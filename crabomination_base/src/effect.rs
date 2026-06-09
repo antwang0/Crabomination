@@ -381,6 +381,9 @@ pub enum Value {
     /// from `EffectContext.converged_value` here. Used by Prismatic
     /// Ending and Pest Control.
     ConvergedValue,
+    /// CR 702.157 — the number of times the source permanent's Squad cost was
+    /// paid (`CardInstance.squad_count`). Reads `ctx.source`. Zero off-source.
+    SquadCount,
     /// Total mana spent paying the originating spell's cost. Stashed on
     /// `StackItem::Spell.mana_spent` at cast time, propagated onto
     /// spell-cast `StackItem::Trigger.mana_spent`, and read from

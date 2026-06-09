@@ -33690,3 +33690,109 @@ pub fn nowhere_to_run() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Squad (CR 702.157) ───────────────────────────────────────────────────────
+// `Keyword::Squad(cost)` + `shortcut::squad_etb()` (mints `Value::SquadCount`
+// token copies on ETB). Cast via `GameAction::CastSpellSquad { times }`.
+
+/// Galadhrim Brigade — {2}{G} 2/2 Elf Soldier. Squad {1}{G}. Other Elves you
+/// control get +1/+1.
+pub fn galadhrim_brigade() -> CardDefinition {
+    CardDefinition {
+        name: "Galadhrim Brigade",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Squad(cost(&[generic(1), g()]))],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Other Elves you control get +1/+1.",
+            effect: crate::effect::StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::squad_etb()],
+        ..Default::default()
+    }
+}
+
+/// Vanguard Suppressor — {3}{U} 3/2 Astartes Warrior. Squad {2}. Flying. When
+/// it deals combat damage to a player, draw a card.
+pub fn vanguard_suppressor() -> CardDefinition {
+    CardDefinition {
+        name: "Vanguard Suppressor",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Squad(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wasteland Raider — {2}{B}{B} 4/3 Human Mercenary. Squad {2}. When it enters,
+/// each player sacrifices a creature.
+pub fn wasteland_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Wasteland Raider",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Squad(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            etb(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Zephyrim — {3}{W} 3/3 Human Warrior. Squad {2}. Flying, vigilance. Miracle
+/// {1}{W}.
+pub fn zephyrim() -> CardDefinition {
+    CardDefinition {
+        name: "Zephyrim",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Squad(cost(&[generic(2)]))],
+        miracle: Some(cost(&[generic(1), w()])),
+        triggered_abilities: vec![crate::effect::shortcut::squad_etb()],
+        ..Default::default()
+    }
+}

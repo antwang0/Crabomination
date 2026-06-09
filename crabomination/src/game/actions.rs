@@ -1184,6 +1184,52 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.157 — cast a creature spell paying its optional Squad cost
+    /// `times` times. The squad cost is charged that many extra times (an
+    /// additional cost, CR 601.2f) and the resolving spell is stamped
+    /// `squad_count = times` so its ETB mints that many token copies.
+    pub(crate) fn cast_spell_squad(
+        &mut self,
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let squad = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.squad_cost().cloned())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Pay the base cost first (pip-aware, so the colored pips aren't
+        // stranded by the generic squad payment), then charge the squad cost
+        // `times` times as an additional cost (CR 601.2f).
+        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        if times > 0 {
+            let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
+            for _ in 0..times {
+                combined.symbols.extend(squad.symbols.iter().cloned());
+            }
+            self.try_pay_with_auto_tap(p, &combined)?;
+        }
+        // Stamp the squad count on the spell now on the stack so its ETB
+        // (Value::SquadCount) mints the right number of copies.
+        if times > 0 {
+            for si in self.stack.iter_mut() {
+                if let StackItem::Spell { card, .. } = si
+                    && card.id == card_id
+                {
+                    card.squad_count = times;
+                }
+            }
+        }
+        Ok(events)
+    }
+
     /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
     /// creatures, {N} less each" additional cost (Awaken the Blood Avatar).
     /// Each creature in `sacrifices` is sacrificed before the spell is put on

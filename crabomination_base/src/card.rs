@@ -583,6 +583,11 @@ pub enum Keyword {
     /// Kicker pipeline (`has_kicker` returns this cost, `SpellWasKicked` gates
     /// the ETB token-copy). Thundertrap Trainer.
     Offspring(crate::mana::ManaCost),
+    /// CR 702.157 — Squad [cost]. An optional additional cast cost payable any
+    /// number of times; the creature's ETB mints one token copy of itself per
+    /// payment (`Value::SquadCount` reads `CardInstance.squad_count`). Cast via
+    /// `GameAction::CastSpellSquad`.
+    Squad(crate::mana::ManaCost),
     /// "This creature can't attack or block unless it has an even number of
     /// counters on it." (Zero is even.) Enforced in `declare_attackers` and
     /// `declare_blockers` (and the bot/legal-attacker gates) by reading the
@@ -1683,6 +1688,12 @@ impl CardDefinition {
             if let Keyword::Offspring(cost) = kw { Some(cost) } else { None }
         })
     }
+    /// CR 702.157 — the Squad cost if this card has `Keyword::Squad`.
+    pub fn squad_cost(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Squad(cost) = kw { Some(cost) } else { None }
+        })
+    }
     /// CR 702.35 — the Madness cost if this card has `Keyword::Madness`.
     pub fn madness_cost(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
@@ -1768,6 +1779,10 @@ pub struct CardInstance {
     /// creature leaves the battlefield (SBA in `stack.rs`).
     pub soulbond_partner: Option<CardId>,
     pub kicked: bool,
+    /// CR 702.157 — how many times this spell's optional Squad cost was paid.
+    /// Persists onto the permanent so its ETB mints one token copy per payment
+    /// (`Value::SquadCount`). Defaults to 0 (no Squad / not paid).
+    pub squad_count: u32,
     /// CR 702.176 — true if this spell was cast paying its optional Bargain
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
@@ -2004,6 +2019,7 @@ impl CardInstance {
             attached_to: None,
             soulbond_partner: None,
             kicked: false,
+            squad_count: 0,
             bargained: false,
             bought_back: false,
             bestowed: false,

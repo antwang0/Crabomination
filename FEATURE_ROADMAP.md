@@ -360,7 +360,11 @@ feature; sweep card-batch by card-batch.
   ✅ Afterlife (`shortcut::afterlife` — CR 702.135),
   ✅ Explore (`Effect::Explore` + `EventKind::Explored`, CR 701.40 — Merfolk
   Branchwalker, Jadelight Ranger, Wildgrowth Walker, Seekers' Squire,
-  Emperor's Vanguard, Path of Discovery), ⏳ Squad,
+  Emperor's Vanguard, Path of Discovery), ✅ Squad (CR 702.157 —
+  `Keyword::Squad(cost)` + `GameAction::CastSpellSquad { times }` +
+  `shortcut::squad_etb` + `Value::SquadCount`: pay the squad cost any number
+  of times, mint that many token copies on ETB; Galadhrim Brigade, Vanguard
+  Suppressor, Wasteland Raider, Zephyrim),
   ✅ Forage (CR 701.61 — `Effect::Forage { then }`: exile three graveyard
   cards or sacrifice a Food, then run the payoff; Treetop Sentries, Bushy
   Bodyguard), ✅ Endure (CR 701.63 — `Effect::Endure { target, n }`: counters

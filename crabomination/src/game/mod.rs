@@ -3331,6 +3331,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_casualty(card_id, sacrifice, target, additional_targets, mode, x_value),
+            GameAction::CastSpellSquad {
+                card_id,
+                times,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_squad(card_id, times, target, additional_targets, mode, x_value),
             GameAction::CastSpellSacrificeReduce {
                 card_id,
                 sacrifices,

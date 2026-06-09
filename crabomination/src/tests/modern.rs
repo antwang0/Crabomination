@@ -40135,3 +40135,95 @@ fn nowhere_to_run_shrinks_opponent_creature() {
     // 2/2 with -3/-3 dies as a 0-or-less-toughness creature.
     assert!(g.battlefield_find(bear).is_none(), "bear shrank to lethal and died");
 }
+
+// ── Squad (CR 702.157) ───────────────────────────────────────────────────────
+
+/// Vanguard Suppressor cast paying its Squad {2} twice mints two token copies
+/// of itself (three Vanguard Suppressors total).
+#[test]
+fn squad_paid_twice_mints_two_token_copies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::vanguard_suppressor());
+    // Base {3}{U} + Squad {2} × 2 = {3}{U} + {4} generic (with a buffer so the
+    // generic squad payment doesn't strand the blue pip).
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(8);
+
+    g.perform_action(GameAction::CastSpellSquad {
+        card_id: id, times: 2,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Vanguard Suppressor with Squad paid twice");
+    drain_stack(&mut g);
+
+    let count = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Vanguard Suppressor").count();
+    assert_eq!(count, 3, "original + two squad token copies");
+    let tokens = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Vanguard Suppressor").count();
+    assert_eq!(tokens, 2, "the two copies are tokens");
+}
+
+/// Squad with zero extra payments is just a normal cast — no token copies.
+#[test]
+fn squad_paid_zero_times_is_a_plain_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::vanguard_suppressor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpellSquad {
+        card_id: id, times: 0,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for base cost, Squad paid zero times");
+    drain_stack(&mut g);
+
+    let count = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Vanguard Suppressor").count();
+    assert_eq!(count, 1, "no copies when Squad isn't paid");
+}
+
+/// Galadhrim Brigade's Squad copies are Elves, so they and the original all see
+/// the +1/+1 Elf anthem from each other.
+#[test]
+fn galadhrim_brigade_squad_copies_anthem_each_other() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::galadhrim_brigade());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.players[0].mana_pool.add_colorless(4);
+
+    // Base {2}{G} + Squad {1}{G} once.
+    g.perform_action(GameAction::CastSpellSquad {
+        card_id: id, times: 1,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Galadhrim Brigade with Squad once");
+    drain_stack(&mut g);
+
+    let ids: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Galadhrim Brigade").map(|c| c.id).collect();
+    assert_eq!(ids.len(), 2, "original + one squad copy");
+    // Each is a 2/2 buffed by the other Elf's anthem to 3/3.
+    for id in ids {
+        assert_eq!(g.computed_permanent(id).unwrap().power, 3,
+            "buffed by the other Brigade's Elf anthem");
+    }
+}
+
+/// Wasteland Raider's ETB makes each player sacrifice a creature.
+#[test]
+fn wasteland_raider_etb_each_player_sacrifices() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wasteland_raider());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Wasteland Raider");
+    drain_stack(&mut g);
+    // The opponent's only creature is sacrificed; the controller keeps the 4/3
+    // Raider and loses the weaker bear.
+    assert!(g.battlefield_find(opp).is_none(), "opponent sacrificed its creature");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0
+        && c.definition.name == "Wasteland Raider"), "Raider stays");
+}

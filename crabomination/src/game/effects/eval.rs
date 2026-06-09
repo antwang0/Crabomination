@@ -220,6 +220,11 @@ impl GameState {
                 self.permanents_destroyed_this_resolution as i32
             }
             Value::ConvergedValue => ctx.converged_value as i32,
+            Value::SquadCount => ctx
+                .source
+                .and_then(|s| self.battlefield_find(s))
+                .map(|c| c.squad_count as i32)
+                .unwrap_or(0),
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when
                 // the just-cast spell is still on the stack (trigger

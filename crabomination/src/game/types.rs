@@ -195,6 +195,19 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.157 — cast a creature spell paying its optional Squad cost
+    /// `times` times. The squad cost is charged that many extra times and the
+    /// resolving spell is stamped `squad_count = times`, minting that many
+    /// token copies on ETB.
+    CastSpellSquad {
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.170 — Plot a card from hand: pay its plot cost and exile it
     /// face-up. Special action, main phase + empty stack only.
     Plot { card_id: CardId },

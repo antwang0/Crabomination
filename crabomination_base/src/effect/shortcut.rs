@@ -662,6 +662,20 @@ pub fn cascade(mv: u32) -> TriggeredAbility {
     }
 }
 
+/// Squad (CR 702.157) — the ETB trigger that mints one token copy of this
+/// creature per time its squad cost was paid (`Value::SquadCount`). Pair with
+/// `Keyword::Squad(cost)` on the card.
+pub fn squad_etb() -> TriggeredAbility {
+    etb(Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::SquadCount,
+        source: Selector::This,
+        extra_creature_types: Vec::new(),
+        override_pt: None,
+        non_legendary: false,
+    })
+}
+
 /// Demonstrate (CR 702.150) — the self-cast trigger that copies the spell for
 /// its caster and an opponent (each copy may choose new targets). Attach to a
 /// card's `triggered_abilities`; see `Effect::Demonstrate`.
