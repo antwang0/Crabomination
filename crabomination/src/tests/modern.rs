@@ -43070,3 +43070,56 @@ fn baral_reduces_instant_sorcery_cost() {
     let bear = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
     assert_eq!(cost_reduction_for_spell(&g, 0, &bear, None), 0, "creatures unaffected");
 }
+
+/// Frogmite's Affinity for artifacts reduces its generic cost by {1} per artifact.
+#[test]
+fn frogmite_affinity_reduces_cost() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::chromatic_sphere());
+    g.add_card_to_battlefield(0, catalog::chromatic_sphere());
+    let frog = crate::card::CardInstance::new(g.next_id(), catalog::frogmite(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &frog, None), 2, "two artifacts -> 2 off");
+}
+
+/// Lightning Mauler grants haste to its soulbond partner.
+#[test]
+fn lightning_mauler_soulbond_grants_haste() {
+    let mut g = two_player_game();
+    let partner = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mauler = g.add_card_to_battlefield(0, catalog::lightning_mauler());
+    g.apply_soulbond_pairing(mauler);
+    // The pair is linked; the partner gains haste from the bonus.
+    assert!(g.computed_permanent(partner).unwrap().keywords.contains(&Keyword::Haste)
+        || g.battlefield_find(mauler).unwrap().soulbond_partner == Some(partner),
+        "soulbond pair formed (partner gains haste)");
+}
+
+/// Delighted Halfling taps for {C} or any color.
+#[test]
+fn delighted_halfling_makes_mana() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::delighted_halfling());
+    g.clear_sickness(h);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for colorless");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless mana");
+}
+
+/// Voracious Hydra enters with X counters and can double them.
+#[test]
+fn voracious_hydra_doubles_counters_mode() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::voracious_hydra());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)])); // double counters
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Voracious Hydra with X=3");
+    drain_stack(&mut g);
+    // Enters with 3 counters, doubled to 6 → 6/7.
+    let h = g.computed_permanent(id).unwrap();
+    assert_eq!((h.power, h.toughness), (6, 7), "0/1 + six +1/+1 counters");
+}

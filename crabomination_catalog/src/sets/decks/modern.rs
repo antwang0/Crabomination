@@ -37436,3 +37436,93 @@ pub fn baral_chief_of_compliance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Frogmite — {4} 2/2 artifact creature with Affinity for artifacts.
+pub fn frogmite() -> CardDefinition {
+    CardDefinition {
+        name: "Frogmite",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        ..Default::default()
+    }
+}
+
+/// Lightning Mauler — {1}{R} 2/1 Human Wizard. Soulbond; both paired creatures
+/// have haste.
+pub fn lightning_mauler() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning Mauler",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus { keywords: vec![Keyword::Haste], ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Delighted Halfling — {G} 1/2 Halfling Citizen. {T}: Add {C}. {T}: Add one
+/// mana of any color. (The "legendary-only + uncounterable" spend rider is dropped.)
+pub fn delighted_halfling() -> CardDefinition {
+    CardDefinition {
+        name: "Delighted Halfling",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            crate::sets::tap_add_any_color(),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Voracious Hydra — {X}{G}{G} 0/1 Hydra with trample. Enters with X +1/+1
+/// counters; ETB choose one — double its +1/+1 counters, or it fights target
+/// creature you don't control.
+pub fn voracious_hydra() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Voracious Hydra",
+        cost: cost(&[x(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hydra],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::DoubleCountersOnEach {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+            },
+            Effect::Fight {
+                attacker: Selector::This,
+                defender: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        ]))],
+        ..Default::default()
+    }
+}

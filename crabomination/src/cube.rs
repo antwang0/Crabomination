@@ -221,6 +221,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         scrapheap_scrounger,
         chromatic_sphere,
         endless_one,
+        // ── modern_decks: affinity artifact creature ──
+        frogmite,
 
         // ── modern_decks: draw-engine artifact ──
         the_endstone,
@@ -1788,6 +1790,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: red utility land ──
         bolrac_clan_basher,
+        // ── modern_decks: Soulbond haste ──
+        lightning_mauler,
         offender_at_large,
         pyrotechnic_performer,
         riftburst_hellion,
@@ -2239,6 +2243,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         nervous_gardener,
         greenbelt_radical,
+        // ── modern_decks: mana dork + X-Hydra ──
+        delighted_halfling,
+        voracious_hydra,
         bannerhide_krushok,
         experiment_twelve,
         culvert_ambusher,
