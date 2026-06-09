@@ -33,19 +33,12 @@ Demonstrate cycle ✅ — Creative / Excavation / Healing / Incarnation /
 Replication Technique + Transforming Flourish (`Effect::Demonstrate`, CR
 702.150).
 
-⏳ work remaining printed STX cards, grouped by blocker:
-  (Hone counters ✅ — `CounterType::Hone` + `Effect::HoneFromHand` + the
-  `GameState::process_hone` upkeep tick → {4}-less cast-from-exile grant;
-  Nassari rides `ExileTopAndGrantMayPlay { EachOpponent }` +
-  `Predicate::CastSpellFromExile`. Uvilda//Nassari shipped; Nassari's
-  "spend mana as any color" clause is dropped. Study counters ✅ —
-  `CounterType::Study`, Kianne//Imbraham.)
-- **Continuous "becomes a copy" layer-1**: Echoing Equation (Augmenter's back).
-- **Cast-from-top impulse + can't-cast-permanents static**: Codie.
-- **Misc primitives**: Ecological Appreciation (up-to-four variable targets +
-  opponent split), Jadzi, Flamescroll//Revel (opponent ability-activation
-  trigger + spell-lock). (Awaken the Blood Avatar ✅ — `StaticEffect::
-  SacrificeCostReduction { per }` + `GameAction::CastSpellSacrificeReduce`:
-  sacrifice any number of creatures, {2} less each.) (Radiant Scrollwielder ✅ —
-  `StaticEffect::YourInstantSorcerySpellsHaveLifelink` + non-combat lifelink,
-  CR 702.15; upkeep random-recur via auto-pick.)
+All previously-blocked printed STX cards now ship:
+- ✅ Echoing Equation (Augmenter's back) — `Effect::BecomeCopyOfFor`
+  (CR 707.2 continuous copy with EOT/leave revert).
+- ✅ Codie, Vociferous Codex — `ControllerCantCastPermanentSpells` +
+  `OnYourNextSpellCastThisTurn` + filtered `Discover` impulse.
+- ✅ Ecological Appreciation (`Effect::SearchSplitWithOpponent`),
+  Jadzi // Journey to the Oracle (pay-{1} top-of-library cast +
+  put-lands-from-hand + self-return), Flamescroll // Revel in Silence
+  (opponent non-mana-activation trigger + `SilencePlayersThisTurn`).

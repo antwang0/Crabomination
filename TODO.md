@@ -17,25 +17,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   creature to slot 0. Umezawa's Jitte now charges when its equipped creature is
   blocked. (Fires once per damaged creature — a minor over-count for Jitte under
   multi-block.)
-- ⏳ **Cipher follow-ups (CR 702.46 shipped this run).** Remaining Cipher cards
-  each want one extra primitive: Hidden Strings (two-target tap-or-untap),
-  Trait Doctoring (grant a color / land type to a permanent), Stolen Identity's
-  encore (already plays via the free-copy path). Rubblehulk's Bloodrush wants a
-  `Value::LandsControlled`-scaled pump + a `*/*` = lands CDA body.
+- 🟡 **Cipher follow-ups.** Hidden Strings ✅ (4-way ChooseMode + MayDo per
+  half); Rubblehulk ✅ (lands CDA + Value-scaled Bloodrush). Remaining:
+  Trait Doctoring (grant a color / land type to a permanent).
 - ⏳ **UI render edits remain blocked** in the web sandbox (wayland-sys /
   alsa-sys / libudev build scripts need system libs). The server `PlayerView`
   is the verifiable surface; `ExileCardView.encoded_on` (Cipher carrier) ships
   this run for the client to badge once it can build.
-- ⏳ **Aether Gust + Subtlety-style "spell or permanent → top/bottom of
-  library".** Aether Gust hits a red/green *spell or permanent* and the owner
-  chooses top or bottom; the spell-counter half rides `CounteredSpellZone::
-  OwnerLibraryTopOrBottom`, but the permanent half needs a "move target
-  permanent to top/bottom of its owner's library (owner chooses)" effect.
-- ⏳ **Continuous "becomes a copy" (layer-1).** Still the highest-leverage
-  open primitive — `Layer::L1Copy` exists but there's no `Modification` arm or
-  copiable-values rewrite in `compute_battlefield`. Unblocks Mirrorform (aura),
-  Shifting Woodland, Vesuva / Thespian's Stage, Echoing Equation, Helm of the
-  Host's haste-token loop.
+- ✅ **Aether Gust** — spell half rides `CounteredSpellZone::
+  OwnerLibraryTopOrBottom`; permanent half rides the existing
+  `LibraryPosition::OwnerChoice` Move dest.
+- ✅ **Continuous "becomes a copy" (CR 707.2)** — `Effect::BecomeCopyOfFor`
+  swaps the definition with a scheduled revert (`GameState.temporary_copies`,
+  the Act-of-Treason plumbing pattern): reverts at duration end and on
+  battlefield-leave; `non_legendary` strips Legendary (707.2e). Ships Echoing
+  Equation, Vesuva, Thespian's Stage. Remaining ⏳: "while attached" aura
+  copies (Mirrorform) want a WhileSourceOnBattlefield-style duration tied to
+  the aura.
 - ✅ **Reinforce/face-down client affordances.** `GameAction::Reinforce` (CR
   702.77) and `CastFaceDown`/`TurnFaceUp` are engine-complete. `reinforceable_hand`
   now ships (`PlayerView.reinforceable_hand` + `compute_hand_affordances`,
@@ -71,12 +69,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - ✅ **Leyline Binding** — Domain cost reduction ({1} less per basic land type)
     ships via `StaticEffect::SelfCostReducedByDomain` + `Value::DomainCount`;
     Tribal Flames reuses the Value for its X-damage. (Leyline Binding, Tribal Flames.)
-  - **Orcish Bowmasters** — "whenever an opponent draws a card except the first
-    in their draw step" trigger scope.
+  - ✅ **Orcish Bowmasters** — `Player.cards_drawn_this_step` +
+    `Value::CardsDrawnThisStep` power the draw-step first-draw exemption.
   - **Restless lands cycle** — manlands with per-card attack riders + typeless
     land + dual color (only Restless Spire shipped so far).
-  - **Witch's Oven** — cost-sacrifice toughness visible at the ability's
-    resolution (capture sacrificed P/T on the activated-ability `StackItem`).
+  - ✅ **Witch's Oven** — `Effect::WithSacrificedPt` re-stamps the
+    cost-sacrificed creature's P/T at the ability's resolution.
 - ⏳ **Client Squad/Replicate stepper.** `PlayerView.{squadable_hand,
   replicatable_hand}` now surface which hand cards can pay Squad (CR 702.157) /
   Replicate (CR 702.107) at least once; the client should render a "pay N
@@ -101,10 +99,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     `PermanentView.impending_counters` countdown (engine + view ship it; the
     wayland sandbox blocks the client render edit).
   - Hideaway (CR 702.76, `Effect::Hideaway`): the hidden-card pick auto-resolves
-    to the highest-MV card rather than prompting; and the Lorwyn land cycle's
-    harder gates are unwired — Mosswort Bridge (total power ≥ 8), Spinerock Knoll
-    (an opponent lost ≥ 7 life this turn), Windbrisk Heights (attacked with ≥ 3
-    creatures). Need the matching count/this-turn predicates.
+    to the highest-MV card rather than prompting. The Lorwyn land cycle ✅ —
+    Mosswort Bridge / Spinerock Knoll / Windbrisk Heights ship with their
+    printed gates (`Value::PowerOf` fan-out, `Value::LifeLostThisTurn`,
+    `Value::CreaturesAttackedWithThisTurn`).
 - ⏳ **Card riders dropped this run (each wants one small primitive):**
   Glissa Sunslayer (combat-damage `ChooseMode` with per-mode targets — only the
   draw mode ships); Bristly Bill ✅ (double-counters activated shipped via
@@ -142,12 +140,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - ✅ **Tap-N activation cost.** `ActivatedAbility.tap_n_filter` taps N matching
   untapped permanents (source eligible) as a cost — Heritage Druid. (An "X can't
   be blocked this turn" grant for Whirler Rogue-style payoffs is still ⏳.)
-- ⏳ **Cost-sacrifice P/T visible to the ability's resolution.** `sac_other_filter`
-  pays the sacrifice during activation, but `resolve_effect` resets the
-  `sacrificed_power/toughness` scratch, so `Value::SacrificedToughness` reads 0 in
-  the ability's stack resolution. Blocks Witch's Oven's "two Food if toughness ≥ 4"
-  (shipped as always-one-Food). Capture cost-sacrifice stats on the ability's
-  StackItem and restore them before resolving.
+- ✅ **Cost-sacrifice P/T visible to the ability's resolution** —
+  `activate_ability` wraps the queued effect in `Effect::WithSacrificedPt`,
+  restoring the scratch at resolution (Witch's Oven's two-Food branch).
 - ✅ **Put-permanent-from-hand-onto-battlefield effect** —
   `Effect::PutFromHandOntoBattlefield { who, filter, count, tapped, haste,
   sacrifice_eot }`: the controller picks up to `count` matching hand cards via
@@ -238,7 +233,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     (Unholy Annex) + meld (Westvale/Hanweir, Mightstone/Weakstone) + the Morph
     cast-face-down spell path still need their own subsystems on top.
 
-- ⏳ **Remaining STX printed cards (each needs a new primitive):**
+- ✅ **Remaining STX printed cards** — all shipped (this run): layer-1 copy
+  (Echoing Equation), Jadzi // Journey, Codie, Ecological Appreciation,
+  Flamescroll // Revel. Historical blocker list below; only Kasmina's
+  ability-sharing static + the inline `wants_ui` picker gaps remain.
+- (historical) **Remaining STX printed cards (each needed a new primitive):**
   - ✅ **Hone counters + cast-from-exile** — `CounterType::Hone` +
     `Effect::HoneFromHand` + `GameState::process_hone` (upkeep tick → {4}-less
     cast-from-exile via a may-play grant). Nassari rides
@@ -274,9 +273,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - ✅ **`Effect::CatchUpBasicLands`** (Scholarship Sponsor), **`Effect::
     ExileFromHandTaxed`** (Elite Spellbinder, owner-may-play + tax), **hone
     counters** (`process_hone`, Uvilda // Nassari).
-  - **Codie, Vociferous Codex** still ⏳: needs `StaticEffect::
-    CantCastPermanentSpells` + a `DelayedTriggerKind::YourNextSpellCast` that
-    runs a discover-until-lesser-MV impulse (two new primitives).
+  - ✅ **Codie, Vociferous Codex** — `ControllerCantCastPermanentSpells` +
+    `OnYourNextSpellCastThisTurn` + filtered `Discover` impulse.
   - **Awaken the Blood Avatar** variable-sacrifice cost reduction still ⏳
     (auto-path sacrifices 0; needs a cast-time "sacrifice N, {2} less each"
     decision threaded into the cost computation).
