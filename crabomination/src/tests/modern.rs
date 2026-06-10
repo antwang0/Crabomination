@@ -4969,6 +4969,24 @@ fn spirebluff_canal_enters_tapped_with_many_lands() {
     assert!(on_bf.tapped, "fastland enters tapped with ≥4 lands");
 }
 
+/// Prismatic Vista cracks for any basic.
+#[test]
+fn prismatic_vista_fetches_any_basic() {
+    let mut g = two_player_game();
+    let vista = g.add_card_to_battlefield(0, catalog::prismatic_vista());
+    g.clear_sickness(vista);
+    let mountain = g.add_card_to_library(0, catalog::mountain());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(mountain))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vista, ability_index: 0, target: None, x_value: None,
+    }).expect("crack the Vista");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mountain).is_some(), "basic fetched untapped");
+    assert!(g.battlefield_find(vista).is_none(), "Vista sacrificed");
+    assert_eq!(g.players[0].life, life - 1, "paid 1 life");
+}
+
 /// Check-land: enters untapped with a matching basic-typed land, tapped
 /// without one.
 #[test]

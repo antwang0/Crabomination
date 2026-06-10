@@ -108,3 +108,27 @@ pub fn arid_mesa() -> CardDefinition {
 pub fn marsh_flats() -> CardDefinition {
     fetch_land("Marsh Flats", LandType::Plains, LandType::Swamp)
 }
+
+/// Prismatic Vista — {T}, pay 1 life, sacrifice: search your library for a
+/// basic land and put it onto the battlefield.
+pub fn prismatic_vista() -> CardDefinition {
+    CardDefinition {
+        name: "Prismatic Vista",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
