@@ -9016,3 +9016,84 @@ pub fn skitter_of_lizards() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Lightkeeper of Emeria — {3}{W} Creature — Angel 2/4, Flying, Multikicker
+/// {W}. When this enters, you gain 2 life for each time it was kicked.
+pub fn lightkeeper_of_emeria() -> CardDefinition {
+    CardDefinition {
+        name: "Lightkeeper of Emeria",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Multikicker(cost(&[w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Times(Box::new(Value::TimesKicked), Box::new(Value::Const(2))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloodhusk Ritualist — {2}{B} Creature — Vampire Shaman 2/2, Multikicker
+/// {B}. When this enters, target opponent discards a card per kick.
+pub fn bloodhusk_ritualist() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodhusk Ritualist",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Multikicker(cost(&[b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::TimesKicked,
+                random: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Joraga Warcaller — {G} Creature — Elf Warrior 1/1, Multikicker {1}{G}.
+/// Enters with a +1/+1 counter per kick; other Elf creatures you control
+/// get +1/+1 for each +1/+1 counter on it.
+pub fn joraga_warcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Joraga Warcaller",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Multikicker(cost(&[generic(1), g()]))],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::TimesKicked)),
+        static_abilities: vec![StaticAbility {
+            description: "Other Elf creatures you control get +1/+1 for each +1/+1 counter on this creature.",
+            effect: StaticEffect::PumpPTPerCounterOnSource {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}

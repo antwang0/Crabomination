@@ -30,6 +30,16 @@ pub struct StaticAbility {
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
     PumpPT { applies_to: Selector, power: i32, toughness: i32 },
+    /// Anthem scaled by the counters on the *source*: everything the
+    /// selector picks gets +(n×per_power)/+(n×per_toughness) where n is the
+    /// source's `kind`-counter count (Joraga Warcaller's "Other Elf
+    /// creatures you control get +1/+1 for each +1/+1 counter on this").
+    PumpPTPerCounterOnSource {
+        applies_to: Selector,
+        kind: crate::card::CounterType,
+        per_power: i32,
+        per_toughness: i32,
+    },
     /// Self-buff scaled by the number of the controller's battlefield
     /// permanents matching `filter`: "this creature gets `+per_power`/
     /// `+per_toughness` for each [filter] you control." Resolved live in

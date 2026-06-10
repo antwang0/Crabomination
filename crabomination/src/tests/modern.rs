@@ -46808,8 +46808,7 @@ fn promise_of_power_demon_scales_with_hand() {
         g.add_card_to_hand(0, catalog::island());
     }
     let pp = g.add_card_to_hand(0, catalog::promise_of_power());
-    g.players[0].mana_pool.add(Color::Black, 3);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 5);
     g.perform_action(GameAction::CastSpell {
         card_id: pp, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
     }).expect("cast mode 1");
@@ -49465,4 +49464,53 @@ fn phyrexian_scriptures_chapters() {
     g.saga_advance(saga);
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), 0, "opponent graveyard exiled");
+}
+
+// ── Multikicker ETB payoffs ──────────────────────────────────────────────────
+
+/// Lightkeeper kicked twice gains 4 life.
+#[test]
+fn lightkeeper_of_emeria_gains_two_per_kick() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lightkeeper_of_emeria());
+    g.players[0].mana_pool.add(Color::White, 6);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellMultikicked {
+        card_id: id, times: 2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked twice");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Bloodhusk Ritualist kicked twice makes the opponent discard two.
+#[test]
+fn bloodhusk_ritualist_discards_per_kick() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::bloodhusk_ritualist());
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::forest()); }
+    let hand = g.players[1].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 5);
+    g.perform_action(GameAction::CastSpellMultikicked {
+        card_id: id, times: 2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked twice");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand - 2);
+}
+
+/// Joraga Warcaller's counter-scaled anthem pumps other Elves only.
+#[test]
+fn joraga_warcaller_anthem_scales_with_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let joraga = g.add_card_to_battlefield(0, catalog::joraga_warcaller());
+    let elf = g.add_card_to_battlefield(0, catalog::elves_of_deep_shadow());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(joraga).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let cp = g.compute_battlefield();
+    let elf_v = cp.iter().find(|c| c.id == elf).unwrap();
+    assert_eq!((elf_v.power, elf_v.toughness), (3, 3), "1/1 elf +2/+2");
+    let joraga_v = cp.iter().find(|c| c.id == joraga).unwrap();
+    assert_eq!((joraga_v.power, joraga_v.toughness), (3, 3), "own counters only (no self-anthem)");
+    let bear_v = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((bear_v.power, bear_v.toughness), (2, 2), "non-Elf untouched");
 }

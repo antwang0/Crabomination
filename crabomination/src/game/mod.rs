@@ -7669,6 +7669,27 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                     None => vec![],
                 }
             }
+            StaticEffect::PumpPTPerCounterOnSource { applies_to, kind, per_power, per_toughness } => {
+                let n = card.counter_count(*kind) as i32;
+                if n == 0 {
+                    return vec![];
+                }
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            n * per_power,
+                            n * per_toughness,
+                        ),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::GrantKeyword { applies_to, keyword } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {
