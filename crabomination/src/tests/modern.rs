@@ -44293,3 +44293,95 @@ fn heart_of_kiran_crews_and_attacks() {
     assert!(v.card_types.contains(&CardType::Creature), "animated by crewing");
     assert_eq!((v.power, v.toughness), (4, 4));
 }
+
+// ── CR 401.5/401.6 — play with top revealed / play from the library top ─────
+
+#[test]
+fn courser_plays_lands_from_the_library_top_and_gains_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::courser_of_kruphix());
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::island());
+    let life = g.players[0].life;
+
+    g.perform_action(GameAction::PlayLand(top)).expect("land playable off the top");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(top).is_some(), "Island entered from the library");
+    assert_eq!(g.players[0].life, life + 1, "landfall life");
+}
+
+#[test]
+fn courser_does_not_allow_nonland_or_non_top_plays() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::courser_of_kruphix());
+    // A land *below* the top is not playable.
+    let below = g.next_id();
+    g.players[0].add_to_library_top(below, catalog::island());
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::grizzly_bears());
+    assert!(g.perform_action(GameAction::PlayLand(below)).is_err(), "only the top card");
+    // The nonland top isn't castable off Courser's land-only permission.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "Courser's permission covers lands only"
+    );
+    assert_eq!(g.players[0].library.len(), 2, "library untouched after rejections");
+}
+
+#[test]
+fn mystic_forge_casts_artifacts_from_the_top() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mystic_forge());
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::mind_stone());
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: top, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("artifact castable off the top");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(top).is_some(), "Mind Stone resolved from the library top");
+}
+
+#[test]
+fn mystic_forge_exiles_the_top_for_a_life() {
+    let mut g = two_player_game();
+    let forge = g.add_card_to_battlefield(0, catalog::mystic_forge());
+    g.add_card_to_library(0, catalog::island());
+    let life = g.players[0].life;
+    let lib = g.players[0].library.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forge, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("{T}, pay 1 life activates");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life - 1);
+    assert_eq!(g.players[0].library.len(), lib - 1, "top card exiled");
+}
+
+#[test]
+fn top_of_library_revealed_in_view_with_courser() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::courser_of_kruphix());
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::island());
+    // Revealed to both seats.
+    for viewer in 0..2 {
+        let view = crate::server::view::project(&g, viewer);
+        assert_eq!(
+            view.players[0].library.known_top.first().map(|c| c.name.as_str()),
+            Some("Island"),
+            "viewer {viewer} sees the revealed top"
+        );
+    }
+}

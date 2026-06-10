@@ -38802,3 +38802,99 @@ pub fn heart_of_kiran() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Courser of Kruphix — {1}{G}{G} 2/4 Enchantment Creature — Centaur.
+/// Play with the top card of your library revealed; you may play lands
+/// from the top of your library. Landfall — gain 1 life.
+pub fn courser_of_kruphix() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Courser of Kruphix",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Play with the top card of your library revealed.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may play lands from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Land },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oracle of Mul Daya — {3}{G} 2/2 Elf Shaman. An additional land each
+/// turn; play with the top card revealed; play lands from the top.
+pub fn oracle_of_mul_daya() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Oracle of Mul Daya",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may play an additional land on each of your turns.",
+                effect: StaticEffect::ExtraLandPerTurn,
+            },
+            StaticAbility {
+                description: "Play with the top card of your library revealed.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may play lands from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Land },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mystic Forge — {4} Artifact. Look at / cast artifact and colorless
+/// spells from the top of your library. {T}, Pay 1 life: Exile the top
+/// card of your library.
+pub fn mystic_forge() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Mystic Forge",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast artifact spells and colorless spells from the top of your library.",
+            effect: StaticEffect::PlayFromLibraryTop {
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Colorless),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            life_cost: 1,
+            effect: Effect::ExileTopOfLibrary {
+                who: Selector::You,
+                amount: Value::Const(1),
+                link_to_source: false,
+                face_down: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

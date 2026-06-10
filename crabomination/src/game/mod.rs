@@ -7143,6 +7143,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // OtherPlaneswalkersHaveSourceLoyaltyAbilities — read at loyalty
             // activation time in `activate_loyalty_ability`; no layer effect.
             | StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
+            // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
+            // cast paths and the view projection; no layer effect.
+            | StaticEffect::PlayFromLibraryTop { .. }
+            | StaticEffect::TopOfLibraryRevealed
             // SpellsYouCastHaveDelve (Teval) — read at cast time by
             // `controller_grants_spells_delve`; no layer effect.
             | StaticEffect::SpellsYouCastHaveDelve

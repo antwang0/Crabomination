@@ -805,21 +805,34 @@ impl GameState {
         if !self.can_player_play_land(p) {
             return Err(GameError::AlreadyPlayedLand);
         }
-        if !self.players[p].has_in_hand(card_id) {
+        // CR 401.6 — a PlayFromLibraryTop static (Courser of Kruphix,
+        // Oracle of Mul Daya) lets the land be played off the library top.
+        let from_top = !self.players[p].has_in_hand(card_id)
+            && self.library_top_playable(p, card_id);
+        let mut card = if from_top {
+            self.players[p].library.remove(0)
+        } else if self.players[p].has_in_hand(card_id) {
+            self.players[p].remove_from_hand(card_id).unwrap()
+        } else {
             return Err(GameError::CardNotInHand(card_id));
-        }
-        let mut card = self.players[p].remove_from_hand(card_id).unwrap(); // we just checked has_in_hand
+        };
+        let restore = |state: &mut Self, card: crate::card::CardInstance| {
+            if from_top {
+                state.players[p].library.insert(0, card);
+            } else {
+                state.players[p].hand.push(card);
+            }
+        };
         if back_face {
             // Swap to the back face's definition. Reject if there isn't one.
             let Some(back) = card.definition.back_face.clone() else {
-                self.players[p].hand.push(card);
+                restore(self, card);
                 return Err(GameError::NotALand(card_id));
             };
             card.definition = std::sync::Arc::new(*back);
         }
         if !card.definition.is_land() {
-            // Put it back then error
-            self.players[p].hand.push(card);
+            restore(self, card);
             return Err(GameError::NotALand(card_id));
         }
         self.place_land_card(p, card)
@@ -1112,7 +1125,44 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // CR 401.6 — cast off the library top when a PlayFromLibraryTop
+        // static covers the card (Mystic Forge). Hop the card into hand for
+        // the normal cast pipeline; restore it to the top on failure.
+        let p = self.priority.player_with_priority;
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && self.library_top_playable(p, card_id)
+        {
+            let card = self.players[p].library.remove(0);
+            self.players[p].hand.push(card);
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false,
+            );
+            if r.is_err()
+                && let Some(pos) = self.players[p].hand.iter().position(|c| c.id == card_id)
+            {
+                let card = self.players[p].hand.remove(pos);
+                self.players[p].library.insert(0, card);
+            }
+            return r;
+        }
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false)
+    }
+
+    /// CR 401.6 — true when `card_id` is the top card of `p`'s library and a
+    /// `PlayFromLibraryTop` static `p` controls covers it.
+    pub(crate) fn library_top_playable(&self, p: usize, card_id: CardId) -> bool {
+        use crate::effect::StaticEffect;
+        let Some(card) = self.players[p].library.first() else { return false };
+        if card.id != card_id {
+            return false;
+        }
+        self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(&sa.effect, StaticEffect::PlayFromLibraryTop { filter }
+                        if self.evaluate_requirement_on_card(filter, card, p))
+                })
+        })
     }
 
     /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker

@@ -317,6 +317,14 @@ pub enum StaticEffect {
     /// which appends the source's loyalty abilities (indices ≥ printed
     /// count) to every other friendly planeswalker.
     OtherPlaneswalkersHaveSourceLoyaltyAbilities,
+    /// CR 401.6-adjacent: the controller may play/cast cards matching
+    /// `filter` from the top of their library (Courser of Kruphix /
+    /// Oracle of Mul Daya lands, Mystic Forge artifact+colorless spells).
+    /// Checked in `play_land_with_face` and `cast_spell`.
+    PlayFromLibraryTop { filter: crate::card::SelectionRequirement },
+    /// CR 401.5: the controller plays with the top card of their library
+    /// revealed (surfaced to every seat via `PlayerView.library_top`).
+    TopOfLibraryRevealed,
     /// "Creatures you control of the chosen type get +P/+T" — a tribal anthem
     /// keyed to the source permanent's `chosen_creature_type` (set at ETB via
     /// `Effect::NameCreatureType`). Resolved live in `gather_continuous_effects`

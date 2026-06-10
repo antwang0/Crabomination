@@ -246,6 +246,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         bomat_courier,
         containment_construct,
         heart_of_kiran,
+        // CR 401.5/401.6 — play with top revealed / play from the top.
+        courser_of_kruphix,
+        oracle_of_mul_daya,
+        mystic_forge,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,

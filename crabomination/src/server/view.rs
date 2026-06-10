@@ -58,7 +58,7 @@ fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i))
+                project_player(p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), known_library_top(state, i, viewer_seat))
             })
             .collect(),
         battlefield: {
@@ -314,6 +314,32 @@ fn commander_damage_taken(
     entries
 }
 
+/// CR 401.5/401.6 — the top library card is public while a
+/// `TopOfLibraryRevealed` static is active (Courser of Kruphix), and
+/// owner-visible under a `PlayFromLibraryTop` permission (Mystic Forge's
+/// "may look at the top card of your library any time").
+fn known_library_top(
+    state: &GameState,
+    player_seat: usize,
+    viewer_seat: usize,
+) -> Vec<crate::net::KnownCard> {
+    use crate::effect::StaticEffect;
+    let has_static = |pred: &dyn Fn(&StaticEffect) -> bool| {
+        state.battlefield.iter().any(|c| {
+            c.controller == player_seat
+                && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
+        })
+    };
+    let revealed_to_all = has_static(&|e| matches!(e, StaticEffect::TopOfLibraryRevealed));
+    let owner_may_look = viewer_seat == player_seat
+        && has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }));
+    if revealed_to_all || owner_may_look {
+        state.players[player_seat].library.first().map(known_card).into_iter().collect()
+    } else {
+        Vec::new()
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn project_player(
     player: &Player,
@@ -326,6 +352,7 @@ fn project_player(
     commander_damage_taken: Vec<crate::net::CommanderDamageEntry>,
     team: usize,
     cannot_gain_life: bool,
+    known_top: Vec<crate::net::KnownCard>,
 ) -> PlayerView {
     use crate::game::types::PreventionTarget;
     let has_prevention_shield = prevention_shields
@@ -340,7 +367,7 @@ fn project_player(
         mana_pool: player.mana_pool.clone(),
         library: LibraryView {
             size: player.library.len(),
-            known_top: Vec::new(),
+            known_top,
         },
         graveyard: player.graveyard.iter().map(graveyard_entry).collect(),
         hand: player
