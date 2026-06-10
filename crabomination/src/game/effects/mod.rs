@@ -2168,6 +2168,18 @@ impl GameState {
                 // restricted colorless mana).
                 let (pool, restriction) = match pool {
                     ManaPayload::Restricted(inner, r) => (inner.as_ref(), Some(*r)),
+                    // Cavern of Souls: tag pips with the source's chosen
+                    // creature type; no chosen type → unrestricted.
+                    ManaPayload::RestrictedToChosenType(inner) => {
+                        let chosen = ctx
+                            .source
+                            .and_then(|cid| self.battlefield_find(cid))
+                            .and_then(|c| c.chosen_creature_type);
+                        (
+                            inner.as_ref(),
+                            chosen.map(crate::mana::SpendRestriction::CreatureOfTypeUncounterable),
+                        )
+                    }
                     other => (other, None),
                 };
                 // CR 701.10f — Mana Reflection doubles every pip this mana
@@ -2392,7 +2404,7 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
-                    ManaPayload::Restricted(..) => {
+                    ManaPayload::Restricted(..) | ManaPayload::RestrictedToChosenType(..) => {
                         // One unwrap above already stripped the restriction;
                         // no card nests wrappers, so a doubly-wrapped payload
                         // is malformed — ignore it rather than panic.

@@ -414,7 +414,9 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         ManaPayload::OfColor(_, _)
         | ManaPayload::Colorless(_)
         | ManaPayload::ChosenColorOfSource => false,
-        ManaPayload::Restricted(inner, _) => payload_yields_multiple(inner),
+        ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner) => {
+            payload_yields_multiple(inner)
+        }
     }
 }
 
@@ -570,14 +572,9 @@ pub(crate) fn apply_etb_trigger_tax(
     false
 }
 
-/// Cavern of Souls approximation: when a creature spell is cast, mark it
-/// uncounterable if the caster controls a Cavern of Souls.
-///
-/// The real card requires Cavern to be tapped for mana, that mana to be
-/// spent on the cast, and the creature's type to match the named type. We
-/// don't track mana provenance or named-types, so this collapses to "any
-/// creature you cast is uncounterable while you control a Cavern" — close
-/// enough for the demo deck.
+/// Cast-time "can't be countered" checks (printed keyword, turn-scoped
+/// grants, Banefire X gates). Cavern of Souls rides mana provenance
+/// instead — see `note_cast_payment_riders`.
 impl crate::game::GameState {
     /// Legacy entrypoint kept for symmetry; new call sites should use
     /// `caster_grants_uncounterable_with_x` to thread the cast's X
@@ -628,34 +625,23 @@ impl crate::game::GameState {
         {
             return true;
         }
-        // Cavern of Souls–style: any permanent the caster controls
-        // whose static abilities include
-        // `UncounterableCreaturesOfChosenType` makes a matching-type
-        // creature spell uncounterable. Permanents whose ETB hasn't yet
-        // resolved (`chosen_creature_type == None`) fall back to
-        // "unrestricted" so legacy test fixtures that bypass the ETB
-        // still work. The mana-provenance gate (must spend the
-        // permanent's mana on the cast) is collapsed — see Cavern's
-        // catalog doc-comment.
-        use crate::effect::StaticEffect;
-        if !card.definition.is_creature() {
-            return false;
+        // Cavern of Souls' "can't be countered" rider is provenance-based:
+        // it rides the spent mana (`SpendRestriction::
+        // CreatureOfTypeUncounterable` → `cast_paid_uncounterable`), not a
+        // battlefield scan — see `note_cast_payment_riders`.
+        false
+    }
+
+    /// Note restricted-mana riders from a cast's payment: spending
+    /// Cavern-of-Souls mana stamps the cast uncounterable (consumed by
+    /// `finalize_cast`).
+    pub(crate) fn note_cast_payment_riders(&mut self, receipt: &PaymentReceipt) {
+        use crate::mana::SpendRestriction;
+        if receipt.side_effects.spent_restrictions.iter()
+            .any(|r| matches!(r, SpendRestriction::CreatureOfTypeUncounterable(_)))
+        {
+            self.cast_paid_uncounterable = true;
         }
-        self.battlefield.iter().any(|c| {
-            if c.controller != caster {
-                return false;
-            }
-            let has_static = c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, StaticEffect::UncounterableCreaturesOfChosenType)
-            });
-            if !has_static {
-                return false;
-            }
-            match c.chosen_creature_type {
-                None => true, // ETB not resolved → unrestricted (legacy)
-                Some(t) => card.definition.has_creature_type(t),
-            }
-        })
     }
 
     /// True if any battlefield permanent's static abilities include
@@ -779,7 +765,7 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             // pip could strand an otherwise-payable cast. The controller
             // activates them deliberately (or they float via a trigger),
             // and `pay_for_spell` consumes the floated mana.
-            ManaPayload::Restricted(_, _) => false,
+            ManaPayload::Restricted(_, _) | ManaPayload::RestrictedToChosenType(_) => false,
             // Instance-dependent (the chosen color isn't known at the
             // definition level), so it's not part of the static auto-tap
             // signature; the controller taps it deliberately.
@@ -2478,18 +2464,9 @@ impl GameState {
         }
 
         let forced_only = self.players[p].wants_ui;
-        // Spell kind gates spend-restricted mana ("spend only to cast
-        // instant and sorcery spells"). Only an I/S spell may draw on it.
-        let spell_kind = if card
-            .definition
-            .card_types
-            .iter()
-            .any(|t| matches!(t, CardType::Instant | CardType::Sorcery))
-        {
-            crate::mana::SpellKind::InstantOrSorcery
-        } else {
-            crate::mana::SpellKind::Other
-        };
+        // Spell kind gates spend-restricted mana ("spend only to cast …")
+        // by the cast card's types — see `CardDefinition::spell_kind`.
+        let spell_kind = card.definition.spell_kind();
         // CR 601.2g — float-spend confirmation. If the caster has pre-existing
         // floating mana that the cost could *either* spend *or* avoid (untapped
         // sources can cover it), ask before auto-spending it instead of silently
@@ -2501,7 +2478,7 @@ impl GameState {
             && spend_float_choice.is_none()
             && convoke_creatures.is_empty()
             && delve_cards.is_empty()
-            && self.float_spend_is_optional(p, &cost, spell_kind)
+            && self.float_spend_is_optional(p, &cost, &spell_kind)
         {
             let float_summary = self.protectable_float(p, &cost).summary();
             let name = card.definition.name;
@@ -2532,7 +2509,7 @@ impl GameState {
             return Ok(vec![]);
         }
 
-        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, spell_kind, spend_float_choice) {
+        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &spell_kind, spend_float_choice) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].hand.push(card);
@@ -2542,6 +2519,7 @@ impl GameState {
         if receipt.side_effects.life_lost > 0 {
             self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
+        self.note_cast_payment_riders(&receipt);
 
         // Delve payment succeeded — exile the chosen graveyard cards now
         // (CR 702.66: they're exiled as part of paying the cost). Bumps the
@@ -2967,7 +2945,8 @@ impl GameState {
         } else {
             collect_self_cast_triggers(&card)
         };
-        let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
+        let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value)
+            || std::mem::take(&mut self.cast_paid_uncounterable);
 
         let was_creature_spell = !card.adventuring && card.definition.is_creature();
         // CR 702.146e — casting a daybound spell while it's neither day nor
@@ -3378,7 +3357,7 @@ impl GameState {
         if spend_float.is_none()
             && self.players[p].wants_ui
             && !cost.symbols.is_empty()
-            && self.float_spend_is_optional(p, &cost, crate::mana::SpellKind::Other)
+            && self.float_spend_is_optional(p, &cost, &card.definition.spell_kind())
         {
             let float_summary = self.protectable_float(p, &cost).summary();
             let name = card.definition.name;
@@ -3405,11 +3384,12 @@ impl GameState {
         let forced_only = self.players[p].wants_ui;
         let snapshot = self.snapshot_payment_state(p);
         let receipt = self.try_pay_after_snapshot_mode(
-            p, &cost, snapshot, forced_only, crate::mana::SpellKind::Other, spend_float,
+            p, &cost, snapshot, forced_only, &card.definition.spell_kind(), spend_float,
         )?;
         if receipt.side_effects.life_lost > 0 {
             self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
+        self.note_cast_payment_riders(&receipt);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -4356,7 +4336,7 @@ impl GameState {
         if spend_float.is_none()
             && self.players[p].wants_ui
             && !mana_cost.symbols.is_empty()
-            && self.float_spend_is_optional(p, &mana_cost, crate::mana::SpellKind::Other)
+            && self.float_spend_is_optional(p, &mana_cost, &card.definition.spell_kind())
         {
             let float_summary = self.protectable_float(p, &mana_cost).summary();
             let name = card.definition.name;
@@ -4385,7 +4365,7 @@ impl GameState {
         let forced_only = self.players[p].wants_ui;
         let alt_snapshot = self.snapshot_payment_state(p);
         let receipt = match self.try_pay_after_snapshot_mode(
-            p, &mana_cost, alt_snapshot, forced_only, crate::mana::SpellKind::Other, spend_float,
+            p, &mana_cost, alt_snapshot, forced_only, &card.definition.spell_kind(), spend_float,
         ) {
             Ok(r) => r,
             Err(e) => {
@@ -4393,6 +4373,7 @@ impl GameState {
                 return Err(e);
             }
         };
+        self.note_cast_payment_riders(&receipt);
         if receipt.side_effects.life_lost > 0 {
             self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
@@ -4846,7 +4827,7 @@ impl GameState {
         // ability activations, engine-driven pays). Restricted "cast only"
         // mana never applies to these, so pay as `Other`. These paths don't
         // pose the float-spend confirmation, so pass `None`.
-        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, crate::mana::SpellKind::Other, None)
+        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, &crate::mana::SpellKind::default(), None)
     }
 
     /// CR 601.2g — the pre-existing floating mana that paying `cost` would sweep
@@ -4894,7 +4875,7 @@ impl GameState {
         &self,
         payer: usize,
         cost: &crate::mana::ManaCost,
-        kind: crate::mana::SpellKind,
+        kind: &crate::mana::SpellKind,
     ) -> bool {
         use crate::mana::ManaSymbol;
         // Prefilled pool: if the floating mana already covers the *whole* cost,
@@ -4955,7 +4936,7 @@ impl GameState {
         cost: &crate::mana::ManaCost,
         snapshot: PaymentSnapshot,
         forced_only: bool,
-        kind: crate::mana::SpellKind,
+        kind: &crate::mana::SpellKind,
         // CR 601.2g float-spend choice: `Some(false)` = the player declined to
         // spend their pre-existing floating mana, so pay from freshly-tapped
         // sources and keep the float; `Some(true)`/`None` = normal payment
@@ -5667,6 +5648,21 @@ impl GameState {
             }
         };
 
+        // Spend context for restricted mana: an ArtifactOnly pool entry
+        // (Power Depot) may fund abilities of artifact sources.
+        let ability_spend_kind = {
+            let def = if source_in_gy {
+                self.players[source_owner.unwrap()].graveyard.iter()
+                    .find(|c| c.id == card_id).map(|c| &c.definition)
+            } else if source_in_hand {
+                self.players[source_owner.unwrap()].hand.iter()
+                    .find(|c| c.id == card_id).map(|c| &c.definition)
+            } else {
+                self.battlefield.iter().find(|c| c.id == card_id).map(|c| &c.definition)
+            };
+            def.map(|d| d.ability_spend_kind()).unwrap_or_default()
+        };
+
         // For graveyard/hand activations, reject if the ability isn't flagged
         // for that zone. This prevents activating a card's printed
         // battlefield-only ability from another zone accidentally.
@@ -6189,7 +6185,7 @@ impl GameState {
         if spend_float.is_none()
             && self.players[p].wants_ui
             && !effective_mana_cost.symbols.is_empty()
-            && self.float_spend_is_optional(p, &effective_mana_cost, crate::mana::SpellKind::Other)
+            && self.float_spend_is_optional(p, &effective_mana_cost, &ability_spend_kind)
         {
             let float_summary = self.protectable_float(p, &effective_mana_cost).summary();
             let name = self
@@ -6239,14 +6235,14 @@ impl GameState {
         let mut auto_mana_events = Vec::new();
         if let Some(snapshot) = pre_snapshot {
             let forced_only = self.players[p].wants_ui;
-            // Activated-ability mana costs are not spell casts; restricted
-            // "cast only" mana can never pay them.
+            // Restricted mana may fund this only per the source's spend
+            // context (e.g. ArtifactOnly mana for an artifact's ability).
             let receipt = self.try_pay_after_snapshot_mode(
                 p,
                 &effective_mana_cost,
                 snapshot,
                 forced_only,
-                crate::mana::SpellKind::Other,
+                &ability_spend_kind,
                 spend_float,
             )?;
             if receipt.side_effects.life_lost > 0 {

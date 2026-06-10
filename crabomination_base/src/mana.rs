@@ -337,27 +337,45 @@ impl ManaCost {
 pub enum SpendRestriction {
     /// "Spend this mana only to cast instant and sorcery spells."
     InstantSorceryOnly,
+    /// "Spend this mana only to cast artifact spells or activate
+    /// abilities of artifacts." (Power Depot, Mishra's Workshop kin.)
+    ArtifactOnly,
+    /// "Spend this mana only to cast a creature spell of the chosen
+    /// type, and that spell can't be countered." (Cavern of Souls.)
+    /// Spending it stamps the cast uncounterable via
+    /// [`PaymentSideEffects::spent_restrictions`].
+    CreatureOfTypeUncounterable(crate::card::CreatureType),
 }
 
 impl SpendRestriction {
-    /// True iff mana under this restriction may pay for a spell of `kind`.
-    pub fn allows(self, kind: SpellKind) -> bool {
+    /// True iff mana under this restriction may fund a payment of `kind`.
+    pub fn allows(self, kind: &SpellKind) -> bool {
         match self {
-            SpendRestriction::InstantSorceryOnly => kind == SpellKind::InstantOrSorcery,
+            SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
+            SpendRestriction::ArtifactOnly => kind.artifact,
+            SpendRestriction::CreatureOfTypeUncounterable(t) => {
+                kind.changeling || kind.creature_types.contains(&t)
+            }
         }
     }
 }
 
 /// What a payment is funding, so spend-restricted mana can decide whether
-/// it is allowed to contribute. Only spell casts thread a `SpellKind`;
-/// ability activations and other costs pay via the unrestricted
-/// [`ManaPool::pay`], which never touches restricted mana.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum SpellKind {
+/// it is allowed to contribute. Spell casts build this from the card being
+/// cast ([`crate::card::CardDefinition::spell_kind`]); ability activations
+/// describe their source ([`crate::card::CardDefinition::ability_spend_kind`]);
+/// everything else pays with the empty [`SpellKind::default`], which no
+/// restricted mana may fund.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SpellKind {
     /// Casting an instant or sorcery spell.
-    InstantOrSorcery,
-    /// Casting any other spell (creature, artifact, enchantment, …).
-    Other,
+    pub instant_or_sorcery: bool,
+    /// Casting an artifact spell, or activating an ability of an artifact.
+    pub artifact: bool,
+    /// The creature types of a creature spell being cast (empty otherwise).
+    pub creature_types: Vec<crate::card::CreatureType>,
+    /// The spell is a Changeling (every creature type, CR 702.73).
+    pub changeling: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.
@@ -397,6 +415,10 @@ pub struct ManaPool {
 #[derive(Debug, Clone, Default)]
 pub struct PaymentSideEffects {
     pub life_lost: u32,
+    /// Restrictions of the spend-restricted mana that actually funded the
+    /// payment — lets the cast path apply spend-triggered riders (Cavern
+    /// of Souls' "and that spell can't be countered").
+    pub spent_restrictions: Vec<SpendRestriction>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -751,7 +773,7 @@ impl ManaPool {
     pub fn pay_for_spell(
         &mut self,
         cost: &ManaCost,
-        kind: SpellKind,
+        kind: &SpellKind,
     ) -> Result<PaymentSideEffects, ManaError> {
         // How much restricted mana, per color, may fund a spell of `kind`?
         let mut spendable = [0u32; 5];
@@ -776,7 +798,7 @@ impl ManaPool {
         for c in Color::ALL {
             work.add(c, spendable[color_index(c)]);
         }
-        let side_effects = work.pay(cost)?;
+        let mut side_effects = work.pay(cost)?;
 
         // Settle each color: restricted drains before unrestricted.
         let mut result = work.clone();
@@ -800,6 +822,9 @@ impl ManaPool {
                     let d = rem.min(entry.1);
                     entry.1 -= d;
                     rem -= d;
+                    if d > 0 && !side_effects.spent_restrictions.contains(&entry.2) {
+                        side_effects.spent_restrictions.push(entry.2);
+                    }
                 }
             }
         }

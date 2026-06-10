@@ -978,6 +978,12 @@ pub enum ManaPayload {
     /// Resonating Lute). Colorless pips in a wrapped payload are added
     /// unrestricted — no current card produces restricted colorless mana.
     Restricted(Box<ManaPayload>, SpendRestriction),
+    /// Like `Restricted`, but the restriction is "spend only to cast a
+    /// creature spell of the source's chosen creature type, and that spell
+    /// can't be countered" (Cavern of Souls). The chosen type is read off
+    /// the source permanent at resolution; with none chosen the mana is
+    /// added unrestricted.
+    RestrictedToChosenType(Box<ManaPayload>),
     /// Add one mana of the color stamped on the source's `chosen_color`
     /// (Coldsteel Heart, choose-a-color rocks). Falls back to colorless when
     /// no color was chosen.

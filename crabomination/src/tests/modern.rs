@@ -30993,13 +30993,48 @@ fn power_depot_enters_tapped_and_fixes_mana() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).unwrap().tapped, "Power Depot enters tapped");
     assert!(g.battlefield_find(id).unwrap().definition.card_types.contains(&crate::card::CardType::Artifact));
-    // Untap and tap for any color (the second ability).
+    // Untap and tap for any color (the second ability) — the pip is
+    // spend-restricted to artifact spells / artifact abilities.
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 1, target: None, x_value: Some(0),
     }).expect("tap for any color");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana of a chosen color");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "restricted artifact-only pip");
+}
+
+#[test]
+fn power_depot_mana_spends_only_on_artifacts() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::power_depot());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Color(Color::Green),
+        DecisionAnswer::Color(Color::Green),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("tap for restricted mana");
+
+    // Can't fund a creature spell…
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "artifact-only mana can't fund a creature spell"
+    );
+
+    // …but funds an artifact spell.
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.perform_action(GameAction::CastSpell {
+        card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("artifact-only mana + {C} covers Mind Stone's {2}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == stone), "Mind Stone resolved");
 }
 
 #[test]

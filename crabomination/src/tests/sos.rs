@@ -4556,7 +4556,7 @@ fn abstract_paintmage_adds_ur_at_first_main_phase() {
     use crate::mana::{cost, r, u, SpellKind};
     let mut clone = pool.clone();
     clone
-        .pay_for_spell(&cost(&[u(), r()]), SpellKind::InstantOrSorcery)
+        .pay_for_spell(&cost(&[u(), r()]), &SpellKind { instant_or_sorcery: true, ..Default::default() })
         .expect("restricted {U}{R} funds an instant/sorcery");
 }
 

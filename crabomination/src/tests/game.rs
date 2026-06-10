@@ -3515,21 +3515,29 @@ fn elesh_norn_suppresses_opponent_etb_triggers() {
 
 #[test]
 fn cavern_of_souls_makes_creatures_uncounterable() {
-    // While P0 controls a Cavern of Souls, any creature spell P0 casts is
-    // marked uncounterable on the stack — Counterspell from P1 should not
-    // remove it.
+    // Spending Cavern's chosen-type mana on a matching creature spell
+    // stamps the cast uncounterable (mana provenance, not a board scan).
     let mut g = two_player_game();
-    let _cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
+    let cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
+    g.battlefield_find_mut(cavern).unwrap().chosen_creature_type =
+        Some(crate::card::CreatureType::Bear);
+
+    // Tap Cavern for restricted {G} (ability 1 = any color; ScriptedDecider
+    // picks Green), then pay the rest with plain mana.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cavern, ability_index: 1, target: None, x_value: None,
+    })
+    .expect("Cavern any-color ability");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "restricted pip floats");
 
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Grizzly Bears castable for {1}{G}");
 
-    // P1 tries to counter the bear.
     let counter = g.add_card_to_hand(1, catalog::counterspell());
     g.players[1].mana_pool.add(Color::Blue, 2);
     g.priority.player_with_priority = 1;
@@ -3544,62 +3552,63 @@ fn cavern_of_souls_makes_creatures_uncounterable() {
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == bear),
-        "Cavern of Souls should make P0's creature uncounterable");
+        "a Bear cast with Cavern (Bear) mana can't be countered");
 }
 
 #[test]
 fn cavern_of_souls_does_not_protect_noncreature_spells() {
-    // Cavern's uncounterable approximation is creature-only — countering a
-    // noncreature spell should still work even with a Cavern in play.
+    // Cavern's restricted mana can't even pay for a noncreature spell,
+    // and a creature cast *without* Cavern mana stays counterable.
     let mut g = two_player_game();
-    let _cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
+    let cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
+    g.battlefield_find_mut(cavern).unwrap().chosen_creature_type =
+        Some(crate::card::CreatureType::Bear);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cavern, ability_index: 1, target: None, x_value: None,
+    })
+    .expect("Cavern any-color ability");
 
+    // Restricted {R} alone can't fund Lightning Bolt.
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
+    let err = g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    })
-    .expect("Lightning Bolt castable for {R}");
-
-    let counter = g.add_card_to_hand(1, catalog::counterspell());
-    g.players[1].mana_pool.add(Color::Blue, 2);
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: counter,
-        target: Some(Target::Permanent(bolt)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Counterspell castable");
-    drain_stack(&mut g);
-
-    assert!(!g.stack.iter().any(|si| matches!(
-        si, crate::game::StackItem::Spell { card, .. } if card.id == bolt
-    )), "Lightning Bolt should be countered (Cavern only protects creatures)");
+    });
+    assert!(err.is_err(), "Cavern mana can't pay a noncreature spell");
 }
 
 #[test]
 fn cavern_of_souls_only_protects_named_creature_type() {
-    // When the chosen_creature_type is set on a Cavern, only spells with
-    // that creature type are uncounterable; others remain counterable.
+    // The chosen type gates spending: Bear mana can't fund an Elf spell.
     let mut g = two_player_game();
     let cavern = g.add_card_to_battlefield(0, catalog::cavern_of_souls());
     g.battlefield_find_mut(cavern).unwrap().chosen_creature_type =
         Some(crate::card::CreatureType::Bear);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cavern, ability_index: 1, target: None, x_value: None,
+    })
+    .expect("Cavern any-color ability");
 
-    // Llanowar Elves (Elf type, not Bear) should be counterable.
     let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "Bear-restricted mana can't fund an Elf spell"
+    );
+
+    // Paid with plain mana instead, the Elf is counterable as normal.
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Llanowar Elves castable");
-
+    .expect("Llanowar Elves castable from plain {G}");
     let counter = g.add_card_to_hand(1, catalog::counterspell());
     g.players[1].mana_pool.add(Color::Blue, 2);
     g.priority.player_with_priority = 1;
@@ -3610,32 +3619,7 @@ fn cavern_of_souls_only_protects_named_creature_type() {
     drain_stack(&mut g);
 
     assert!(!g.battlefield.iter().any(|c| c.id == elf),
-        "Elf should be countered — Cavern named Bear, Elves are not Bears");
-}
-
-#[test]
-fn cavern_of_souls_etb_picks_creature_type_via_decider() {
-    // ETB trigger asks the decider; ScriptedDecider picks Phyrexian and
-    // verify the chosen type is recorded.
-    let mut g = two_player_game();
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::CreatureType(crate::card::CreatureType::Phyrexian),
-    ]));
-
-    g.add_card_to_library(0, catalog::cavern_of_souls());
-    let cavern_id = g.players[0].library[0].id;
-    let card = g.players[0].library.remove(0);
-    g.players[0].hand.push(card);
-    g.perform_action(GameAction::PlayLand(cavern_id))
-        .expect("Cavern should be playable");
-    drain_stack(&mut g);
-
-    let cavern = g.battlefield_find(cavern_id).expect("Cavern on battlefield");
-    assert_eq!(
-        cavern.chosen_creature_type,
-        Some(crate::card::CreatureType::Phyrexian),
-        "ETB should record the chosen type"
-    );
+        "an Elf paid with plain mana is countered as normal");
 }
 
 #[test]

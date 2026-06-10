@@ -312,16 +312,6 @@ pub enum StaticEffect {
         #[serde(default)]
         also_dies: bool,
     },
-    /// CR 702.x — "Creature spells you cast of the chosen type can't be
-    /// countered." Cavern of Souls. The chosen creature type lives on
-    /// the permanent's `chosen_creature_type` field (set at ETB) — the
-    /// engine reads it at cast time via
-    /// `caster_grants_uncounterable_with_x`. A creature spell whose
-    /// caster controls any permanent carrying this static AND whose
-    /// types match the chosen type is flagged uncounterable.
-    /// `chosen_creature_type == None` falls back to "unrestricted" so
-    /// legacy test fixtures that bypass the ETB still work.
-    UncounterableCreaturesOfChosenType,
     /// "Creatures you control of the chosen type get +P/+T" — a tribal anthem
     /// keyed to the source permanent's `chosen_creature_type` (set at ETB via
     /// `Effect::NameCreatureType`). Resolved live in `gather_continuous_effects`

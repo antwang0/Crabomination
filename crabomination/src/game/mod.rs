@@ -360,6 +360,12 @@ pub struct GameState {
     /// in `cost_reduction_for_spell`, and cleared immediately after the cast.
     #[serde(skip)]
     pub(crate) extra_cast_reduction: u32,
+    /// Transient: the cast in flight paid with Cavern-of-Souls-style
+    /// restricted mana whose rider makes the spell uncounterable
+    /// (`SpendRestriction::CreatureOfTypeUncounterable`). Set right after
+    /// payment, consumed by `finalize_cast`.
+    #[serde(skip)]
+    pub(crate) cast_paid_uncounterable: bool,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -819,6 +825,7 @@ impl Clone for GameState {
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
             extra_cast_reduction: self.extra_cast_reduction,
+            cast_paid_uncounterable: self.cast_paid_uncounterable,
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
@@ -929,6 +936,7 @@ impl GameState {
             last_created_token: None,
             last_die_roll: 0,
             extra_cast_reduction: 0,
+            cast_paid_uncounterable: false,
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
@@ -7066,9 +7074,6 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).
             | StaticEffect::SuppressCreatureEtbTriggers { .. }
-            // UncounterableCreaturesOfChosenType — read at cast time by
-            // `caster_grants_uncounterable_with_x`; no layer effect.
-            | StaticEffect::UncounterableCreaturesOfChosenType
             // SpellsYouCastHaveDelve (Teval) — read at cast time by
             // `controller_grants_spells_delve`; no layer effect.
             | StaticEffect::SpellsYouCastHaveDelve

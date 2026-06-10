@@ -245,7 +245,8 @@ impl Effect {
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
-                    ManaPayload::Restricted(inner, _) => match inner.as_ref() {
+                    ManaPayload::Restricted(inner, _)
+                    | ManaPayload::RestrictedToChosenType(inner) => match inner.as_ref() {
                         ManaPayload::Colorless(v)
                         | ManaPayload::AnyOneColor(v)
                         | ManaPayload::AnyColors(v)

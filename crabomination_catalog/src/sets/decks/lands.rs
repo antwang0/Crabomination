@@ -418,77 +418,38 @@ pub fn gemstone_caverns() -> CardDefinition {
     }
 }
 
-/// Cavern of Souls — Land. As Cavern of Souls enters, choose a creature
-/// type. {T}: Add {C}. {T}: Add one mana of any color. Spend this mana
-/// only to cast a creature spell of the chosen type, and that spell
-/// can't be countered.
-///
-/// Approximations:
-///
-/// - **Name-a-type ETB**: a self-source `ChooseMode` ETB trigger picks
-///   one of the demo decks' relevant types (Eldrazi / Demon / Sphinx /
-///   Frog / Phyrexian / Angel / Avatar / Beast). The chosen type is
-///   discarded after the trigger resolves; the engine doesn't yet wire
-///   per-cast mana provenance, so the actual "which creatures are
-///   uncounterable" check still collapses to "any creature you cast"
-///   while you control a Cavern (see `caster_grants_uncounterable` in
-///   `actions.rs`). The mode pick keeps the modal-decision round-trip
-///   available to the UI.
-/// - **Activated mana**: only the `{T}: Add {C}` half is wired. The
-///   uncounterable flag still fires correctly for creature spells via
-///   the simplified rule.
+/// Cavern of Souls — Land. As this enters, choose a creature type.
+/// {T}: Add {C}. {T}: Add one mana of any color; spend it only to cast a
+/// creature spell of the chosen type, and that spell can't be countered
+/// (mana provenance via `ManaPayload::RestrictedToChosenType`).
 pub fn cavern_of_souls() -> CardDefinition {
     use crate::card::TriggeredAbility;
     CardDefinition {
         name: "Cavern of Souls",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(1)),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::RestrictedToChosenType(Box::new(
+                        ManaPayload::AnyOneColor(Value::Const(1)),
+                    )),
+                },
+                ..Default::default()
+            },
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            // "As ~ enters, choose a creature type." `NameCreatureType`
-            // surfaces a `Decision::ChooseCreatureType` to the controller
-            // (AutoDecider picks Demon, matching the demo Goryo's deck's
-            // Griselbrand). The chosen type is stored on the Cavern's
-            // `CardInstance.chosen_creature_type` and consulted by
-            // `caster_grants_uncounterable` to gate which creature spells
-            // the Cavern actually protects.
-            effect: Effect::NameCreatureType {
-                what: Selector::This,
-            },
-        }],
-        // The "creature spells of the chosen type can't be countered"
-        // half. `caster_grants_uncounterable_with_x` scans for this
-        // static instead of matching on the printed name, then reads
-        // `chosen_creature_type` off the permanent for the gate.
-        static_abilities: vec![crate::card::StaticAbility {
-            description:
-                "Creature spells you cast of the chosen type can't be countered.",
-            effect: crate::effect::StaticEffect::UncounterableCreaturesOfChosenType,
+            effect: Effect::NameCreatureType { what: Selector::This },
         }],
         ..Default::default()
     }

@@ -1642,6 +1642,27 @@ impl CardDefinition {
         self.subtypes.land_types.contains(&lt)
     }
 
+    /// Spend-restriction context for casting this card as a spell — gates
+    /// which restricted mana [`crate::mana::ManaPool::pay_for_spell`] may drain.
+    pub fn spell_kind(&self) -> crate::mana::SpellKind {
+        crate::mana::SpellKind {
+            instant_or_sorcery: self.is_instant() || self.is_sorcery(),
+            artifact: self.is_artifact(),
+            creature_types: if self.is_creature() {
+                self.subtypes.creature_types.clone()
+            } else {
+                Vec::new()
+            },
+            changeling: self.is_creature() && self.keywords.contains(&Keyword::Changeling),
+        }
+    }
+
+    /// Spend-restriction context for activating an ability of this card
+    /// ("… or activate abilities of artifacts" — Power Depot).
+    pub fn ability_spend_kind(&self) -> crate::mana::SpellKind {
+        crate::mana::SpellKind { artifact: self.is_artifact(), ..Default::default() }
+    }
+
     // Vehicles (CR 301.7) carry printed P/T even though they aren't
     // creatures until crewed, so their base P/T must survive into the layer
     // system — when a Crew activation animates them via a layer-4

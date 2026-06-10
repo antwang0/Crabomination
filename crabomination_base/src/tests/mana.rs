@@ -1,5 +1,15 @@
 use super::*;
 
+/// Spend context for an instant/sorcery cast.
+fn is_kind() -> SpellKind {
+    SpellKind { instant_or_sorcery: true, ..Default::default() }
+}
+
+/// Spend context that no restricted mana may fund.
+fn other_kind() -> SpellKind {
+    SpellKind::default()
+}
+
 #[test]
 fn cmc_sums_pip_values() {
     assert_eq!(cost(&[r()]).cmc(), 1, "Lightning Bolt {{R}}");
@@ -320,7 +330,7 @@ fn restricted_mana_kept_out_of_total_and_amount() {
 fn restricted_mana_pays_an_instant_or_sorcery() {
     let mut pool = ManaPool::new();
     pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
-    pool.pay_for_spell(&cost(&[r()]), SpellKind::InstantOrSorcery)
+    pool.pay_for_spell(&cost(&[r()]), &is_kind())
         .expect("I/S spell may use instants-only mana");
     assert_eq!(pool.restricted_total(), 0, "the restricted {{R}} was consumed");
     assert_eq!(pool.total(), 0);
@@ -331,7 +341,7 @@ fn restricted_mana_cannot_pay_a_creature() {
     let mut pool = ManaPool::new();
     pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
     assert!(
-        pool.pay_for_spell(&cost(&[r()]), SpellKind::Other).is_err(),
+        pool.pay_for_spell(&cost(&[r()]), &other_kind()).is_err(),
         "instants-only mana can't fund a creature spell"
     );
     assert_eq!(pool.restricted_total(), 1, "failed pay leaves restricted mana untouched");
@@ -344,7 +354,7 @@ fn restricted_mana_drains_before_unrestricted_of_same_color() {
     let mut pool = ManaPool::new();
     pool.add(Color::Red, 1);
     pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
-    pool.pay_for_spell(&cost(&[r()]), SpellKind::InstantOrSorcery).unwrap();
+    pool.pay_for_spell(&cost(&[r()]), &is_kind()).unwrap();
     assert_eq!(pool.restricted_total(), 0, "restricted R spent first");
     assert_eq!(pool.amount(Color::Red), 1, "unrestricted R remains");
 }
@@ -355,7 +365,7 @@ fn restricted_mana_funds_generic_pips_for_instants() {
     let mut pool = ManaPool::new();
     pool.add_restricted(Color::Blue, 1, SpendRestriction::InstantSorceryOnly);
     pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
-    pool.pay_for_spell(&cost(&[generic(1), u()]), SpellKind::InstantOrSorcery)
+    pool.pay_for_spell(&cost(&[generic(1), u()]), &is_kind())
         .expect("restricted mana covers colored + generic of an I/S spell");
     assert_eq!(pool.restricted_total(), 0);
 }
@@ -367,7 +377,7 @@ fn restricted_mana_falls_back_to_plain_pay_for_other_spells() {
     let mut pool = ManaPool::new();
     pool.add(Color::Green, 1);
     pool.add_restricted(Color::Red, 2, SpendRestriction::InstantSorceryOnly);
-    pool.pay_for_spell(&cost(&[g()]), SpellKind::Other).unwrap();
+    pool.pay_for_spell(&cost(&[g()]), &other_kind()).unwrap();
     assert_eq!(pool.amount(Color::Green), 0);
     assert_eq!(pool.restricted_total(), 2, "restricted mana not consumed by a non-I/S cast");
 }
@@ -380,7 +390,7 @@ fn restricted_pay_is_atomic_on_failure() {
     pool.add(Color::Blue, 1);
     pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
     assert!(pool
-        .pay_for_spell(&cost(&[r(), r()]), SpellKind::InstantOrSorcery)
+        .pay_for_spell(&cost(&[r(), r()]), &is_kind())
         .is_err());
     assert_eq!(pool.amount(Color::Blue), 1);
     assert_eq!(pool.restricted_total(), 1);
