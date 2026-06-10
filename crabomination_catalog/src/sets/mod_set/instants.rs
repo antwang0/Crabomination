@@ -790,19 +790,18 @@ pub fn lose_focus() -> CardDefinition {
 /// Stifle — {U} Instant. Counter target activated or triggered ability.
 ///
 /// Wired via `Effect::CounterAbility` (the Consign-to-Memory primitive).
-/// Targets a permanent — the engine walks the stack top-down and removes
-/// the topmost `StackItem::Trigger` whose `source` matches that permanent.
-/// The "or activated ability" branch reuses the same primitive: an
-/// activated ability also pushes a `StackItem::Trigger` with `source ==
-/// the activator's permanent`, so a single CounterAbility variant covers
-/// both cases.
+/// Targets a permanent with an ability on the stack
+/// (`SelectionRequirement::HasAbilityOnStack`, CR 113.9) — the engine
+/// removes the topmost `StackItem::Trigger` whose `source` matches.
+/// Activated abilities push the same stack-item shape, so one variant
+/// covers both halves of the printed text.
 pub fn stifle() -> CardDefinition {
     CardDefinition {
         name: "Stifle",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::CounterAbility {
-            what: target_filtered(SelectionRequirement::Permanent),
+            what: target_filtered(SelectionRequirement::HasAbilityOnStack),
         },
         ..Default::default()
     }

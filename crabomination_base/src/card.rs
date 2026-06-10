@@ -815,6 +815,10 @@ pub enum SelectionRequirement {
     /// point this turn (`CardInstance.attacked_this_turn`). Relentless
     /// Assault's "untap all creatures that attacked this turn".
     AttackedThisTurn,
+    /// True when the candidate permanent is the source of an activated or
+    /// triggered ability currently on the stack. Targeting filter for
+    /// `Effect::CounterAbility` (Stifle — CR 113.9).
+    HasAbilityOnStack,
     /// CR 603.4 — true when the candidate permanent entered the battlefield
     /// this turn (its `CardInstance.entered_turn` equals the current
     /// `GameState.turn_number`). Battlefield-only; powers "each creature that

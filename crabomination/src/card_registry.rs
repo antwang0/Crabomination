@@ -60,12 +60,13 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     }
     // Extra-turn spells (sets::xtra) — registered so mid-game snapshots
     // involving them round-trip through the name→factory lookup.
-    let xtra: [CardFactory; 5] = [
+    let xtra: [CardFactory; 6] = [
         sets::xtra::time_walk,
         sets::xtra::time_warp,
         sets::xtra::temporal_manipulation,
         sets::xtra::capture_of_jingzhou,
         sets::xtra::nexus_of_fate,
+        sets::xtra::part_the_waterveil,
     ];
     all.extend_from_slice(&xtra);
     // Kaladesh energy cards (sets::kld) — registered so mid-game snapshots

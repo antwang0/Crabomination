@@ -1115,6 +1115,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // Awaken (CR 702.113)
+        part_the_waterveil,
         // Disturb (CR 702.146)
         baithook_angler,
         // milled triggers (EventKind::CardMilled)

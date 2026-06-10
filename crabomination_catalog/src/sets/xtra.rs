@@ -69,3 +69,45 @@ pub fn nexus_of_fate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Part the Waterveil — {4}{U}{U} Sorcery. Take an extra turn after this
+/// one. Awaken 6—{6}{U}{U} (CR 702.113): cast for the awaken cost to also
+/// put six +1/+1 counters on target land you control; it becomes a 0/0
+/// Elemental creature with haste. (The self-exile rider is omitted.)
+pub fn part_the_waterveil() -> CardDefinition {
+    use crate::card::{
+        AlternativeCost, CounterType, CreatureType, Keyword, SelectionRequirement, Selector,
+        Value,
+    };
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    let own_land = SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Part the Waterveil",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: extra_turn_body(),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(6), u(), u()]),
+            target_filter: Some(own_land.clone()),
+            effect_override: Some(Effect::Seq(vec![
+                extra_turn_body(),
+                Effect::AddCounter {
+                    what: target_filtered(own_land),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(6),
+                },
+                Effect::BecomeCreature {
+                    what: Selector::Target(0),
+                    power: Value::Const(0),
+                    toughness: Value::Const(0),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![Keyword::Haste],
+                    duration: Duration::Permanent,
+                },
+            ])),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

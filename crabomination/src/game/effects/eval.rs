@@ -1094,6 +1094,10 @@ impl GameState {
                         self.block_map.len() == 1 && self.block_map.contains_key(&card.id)
                     }
                     R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
+                    R::HasAbilityOnStack => self.stack.iter().any(|si| matches!(
+                        si,
+                        StackItem::Trigger { source, .. } if *source == card.id
+                    )),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
                     // Unresolved X-relative filter (no X in scope here).
                     R::ManaValueAtMostXFromCost => false,
@@ -1354,7 +1358,7 @@ impl GameState {
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
-            | R::AttackedThisTurn
+            | R::AttackedThisTurn | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn | R::IsEnchanted => false,
         }
     }

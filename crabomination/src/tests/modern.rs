@@ -48335,3 +48335,75 @@ fn relentless_assault_untaps_attackers_and_adds_post_main_combat() {
     assert_eq!(after_combat, Some(&TurnStep::PostCombatMain),
         "the extra combat is followed by an additional main phase");
 }
+
+/// CR 113.9 targeting precision: Stifle's filter rejects a permanent with
+/// no ability on the stack.
+#[test]
+fn stifle_rejects_target_without_ability_on_stack() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let stifle = g.add_card_to_hand(1, catalog::stifle());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: stifle,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(r.is_err(), "no ability on the stack from that source → illegal target");
+}
+
+/// CR 702.113 Awaken — Part the Waterveil's awaken cast animates the
+/// targeted land into a 6/6 (0/0 + six counters) Elemental with haste and
+/// still banks the extra turn.
+#[test]
+fn part_the_waterveil_awaken_animates_a_land_and_banks_extra_turn() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::part_the_waterveil());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spell,
+        pitch_card: None,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("awaken cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_turns, 1, "extra turn banked");
+    let cp = g.compute_battlefield();
+    let v = cp.iter().find(|c| c.id == land).unwrap();
+    assert!(v.card_types.contains(&CardType::Creature), "land animated");
+    assert!(v.card_types.contains(&CardType::Land), "still a land");
+    assert_eq!((v.power, v.toughness), (6, 6), "0/0 + six +1/+1 counters");
+    assert!(v.keywords.contains(&crate::card::Keyword::Haste));
+}
+
+/// CR 702.113a — the regular cast must not animate anything.
+#[test]
+fn part_the_waterveil_regular_cast_skips_awaken() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::part_the_waterveil());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("regular cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_turns, 1);
+    let cp = g.compute_battlefield();
+    let v = cp.iter().find(|c| c.id == land).unwrap();
+    assert!(!v.card_types.contains(&CardType::Creature), "land untouched");
+}
