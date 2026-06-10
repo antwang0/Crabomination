@@ -410,6 +410,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         planar_nexus,
         maze_of_ith,
         urborg_tomb_of_yawgmoth,
+        yavimaya_cradle_of_growth,
         // ── modern_decks-17 ──
         lightning_greaves,
         stonecoil_serpent,
@@ -433,6 +434,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         myr_battlesphere,
         duplicant,
         eon_hub,
+        ensnaring_bridge,
+        kaldra_compleat,
         spine_of_ish_sah,
         ankh_of_mishra,
         // ── Push XXIV (session 8) — colorless cube additions ──
@@ -1427,6 +1430,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        surgical_extraction,
         orcish_bowmasters,
         gravecrawler,
         knight_of_the_ebon_legion,

@@ -7368,6 +7368,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GraveyardLibraryLockdown
             // SkipStep — consulted by `advance_step` (CR 614.10); no layer.
             | StaticEffect::SkipStep { .. }
+            // AttackPowerCapByControllerHand — consulted in declare_attackers.
+            | StaticEffect::AttackPowerCapByControllerHand
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }

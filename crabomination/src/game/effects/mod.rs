@@ -2598,6 +2598,15 @@ impl GameState {
                 // exile→exile re-routes) just relocate via `move_card_to`.
                 for ent in self.resolve_selector(what, ctx) {
                     match ent {
+                        // A `Permanent` ref whose object already left the
+                        // battlefield (died mid-trigger — Kaldra Compleat's
+                        // "exile that creature") is exiled from wherever it
+                        // went instead of silently no-oping.
+                        EntityRef::Permanent(cid)
+                            if !self.battlefield.iter().any(|c| c.id == cid) =>
+                        {
+                            self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                        }
                         EntityRef::Permanent(cid) => {
                             self.remove_from_battlefield_to_exile(cid);
                             // Bump the controller's per-turn exile tally
@@ -2768,21 +2777,24 @@ impl GameState {
             }
 
             Effect::ExileSameNameAsTarget { what } => {
-                // Crumble to Dust: exile the anchor permanent, then exile every
-                // same-named card from its owner's graveyard, hand, and library,
-                // and shuffle that library. Read the anchor's name + owner first.
+                // Crumble to Dust / Surgical Extraction: exile the anchor
+                // (battlefield permanent or graveyard card), then exile every
+                // same-named card from its owner's graveyard, hand, and
+                // library, and shuffle that library.
                 let anchor = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
-                    EntityRef::Permanent(c) => Some(c),
+                    EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
                     _ => None,
                 });
                 let Some(anchor_id) = anchor else { return Ok(()); };
                 let Some((name, owner)) = self
-                    .battlefield_find(anchor_id)
+                    .find_card_anywhere(anchor_id)
                     .map(|c| (c.definition.name.to_string(), c.owner))
                 else { return Ok(()); };
 
-                self.remove_from_battlefield_to_exile(anchor_id);
-                events.push(GameEvent::PermanentExiled { card_id: anchor_id });
+                if self.battlefield_find(anchor_id).is_some() {
+                    self.remove_from_battlefield_to_exile(anchor_id);
+                    events.push(GameEvent::PermanentExiled { card_id: anchor_id });
+                }
 
                 // Sweep the owner's hidden/graveyard zones for same-named cards.
                 let pl = &mut self.players[owner];

@@ -340,6 +340,10 @@ pub enum StaticEffect {
         /// `true` = every player's step; `false` = only the controller's.
         all_players: bool,
     },
+    /// Ensnaring Bridge — creatures with power greater than the number of
+    /// cards in this permanent's controller's hand can't attack. Enforced
+    /// in `declare_attackers` against layer-computed power.
+    AttackPowerCapByControllerHand,
     /// CR 305.7 — "[lands] are <type>" statics. `replace: true` strips the
     /// other land types and all abilities (Blood Moon / Magus of the Moon —
     /// the intrinsic mana ability follows the computed type); `false` adds

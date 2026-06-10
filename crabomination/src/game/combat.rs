@@ -161,8 +161,28 @@ impl GameState {
             self.players[p].mana_pool.spend_generic(total_tax);
         }
 
+        // Ensnaring Bridge — creatures with power greater than the bridge
+        // controller's hand size can't attack. Collect the live caps once.
+        let attack_power_caps: Vec<usize> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::AttackPowerCapByControllerHand)
+                })
+            })
+            .map(|c| self.players[c.controller].hand.len())
+            .collect();
+
         for atk in attacks {
             let id = atk.attacker;
+            // Ensnaring Bridge cap (computed power, CR 613).
+            if !attack_power_caps.is_empty() {
+                let power = self.computed_permanent(id).map(|c| c.power).unwrap_or(0);
+                if attack_power_caps.iter().any(|cap| power > *cap as i32) {
+                    return Err(GameError::CannotAttack(id));
+                }
+            }
             // "Can't attack unless defending player controls a [filter]"
             // (Dandân). Resolved before the mutable attacker binding to keep
             // the borrows disjoint: require ≥1 matching permanent under the

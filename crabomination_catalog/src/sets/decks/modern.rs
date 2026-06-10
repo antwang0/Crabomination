@@ -39415,3 +39415,105 @@ pub fn urborg_tomb_of_yawgmoth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Yavimaya, Cradle of Growth — Legendary Land. Each land is a Forest in
+/// addition to its other land types.
+pub fn yavimaya_cradle_of_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Yavimaya, Cradle of Growth",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "Each land is a Forest in addition to its other land types.",
+            effect: StaticEffect::LandTypeChanger {
+                applies_to: Selector::EachPermanent(SelectionRequirement::Land),
+                land_type: LandType::Forest,
+                replace: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ensnaring Bridge — {3} Artifact. Creatures with power greater than the
+/// number of cards in your hand can't attack.
+pub fn ensnaring_bridge() -> CardDefinition {
+    CardDefinition {
+        name: "Ensnaring Bridge",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures with power greater than the number of cards in your hand can't attack.",
+            effect: StaticEffect::AttackPowerCapByControllerHand,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Surgical Extraction — {B/P} Instant. Target a nonbasic card in a
+/// graveyard; exile it and every same-named card from its owner's
+/// graveyard, hand, and library, then shuffle.
+pub fn surgical_extraction() -> CardDefinition {
+    use crate::mana::phyrexian;
+    CardDefinition {
+        name: "Surgical Extraction",
+        cost: ManaCost::new(vec![phyrexian(Color::Black)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileSameNameAsTarget {
+            what: target_filtered(
+                SelectionRequirement::Not(Box::new(SelectionRequirement::IsBasicLand)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kaldra Compleat — {7} Legendary Equipment, living weapon, indestructible.
+/// Equipped creature gets +5/+5, first strike, trample, indestructible,
+/// haste, and "whenever this deals combat damage to a creature, exile it."
+pub fn kaldra_compleat() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    let germ = TokenDefinition {
+        name: "Phyrexian Germ".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kaldra Compleat",
+        cost: cost(&[generic(7)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Indestructible, Keyword::Equip(cost(&[generic(7)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 5,
+            toughness: 5,
+            keywords: vec![
+                Keyword::FirstStrike,
+                Keyword::Trample,
+                Keyword::Indestructible,
+                Keyword::Haste,
+            ],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToCreature,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Exile { what: Selector::Target(0) },
+            }],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        ..Default::default()
+    }
+}

@@ -20972,6 +20972,93 @@ fn mind_bend_swaps_color_word_permanently() {
         "swap survives end of turn");
 }
 
+/// Yavimaya: each land is also a Forest — taps for green alongside its
+/// printed color.
+#[test]
+fn yavimaya_makes_every_land_a_forest_in_addition() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::yavimaya_cradle_of_growth());
+    let island = g.add_card_to_battlefield(1, catalog::island());
+    let cp = g.computed_permanent(island).unwrap();
+    assert!(cp.subtypes.land_types.contains(&LandType::Forest));
+    assert!(cp.subtypes.land_types.contains(&LandType::Island));
+}
+
+/// Ensnaring Bridge: a creature with power above the bridge controller's
+/// hand size can't attack; one at or under the cap can.
+#[test]
+fn ensnaring_bridge_caps_attacker_power_by_hand_size() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::ensnaring_bridge());
+    g.players[1].hand.clear();
+    g.add_card_to_hand(1, catalog::island()); // hand size 1
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let small = g.add_card_to_battlefield(0, catalog::ornithopter()); // 0/2
+    g.clear_sickness(big);
+    g.clear_sickness(small);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: big, target: AttackTarget::Player(1) },
+    ])).is_err(), "power 4 > hand 1 can't attack");
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: small, target: AttackTarget::Player(1) },
+    ])).expect("power 0 attacks under the bridge");
+}
+
+/// Surgical Extraction rips every copy of the targeted graveyard card.
+#[test]
+fn surgical_extraction_strips_all_copies() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let in_hand = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let in_lib = g.add_card_to_library(1, catalog::lightning_bolt());
+    let se = g.add_card_to_hand(0, catalog::surgical_extraction());
+    // {B/P} paid with 2 life — no mana needed.
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: se, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Surgical castable for Phyrexian black");
+    drain_stack(&mut g);
+    for id in [dead, in_hand, in_lib] {
+        assert!(g.exile.iter().any(|c| c.id == id), "copy exiled");
+    }
+    assert_eq!(g.players[0].life, life_before - 2, "paid 2 life for Phyrexian pip");
+}
+
+/// Kaldra Compleat: living weapon Germ becomes a 5/5; combat damage to a
+/// blocking creature exiles it.
+#[test]
+fn kaldra_compleat_germ_exiles_blockers() {
+    let mut g = two_player_game();
+    let kaldra = g.add_card_to_battlefield(0, catalog::kaldra_compleat());
+    g.fire_self_etb_triggers(kaldra, 0);
+    drain_stack(&mut g);
+    let germ = g.battlefield.iter()
+        .find(|c| c.definition.name == "Phyrexian Germ")
+        .map(|c| c.id)
+        .expect("Germ minted and equipped");
+    let cp = g.computed_permanent(germ).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "Germ wears Kaldra");
+    // Attack; a blocker dies to first-strike damage and is exiled.
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: germ, target: AttackTarget::Player(1) },
+    ])).expect("Germ has haste");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, germ)])).expect("block");
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().expect("first strike");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == blocker), "damaged blocker exiled");
+}
+
 #[test]
 fn toxic_deluge_sweeps_small_creatures() {
     let mut g = two_player_game();
