@@ -202,6 +202,9 @@ pub struct HandAffordances {
     /// CR 702.107 — hand cards with Replicate castable paying the replicate
     /// cost at least once, so the client can offer a "replicate N times?" stepper.
     pub replicatable: Vec<CardId>,
+    /// CR 702.33c — hand cards with Multikicker castable paying the kicker
+    /// cost at least once, so the client can offer a "kick N times?" stepper.
+    pub multikickable: Vec<CardId>,
     /// CR 702.94 — hand cards with a live Miracle window (revealed as the
     /// turn's first draw): castable for the cheaper miracle cost via
     /// `GameAction::CastFromZoneWithoutPaying`.
@@ -574,6 +577,12 @@ pub struct GameState {
     /// multiplies each pip count by `2^doublers`. 0 = no doubling (1×).
     #[serde(default)]
     pub(crate) mana_production_doublers: u8,
+    /// Identity of the spell currently resolving — (card id, caster, printed
+    /// colors). Stamped around `resolve_effect` in spell resolution so
+    /// source-aware damage replacements (Torbran) can read the controller and
+    /// colors of a card that's in no visible zone mid-resolution. Transient.
+    #[serde(skip)]
+    pub(crate) resolving_source: Option<(CardId, usize, Vec<crate::mana::Color>)>,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -892,6 +901,7 @@ impl Clone for GameState {
             suspend_signal: self.suspend_signal.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             mana_production_doublers: self.mana_production_doublers,
+            resolving_source: self.resolving_source.clone(),
             additional_combat_phases: self.additional_combat_phases,
             additional_post_main_combats: self.additional_post_main_combats,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
@@ -1009,6 +1019,7 @@ impl GameState {
             suspend_signal: None,
             prevent_combat_damage_this_turn: false,
             mana_production_doublers: 0,
+            resolving_source: None,
             additional_combat_phases: 0,
             additional_post_main_combats: 0,
             combat_damage_prevented_creatures: Vec::new(),
@@ -2134,11 +2145,18 @@ impl GameState {
         amount.saturating_mul(1 << d) >> h
     }
 
-    /// Target-aware damage scaling: the global doublers/halvers plus the
-    /// side-scoped ones (Gisela, Blade of Goldnight — `DoubleDamageToOpponents`
-    /// doubles events hitting an opponent's side, `HalveDamageToYou` halves
-    /// events hitting the controller's own side, CR 614.5).
-    pub fn scale_damage_to(&self, ent: crate::game::effects::EntityRef, amount: u32) -> u32 {
+    /// Source- and target-aware damage scaling: the global doublers/halvers,
+    /// the side-scoped ones (Gisela, Blade of Goldnight —
+    /// `DoubleDamageToOpponents` doubles events hitting an opponent's side,
+    /// `HalveDamageToYou` halves events hitting the controller's own side,
+    /// CR 614.5), and the source-scoped additive bonus (Torbran —
+    /// `AddDamageToOpponents`, applied before the multipliers).
+    pub fn scale_damage_to(
+        &self,
+        source: Option<CardId>,
+        ent: crate::game::effects::EntityRef,
+        amount: u32,
+    ) -> u32 {
         use crate::effect::StaticEffect;
         use crate::game::effects::EntityRef;
         let affected = match ent {
@@ -2146,18 +2164,43 @@ impl GameState {
             EntityRef::Permanent(c) => self.battlefield_find(c).map(|c| c.controller),
             EntityRef::Card(_) => None,
         };
+        // Source identity: a battlefield permanent's computed colors +
+        // controller, else the resolving spell stamped by `resolve_spell`.
+        let source_info: Option<(usize, Vec<crate::mana::Color>)> = source.and_then(|s| {
+            self.computed_permanent(s)
+                .map(|cp| (cp.controller, cp.colors.clone()))
+                .or_else(|| match &self.resolving_source {
+                    Some((id, caster, colors)) if *id == s => {
+                        Some((*caster, colors.clone()))
+                    }
+                    _ => None,
+                })
+        });
+        let mut amount = amount;
         let mut d = self.damage_doublers();
         let mut h = self.damage_halvers();
         if let Some(p) = affected {
             for c in &self.battlefield {
                 for sa in &c.definition.static_abilities {
-                    match sa.effect {
+                    match &sa.effect {
                         StaticEffect::DoubleDamageToOpponents
                             if !self.same_team(c.controller, p) =>
                         {
                             d += 1;
                         }
                         StaticEffect::HalveDamageToYou if c.controller == p => h += 1,
+                        StaticEffect::AddDamageToOpponents { source_color, amount: bonus }
+                            if !self.same_team(c.controller, p) =>
+                        {
+                            // "+N if a [color] source you control" — needs a
+                            // known source controlled by the static's owner.
+                            if let Some((src_ctrl, src_colors)) = &source_info
+                                && *src_ctrl == c.controller
+                                && source_color.is_none_or(|sc| src_colors.contains(&sc))
+                            {
+                                amount = amount.saturating_add(*bonus);
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -3871,6 +3914,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_squad(card_id, times, target, additional_targets, mode, x_value),
+            GameAction::CastSpellMultikicked {
+                card_id,
+                times,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_multikicked(card_id, times, target, additional_targets, mode, x_value),
             GameAction::CastSpellReplicate {
                 card_id,
                 times,
@@ -6796,7 +6847,17 @@ impl GameState {
         ctx.kicked = card.kicked;
         ctx.bargained = card.bargained;
         ctx.entwined = card.entwined;
-        let mut events = self.resolve_effect(&effect, &ctx)?;
+        // Stamp the resolving spell's identity so source-aware damage
+        // replacements (Torbran) can read its controller/colors while the
+        // card is in no visible zone.
+        let prev_src = self.resolving_source.replace((
+            card.id,
+            caster,
+            card.definition.printed_colors(),
+        ));
+        let res = self.resolve_effect(&effect, &ctx);
+        self.resolving_source = prev_src;
+        let mut events = res?;
         // CR 709 / 702.102 — a fused split cast resolves its right half in a
         // second pass, reading its target from `additional_targets` slot 0
         // (the left half consumed `target`). Fusable halves are single-target.
@@ -7591,6 +7652,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::HalveDamageDealt
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::HalveDamageToYou
+            | StaticEffect::AddDamageToOpponents { .. }
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }

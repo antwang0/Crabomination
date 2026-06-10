@@ -167,6 +167,11 @@ pub struct Player {
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
     pub silenced_this_turn: bool,
+    /// True once this player has searched their own library this turn
+    /// (CR 701.19). Reset for every player at the turn boundary. Powers
+    /// `Predicate::SearchedLibraryThisTurn` (Archive Trap's free alt cost).
+    #[serde(default)]
+    pub searched_library_this_turn: bool,
     /// "You gain protection from everything until your next turn" (The One
     /// Ring). While set: this player can't be targeted and all damage to
     /// them is prevented. Cleared when their turn begins.
@@ -378,6 +383,7 @@ impl Player {
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
             silenced_this_turn: false,
+            searched_library_this_turn: false,
             protected_from_everything: false,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,

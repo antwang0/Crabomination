@@ -240,6 +240,18 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.33c — cast a spell paying its Multikicker cost `times` times.
+    /// The kicker cost is charged that many extra times; the resolving spell
+    /// is stamped `kicked` + `kick_count = times` (`Value::TimesKicked`).
+    CastSpellMultikicked {
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.107 — cast an instant/sorcery paying its optional Replicate cost
     /// `times` times. The replicate cost is charged that many extra times and
     /// the spell is copied that many times (copies may choose new targets).
@@ -807,6 +819,7 @@ impl GameAction {
             self,
             A::CastSpell { .. }
                 | A::CastSpellKicked { .. }
+                | A::CastSpellMultikicked { .. }
                 | A::CastBestow { .. }
                 | A::CastSpellBuyback { .. }
                 | A::CastSpellEntwine { .. }

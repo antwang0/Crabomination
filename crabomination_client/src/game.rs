@@ -137,10 +137,29 @@ pub struct TargetingState {
     /// controlled Equipment; cleared once the equip is submitted (or
     /// cancelled). Takes precedence over the spell/ability target paths.
     pub pending_equip_source: Option<CardId>,
-    /// When `Some((times, is_replicate))`, the pending cast pays its Squad /
-    /// Replicate cost `times` times — the eventual submit routes through
-    /// `CastSpellSquad` / `CastSpellReplicate`. Set by the pay-times stepper.
-    pub pending_pay_times: Option<(u32, bool)>,
+    /// When `Some((times, mechanic))`, the pending cast pays its Squad /
+    /// Replicate / Multikicker cost `times` times — the eventual submit
+    /// routes through the matching `CastSpell*` action. Set by the
+    /// pay-times stepper.
+    pub pending_pay_times: Option<(u32, PayTimesMechanic)>,
+}
+
+/// Which pay-N-times cast mechanic the stepper is configuring.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PayTimesMechanic {
+    Squad,
+    Replicate,
+    Multikicker,
+}
+
+impl PayTimesMechanic {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Squad => "Squad",
+            Self::Replicate => "Replicate",
+            Self::Multikicker => "Multikicker",
+        }
+    }
 }
 
 /// Legal targets surfaced by the engine's `Decision::ChooseTarget`.
@@ -204,13 +223,14 @@ pub struct AltCastState {
     pub pending: Option<CardId>,
 }
 
-/// Squad / Replicate "pay N times" stepper (CR 702.157 / 702.107). Set when
-/// the user right-clicks a squadable/replicatable hand card; the modal lets
-/// them step the count and submits `CastSpellSquad` / `CastSpellReplicate`.
+/// Squad / Replicate / Multikicker "pay N times" stepper (CR 702.157 /
+/// 702.107 / 702.33c). Set when the user right-clicks a hand card with one
+/// of those mechanics; the modal steps the count and submits the matching
+/// `CastSpell*` action.
 #[derive(Resource, Default)]
 pub struct PayTimesState {
-    /// The spell being configured + `true` when it's Replicate (vs Squad).
-    pub pending: Option<(CardId, bool)>,
+    /// The spell being configured + which mechanic pays N times.
+    pub pending: Option<(CardId, PayTimesMechanic)>,
     /// How many extra times to pay the cost (≥ 1).
     pub times: u32,
 }

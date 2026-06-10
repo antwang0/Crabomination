@@ -5102,6 +5102,8 @@ impl GameState {
                 if !self.pay_search_tax(p) {
                     return Ok(());
                 }
+                // CR 701.19 — `p` searched their library this turn (Archive Trap).
+                self.players[p].searched_library_this_turn = true;
                 // Aven Mindcensor — an opponent's search only sees the top N.
                 let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
 
@@ -5928,6 +5930,7 @@ impl GameState {
                     if deficit == 0 {
                         continue;
                     }
+                    self.players[p].searched_library_this_turn = true;
                     let ids: Vec<crate::card::CardId> = self.players[p]
                         .library
                         .iter()
@@ -6476,6 +6479,7 @@ impl GameState {
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
                 let cap = ctx.x_value;
+                self.players[p].searched_library_this_turn = true;
                 // Candidates: creature cards in the controller's library +
                 // graveyard, MV ≤ X, distinct names; take the biggest `count`.
                 let mut candidates: Vec<(CardId, &'static str, u32)> = self.players[p]

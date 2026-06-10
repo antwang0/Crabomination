@@ -1358,7 +1358,7 @@ impl GameState {
                 // Lifelink scales off the post-prevention amount (702.15a).
                 let amount = self.prevent_combat_to_target(
                     atk.target,
-                    self.scale_combat_damage(atk.target, raw),
+                    self.scale_combat_damage(Some(atk.id), atk.target, raw),
                     Some(atk.id),
                     &mut events,
                 );
@@ -1421,6 +1421,7 @@ impl GameState {
                     let dealt = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
                         self.scale_damage_to(
+                            Some(atk.id),
                             crate::game::effects::EntityRef::Permanent(blocker_id),
                             assign,
                         ),
@@ -1466,7 +1467,7 @@ impl GameState {
                     // post-prevention amount.
                     let amount = self.prevent_combat_to_target(
                         atk.target,
-                        self.scale_combat_damage(atk.target, trample_leftover),
+                        self.scale_combat_damage(Some(atk.id), atk.target, trample_leftover),
                         Some(atk.id),
                         &mut events,
                     );
@@ -1533,6 +1534,7 @@ impl GameState {
                     let dmg = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(atk.id),
                         self.scale_damage_to(
+                            dealing_blocker_ids.first().copied(),
                             crate::game::effects::EntityRef::Permanent(atk.id),
                             blocker_damage_to_attacker.max(0) as u32,
                         ),
@@ -1592,7 +1594,7 @@ impl GameState {
                             .map(|c| c.controller)
                             .unwrap_or(atk.defender_player);
                         *lifelink_by_controller.entry(controller).or_insert(0) +=
-                            self.scale_damage_to(crate::game::effects::EntityRef::Permanent(atk.id), bc.power.max(0) as u32) as i32;
+                            self.scale_damage_to(Some(bid), crate::game::effects::EntityRef::Permanent(atk.id), bc.power.max(0) as u32) as i32;
                     }
                     // Sort by seat for deterministic event ordering;
                     // life-gain math is commutative but the event log
@@ -1629,14 +1631,20 @@ impl GameState {
     /// remainder. Creature-vs-creature combat damage is not yet routed
     /// through shields (tracked in TODO.md).
     /// Target-aware scaling for a combat-damage event aimed at a player or
-    /// planeswalker attack target (CR 614.2 / 614.5).
-    fn scale_combat_damage(&self, target: AttackTarget, amount: u32) -> u32 {
+    /// planeswalker attack target (CR 614.2 / 614.5). `source` is the
+    /// attacking creature (Torbran's source-scoped bonus).
+    fn scale_combat_damage(
+        &self,
+        source: Option<crate::card::CardId>,
+        target: AttackTarget,
+        amount: u32,
+    ) -> u32 {
         use crate::game::effects::EntityRef;
         let ent = match target {
             AttackTarget::Player(p) => EntityRef::Player(p),
             AttackTarget::Planeswalker(pw) => EntityRef::Permanent(pw),
         };
-        self.scale_damage_to(ent, amount)
+        self.scale_damage_to(source, ent, amount)
     }
 
     fn prevent_combat_to_target(

@@ -695,6 +695,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Crew(n) => format!("Crew {n}"),
         K::Madness(cost) => format!("Madness {}", cost.summary()),
         K::Kicker(cost) => format!("Kicker {}", cost.summary()),
+        K::Multikicker(cost) => format!("Multikicker {}", cost.summary()),
         K::Echo(cost) => format!("Echo {}", cost.summary()),
         K::CumulativeUpkeep(cost) => format!("Cumulative upkeep {}", cost.summary()),
         K::Fading(n) => format!("Fading {n}"),

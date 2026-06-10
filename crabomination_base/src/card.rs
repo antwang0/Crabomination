@@ -433,6 +433,10 @@ pub enum Keyword {
     /// flashback cast path). Chemister's Insight, Radical Idea.
     JumpStart,
     Kicker(crate::mana::ManaCost),
+    /// CR 702.33c — Multikicker: a kicker cost that may be paid any number
+    /// of times. `CardInstance.kick_count` records how many times;
+    /// `Value::TimesKicked` reads it (Everflowing Chalice).
+    Multikicker(crate::mana::ManaCost),
     /// CR 702.27 — Buyback. An optional additional cost paid when casting
     /// the spell from hand; if paid, the spell returns to its owner's hand
     /// instead of the graveyard as it resolves. Cast via
@@ -1933,6 +1937,13 @@ impl CardDefinition {
         })
     }
 
+    /// CR 702.33c — the Multikicker cost, if this card has the keyword.
+    pub fn has_multikicker(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Multikicker(cost) = kw { Some(cost) } else { None }
+        })
+    }
+
     /// The Offspring cost (CR 702.166), if this card has the keyword.
     pub fn has_offspring(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
@@ -2065,6 +2076,10 @@ pub struct CardInstance {
     /// creature leaves the battlefield (SBA in `stack.rs`).
     pub soulbond_partner: Option<CardId>,
     pub kicked: bool,
+    /// CR 702.33c — how many times this spell's Multikicker cost was paid.
+    /// Persists onto the permanent so `Value::TimesKicked` can read it
+    /// (Everflowing Chalice's enters-with-counters). Defaults to 0.
+    pub kick_count: u32,
     /// CR 702.157 — how many times this spell's optional Squad cost was paid.
     /// Persists onto the permanent so its ETB mints one token copy per payment
     /// (`Value::SquadCount`). Defaults to 0 (no Squad / not paid).
@@ -2344,6 +2359,7 @@ impl CardInstance {
             attached_to: None,
             soulbond_partner: None,
             kicked: false,
+            kick_count: 0,
             squad_count: 0,
             bargained: false,
             bought_back: false,

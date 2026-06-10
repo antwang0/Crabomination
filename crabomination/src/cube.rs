@@ -365,6 +365,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         power_depot,
         // ── Modern utility artifacts ──
         coalition_relic,
+        everflowing_chalice,
         ghost_vacuum,
         krark_clan_ironworks,
         karn_scion_of_urza,
@@ -1358,6 +1359,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         opt,
         consider,
         thought_scour,
+        archive_trap,
         // ── Miracle (CR 702.94) ──
         temporal_mastery,
         // ── Cube expansion ──
@@ -2065,6 +2067,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         smoke,
         // cast-trigger ritual god
         birgi_god_of_storytelling,
+        torbran_thane_of_red_fell,
         // modal ritual / impulse
         jeskas_will,
         // free-with-commander counter (simplified)

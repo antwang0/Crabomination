@@ -723,6 +723,30 @@ pub fn hangarback_walker() -> CardDefinition {
     }
 }
 
+/// Everflowing Chalice — {0} Artifact. Multikicker {2}; enters with a charge
+/// counter for each time it was kicked. {T}: Add {C} for each charge counter.
+pub fn everflowing_chalice() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Everflowing Chalice",
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Multikicker(cost(&[generic(2)]))],
+        enters_with_counters: Some((CounterType::Charge, Value::TimesKicked)),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Arcbound Worker — {1} Artifact Creature — Construct, 0/0, Modular 1.
 /// Enters with one +1/+1 counter; on death moves its counters to a target
 /// artifact creature.

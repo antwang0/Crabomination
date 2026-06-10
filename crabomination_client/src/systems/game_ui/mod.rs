@@ -3381,10 +3381,16 @@ pub fn handle_game_input(
                     if k.has_alternative_cost {
                         r.alt_cast.pending = Some(card_id);
                     } else if cv.squadable_hand.contains(&card_id) {
-                        r.pay_times.pending = Some((card_id, false));
+                        r.pay_times.pending =
+                            Some((card_id, crate::game::PayTimesMechanic::Squad));
                         r.pay_times.times = 1;
                     } else if cv.replicatable_hand.contains(&card_id) {
-                        r.pay_times.pending = Some((card_id, true));
+                        r.pay_times.pending =
+                            Some((card_id, crate::game::PayTimesMechanic::Replicate));
+                        r.pay_times.times = 1;
+                    } else if cv.multikickable_hand.contains(&card_id) {
+                        r.pay_times.pending =
+                            Some((card_id, crate::game::PayTimesMechanic::Multikicker));
                         r.pay_times.times = 1;
                     } else if k.back_face_name.is_some()
                         && !r.flipped_hand.flipped.insert(card_id) {
@@ -3739,21 +3745,18 @@ pub fn handle_game_input(
 }
 
 /// Build the cast action for a pending spell-targeting session, honoring the
-/// MDFC back-face flag and any Squad / Replicate pay-times rider.
+/// MDFC back-face flag and any Squad / Replicate / Multikicker pay-times rider.
 fn build_pending_cast(
     card_id: CardId,
     target: Option<Target>,
     mode: Option<usize>,
     cast_back: bool,
-    pay_times: Option<(u32, bool)>,
+    pay_times: Option<(u32, crate::game::PayTimesMechanic)>,
 ) -> GameAction {
     match pay_times {
-        Some((times, true)) => GameAction::CastSpellReplicate {
-            card_id, times, target, additional_targets: vec![], mode, x_value: None,
-        },
-        Some((times, false)) => GameAction::CastSpellSquad {
-            card_id, times, target, additional_targets: vec![], mode, x_value: None,
-        },
+        Some((times, mechanic)) => {
+            popups::pay_times_cast_action(mechanic, card_id, times, target, mode)
+        }
         None if cast_back => GameAction::CastSpellBack {
             card_id, target, additional_targets: vec![], mode, x_value: None,
         },

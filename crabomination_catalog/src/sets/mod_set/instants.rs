@@ -222,6 +222,29 @@ pub fn thought_scour() -> CardDefinition {
     }
 }
 
+/// Archive Trap — {3}{U}{U} Instant — Trap. If an opponent searched their
+/// library this turn, you may pay {0} rather than pay this spell's mana
+/// cost. Target opponent mills thirteen cards.
+pub fn archive_trap() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Archive Trap",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(13),
+        },
+        alternative_cost: Some(AlternativeCost {
+            condition: Some(Predicate::SearchedLibraryThisTurn {
+                who: PlayerRef::EachOpponent,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Tarfire — {R} Kindred Instant — Goblin. Tarfire deals 2 damage to
 /// any target.
 ///

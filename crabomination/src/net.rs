@@ -299,6 +299,11 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub replicatable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with Multikicker they could cast paying
+    /// the kicker cost at least once (CR 702.33c). `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub multikickable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast via their Dash
     /// alternative cost right now (CR 702.110). Lets the client offer a
     /// "dash?" affordance distinct from the plain castable highlight.

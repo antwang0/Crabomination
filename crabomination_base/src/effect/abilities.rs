@@ -316,6 +316,13 @@ pub enum StaticEffect {
     /// remainder is floor(amount/2) — same arithmetic as a halver, scoped
     /// to the static's controller's side.
     HalveDamageToYou,
+    /// CR 614.5 — "If a [color] source you control would deal damage to an
+    /// opponent or a permanent an opponent controls, it deals that much
+    /// damage plus `amount` instead." (Torbran, Thane of Red Fell.)
+    /// `source_color: None` matches any source you control. Consulted by
+    /// `GameState::scale_damage_to` (additive bonus applied before the
+    /// doublers/halvers).
+    AddDamageToOpponents { source_color: Option<crate::mana::Color>, amount: u32 },
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

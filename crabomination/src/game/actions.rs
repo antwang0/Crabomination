@@ -1424,6 +1424,46 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.33c — cast a spell paying its Multikicker cost `times` times.
+    /// The kicker cost is charged that many extra times (CR 601.2f) and the
+    /// resolving spell is stamped `kicked` + `kick_count = times` so
+    /// `Value::TimesKicked` riders read it (Everflowing Chalice).
+    pub(crate) fn cast_spell_multikicked(
+        &mut self,
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let kick = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.has_multikicker().cloned())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        if times > 0 {
+            let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
+            for _ in 0..times {
+                combined.symbols.extend(kick.symbols.iter().cloned());
+            }
+            self.try_pay_with_auto_tap(p, &combined)?;
+            for si in self.stack.iter_mut() {
+                if let StackItem::Spell { card, .. } = si
+                    && card.id == card_id
+                {
+                    card.kicked = true;
+                    card.kick_count = times;
+                }
+            }
+        }
+        Ok(events)
+    }
+
     /// CR 702.107 — cast an instant/sorcery paying its optional Replicate cost
     /// `times` times. The replicate cost is charged that many extra times and
     /// the spell is copied that many times on the stack (copies may choose new

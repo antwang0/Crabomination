@@ -239,6 +239,11 @@ impl GameState {
                 .and_then(|s| self.battlefield_find(s))
                 .map(|c| c.squad_count as i32)
                 .unwrap_or(0),
+            Value::TimesKicked => ctx
+                .source
+                .and_then(|s| self.battlefield_find(s))
+                .map(|c| c.kick_count as i32)
+                .unwrap_or(0),
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when
                 // the just-cast spell is still on the stack (trigger
@@ -588,6 +593,10 @@ impl GameState {
                     .map(|p| self.players[p].cards_left_graveyard_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::SearchedLibraryThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .iter()
+                .any(|&p| self.players[p].searched_library_this_turn),
             Predicate::SpellsCastThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

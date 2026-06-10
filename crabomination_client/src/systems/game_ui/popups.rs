@@ -4,7 +4,7 @@
 
 use bevy::prelude::*;
 use crabomination::card::CardId;
-use crabomination::game::GameAction;
+use crabomination::game::{GameAction, Target};
 
 use crate::card::DeckPile;
 use crate::game::{AbilityMenuState, TargetingState};
@@ -370,7 +370,7 @@ pub fn handle_alt_cast_buttons(
     }
 }
 
-// ── Squad / Replicate pay-times stepper ─────────────────────────────────────
+// ── Squad / Replicate / Multikicker pay-times stepper ───────────────────────
 
 #[derive(Component)]
 pub struct PayTimesModal;
@@ -407,7 +407,7 @@ pub fn spawn_pay_times_modal(
     for e in &existing {
         commands.entity(e).despawn();
     }
-    let Some((spell_id, is_replicate)) = state.pending else { return };
+    let Some((spell_id, mechanic)) = state.pending else { return };
     let Some(cv) = &view.0 else { return };
     let name = cv
         .players
@@ -421,7 +421,7 @@ pub fn spawn_pay_times_modal(
             })
         })
         .unwrap_or_default();
-    let mechanic = if is_replicate { "Replicate" } else { "Squad" };
+    let mechanic = mechanic.label();
 
     commands
         .spawn((
@@ -553,7 +553,7 @@ pub fn spawn_pay_times_modal(
 /// Step / confirm / cancel handling for the pay-times stepper. Confirm
 /// submits directly for untargeted spells; targeted ones arm the targeting
 /// cursor with the pay-times rider so the click-submit routes through
-/// `CastSpellSquad` / `CastSpellReplicate`.
+/// the matching pay-N-times `CastSpell*` action.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_pay_times_buttons(
     mut state: ResMut<crate::game::PayTimesState>,
@@ -578,7 +578,7 @@ pub fn handle_pay_times_buttons(
         }
     }
     if confirm_q.iter().any(|i| *i == Interaction::Pressed)
-        && let Some((spell_id, is_replicate)) = state.pending
+        && let Some((spell_id, mechanic)) = state.pending
     {
         let times = state.times.max(1);
         let needs_target = view.0.as_ref().is_some_and(|cv| {
@@ -592,22 +592,35 @@ pub fn handle_pay_times_buttons(
             targeting.active = true;
             targeting.pending_card_id = Some(spell_id);
             targeting.back_face_pending = false;
-            targeting.pending_pay_times = Some((times, is_replicate));
+            targeting.pending_pay_times = Some((times, mechanic));
         } else if let Some(outbox) = &outbox {
-            let action = if is_replicate {
-                GameAction::CastSpellReplicate {
-                    card_id: spell_id, times, target: None,
-                    additional_targets: vec![], mode: None, x_value: None,
-                }
-            } else {
-                GameAction::CastSpellSquad {
-                    card_id: spell_id, times, target: None,
-                    additional_targets: vec![], mode: None, x_value: None,
-                }
-            };
-            outbox.submit(action);
+            outbox.submit(pay_times_cast_action(
+                mechanic, spell_id, times, None, None,
+            ));
         }
         state.pending = None;
+    }
+}
+
+/// The `CastSpell*` action for a pay-N-times mechanic.
+pub fn pay_times_cast_action(
+    mechanic: crate::game::PayTimesMechanic,
+    card_id: CardId,
+    times: u32,
+    target: Option<Target>,
+    mode: Option<usize>,
+) -> GameAction {
+    use crate::game::PayTimesMechanic as M;
+    match mechanic {
+        M::Replicate => GameAction::CastSpellReplicate {
+            card_id, times, target, additional_targets: vec![], mode, x_value: None,
+        },
+        M::Squad => GameAction::CastSpellSquad {
+            card_id, times, target, additional_targets: vec![], mode, x_value: None,
+        },
+        M::Multikicker => GameAction::CastSpellMultikicked {
+            card_id, times, target, additional_targets: vec![], mode, x_value: None,
+        },
     }
 }
 

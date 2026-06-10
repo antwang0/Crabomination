@@ -394,6 +394,10 @@ pub enum Value {
     /// CR 702.157 — the number of times the source permanent's Squad cost was
     /// paid (`CardInstance.squad_count`). Reads `ctx.source`. Zero off-source.
     SquadCount,
+    /// CR 702.33c — the number of times the source permanent's Multikicker
+    /// cost was paid (`CardInstance.kick_count`). Reads `ctx.source`. Zero
+    /// off-source (Everflowing Chalice).
+    TimesKicked,
     /// Total mana spent paying the originating spell's cost. Stashed on
     /// `StackItem::Spell.mana_spent` at cast time, propagated onto
     /// spell-cast `StackItem::Trigger.mana_spent`, and read from
@@ -658,6 +662,10 @@ pub enum Predicate {
     /// payoffs — Living History's combat trigger, Primary Research's
     /// end-step draw rider, Wilt in the Heat's cost reduction rider.
     CardsLeftGraveyardThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// CR 701.19 — true if `who` (any matching player) searched their own
+    /// library this turn. `PlayerRef::EachOpponent` is satisfied by any one
+    /// opponent. Archive Trap's "rather than pay" gate.
+    SearchedLibraryThisTurn { who: PlayerRef },
     /// `who` has cast at least `at_least` spells on the current turn.
     /// Backed by `Player.spells_cast_this_turn`. Used by Burrog Barrage
     /// ("if you've cast another instant or sorcery spell this turn, …")

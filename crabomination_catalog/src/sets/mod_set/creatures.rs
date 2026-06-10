@@ -8731,3 +8731,31 @@ pub fn birgi_god_of_storytelling() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Torbran, Thane of Red Fell — {1}{R}{R}{R} Legendary Creature — Dwarf
+/// Noble 2/4. If a red source you control would deal damage to an opponent
+/// or a permanent an opponent controls, it deals that much damage plus 2
+/// instead.
+pub fn torbran_thane_of_red_fell() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Torbran, Thane of Red Fell",
+        cost: cost(&[generic(1), r(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "If a red source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 2 instead.",
+            effect: StaticEffect::AddDamageToOpponents {
+                source_color: Some(Color::Red),
+                amount: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}

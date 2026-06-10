@@ -48880,3 +48880,118 @@ fn pack_rat_scales_with_rats_and_copies_itself() {
     let v = cp.iter().find(|c| c.id == rat).unwrap();
     assert_eq!((v.power, v.toughness), (2, 2), "two rats → 2/2 each");
 }
+
+// ── Multikicker (CR 702.33c) ─────────────────────────────────────────────────
+
+/// Everflowing Chalice kicked twice enters with two charge counters and taps
+/// for {C}{C}.
+#[test]
+fn everflowing_chalice_multikicker_charges_and_taps_for_mana() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::everflowing_chalice());
+    g.players[0].mana_pool.add_colorless(4); // {0} base + 2 × {2}
+    g.perform_action(GameAction::CastSpellMultikicked {
+        card_id: id, times: 2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable kicked twice");
+    drain_stack(&mut g);
+    let chalice = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(chalice.counter_count(CounterType::Charge), 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "adds {{C}} per charge counter");
+}
+
+/// Unkicked, the Chalice enters with no counters; kicking requires the mana.
+#[test]
+fn everflowing_chalice_unkicked_enters_empty() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::everflowing_chalice());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::Charge), 0);
+}
+
+// ── Archive Trap (search-this-turn alt cost) ─────────────────────────────────
+
+/// After the opponent searches their library, Archive Trap casts for {0} and
+/// mills them thirteen.
+#[test]
+fn archive_trap_free_after_opponent_searches() {
+    let mut g = two_player_game();
+    // Opponent fetches: resolve an Effect::Search for them via a scripted
+    // search (their evolving_wilds works as a real searcher).
+    let fetch = g.add_card_to_battlefield(1, catalog::evolving_wilds());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch, ability_index: 0, target: None, x_value: None,
+    }).expect("fetch activation");
+    drain_stack(&mut g);
+    assert!(g.players[1].searched_library_this_turn, "search stamped");
+
+    g.priority.player_with_priority = 0;
+    let trap = g.add_card_to_hand(0, catalog::archive_trap());
+    for _ in 0..15 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let lib_before = g.players[1].library.len();
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: trap, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free via trap condition");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib_before - 13, "milled 13");
+}
+
+/// Without a search this turn the {0} alternative cost is rejected.
+#[test]
+fn archive_trap_alt_cost_rejected_without_search() {
+    let mut g = two_player_game();
+    let trap = g.add_card_to_hand(0, catalog::archive_trap());
+    assert!(g.perform_action(GameAction::CastSpellAlternative {
+        card_id: trap, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no search this turn → no free cast");
+}
+
+// ── Torbran (additive source-scoped damage replacement) ──────────────────────
+
+/// With Torbran out, a red spell you control deals +2 to the opponent; a
+/// non-red source is unchanged.
+#[test]
+fn torbran_adds_two_to_red_source_damage_to_opponents() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::torbran_thane_of_red_fell());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 15, "3 + 2 = 5 damage");
+}
+
+/// Torbran's bonus also applies to red combat damage, and not to the
+/// controller's own side.
+#[test]
+fn torbran_combat_damage_bonus_red_attacker_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::torbran_thane_of_red_fell());
+    // Goblin Guide: red 2/2 haste.
+    let goblin = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    g.clear_sickness(goblin);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: goblin, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "2 + 2 = 4 combat damage");
+}

@@ -454,6 +454,37 @@ impl GameState {
         out
     }
 
+    /// CR 702.33c — hand cards with Multikicker the caster could cast paying
+    /// the kicker cost at least once right now (probed at `times: 1`).
+    fn multikickable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.has_multikicker().is_some())
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, needs_target, effect) in &hand {
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellMultikicked {
+                card_id: *id, times: 1, target, additional_targets, mode: None, x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// CR 702.107 — hand cards with Replicate the caster could cast paying the
     /// replicate cost at least once right now (probed at `times: 1`).
     fn replicatable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
@@ -860,6 +891,7 @@ impl GameState {
             bargainable: self.bargainable_hand_cards_on(&template, seat),
             squadable: self.squadable_hand_cards_on(&template, seat),
             replicatable: self.replicatable_hand_cards_on(&template, seat),
+            multikickable: self.multikickable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),
