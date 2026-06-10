@@ -9,9 +9,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 ## Follow-ups noticed (not yet done)
 
 - ⏳ **Noticed this run (claude/modern_decks):**
-  - **Per-blocker combat-damage assignment modal** — ordering now has a real
-    client modal (`spawn_damage_order_modal`); `AssignCombatDamage` still
-    auto-answers the engine default split.
+  - ✅ **Per-blocker combat-damage assignment modal** ships
+    (`spawn_damage_assign_modal` — +/- steppers per blocker, total capped at
+    attacker power; the old auto-answer fallback is gone).
   - ✅ **Controller-scoped damage doubling/halving** ships —
     `DoubleDamageToOpponents` / `HalveDamageToYou` + the target-aware
     `scale_damage_to` at both funnels (Gisela, Blade of Goldnight).

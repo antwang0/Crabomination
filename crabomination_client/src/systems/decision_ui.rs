@@ -51,6 +51,14 @@ pub struct DamageOrderReorderButton {
     pub delta: i32,
 }
 
+/// +/- stepper for the AssignCombatDamage modal (CR 510.1d). Adjusts the
+/// damage assigned to one blocker.
+#[derive(Component)]
+pub struct DamageAssignButton {
+    pub blocker: CardId,
+    pub delta: i32,
+}
+
 #[derive(Component)]
 pub struct MulliganKeepButton;
 
@@ -101,6 +109,9 @@ pub struct DecisionUiState {
     /// For CombatDamageOrder (CR 510.1c): the working blocker damage order
     /// (index 0 takes damage first).
     pub damage_order: Vec<CardId>,
+    /// For AssignCombatDamage (CR 510.1d): the working per-blocker damage
+    /// split.
+    pub damage_assign: Vec<(CardId, u32)>,
     /// CardId the modal was last spawned for — avoids respawning each frame.
     pub spawned_for: Option<DecisionKey>,
 }
@@ -125,6 +136,8 @@ pub enum DecisionKey {
     OrderTriggers(Vec<CardId>),
     /// `Decision::CombatDamageOrder` (CR 510.1c) — keyed by attacker + blockers.
     CombatDamageOrder(CardId, Vec<CardId>),
+    /// `Decision::AssignCombatDamage` (CR 510.1d) — keyed by attacker + blockers.
+    AssignCombatDamage(CardId, Vec<CardId>),
     /// `Decision::ChooseCards` — keyed by the candidate ids + (min, max) so a
     /// re-posed pick (e.g. a chained second cost) re-spawns the modal.
     ChooseCards(Vec<CardId>, u32, u32),
@@ -168,6 +181,12 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
             Some(DecisionKey::CombatDamageOrder(
                 *attacker,
                 blockers.iter().map(|(id, _)| *id).collect(),
+            ))
+        }
+        DecisionWire::AssignCombatDamage { attacker, blockers, .. } => {
+            Some(DecisionKey::AssignCombatDamage(
+                *attacker,
+                blockers.iter().map(|(id, _, _)| *id).collect(),
             ))
         }
         DecisionWire::ChooseCards { candidates, min, max, .. } => Some(DecisionKey::ChooseCards(
@@ -390,6 +409,40 @@ pub fn spawn_decision_ui(
             let ordered: Vec<(CardId, String)> =
                 state.damage_order.iter().map(|id| (*id, name_of(*id))).collect();
             spawn_damage_order_modal(&mut commands, &asset_server, &ui_fonts, &attacker_name, &ordered);
+        }
+        DecisionWire::AssignCombatDamage { attacker, attacker_power, blockers } => {
+            if state.damage_assign.is_empty() {
+                // Seed with the default lethal-in-order split so the modal
+                // opens on the engine's fallback.
+                let mut left = *attacker_power;
+                state.damage_assign = blockers
+                    .iter()
+                    .map(|(id, _, lethal)| {
+                        let give = (*lethal).min(left);
+                        left -= give;
+                        (*id, give)
+                    })
+                    .collect();
+                if let Some(last) = state.damage_assign.last_mut() {
+                    last.1 += left;
+                }
+            }
+            state.spawned_for = Some(key);
+            let attacker_name = cv
+                .battlefield
+                .iter()
+                .find(|p| p.id == *attacker)
+                .map(|p| p.name.clone())
+                .unwrap_or_else(|| "Attacker".to_string());
+            spawn_damage_assign_modal(
+                &mut commands,
+                &asset_server,
+                &ui_fonts,
+                &attacker_name,
+                *attacker_power,
+                blockers,
+                &state.damage_assign,
+            );
         }
         DecisionWire::ChooseTarget { legal, source_name, description, .. } => {
             // No modal — reuse the existing in-scene targeting cursor.
@@ -916,6 +969,172 @@ fn spawn_damage_order_modal(
                                         } else {
                                             theme::TEXT_PRIMARY
                                         }),
+                                        Pickable::IGNORE,
+                                    ));
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+        panel
+            .spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                DecisionConfirmButton,
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new("Confirm"),
+                    ui_fonts.tf(18.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                    Pickable::IGNORE,
+                ));
+            });
+    });
+}
+
+/// CR 510.1d — modal letting the attacking player split combat damage among
+/// blockers with per-blocker +/- steppers. The engine validates the split and
+/// falls back to lethal-in-order if it breaks the ordering rule.
+#[allow(clippy::too_many_arguments)]
+fn spawn_damage_assign_modal(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
+    attacker_name: &str,
+    attacker_power: u32,
+    blockers: &[(CardId, String, u32)],
+    assign: &[(CardId, u32)],
+) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG),
+            Button,
+            DecisionModal,
+        ))
+        .id();
+
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                row_gap: Val::Px(16.0),
+                padding: UiRect::all(Val::Px(20.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+
+    commands.entity(root).add_child(panel);
+
+    let assigned: u32 = assign.iter().map(|(_, a)| *a).sum();
+    commands.entity(panel).with_children(|panel| {
+        panel.spawn((
+            Text::new(format!(
+                "{attacker_name}: assign combat damage  ·  {assigned} / {attacker_power} assigned",
+            )),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+
+        panel
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(12.0),
+                ..default()
+            })
+            .with_children(|row| {
+                for (blocker, name, lethal) in blockers {
+                    let amount = assign
+                        .iter()
+                        .find(|(id, _)| id == blocker)
+                        .map(|(_, a)| *a)
+                        .unwrap_or(0);
+                    let path = scryfall::card_asset_path(name);
+                    let texture: Handle<Image> = asset_server.load(&path);
+
+                    row.spawn(Node {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        row_gap: Val::Px(6.0),
+                        ..default()
+                    })
+                    .with_children(|col| {
+                        col.spawn((
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                width: Val::Px(CARD_W),
+                                padding: UiRect::all(Val::Px(6.0)),
+                                row_gap: Val::Px(4.0),
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            BackgroundColor(MODAL_TILE_BG),
+                        ))
+                        .with_children(|cb| {
+                            cb.spawn((
+                                ImageNode { image: texture, ..default() },
+                                Node {
+                                    width: Val::Px(CARD_W - 12.0),
+                                    height: Val::Px(CARD_H - 12.0),
+                                    ..default()
+                                },
+                                Pickable::IGNORE,
+                            ));
+                            cb.spawn((
+                                Text::new(format!("{amount} dmg  (lethal {lethal})")),
+                                ui_fonts.tf(14.0),
+                                TextColor(if amount >= *lethal {
+                                    theme::TEXT_GOOD
+                                } else {
+                                    theme::TEXT_PRIMARY
+                                }),
+                                Pickable::IGNORE,
+                            ));
+                        });
+
+                        col.spawn(Node {
+                            flex_direction: FlexDirection::Row,
+                            column_gap: Val::Px(8.0),
+                            ..default()
+                        })
+                        .with_children(|r| {
+                            for (label, delta) in [("−", -1i32), ("+", 1)] {
+                                r.spawn((
+                                    Button,
+                                    Node {
+                                        padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(REORDER_BG),
+                                    DamageAssignButton { blocker: *blocker, delta },
+                                ))
+                                .with_children(|b| {
+                                    b.spawn((
+                                        Text::new(label),
+                                        ui_fonts.tf(16.0),
+                                        TextColor(theme::TEXT_PRIMARY),
                                         Pickable::IGNORE,
                                     ));
                                 });
@@ -1640,6 +1859,46 @@ pub fn handle_damage_order_reorder(
     }
 }
 
+/// Handle clicks on the AssignCombatDamage +/- steppers: adjust one
+/// blocker's share (capped so the total never exceeds the attacker's power)
+/// and respawn the modal.
+pub fn handle_damage_assign_buttons(
+    view: Res<CurrentView>,
+    mut state: ResMut<DecisionUiState>,
+    query: Query<(&Interaction, &DamageAssignButton), Changed<Interaction>>,
+    modal: Query<Entity, With<DecisionModal>>,
+    mut commands: Commands,
+) {
+    let Some(cv) = &view.0 else { return };
+    let Some(power) = cv.pending_decision.as_ref().and_then(|p| match p.decision.as_ref() {
+        Some(DecisionWire::AssignCombatDamage { attacker_power, .. }) => Some(*attacker_power),
+        _ => None,
+    }) else {
+        return;
+    };
+    for (interaction, btn) in &query {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let total: u32 = state.damage_assign.iter().map(|(_, a)| *a).sum();
+        let Some(entry) = state.damage_assign.iter_mut().find(|(id, _)| *id == btn.blocker)
+        else {
+            continue;
+        };
+        if btn.delta > 0 && total < power {
+            entry.1 += 1;
+        } else if btn.delta < 0 && entry.1 > 0 {
+            entry.1 -= 1;
+        } else {
+            continue;
+        }
+        for e in &modal {
+            commands.entity(e).despawn();
+        }
+        state.spawned_for = None;
+    }
+}
+
 /// Handle the Confirm button: build the appropriate answer based on which
 /// decision is pending and submit it to the server via NetOutbox.
 pub fn handle_confirm(
@@ -1691,6 +1950,9 @@ pub fn handle_confirm(
             DecisionWire::CombatDamageOrder { .. } => {
                 DecisionAnswer::DamageOrder(state.damage_order.clone())
             }
+            DecisionWire::AssignCombatDamage { .. } => {
+                DecisionAnswer::CombatDamageAssignment(state.damage_assign.clone())
+            }
             _ => continue,
         };
 
@@ -1704,44 +1966,11 @@ pub fn handle_confirm(
         state.discard_selected.clear();
         state.trigger_order.clear();
         state.damage_order.clear();
+        state.damage_assign.clear();
         state.spawned_for = None;
     }
 }
 
-/// Interim fallback for CR 510.1d combat-damage *assignment* (ordering has a
-/// real modal now — `spawn_damage_order_modal`). To avoid a soft-lock when an
-/// assignment decision is posed for the local player, auto-submit the engine
-/// default — an empty answer keeps the lethal-to-each split. The `Local`
-/// tracks the last auto-answered `(attacker, kind)` so each decision fires
-/// once despite the submit→new-view round-trip. A per-blocker assignment
-/// modal is the remaining piece (tracked in TODO.md).
-pub fn auto_resolve_combat_damage_decisions(
-    view: Res<CurrentView>,
-    outbox: Option<Res<NetOutbox>>,
-    mut last: Local<Option<(CardId, u8)>>,
-) {
-    let Some(cv) = &view.0 else { *last = None; return; };
-    let pending = match &cv.pending_decision {
-        Some(pd) if pd.acting_player == cv.your_seat => pd,
-        _ => { *last = None; return; }
-    };
-    let combat = match pending.decision.as_ref() {
-        // CombatDamageOrder now has a real reorder modal (see
-        // `spawn_damage_order_modal`); only assignment still auto-answers.
-        Some(DecisionWire::AssignCombatDamage { attacker, .. }) => {
-            Some(((*attacker, 1u8), DecisionAnswer::CombatDamageAssignment(vec![])))
-        }
-        _ => None,
-    };
-    let Some((key, answer)) = combat else { *last = None; return; };
-    if *last == Some(key) {
-        return;
-    }
-    if let Some(outbox) = &outbox {
-        outbox.submit(GameAction::SubmitDecision(answer));
-    }
-    *last = Some(key);
-}
 
 /// Update the live "X / N selected" text in the PutOnLibrary banner.
 pub fn update_put_on_library_count_text(

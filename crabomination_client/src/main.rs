@@ -80,7 +80,7 @@ use systems::ui::{
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
     update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, auto_resolve_combat_damage_decisions, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -661,6 +661,7 @@ fn main() {
                 handle_scry_reorder,
                 handle_trigger_reorder,
                 handle_damage_order_reorder,
+                handle_damage_assign_buttons,
                 handle_search_select,
                 handle_put_on_library_select,
                 handle_put_on_library_hand_click,
@@ -675,7 +676,6 @@ fn main() {
                 handle_optional_buttons,
                 spawn_mode_pick_ui,
                 handle_mode_pick_buttons,
-                auto_resolve_combat_damage_decisions,
             )
                 .chain()
                 .after(handle_game_input)
