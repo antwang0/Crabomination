@@ -418,6 +418,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         sundial_of_the_infinite,
         reckoner_bankbuster,
         amulet_of_vigor,
+        welding_jar,
+        colossus_hammer,
         // ── equip-granted dies trigger (CR 702.6e) ──
         skullclamp,
         // ── modern_decks: equip-trigger that charges the equipment ──
@@ -515,6 +517,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         suppression_field,
         burrenton_forge_tender,
         white_orchid_phantom,
+        sigardas_aid,
         // Hideaway land (CR 702.76)
         windbrisk_heights,
         // Damage redirection (CR 614.9)
@@ -1880,6 +1883,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mizzium_mortars,
         fable_of_the_mirror_breaker,
         oliphaunt,
+        // ── modern_decks-19 ──
+        vexing_devil,
+        browbeat,
+        risk_factor,
         hero_of_oxid_ridge,
         shrapnel_blast,
         // Hideaway land (CR 702.76)

@@ -5067,6 +5067,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayersMayAccept { who, description, on_accept, otherwise } => {
+                // Ask each resolved player in APNAP order; the first to
+                // accept runs `on_accept` with themselves in slot 0 and the
+                // offer closes. Nobody accepting runs `otherwise`.
+                for p in self.resolve_players(who, ctx) {
+                    let answer = self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        description: description.clone(),
+                    });
+                    if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
+                        let mut acc_ctx = ctx.clone();
+                        if acc_ctx.targets.is_empty() {
+                            acc_ctx.targets.push(Target::Player(p));
+                        } else {
+                            acc_ctx.targets[0] = Target::Player(p);
+                        }
+                        return self.run_effect(on_accept, &acc_ctx, events);
+                    }
+                }
+                self.run_effect(otherwise, ctx, events)
+            }
+
             Effect::StealCreatureEtbThisTurn => {
                 let p = ctx.controller;
                 if !self.creature_etb_steal_this_turn.contains(&p) {

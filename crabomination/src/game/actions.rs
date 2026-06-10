@@ -2452,7 +2452,18 @@ impl GameState {
         // until their next turn (when do_untap clears the flag).
         // Teferi's static (`OpponentsSorceryTimingOnly`) flips the rule for
         // opponents: even instants must wait until their main phase.
-        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+        // Sigarda's Aid — a battlefield static can grant flash timing to
+        // matching spells (Auras + Equipment).
+        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
+                                if self.evaluate_requirement_on_card(filter, &card, p))
+                    })
+            });
+        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
             && !self.can_cast_sorcery_speed(p)
@@ -3489,7 +3500,18 @@ impl GameState {
 
         // Timing: instants can be cast at instant speed, others at sorcery
         // speed. Honor Teferi-style opponent restriction.
-        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+        // Sigarda's Aid — a battlefield static can grant flash timing to
+        // matching spells (Auras + Equipment).
+        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
+                                if self.evaluate_requirement_on_card(filter, &card, p))
+                    })
+            });
+        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
@@ -3666,7 +3688,18 @@ impl GameState {
         if !card.definition.has_retrace() {
             return Err(GameError::SorcerySpeedOnly);
         }
-        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+        // Sigarda's Aid — a battlefield static can grant flash timing to
+        // matching spells (Auras + Equipment).
+        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
+                                if self.evaluate_requirement_on_card(filter, &card, p))
+                    })
+            });
+        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
@@ -3746,7 +3779,18 @@ impl GameState {
             .has_escape()
             .map(|(c, n)| (c.clone(), n))
             .ok_or(GameError::SorcerySpeedOnly)?;
-        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+        // Sigarda's Aid — a battlefield static can grant flash timing to
+        // matching spells (Auras + Equipment).
+        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
+                                if self.evaluate_requirement_on_card(filter, &card, p))
+                    })
+            });
+        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
@@ -3847,7 +3891,18 @@ impl GameState {
             .definition
             .has_flashback_tap()
             .ok_or(GameError::FlashbackTapInvalid)?;
-        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+        // Sigarda's Aid — a battlefield static can grant flash timing to
+        // matching spells (Auras + Equipment).
+        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
+                                if self.evaluate_requirement_on_card(filter, &card, p))
+                    })
+            });
+        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
@@ -4141,7 +4196,18 @@ impl GameState {
         // Sorcery-speed gate (commanders are creatures by definition,
         // which are sorcery-speed unless flash). We rebuild the same
         // gate `cast_spell` uses so timing matches.
-        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+        // Sigarda's Aid — a battlefield static can grant flash timing to
+        // matching spells (Auras + Equipment).
+        let flash_granted = !self.player_locked_to_sorcery_timing(p)
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(&sa.effect,
+                            crate::effect::StaticEffect::ControllerSpellsHaveFlash { filter }
+                                if self.evaluate_requirement_on_card(filter, &card, p))
+                    })
+            });
+        let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
             && !self.can_cast_sorcery_speed(p)

@@ -46096,3 +46096,123 @@ fn generous_ent_forestcycles() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == f), "Forest to hand");
 }
+
+// ── modern_decks-19: "may accept" burn + equipment ───────────────────────────
+
+/// Vexing Devil: opponent declines → 4/3 stays; opponent accepts → 4 damage
+/// and the Devil is sacrificed.
+#[test]
+fn vexing_devil_offer_both_branches() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    // Decline: the Devil sticks around.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::vexing_devil());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, id);
+    assert!(g.battlefield_find(id).is_some(), "declined → Devil stays");
+    assert_eq!(g.players[1].life, 20);
+
+    // Accept: 4 damage, Devil sacrificed.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::vexing_devil());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, id);
+    assert!(g.battlefield_find(id).is_none(), "accepted → Devil sacrificed");
+    assert_eq!(g.players[1].life, 16, "took 4");
+}
+
+/// Browbeat: nobody accepts → target player draws three.
+#[test]
+fn browbeat_draws_three_when_no_one_takes_five() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::browbeat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len() - 1; // minus Browbeat itself
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 3, "drew three");
+}
+
+/// Risk Factor: the targeted opponent accepts and takes four.
+#[test]
+fn risk_factor_opponent_takes_four() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::risk_factor());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "opponent took 4 instead of giving cards");
+}
+
+/// Welding Jar's sacrifice regenerates an artifact.
+#[test]
+fn welding_jar_regenerates_artifact() {
+    let mut g = two_player_game();
+    let jar = g.add_card_to_battlefield(0, catalog::welding_jar());
+    let target = g.add_card_to_battlefield(0, catalog::reckoner_bankbuster());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jar, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("sac the Jar");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(jar).is_none(), "Jar sacrificed");
+    assert!(
+        g.battlefield_find(target).unwrap().regeneration_shields > 0,
+        "regeneration shield applied"
+    );
+}
+
+/// Colossus Hammer grants +10/+10 once equipped for {8}.
+#[test]
+fn colossus_hammer_equips_for_eight() {
+    let mut g = two_player_game();
+    let hammer = g.add_card_to_battlefield(0, catalog::colossus_hammer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.perform_action(GameAction::Equip {
+        equipment: hammer, target: bear,
+    }).is_err(), "no mana → can't equip");
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::Equip { equipment: hammer, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (12, 12), "+10/+10");
+}
+
+/// Sigarda's Aid lets an Equipment be cast at instant speed and attaches it
+/// on entry.
+#[test]
+fn sigardas_aid_flashes_in_equipment_and_attaches() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sigardas_aid());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hammer = g.add_card_to_hand(0, catalog::colossus_hammer());
+    g.players[0].mana_pool.add_colorless(1);
+    // Not our main phase: instant timing required.
+    g.step = TurnStep::End;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: hammer, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flash in the Equipment");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(hammer).unwrap().attached_to,
+        Some(bear),
+        "attached on entry"
+    );
+}

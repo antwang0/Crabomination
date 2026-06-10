@@ -257,6 +257,9 @@ pub enum StaticEffect {
     /// spells as though they had flash. Tracked via `Player.sorceries_as_flash`
     /// (set/cleared by the loyalty ability + `do_untap`).
     ControllerSorceriesAsFlash,
+    /// "You may cast [filter] spells as though they had flash." Sigarda's
+    /// Aid (Auras + Equipment). Consulted at the cast-timing gate.
+    ControllerSpellsHaveFlash { filter: SelectionRequirement },
     /// "If one or more tokens would be created under your control, twice
     /// that many tokens are created instead." Used by Adrix and Nev,
     /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a

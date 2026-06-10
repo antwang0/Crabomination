@@ -1765,6 +1765,16 @@ pub enum Effect {
     /// controller re-runs it once per opponent who accepted. Tempt with
     /// Bunnies.
     TemptingOffer { body: Box<Effect> },
+    /// "[who] may [accept]. If a player does, run `on_accept` (that player
+    /// bound to slot 0) and stop; if no one does, run `otherwise`." Asked in
+    /// APNAP order via the synchronous decider (same wants_ui gap as
+    /// TemptingOffer). Vexing Devil, Browbeat, Risk Factor.
+    PlayersMayAccept {
+        who: PlayerRef,
+        description: String,
+        on_accept: Box<Effect>,
+        otherwise: Box<Effect>,
+    },
     /// "If a creature would enter the battlefield under an opponent's
     /// control this turn, it enters under your control instead." Gather
     /// Specimens (CR 614 control-ETB replacement; expires at cleanup).

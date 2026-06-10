@@ -7416,6 +7416,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // continuous-layer modifications here.
             | StaticEffect::OpponentsSorceryTimingOnly
             | StaticEffect::ControllerSorceriesAsFlash
+            | StaticEffect::ControllerSpellsHaveFlash { .. }
             // DoubleTokens — read at `Effect::CreateToken` resolution time
             // via `GameState::token_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleTokens

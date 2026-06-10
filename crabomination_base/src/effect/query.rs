@@ -121,6 +121,9 @@ impl Effect {
             Effect::LookTopExileOneMayPlay { .. } => false,
             Effect::NameCardTargetDiscardsMatching => true,
             Effect::TemptingOffer { body } => body.requires_target(),
+            // The accept branch's slot-0 player is bound at resolution; only
+            // `otherwise` can demand a cast-time target (Browbeat's drawer).
+            Effect::PlayersMayAccept { otherwise, .. } => otherwise.requires_target(),
             Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::ExileHand { who } => player_has_target(who),

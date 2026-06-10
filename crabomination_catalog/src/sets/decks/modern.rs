@@ -40491,3 +40491,156 @@ pub fn white_orchid_phantom() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks-19: burn "may" offers + equipment + utility lands ──────────
+
+/// Vexing Devil — {R} 4/3 Devil. ETB: any opponent may have it deal 4 to
+/// them; if one does, sacrifice it.
+pub fn vexing_devil() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Vexing Devil",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::PlayersMayAccept {
+            who: PlayerRef::EachOpponent,
+            description: "Have Vexing Devil deal 4 damage to you? (it is sacrificed)".into(),
+            on_accept: Box::new(Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+                Effect::SacrificeSource,
+            ])),
+            otherwise: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Browbeat — {2}{R} Sorcery. Any player may have it deal 5 to them; if no
+/// one does, target player draws three.
+pub fn browbeat() -> CardDefinition {
+    CardDefinition {
+        name: "Browbeat",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PlayersMayAccept {
+            who: PlayerRef::EachPlayer,
+            description: "Have Browbeat deal 5 damage to you?".into(),
+            on_accept: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(5),
+            }),
+            otherwise: Box::new(Effect::Draw {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(3),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Risk Factor — {2}{R} Instant, Jump-start. Target opponent may take 4;
+/// otherwise you draw three.
+pub fn risk_factor() -> CardDefinition {
+    CardDefinition {
+        name: "Risk Factor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::JumpStart],
+        effect: Effect::PlayersMayAccept {
+            who: PlayerRef::Target(0),
+            description: "Have Risk Factor deal 4 damage to you?".into(),
+            on_accept: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            }),
+            otherwise: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Welding Jar — {0} Artifact. Sacrifice: regenerate target artifact.
+pub fn welding_jar() -> CardDefinition {
+    CardDefinition {
+        name: "Welding Jar",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Regenerate {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Colossus Hammer — {1} Equipment. Equipped creature gets +10/+10 and
+/// loses flying ("loses flying" is dropped — EquipBonus has no
+/// keyword-removal yet). Equip {8}.
+pub fn colossus_hammer() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Colossus Hammer",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(8)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 10,
+            toughness: 10,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Sigarda's Aid — {W} Enchantment. Aura and Equipment spells have flash;
+/// an Equipment you control entering may attach to target creature you
+/// control.
+pub fn sigardas_aid() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    let equipment = SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment);
+    CardDefinition {
+        name: "Sigarda's Aid",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast Aura and Equipment spells as though \
+                          they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash {
+                filter: SelectionRequirement::HasEnchantmentSubtype(
+                    crate::card::EnchantmentSubtype::Aura,
+                )
+                .or(equipment.clone()),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: equipment,
+                }),
+            effect: Effect::MayDo {
+                description: "Attach the Equipment to target creature you control?".into(),
+                body: Box::new(Effect::Attach {
+                    what: Selector::TriggerSource,
+                    to: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
