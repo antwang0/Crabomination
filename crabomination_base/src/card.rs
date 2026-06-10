@@ -1208,6 +1208,11 @@ pub struct CardDefinition {
     /// SBA pruning step.
     #[serde(default)]
     pub max_counters_of_kind: Option<(CounterType, u32)>,
+    /// CR 604.3 — characteristic-defining dynamic P/T formula (Tarmogoyf,
+    /// Death's Shadow). When `Some`, `compute_battlefield` injects a
+    /// layer-7a SetPT effect from the formula on every recompute.
+    #[serde(default)]
+    pub dynamic_pt: Option<DynamicPt>,
     /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
     /// A combined chapter ("I, II — …") is listed once per number with the
     /// same effect. Non-empty marks the card a Saga: it enters with one lore
@@ -1563,10 +1568,8 @@ pub struct EquipScale {
 /// expression so the engine doesn't have to know the printed Oracle's
 /// wording — just the two scalars to set.
 ///
-/// Mapping from card name to formula lives in
-/// `game::mod::dynamic_pt_for_name` — matches the lookup-table pattern
-/// used by `lifegain_selfpump_for_name`, `graveyard_anthem_for_name`,
-/// etc. Adding a new dynamic-P/T card is one row in that table.
+/// Stored on `CardDefinition.dynamic_pt`; adding a new dynamic-P/T card
+/// sets that field (no engine-side table).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DynamicPt {
     /// Power = N, toughness = N+1 where N is the count of distinct card

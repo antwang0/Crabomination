@@ -292,6 +292,7 @@ pub fn vile_aggregate() -> CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Trample],
         toughness: 5,
         triggered_abilities: vec![ingest()],
+        dynamic_pt: Some(crate::card::DynamicPt::ColorlessCreaturesControlled { base_t: 5 }),
         ..drone("Vile Aggregate", cost(&[generic(2), r()]), 0, 5)
     }
 }

@@ -94,7 +94,7 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
 /// cards' Flashback cost is more than mana — "Flashback—Sacrifice a Mountain"
 /// (Lava Dart) or "Flashback—Sacrifice three creatures" (Dread Return). These
 /// apply *only* on the flashback cast, so they live here rather than on every
-/// CardDefinition (the `dynamic_pt_for_name` lookup-table idiom). `cast_flashback`
+/// CardDefinition. `cast_flashback`
 /// validates + pays them on top of the flashback mana cost.
 pub(crate) fn flashback_additional_cost_for_name(
     name: &str,

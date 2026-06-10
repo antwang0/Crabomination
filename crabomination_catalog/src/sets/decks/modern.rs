@@ -11,7 +11,7 @@ use crate::card::{
     Keyword, LandType, SelectionRequirement, Selector, SoulbondBonus, SplitCard, SplitHalf,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::card::{CounterType, EventKind, EventScope, EventSpec};
+use crate::card::{CounterType, DynamicPt, EventKind, EventScope, EventSpec};
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, on_dies, target_filtered,
@@ -1432,6 +1432,7 @@ pub fn putrid_imp() -> CardDefinition {
 pub fn tarmogoyf() -> CardDefinition {
     CardDefinition {
         name: "Tarmogoyf",
+        dynamic_pt: Some(DynamicPt::DistinctTypesInAllGraveyards),
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -7395,6 +7396,7 @@ pub fn bump_in_the_night() -> CardDefinition {
 pub fn deaths_shadow() -> CardDefinition {
     CardDefinition {
         name: "Death's Shadow",
+        dynamic_pt: Some(DynamicPt::BaseMinusControllerLife { base_p: 13, base_t: 13 }),
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
@@ -7542,6 +7544,7 @@ pub fn lumra_bellow_of_the_woods() -> CardDefinition {
     use crate::effect::ZoneRef;
     CardDefinition {
         name: "Lumra, Bellow of the Woods",
+        dynamic_pt: Some(DynamicPt::LandsControlled { base: 0 }),
         cost: cost(&[generic(4), g(), g()]),
         supertypes: vec![Sup::Legendary],
         card_types: vec![CardType::Creature],
@@ -7967,6 +7970,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
 pub fn cruel_somnophage() -> CardDefinition {
     CardDefinition {
         name: "Cruel Somnophage",
+        dynamic_pt: Some(DynamicPt::ControllerGraveyardSize),
         cost: cost(&[u(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -8274,6 +8278,7 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Knight of the Reliquary",
+        dynamic_pt: Some(DynamicPt::BasePlusLandsInAllGraveyards { base_p: 2, base_t: 2 }),
         cost: cost(&[generic(1), g(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -18825,6 +18830,7 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Wight of the Reliquary",
+        dynamic_pt: Some(DynamicPt::BasePlusLandsInControllerGraveyard { base_p: 1, base_t: 1 }),
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -28813,6 +28819,7 @@ pub fn lifecreed_duo() -> CardDefinition {
 pub fn burrowguard_mentor() -> CardDefinition {
     CardDefinition {
         name: "Burrowguard Mentor",
+        dynamic_pt: Some(DynamicPt::CreaturesControlled { base: 0 }),
         cost: cost(&[g(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -35132,6 +35139,7 @@ pub fn broodstar() -> CardDefinition {
     // ("Broodstar" → ArtifactsControlled). Printed power/toughness are 0/0.
     CardDefinition {
         name: "Broodstar",
+        dynamic_pt: Some(DynamicPt::ArtifactsControlled { base: 0 }),
         cost: cost(&[generic(6), u(), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
@@ -36950,6 +36958,7 @@ pub fn third_path_iconoclast() -> CardDefinition {
 pub fn crackling_drake() -> CardDefinition {
     CardDefinition {
         name: "Crackling Drake",
+        dynamic_pt: Some(DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t: 4 }),
         cost: cost(&[u(), u(), r(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -37515,6 +37524,7 @@ pub fn rubblehulk() -> CardDefinition {
     )));
     CardDefinition {
         name: "Rubblehulk",
+        dynamic_pt: Some(DynamicPt::LandsControlled { base: 0 }),
         cost: cost(&[generic(4), r(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -38953,6 +38963,7 @@ pub fn grafdiggers_cage() -> CardDefinition {
 pub fn duplicant() -> CardDefinition {
     CardDefinition {
         name: "Duplicant",
+        dynamic_pt: Some(DynamicPt::ExiledWithSourcePt { base_p: 2, base_t: 4 }),
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {

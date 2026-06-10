@@ -6,7 +6,8 @@
 //! creature subtypes) are correct so they animate and combat properly.
 
 use crate::card::{
-    ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind,
+    ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, DynamicPt, Effect,
+    EventKind,
     EventScope, EventSpec, Keyword, PlaneswalkerSubtype, Selector, SelectionRequirement, Subtypes,
     Supertype, TriggeredAbility, Value,
 };
@@ -84,6 +85,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
 pub fn cosmogoyf() -> CardDefinition {
     CardDefinition {
         name: "Cosmogoyf",
+        dynamic_pt: Some(DynamicPt::DistinctTypesInAllGraveyards),
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

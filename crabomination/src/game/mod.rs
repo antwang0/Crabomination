@@ -2988,17 +2988,15 @@ impl GameState {
                 });
             }
         }
-        // CR 604.x — characteristic-defining dynamic P/T injection. The
-        // per-card formula lookup lives in `dynamic_pt_for_name`; we
-        // resolve it here on every layer recompute and emit a layer-7
-        // SetPT effect. Adding a new dynamic-P/T card is one row in that
-        // table — no engine-side `if name == "..."` branch.
+        // CR 604.3 — characteristic-defining dynamic P/T injection. The
+        // formula lives on `CardDefinition.dynamic_pt`; we resolve it here
+        // on every layer recompute and emit a layer-7 SetPT effect.
         let goyf_n = self.distinct_card_types_in_all_graveyards() as i32;
         let lands_in_gys: i32 = self.players.iter()
             .map(|p| p.graveyard.iter().filter(|c| c.definition.is_land()).count() as i32)
             .sum();
         for card in &self.battlefield {
-            let Some(formula) = dynamic_pt_for_name(card.definition.name) else { continue };
+            let Some(formula) = card.definition.dynamic_pt.clone() else { continue };
             let (power, toughness) = match formula {
                 crate::card::DynamicPt::DistinctTypesInAllGraveyards => {
                     (goyf_n, goyf_n + 1)
@@ -7289,29 +7287,6 @@ fn event_amount(event: &GameEvent) -> u32 {
 ///   graveyards.
 /// - Cosmogoyf (modern reprint of the same mechanic): same formula.
 /// - Cruel Somnophage (MOM): P=T = controller's graveyard size.
-fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
-    use crate::card::DynamicPt;
-    match name {
-        "Tarmogoyf" | "Cosmogoyf" => Some(DynamicPt::DistinctTypesInAllGraveyards),
-        "Cruel Somnophage" => Some(DynamicPt::ControllerGraveyardSize),
-        "Knight of the Reliquary" => Some(DynamicPt::BasePlusLandsInAllGraveyards {
-            base_p: 2, base_t: 2,
-        }),
-        "Wight of the Reliquary" => Some(DynamicPt::BasePlusLandsInControllerGraveyard {
-            base_p: 1, base_t: 1,
-        }),
-        "Death's Shadow" => Some(DynamicPt::BaseMinusControllerLife {
-            base_p: 13, base_t: 13,
-        }),
-        "Vile Aggregate" => Some(DynamicPt::ColorlessCreaturesControlled { base_t: 5 }),
-        "Burrowguard Mentor" => Some(DynamicPt::CreaturesControlled { base: 0 }),
-        "Lumra, Bellow of the Woods" | "Rubblehulk" => Some(DynamicPt::LandsControlled { base: 0 }),
-        "Broodstar" => Some(DynamicPt::ArtifactsControlled { base: 0 }),
-        "Crackling Drake" => Some(DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t: 4 }),
-        "Duplicant" => Some(DynamicPt::ExiledWithSourcePt { base_p: 2, base_t: 4 }),
-        _ => None,
-    }
-}
 
 /// True if a card definition is colorless from its printed characteristics:
 /// it has Devoid (CR 702.114) or its mana cost carries no colored pips.
