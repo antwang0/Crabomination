@@ -51,7 +51,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Shiko and Narset, Unified | ⏳ | Flurry — copy your second spell each turn if it targets (wants a Demonstrate-style on-second-cast copy trigger). |
 
 ### Lands
 
@@ -69,9 +68,7 @@ are listed in `DECK_FEATURES.md`.
 |---|---|---|
 | Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus ships via `EquipBonus.scale` — Nettlecyst ✅. Equipment-granted triggered abilities ship via `EquipBonus.triggered_abilities` (CR 702.6e; `DealsCombatDamageToPlayer` SelfSource fires off the equipped creature, damaged player bound to `Target(0)`) — Sword of Body and Mind ✅. Lion Sash ✅ (counter-on-self scaled bonus + Reconfigure CR 702.151 — `Keyword::Reconfigure` reuses the equip path and strips Creature-ness while attached). Living weapon ✅ (Nettlecyst, Batterskull — ETB mint-a-Germ-and-attach). Reconfigure *unattach* ✅ (`Reconfigure { target: None }` clears `attached_to`, restoring creature-ness; test `reconfigure_unattach_restores_creatureness`). Equip-trigger that charges the *Equipment* ✅ via `EquipBonus.triggers_on_equipment` (Umezawa's Jitte; charges on combat damage to a player **and to a creature** — CR 510.2 `DealsCombatDamageToCreature` dispatch now ships, so Jitte charges when blocked). |
 | Adventure (cost-mode duality) | ✅ | CR 715 — `CardDefinition.adventure` + `GameAction::CastAdventure`/`CastAdventureCreature`. Virtue of Loyalty (enchantment // instant) ships on it alongside the creature adventures. |
-| Mutate | ⏳ | Mutable Explorer (Mutated Cultist turned out not to be a mutate card — ✅). |
 | Storm count + cast-from-top | 🟡 | Cast-from-library-top statics ✅ (CR 401.6 `PlayFromLibraryTop` — Mystic Forge, Courser, Oracle of Mul Daya). Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (`Effect::ExileTopMayPayEnergyToCast`) ships Amped Raptor ✅. |
-| Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
 | Soulbond | ✅ | `Keyword::Soulbond` + `CardInstance.soulbond_partner` + `CardDefinition.soulbond_bonus` (`SoulbondBonus`: P/T, keywords, granted activated **and** triggered abilities). Pairs auto-resolve on ETB (`apply_soulbond_pairing`); the bonus rides both members as continuous effects and breaks on leave. Wolfir Silverheart, Wingcrafter, Nightshade Peddler, Trusted Forcemage, Hanweir Lancer, Silverblade Paladin, Nearheath Pilgrim, Deadeye Navigator (self-flicker), Tandem Lookout (combat-damage draw). |
 | Companion (CR 702.139) | 🟡 | `Keyword::Companion` + `GameAction::CompanionToHand` ({3} sorcery-speed sideboard → hand) — Zirda ✅. Deck-construction validation still ⏳ (Tier 10 deck-legality work). |
 | Saga lore counters | ✅ | `saga_chapters` (History of Benalia, The Eldest Reborn). DFC sagas (transform-on-final-chapter) still ⏳. |
@@ -90,8 +87,7 @@ are listed in `DECK_FEATURES.md`.
 | Landfall trigger | 🟡 | Bloodghast wired via the new `EventScope::FromYourGraveyard` (graveyard-source `LandPlayed` trigger). Standard battlefield-side landfall (Omnath) still uses the existing `LandPlayed` + `YourControl` path; both are functional. |
 | Loyalty abilities w/ static | 🟡 | Teferi works fully; loyalty-set effects ship via `Effect::SetLoyalty` (CR 606 — Geyadrone Dihada's +1 reset-when-behind ✅). Variable `-X` loyalty ✅ via `LoyaltyAbility.x_cost` (player picks X≤loyalty, body reads `Value::XFromCost`; Kasmina's -X Fractal). Ashiok exile-and-cast ✅, Sorin reveal/drain ✅, Tamiyo name-reveal ✅, Dakkon put-from-hand/gy ✅, Saheeli -7 triple-search ✅, Kasmina ability-sharing ✅. Remaining: Karn -2 fetch, Tezzeret etheric. |
 | Split cards (CR 709) + Fuse + Aftermath | ✅ | `CardDefinition.split` + `CastSplitRight`/`CastSplitFused`/`CastAftermath`. Ships Wear // Tear, Fire // Ice, Far // Away, Assault // Battery, Stand // Deliver, Wax // Wane, Alive // Well, Rough // Tumble, Profit // Loss, Supply // Demand, Toil // Trouble, Dead // Gone, Give // Take, Ready // Willing, plus Aftermath splits (Spring // Mind, Onward // Victory, Cut // Ribbons, Consign // Oblivion, Mouth // Feed). Client half-picker UI still ⏳ (TODO.md). |
-| Living-weapon-on-ETB token | ⏳ | Nettlecyst, Sword-of-Body-and-Mind-adjacent. |
-| Protection-from-color (more colors) | 🟡 | Engine has `Keyword::Protection(Color)`. Cards like Stillmoon Cavalier need toggle abilities + multi-color protection. |
+| Protection-from-color (more colors) | ✅ | Multi-color printed protection (Stillmoon Cavalier — Protection from white and from black, hybrid {W/B} pips) + EOT protection grants. |
 | Charge counters as mana storage | 🟡 | Gemstone Mine wires charge counters + sac-on-empty. Coalition Relic now does the faithful precombat-main "remove all charges → 1 mana of any color each" burst (`MayDo` + `AddMana(AnyColors(CountersOn))` + `RemoveCounter(CountersOn)`). Power Depot, Pentad Prism, Chalice of the Void reuse the same charge primitive. |
 
 ## Plan

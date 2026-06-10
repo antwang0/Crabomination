@@ -8,29 +8,28 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Any-color spend for exile-casts** (Gonti / Hostage Taker): their
-  may-play casts pay the printed cost with normally-colored mana; the
-  printed "mana of any type" clause wants a per-card any-color payment
-  permission threaded into `pay_for_spell`.
-- ⏳ **Gather Specimens vs token mints** — `apply_etb_control_replacement`
-  runs at the two battlefield-entry funnels (spell resolve + move), but
-  token-creation sites push directly; a stolen token ETB needs the hook
-  there too.
-- ⏳ **Grafdigger's Cage vs search-to-battlefield** — `SearchPending` /
-  `PutFromZonesPending` place cards from library/graveyard without the
-  lockdown check (reanimation via `Move` and all cast paths are covered).
 - ⏳ **Rooms subsystem** (Unholy Annex // Ritual Chamber) and **meld**
   (The Mightstone and Weakstone) — each is its own object-model feature.
 - ⏳ **Tempting offer / MayDo wants_ui suspend** — `Effect::TemptingOffer`
   asks each opponent via the synchronous decider; a networked human seat
   gets the AutoDecider default (decline). Same family as the existing
   inline-picker gaps.
-- ⏳ **NameCard auto-decider names nothing** — bots get zero value from
-  Tamiyo +1 / Cabal Therapy / Spoils (empty name → no matches). A
-  heuristic namer (most-common name in the targeted hand/library) would
-  make these bot-playable.
-- ⏳ **Saheeli Rai -7 distinct-names clause** — the triple Search doesn't
-  forbid duplicate picks.
+- ✅ **Any-color spend for exile-casts** — `GrantMayPlay.any_color` /
+  `ExileTopAndGrantMayPlay.pay_any_color` stamp the cost as MV-generic
+  (CR 609.4b). Gonti, Hostage Taker, Nassari.
+- ✅ **Gather Specimens vs token mints** — every token-creation site now
+  funnels through `mint_token_onto_battlefield`, which applies the ETB
+  control replacement (and CR 111.2 ownership).
+- ✅ **Grafdigger's Cage vs search-to-battlefield** — `SearchPending` /
+  `PutFromZonesPending` consult the lockdown before placing creatures.
+- ✅ **NameCard bot heuristic + wire** — `Decision::NameCard.suggestions`
+  (most-common name in the relevant zone, `rank_names_by_frequency`);
+  AutoDecider takes the top pick; the wire + a client picker modal ship.
+- ✅ **Saheeli Rai -7 distinct names** — `SelectionRequirement::
+  NameDiffersFromLastMoved` + search picks validated against the
+  candidate set (`SearchPending.eligible`).
+- ⏳ **Search-pick UI for "with different names"** — the client search
+  modal doesn't grey ineligible candidates (engine rejects them).
 
 - ✅ **Combat-damage-to-a-creature trigger dispatch (CR 510.2).**
   `resolve_combat_damage_with_filter` records every creature-vs-creature damage
@@ -41,13 +40,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   creature to slot 0. Umezawa's Jitte now charges when its equipped creature is
   blocked. (Fires once per damaged creature — a minor over-count for Jitte under
   multi-block.)
-- 🟡 **Cipher follow-ups.** Hidden Strings ✅ (4-way ChooseMode + MayDo per
-  half); Rubblehulk ✅ (lands CDA + Value-scaled Bloodrush). Remaining:
-  Trait Doctoring (grant a color / land type to a permanent).
-- ⏳ **UI render edits remain blocked** in the web sandbox (wayland-sys /
-  alsa-sys / libudev build scripts need system libs). The server `PlayerView`
-  is the verifiable surface; `ExileCardView.encoded_on` (Cipher carrier) ships
-  this run for the client to badge once it can build.
+- ✅ **Cipher follow-ups.** Hidden Strings, Rubblehulk, and Trait Doctoring
+  (CR 612 layer-3 text change) all ship.
+- ✅ **UI render edits unblocked** — `apt-get install -y libwayland-dev
+  libasound2-dev libudev-dev` makes the client build in the web sandbox;
+  client edits now ship normally.
 - ✅ **Aether Gust** — spell half rides `CounteredSpellZone::
   OwnerLibraryTopOrBottom`; permanent half rides the existing
   `LibraryPosition::OwnerChoice` Move dest.
@@ -99,42 +96,37 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     Anchorage / Prairie / Vents landed last).
   - ✅ **Witch's Oven** — `Effect::WithSacrificedPt` re-stamps the
     cost-sacrificed creature's P/T at the ability's resolution.
-- ⏳ **Client Squad/Replicate stepper.** `PlayerView.{squadable_hand,
-  replicatable_hand}` now surface which hand cards can pay Squad (CR 702.157) /
-  Replicate (CR 702.107) at least once; the client should render a "pay N
-  times" stepper feeding `GameAction::CastSpell{Squad,Replicate} { times }`
-  (wayland sandbox blocks the client render edit this run).
-- ⏳ **Resolution-time target legality (CR 608.2b).** Only *token-copy* spells
-  now fizzle when their single target stops matching the spell's filter
-  (`continue_spell_resolution`, scoped to `is_token`). It relies on the
-  filter's battlefield-gated clauses (e.g. `ControlledByOpponent` returns false
-  off-battlefield), so a zone-blind filter (`Permanent`/`Creature`, kept loose
-  for reanimate targeting) still doesn't fizzle — Demonstrate copies of
-  Excavation Technique over-count Treasures when several resolve against one
-  destroyed permanent. A real fix wants either zone-aware battlefield-target
-  requirements (distinct from "creature card in graveyard") or a general
-  608.2b check applied to *all* spells, not just copies.
+- ✅ **Client Squad/Replicate stepper** — right-click a squadable/
+  replicatable hand card → "pay N times" modal (`PayTimesState` +
+  `spawn_pay_times_modal`); targeted spells arm the targeting cursor with
+  `TargetingState.pending_pay_times` so the submit routes through
+  `CastSpellSquad`/`CastSpellReplicate`. Hand highlights include both sets.
+- 🟡 **Resolution-time target legality (CR 608.2b).** General now: every
+  single-target spell whose primary target was a *battlefield permanent at
+  cast time* (`CardInstance.cast_target_was_battlefield`, stamped in
+  `finalize_cast`) fizzles on resolution if the target left the battlefield,
+  stopped matching the (mode/kicker-aware) filter, or gained Hexproof/Shroud;
+  a fizzled real card is countered into its owner's graveyard. Token copies
+  keep the bare filter re-check. Remaining ⏳: multi-target partial fizzle
+  (all-illegal check across `additional_targets`), Aura spells (permanent
+  path), and protection-from-color on resolution.
 - ⏳ **Demonstrate "you may" + opponent choice (CR 702.150).** `Effect::
   Demonstrate` always copies (the optional "you may" collapses) and auto-picks
   the lowest-seat opponent rather than prompting the caster. Fine for bots;
   a `wants_ui` caster should get a yes/no + opponent picker.
 - ⏳ **Impending / Hideaway follow-ups (this run shipped the keywords).**
-  - Impending (CR 702.183, `Keyword::Impending(n)`): the client should badge the
-    `PermanentView.impending_counters` countdown (engine + view ship it; the
-    wayland sandbox blocks the client render edit).
+  - Impending (CR 702.183) ✅ — the client's Time-counter label reads
+    `PermanentView.impending_counters` and badges "Impending N".
   - Hideaway (CR 702.76, `Effect::Hideaway`): the hidden-card pick auto-resolves
     to the highest-MV card rather than prompting. The Lorwyn land cycle ✅ —
     Mosswort Bridge / Spinerock Knoll / Windbrisk Heights ship with their
     printed gates (`Value::PowerOf` fan-out, `Value::LifeLostThisTurn`,
     `Value::CreaturesAttackedWithThisTurn`).
-- ⏳ **Card riders dropped this run (each wants one small primitive):**
-  Glissa Sunslayer (combat-damage `ChooseMode` with per-mode targets — only the
-  draw mode ships); Bristly Bill ✅ (double-counters activated shipped via
-  `DoubleCountersOnEach`); Nowhere to Run ✅ ("opponents' creatures lose
-  hexproof/shroud" via `StaticEffect::LoseKeyword`; `check_target_legality`
-  now reads layer-computed Hexproof/Shroud); Get Lost / Sip of Hemlock use the destroyed
-  permanent's *owner* for the follow-up (differs from "controller" only under
-  control-stealing).
+- ⏳ **Card riders dropped (each wants one small primitive):**
+  Glissa Sunslayer ✅ (full combat-damage `ChooseMode` — draw/lose, destroy
+  enchantment, remove-all-counters); Bristly Bill ✅; Nowhere to Run ✅;
+  Get Lost / Sip of Hemlock use the destroyed permanent's *owner* for the
+  follow-up (differs from "controller" only under control-stealing).
 
 - ⏳ **Cube bombs still needing primitives.** Skyclave Apparition ✅,
   Grafdigger's Cage ✅ (`StaticEffect::GraveyardLibraryLockdown` — gates
@@ -1237,7 +1229,7 @@ picking an item up.
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
 - ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
-- 🟡 **CR 614 — Replacement Effects** — general "instead" framework; damage *halving*; general skip-step/turn (614.10). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
+- 🟡 **CR 614 — Replacement Effects** — general "instead" framework; damage *halving*. Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* still ⏳. Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
 - 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Remaining: source-of-your-choice restriction (the shield soaks any source's next hit).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Phasing / extra-step insertion still ⏳.
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail.
@@ -1259,7 +1251,13 @@ picking an item up.
 - 🟡 **CR 903 — Commander Variant** — MDFC back-face color identity (903.4d); 903.9 optional rider.
 
 ### Todo (⏳)
-- ⏳ **CR 612 — Text-Changing Effects** — no `ReplaceWord`/text-box-swap primitive; no catalog card needs one (Mind Bend, Glamerdye, Spy Kit, Volrath's Shapeshifter, Exchange of Words).
+- ✅ **CR 612 — Text-Changing Effects** — layer-3 `Modification::ReplaceColorWord`
+  / `ReplaceBasicLandType` + `Effect::ReplaceColorWord`/`ReplaceBasicLandType`
+  (two ChooseColor prompts pick from/to; basics map 1:1 onto colors). Rewrites
+  Protection-from-color, landwalk, and the type line (a swapped basic taps for
+  the new color). Trait Doctoring (EOT + Cipher), Mind Bend (permanent).
+  Remaining ⏳: full text-box swaps (Spy Kit, Volrath's Shapeshifter) and
+  ability-text color words beyond keywords.
 
 ## Suggested next-up tasks
 
@@ -1272,10 +1270,9 @@ picking an item up.
   `scripts/fix_doc_costs.py`, coupled test fixtures rewritten via
   `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
   keep it at zero after adding cards.
-  **Still wrong on the *effect body*** (cost/PT right, oracle text invented or
-  blocked on a primitive): Hofri Ghostforge (Spirit-copy reanimation), Fervent
-  Mastery (alt-cost-was-paid rider), Strixhaven Stadium (point counters + "that
-  player loses" combat trigger). ✅ this run: **Stonebinder's Familiar**
+  **Effect-body sweep complete**: Hofri Ghostforge, Fervent Mastery, and
+  Strixhaven Stadium (point counters + ten-point `Effect::LoseGame`) are now
+  faithful. ✅ this run: **Stonebinder's Familiar**
   (`EventKind::CardExiled` once-per-turn-during-your-turn trigger, retyped Spirit
   Dog), **Confront the Past** (faithful 2-mode: reanimate gy PW + remove 2X
   loyalty from an opp PW — the "MV X or less" reanimation gate is dropped, no

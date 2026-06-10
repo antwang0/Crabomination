@@ -96,7 +96,9 @@ not how Magic works" moments.
    `StaticEffect::ExileDyingOpponentCreatures { when_you_do }` checked at the
    shared `remove_from_battlefield_to_graveyard` funnel, with an optional
    reflexive "when you do" — Valentin, Dean of the Vein),
-   damage *redirection* (Maze of Ith) and draw/skip replacement.
+   damage *redirection* (Maze of Ith) and draw replacement. **Skip-step**
+   (CR 614.10) ships via `StaticEffect::SkipStep` (Eon Hub, Stasis);
+   skip-*turn* remains.
    **Creature-ETB control replacement** ships via
    `Effect::StealCreatureEtbThisTurn` + `apply_etb_control_replacement`
    (Gather Specimens; token mints don't consult it yet).
@@ -169,11 +171,16 @@ not how Magic works" moments.
   Magma Opus (AutoDecider spreads evenly; UI/scripted deciders choose the
   split). Remaining: divided *non-damage* riders ("tap up to N", split-mill)
   and true "choose targets as it resolves".
-- ⏳ **Targeting refinements:** "up to N targets", "target each", "another
-  target", same-target-twice rules, protection re-check on resolution.
-- ⏳ **Continuous-effect breadth:** characteristic-defining abilities,
-  type/color/text-changing effects (CR 613 layers 1–6 corner cases),
-  "becomes a copy of" layer interaction, set-P/T vs +N/+N ordering.
+- 🟡 **Targeting refinements:** resolution-time legality re-check (CR 608.2b)
+  ships for single-target spells aimed at battlefield permanents (zone-gone /
+  filter-mismatch / granted Hexproof-Shroud → fizzle to graveyard). Remaining:
+  "up to N targets", "target each", "another target", multi-target partial
+  fizzle, protection-from-color re-check.
+- 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (CR 612 —
+  `ReplaceColorWord`/`ReplaceBasicLandType`; Trait Doctoring, Mind Bend);
+  land-type statics ✅ (`StaticEffect::LandTypeChanger` — Blood Moon, Magus
+  of the Moon, Urborg, Yavimaya). Remaining: CDA corner cases, full
+  text-box swaps, "becomes a copy of" layer interaction.
 - 🟡 **Static ability framework:** cost-reduction statics, "you may play"
   permissions from permanents, "creatures you control have X", anthem
   stacking — wired, including **disjunctive multi-type "other … you control"
@@ -594,6 +601,9 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   graded amber→red as it nears the 21-from-a-single-commander loss. Only
   present in Commander games.
 - ⏳ **Hand sorting / auto-tap preferences / "play tapped land" prompt**.
+- ✅ **Squad / Replicate pay-N-times stepper** — right-click modal feeding
+  `CastSpellSquad`/`CastSpellReplicate`; impending countdown badge; NameCard
+  picker modal with engine-ranked suggestions.
 - ⏳ **Reminder text & rules tooltips** on keywords; **oracle text panel**.
 - ⏳ **Hotkey legend / help overlay**; remappable keys.
 - 🟡 **Highlight legal plays** (castable cards, legal attackers/blockers,
