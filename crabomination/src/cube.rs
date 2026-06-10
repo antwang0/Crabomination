@@ -1025,6 +1025,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(sunbaked_canyon);
     }
     if pair_contains(pair, Color::Black) {
+        v.push(siege_rhino);
         v.push(mourning_thrull);
         v.push(sphinx_of_the_steel_wind);
         v.push(concealing_curtains);
@@ -1485,6 +1486,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         boggart_harbinger,
         unholy_annex_ritual_chamber,
         horror_of_the_broken_lands,
+        morbid_opportunist,
         // ── modern_decks-19 ──
         living_end,
         orcish_bowmasters,
@@ -2406,6 +2408,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         tooth_and_nail,
         rude_awakening,
         shefet_monitor,
+        aftermath_analyst,
         // ── modern_decks-18 ──
         crashing_footfalls,
         dryad_of_the_ilysian_grove,

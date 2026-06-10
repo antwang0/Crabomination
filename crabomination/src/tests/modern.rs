@@ -47309,3 +47309,64 @@ fn gisela_scoped_damage_scaling() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 19, "3 halved to 1");
 }
+
+// ── Final batch: Siege Rhino, Morbid Opportunist, Aftermath Analyst ─────────
+
+/// Siege Rhino's ETB drains each opponent for 3.
+#[test]
+fn siege_rhino_etb_drain() {
+    let mut g = two_player_game();
+    let rhino = g.add_card_to_hand(0, catalog::siege_rhino());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, rhino);
+    assert_eq!(g.players[1].life, 17);
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Morbid Opportunist draws once per turn no matter how many others die.
+#[test]
+fn morbid_opportunist_draws_once_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::morbid_opportunist());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    for _ in 0..2 {
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().damage = 9;
+        let evs = g.check_state_based_actions();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 1, "second death this turn doesn't draw");
+}
+
+/// Aftermath Analyst mills three, then its sac returns all graveyard lands
+/// tapped.
+#[test]
+fn aftermath_analyst_mills_then_returns_lands() {
+    let mut g = two_player_game();
+    for f in [catalog::forest, catalog::island, catalog::grizzly_bears] {
+        g.add_card_to_library(0, f());
+    }
+    let aa = g.add_card_to_hand(0, catalog::aftermath_analyst());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aa);
+    assert_eq!(g.players[0].graveyard.len(), 3, "milled three");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aa, ability_index: 0, target: None, x_value: None,
+    }).expect("sac");
+    drain_stack(&mut g);
+    let lands: Vec<_> = g.battlefield.iter().filter(|c| c.definition.is_land()).collect();
+    assert_eq!(lands.len(), 2, "both lands returned");
+    assert!(lands.iter().all(|c| c.tapped), "returned tapped");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "nonland stays in graveyard");
+}

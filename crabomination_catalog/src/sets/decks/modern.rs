@@ -41840,3 +41840,92 @@ pub fn gisela_blade_of_goldnight() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Siege Rhino — {1}{W}{B}{G} 4/5 trample. ETB: drain each opponent for 3.
+pub fn siege_rhino() -> CardDefinition {
+    CardDefinition {
+        name: "Siege Rhino",
+        cost: cost(&[generic(1), w(), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Morbid Opportunist — {2}{B} 1/3. Draw when one or more other creatures
+/// die, once each turn.
+pub fn morbid_opportunist() -> CardDefinition {
+    CardDefinition {
+        name: "Morbid Opportunist",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: {
+                let mut e = EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::OtherThanSource,
+                    });
+                e.once_per_turn = true;
+                e
+            },
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aftermath Analyst — {1}{G} 1/3 Elf Detective. ETB mill 3; {3}{G}, sac:
+/// return all land cards from your graveyard to the battlefield tapped.
+pub fn aftermath_analyst() -> CardDefinition {
+    CardDefinition {
+        name: "Aftermath Analyst",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            sac_cost: true,
+            effect: Effect::Move {
+                what: Selector::EachMatching {
+                    zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                    filter: SelectionRequirement::Land,
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

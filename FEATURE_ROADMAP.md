@@ -577,8 +577,9 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    protection. Now **layer-aware**: P/T and keywords read the computed
    battlefield, so anthems and granted/stripped evasion are reflected. The
    client surfaces the life rows + a "Dying: N theirs / N yours" summary
-   (`update_combat_preview_panel`). Remaining: multi-blocker damage-order
-   nuance and planeswalker-target rows.
+   (`update_combat_preview_panel`), plus **planeswalker-target rows**
+   (`CombatPreview.damage_to_planeswalkers` → loyalty projections).
+   Remaining: multi-blocker damage-order nuance.
 4. ⏳ **Undo / mana-tap rollback** — undo un-committed taps before a spell
    locks in (`ManualTapRequired` already signals partial manual-tap model).
 5. 🟡 **Targeting arrows on the stack** — `KnownStackItem` now carries
