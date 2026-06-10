@@ -841,6 +841,10 @@ pub enum SelectionRequirement {
     /// whose `attached_to` points at the candidate. Powers Kestia's
     /// "whenever an enchanted creature … you control attacks" trigger.
     IsEnchanted,
+    /// CR 700.9 — "modified": the permanent has one or more counters, is
+    /// equipped, or is enchanted by an Aura its own controller controls.
+    /// Battlefield-only. Kodama of the West Tree.
+    IsModified,
     /// True when the candidate creature dealt damage to the ability's
     /// controller this turn (combat or non-combat). Reads the controller's
     /// `Player.creatures_that_damaged_me_this_turn`. Battlefield-only;

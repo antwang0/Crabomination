@@ -1090,10 +1090,14 @@ impl GameState {
         // Direct phasers currently in play (computed *before* phase-in so a
         // permanent that phases in this step doesn't immediately phase back
         // out), plus any Aura/Equipment attached to one of them.
+        // Computed keywords so layer-granted Phasing (Teferi's Veil-style
+        // statics) phases out too, not just the printed/EOT-granted keyword.
         let mut to_phase_out: std::collections::HashSet<crate::card::CardId> = self
-            .battlefield
+            .compute_battlefield()
             .iter()
-            .filter(|c| c.controller == p && c.has_keyword(&crate::card::Keyword::Phasing))
+            .filter(|c| {
+                c.controller == p && c.keywords.contains(&crate::card::Keyword::Phasing)
+            })
             .map(|c| c.id)
             .collect();
         if !to_phase_out.is_empty() {

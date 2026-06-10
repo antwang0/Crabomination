@@ -2877,6 +2877,48 @@ impl GameState {
                 }
             }
         }
+        // CR 700.9 — "Modified creatures you control have <keyword>"
+        // (Kodama of the West Tree). `IsModified` needs the live battlefield
+        // (attachments), so filters mentioning it resolve here into a
+        // Specific id list per recompute; `affected_from_requirement` drops
+        // them on the static path, so there's no double application.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = &sa.effect
+                else {
+                    continue;
+                };
+                let crate::effect::Selector::EachPermanent(req) = applies_to else { continue };
+                if !requirement_mentions_modified(req) {
+                    continue;
+                }
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            req,
+                            &Target::Permanent(c.id),
+                            card.controller,
+                            Some(card.id),
+                        )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if ids.is_empty() {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(ids),
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(keyword.clone()),
+                });
+            }
+        }
         // CR 700.5 / Theros gods — "isn't a creature unless your devotion
         // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
         // self-effect while the gate is unmet; reading devotion needs the
@@ -6867,6 +6909,36 @@ impl GameState {
                 }
                 return Ok(events);
             }
+        } else if card.cast_target_was_battlefield
+            && let Some(t0) = &target
+        {
+            // CR 608.2b — a multi-target spell fizzles only if EVERY target
+            // is illegal on resolution; effects already skip individual
+            // missing targets. Scoped to battlefield-aimed casts (slot 0 was
+            // a battlefield permanent at cast time) so zone-loose multi-
+            // target spells (graveyard returns) are unaffected.
+            let slot_illegal = |g: &Self, slot: u8, t: &Target| {
+                let gone = matches!(t, Target::Permanent(tid)
+                    if g.battlefield_find(*tid).is_none());
+                let filter_fail = effect
+                    .target_filter_for_slot_in_mode_kicked(slot, Some(mode), card.kicked)
+                    .is_some_and(|f| !g.evaluate_requirement_static(f, t, caster, Some(card.id)));
+                gone
+                    || filter_fail
+                    || g.check_target_legality_with_source(t, caster, Some(card.id)).is_err()
+            };
+            let all_illegal = slot_illegal(self, 0, t0)
+                && additional_targets
+                    .iter()
+                    .enumerate()
+                    .all(|(i, t)| slot_illegal(self, i as u8 + 1, t));
+            if all_illegal {
+                let mut events = Vec::new();
+                if !card.is_token {
+                    self.route_to_graveyard(card, &mut events);
+                }
+                return Ok(events);
+            }
         }
         let mut ctx = EffectContext::for_spell_with_source_and_origin(
             card.id,
@@ -7878,6 +7950,21 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
 /// Translate a selector into a `layers::AffectedPermanents` description for
 /// those `StaticEffect` variants that express broad "lord-like" scope. Returns
 /// `None` if the selector shape isn't representable in the layer system yet.
+/// True if the filter tree contains `IsModified` (CR 700.9) — such filters
+/// are resolved live in `gather_continuous_effects`, not through the static
+/// `AffectedPermanents` decomposition.
+fn requirement_mentions_modified(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::IsModified => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_modified(a) || requirement_mentions_modified(b)
+        }
+        R::Not(inner) => requirement_mentions_modified(inner),
+        _ => false,
+    }
+}
+
 fn selector_to_affected(
     sel: &crate::effect::Selector,
     card: &CardInstance,

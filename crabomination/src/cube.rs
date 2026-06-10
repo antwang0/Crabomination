@@ -782,9 +782,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // works end-to-end. Activated for cube pool.
         ranger_captain_of_eos,
         wrath_of_god,
-        // heliod_sun_crowned 🟡 — devotion-based creature/enchantment
-        // toggle omitted (we leave Heliod as a permanent creature), but
-        // body + lifegain → +1/+1 trigger is the marquee. Activated.
+        // heliod_sun_crowned ✅ — devotion gate (CR 700.5) + lifegain trigger.
         heliod_sun_crowned,
         // containment_priest 🟡 — ETB-replacement effect for non-cast
         // creatures omitted (the trigger doesn't fire today against
@@ -823,6 +821,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         loxodon_hierarch,
         fleecemane_lion,
         ignoble_hierarch,
+        kodama_of_the_west_tree,
         elves_of_deep_shadow,
         generous_ent,
         patchwork_automaton,

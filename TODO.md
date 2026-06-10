@@ -193,9 +193,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `finalize_cast`) fizzles on resolution if the target left the battlefield,
   stopped matching the (mode/kicker-aware) filter, or gained Hexproof/Shroud;
   a fizzled real card is countered into its owner's graveyard. Token copies
-  keep the bare filter re-check. Remaining ⏳: multi-target partial fizzle
-  (all-illegal check across `additional_targets`), Aura spells (permanent
-  path), and protection-from-color on resolution.
+  keep the bare filter re-check. **Multi-target all-illegal fizzle ✅** —
+  battlefield-aimed multi-target spells fizzle only when every slot is
+  illegal (Arc Trail tests). Remaining ⏳: Aura spells (permanent path) and
+  protection-from-color on resolution.
 - ⏳ **Demonstrate "you may" + opponent choice (CR 702.150).** `Effect::
   Demonstrate` always copies (the optional "you may" collapses) and auto-picks
   the lowest-seat opponent rather than prompting the caster. Fine for bots;
@@ -414,13 +415,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     Rise of Extus / Verdant Mastery / Illuminate History were already faithful.
     Re-verify before picking a sweep target.
 - ⏳ **Phasing (CR 702.26) follow-ups**: a permanent that **enters phased out**
-  (Reality Ripple-adjacent / Teferi's Veil grant); phasing **grant** to other
-  permanents (Teferi's Veil "attacking creatures gain phasing"); a creature
-  phasing out mid-combat (remove from the combat arrays cleanly — today
-  `do_phasing` only runs in the untap step so this can't arise yet, but
-  `Effect::PhaseOut` could be cast in combat). **"When this phases in" triggers
-  ✅** — `EventKind::PhasesIn` + `GameEvent::PermanentPhasedIn`; `do_phasing`
-  dispatches them on return. The side-zone model (`GameState.phased_out`) is the hook.
+  (Reality Ripple-adjacent). **Granted phasing ✅** — `do_phasing` now reads
+  computed keywords, so a layer-granted Phasing phases out at the untap step.
+  **Mid-combat `Effect::PhaseOut` ✅** — removes the permanent from the combat
+  arrays (702.26e). **"When this phases in" triggers ✅** — `EventKind::PhasesIn`
+  + `GameEvent::PermanentPhasedIn`. The side-zone model (`GameState.phased_out`)
+  is the hook.
 - ✅ **Changeling (CR 702.73) honored in general type-filter eval** (this run).
   Both `effects/eval.rs` `R::HasCreatureType` sites now OR in
   `has_keyword(Changeling)`, matching the block-restriction path — a Changeling

@@ -2612,6 +2612,13 @@ pub fn heliod_sun_crowned() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Indestructible],
+        static_abilities: vec![StaticAbility {
+            description: "As long as your devotion to white is less than five, Heliod isn't a creature.",
+            effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                colors: vec![crate::mana::Color::White],
+                threshold: 5,
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -8870,6 +8877,53 @@ pub fn dauthi_voidwalker() -> CardDefinition {
                 any_color: false,
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kodama of the West Tree — {2}{G} Legendary Creature — Spirit 1/1, Reach.
+/// Modified creatures you control have trample (CR 700.9). Whenever a
+/// modified creature you control deals combat damage to a player, search
+/// your library for a basic land, put it onto the battlefield tapped.
+pub fn kodama_of_the_west_tree() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Kodama of the West Tree",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Modified creatures you control have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::IsModified),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::IsModified,
+                }),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land
+                    .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Basic)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
         }],
         ..Default::default()
     }

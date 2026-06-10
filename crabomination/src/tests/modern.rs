@@ -49217,3 +49217,128 @@ fn urzas_saga_chapters_grant_abilities_then_tutor() {
         "chapter III fetched the 0-cost artifact");
     assert!(g.battlefield.iter().all(|c| c.id != saga), "Saga sacrificed");
 }
+
+/// CR 700.5 — Heliod's god gate: not a creature below five white devotion,
+/// a creature at five or more.
+#[test]
+fn heliod_devotion_gate_toggles_creatureness() {
+    let mut g = two_player_game();
+    let heliod = g.add_card_to_battlefield(0, catalog::heliod_sun_crowned()); // {2}{W} = 1 devotion
+    let cp = g.compute_battlefield();
+    assert!(!cp.iter().find(|c| c.id == heliod).unwrap().card_types.contains(&CardType::Creature),
+        "1 white pip < 5 → not a creature");
+    // Add four more white pips of devotion (two Serra Angels = {3}{W}{W} each).
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    let cp = g.compute_battlefield();
+    assert!(cp.iter().find(|c| c.id == heliod).unwrap().card_types.contains(&CardType::Creature),
+        "5 white pips → creature");
+}
+
+// ── CR 700.9 modified (Kodama of the West Tree) ──────────────────────────────
+
+/// A countered creature is modified → gains trample from Kodama; a bare one
+/// doesn't.
+#[test]
+fn kodama_grants_trample_to_modified_creatures_only() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kodama_of_the_west_tree());
+    let modded = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bare = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(modded).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let cp = g.compute_battlefield();
+    assert!(cp.iter().find(|c| c.id == modded).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(!cp.iter().find(|c| c.id == bare).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+/// A modified creature connecting fetches a tapped basic.
+#[test]
+fn kodama_fetches_basic_on_modified_combat_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kodama_of_the_west_tree());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(bear);
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+    let fetched = g.battlefield.iter().find(|c| c.id == forest).expect("Forest fetched");
+    assert!(fetched.tapped, "enters tapped");
+}
+
+/// CR 702.26 — layer-granted Phasing (a static "X has phasing") phases the
+/// permanent out at its controller's untap, not just the printed keyword.
+#[test]
+fn granted_phasing_phases_out_at_untap() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Grant Phasing via a continuous effect (the layer system path).
+    g.add_continuous_effect(crate::game::layers::ContinuousEffect {
+        timestamp: 9999,
+        source: bear,
+        affected: crate::game::layers::AffectedPermanents::Specific(vec![bear]),
+        layer: crate::game::layers::Layer::L6Ability,
+        sublayer: None,
+        duration: crate::game::layers::EffectDuration::WhileSourceOnBattlefield,
+        modification: crate::game::layers::Modification::AddKeyword(Keyword::Phasing),
+    });
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield.iter().all(|c| c.id != bear), "phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == bear));
+}
+
+// ── CR 608.2b multi-target fizzle ────────────────────────────────────────────
+
+/// A multi-target spell with every target gone fizzles into the graveyard.
+#[test]
+fn cr_608_2b_multi_target_spell_fizzles_when_all_targets_illegal() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let trail = g.add_card_to_hand(0, catalog::arc_trail());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: trail, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![Target::Permanent(b2)], mode: None, x_value: None,
+    }).expect("cast");
+    // Both targets leave before resolution.
+    g.remove_to_graveyard_with_triggers(b1);
+    g.remove_to_graveyard_with_triggers(b2);
+    let life = g.players[1].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "no stray damage");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == trail), "fizzled to graveyard");
+}
+
+/// With only one of two targets gone, the spell still resolves against the
+/// surviving one.
+#[test]
+fn cr_608_2b_multi_target_spell_resolves_with_one_legal_target() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let trail = g.add_card_to_hand(0, catalog::arc_trail());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: trail, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![Target::Permanent(b2)], mode: None, x_value: None,
+    }).expect("cast");
+    g.remove_to_graveyard_with_triggers(b1); // slot-0 target gone
+    drain_stack(&mut g);
+    let angel = g.battlefield.iter().find(|c| c.id == b2).expect("Angel survives 1 damage");
+    assert_eq!(angel.damage, 1, "slot-1 damage still resolved");
+}

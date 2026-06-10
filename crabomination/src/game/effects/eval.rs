@@ -1091,6 +1091,17 @@ impl GameState {
                     R::IsEnchanted => self.battlefield.iter().any(|o| {
                         o.attached_to == Some(*cid) && o.definition.is_enchantment()
                     }),
+                    // CR 700.9 — counters, equipped, or enchanted by an Aura
+                    // the permanent's own controller controls.
+                    R::IsModified => {
+                        !card.counters.is_empty()
+                            || self.battlefield.iter().any(|o| {
+                                o.attached_to == Some(*cid)
+                                    && (o.definition.is_artifact()
+                                        || (o.definition.is_enchantment()
+                                            && o.controller == card.controller))
+                            })
+                    }
                     // CR 506.5: attacking alone = card is in attacking AND
                     // there is exactly one declared attacker.
                     R::IsAttackingAlone => {
@@ -1376,7 +1387,8 @@ impl GameState {
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::AttackedThisTurn | R::HasAbilityOnStack
-            | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn | R::IsEnchanted => false,
+            | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn | R::IsEnchanted
+            | R::IsModified => false,
         }
     }
 }
