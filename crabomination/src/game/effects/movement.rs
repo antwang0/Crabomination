@@ -629,6 +629,8 @@ impl GameState {
                 // additional plumbing through `move_card_to` from the
                 // cast-time ctx, tracked separately.
                 let enters_spec = card.definition.enters_with_counters.clone();
+                let mut card = card;
+                card.controller = self.apply_etb_control_replacement(&card, card.controller);
                 self.battlefield.push(card);
                 // CR 122.1 — Solemnity drops the enters-with-counters too.
                 let mut counter_specs: Vec<(crate::card::CounterType, crate::effect::Value)> =

@@ -4925,6 +4925,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::StealCreatureEtbThisTurn => {
+                let p = ctx.controller;
+                if !self.creature_etb_steal_this_turn.contains(&p) {
+                    self.creature_etb_steal_this_turn.push(p);
+                }
+                Ok(())
+            }
+
             Effect::PutFromHandOrGraveyardOntoBattlefield { filter } => {
                 use crate::decision::Decision;
                 let p = ctx.controller;

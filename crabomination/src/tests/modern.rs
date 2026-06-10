@@ -44385,3 +44385,37 @@ fn top_of_library_revealed_in_view_with_courser() {
         );
     }
 }
+
+#[test]
+fn gather_specimens_steals_an_opponent_creature_etb() {
+    let mut g = two_player_game();
+    // P1's turn: P0 flashes in Gather Specimens, then P1 casts a creature.
+    g.active_player_idx = 1;
+    let spell = g.add_card_to_hand(0, catalog::gather_specimens());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, spell);
+
+    // P1 casts a creature this turn — it enters under P0's control.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bear castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen on entry");
+
+    // The window closes at cleanup.
+    g.creature_etb_steal_this_turn.clear();
+    let bear2 = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear2).unwrap().controller, 1, "no replacement next turn");
+}

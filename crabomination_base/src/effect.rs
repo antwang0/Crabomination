@@ -1752,6 +1752,10 @@ pub enum Effect {
         #[serde(default)]
         take: Option<Value>,
     },
+    /// "If a creature would enter the battlefield under an opponent's
+    /// control this turn, it enters under your control instead." Gather
+    /// Specimens (CR 614 control-ETB replacement; expires at cleanup).
+    StealCreatureEtbThisTurn,
     /// "You may put a card matching `filter` from your hand or graveyard
     /// onto the battlefield." Dakkon, Shadow Slayer −6. Auto-pick: the
     /// highest-MV match; a `wants_ui` controller picks (or declines) via

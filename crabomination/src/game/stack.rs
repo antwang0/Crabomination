@@ -532,6 +532,8 @@ impl GameState {
                     // BEFORE the next state-based-action sweep, so a printed
                     // 0/0 body (Pterafractyl, Symmathematics) survives ETB.
                     let enters_spec = card.definition.enters_with_counters.clone();
+                    let mut card = card;
+                    card.controller = self.apply_etb_control_replacement(&card, card.controller);
                     self.battlefield.push(card);
                     // Collect the printed `enters_with_counters` spec and
                     // any active `ExtraEtbCountersForCreatureCasts` static
@@ -1417,6 +1419,7 @@ impl GameState {
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
         self.combat_damage_prevented_creatures.clear();
+        self.creature_etb_steal_this_turn.clear();
         self.cant_block_pairs.clear();
         // CR 615 — prevention shields and the "can't be prevented" rider
         // are "this turn" effects; they expire at cleanup too.

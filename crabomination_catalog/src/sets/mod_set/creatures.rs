@@ -4266,13 +4266,9 @@ pub fn thragtusk() -> CardDefinition {
 // ── Courser of Kruphix ─────────────────────────────────────────────────────
 
 /// Courser of Kruphix — {1}{G}{G}, 2/4 Centaur Enchantment Creature.
-/// Landfall: whenever a land enters the battlefield under your control,
-/// gain 1 life.
-///
-/// Wired via `EntersBattlefield` + `YourControl` scope with a
-/// `Predicate::EntityMatches { what: TriggerSource, filter: Land }` filter,
-/// matching the Tireless Tracker pattern. This catches both played and
-/// fetched lands.
+/// Play with the top card of your library revealed; you may play lands
+/// from the top of your library (CR 401.5/401.6). Landfall: gain 1 life
+/// (ETB-scoped, so fetched lands count too).
 pub fn courser_of_kruphix() -> CardDefinition {
     use crate::effect::Predicate;
     CardDefinition {
@@ -4285,6 +4281,18 @@ pub fn courser_of_kruphix() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
+        static_abilities: vec![
+            crate::card::StaticAbility {
+                description: "Play with the top card of your library revealed.",
+                effect: crate::effect::StaticEffect::TopOfLibraryRevealed,
+            },
+            crate::card::StaticAbility {
+                description: "You may play lands from the top of your library.",
+                effect: crate::effect::StaticEffect::PlayFromLibraryTop {
+                    filter: SelectionRequirement::Land,
+                },
+            },
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {

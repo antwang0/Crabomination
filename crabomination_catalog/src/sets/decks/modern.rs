@@ -38803,39 +38803,6 @@ pub fn heart_of_kiran() -> CardDefinition {
     }
 }
 
-/// Courser of Kruphix — {1}{G}{G} 2/4 Enchantment Creature — Centaur.
-/// Play with the top card of your library revealed; you may play lands
-/// from the top of your library. Landfall — gain 1 life.
-pub fn courser_of_kruphix() -> CardDefinition {
-    use crate::effect::{StaticAbility, StaticEffect};
-    CardDefinition {
-        name: "Courser of Kruphix",
-        cost: cost(&[generic(1), g(), g()]),
-        card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Centaur],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 4,
-        static_abilities: vec![
-            StaticAbility {
-                description: "Play with the top card of your library revealed.",
-                effect: StaticEffect::TopOfLibraryRevealed,
-            },
-            StaticAbility {
-                description: "You may play lands from the top of your library.",
-                effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Land },
-            },
-        ],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
-        }],
-        ..Default::default()
-    }
-}
-
 /// Oracle of Mul Daya — {3}{G} 2/2 Elf Shaman. An additional land each
 /// turn; play with the top card revealed; play lands from the top.
 pub fn oracle_of_mul_daya() -> CardDefinition {
@@ -38895,6 +38862,19 @@ pub fn mystic_forge() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Gather Specimens — {3}{U}{U}{U} Instant. If a creature would enter the
+/// battlefield under an opponent's control this turn, it enters under
+/// your control instead.
+pub fn gather_specimens() -> CardDefinition {
+    CardDefinition {
+        name: "Gather Specimens",
+        cost: cost(&[generic(3), u(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::StealCreatureEtbThisTurn,
         ..Default::default()
     }
 }

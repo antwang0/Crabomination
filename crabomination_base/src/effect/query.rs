@@ -117,6 +117,7 @@ impl Effect {
             Effect::NameCardRevealTop { .. } => false,
             Effect::RevealTopToHandOpponentsLoseMv => false,
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
+            Effect::StealCreatureEtbThisTurn => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::ExileHand { who } => player_has_target(who),
             Effect::Demonstrate => false,

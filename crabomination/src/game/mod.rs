@@ -570,6 +570,11 @@ pub struct GameState {
     /// in this set. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
+    /// CR 614.13-style ETB-control replacement (Gather Specimens): seats
+    /// whose opponents' creatures enter under their control instead this
+    /// turn. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) creature_etb_steal_this_turn: Vec<usize>,
     /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
     /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
     /// "{C}: Target creature can't block this creature this turn"). Cleared at
@@ -854,6 +859,7 @@ impl Clone for GameState {
             mana_production_doublers: self.mana_production_doublers,
             additional_combat_phases: self.additional_combat_phases,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
+            creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
@@ -965,6 +971,7 @@ impl GameState {
             mana_production_doublers: 0,
             additional_combat_phases: 0,
             combat_damage_prevented_creatures: Vec::new(),
+            creature_etb_steal_this_turn: Vec::new(),
             cant_block_pairs: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
@@ -2086,6 +2093,24 @@ impl GameState {
                 }
             })
         })
+    }
+
+    /// CR 614 (Gather Specimens): if a creature would enter the battlefield
+    /// under `intended`'s control while an opponent of theirs registered the
+    /// steal-replacement this turn, it enters under that opponent instead.
+    pub(crate) fn apply_etb_control_replacement(
+        &self,
+        card: &crate::card::CardInstance,
+        intended: usize,
+    ) -> usize {
+        if !card.definition.is_creature() {
+            return intended;
+        }
+        self.creature_etb_steal_this_turn
+            .iter()
+            .copied()
+            .find(|b| !self.same_team(*b, intended))
+            .unwrap_or(intended)
     }
 
     /// Place `card` into its owner's graveyard, or exile it instead when a
