@@ -39764,3 +39764,38 @@ pub fn sword_of_the_meek() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Stony Silence — {1}{W} Enchantment. Activated abilities of artifacts
+/// can't be activated.
+pub fn stony_silence() -> CardDefinition {
+    CardDefinition {
+        name: "Stony Silence",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of artifacts can't be activated.",
+            effect: StaticEffect::ArtifactActivatedAbilitiesLocked,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shrapnel Blast — {1}{R} Instant. Additional cost: sacrifice an artifact.
+/// Deals 5 damage to any target.
+pub fn shrapnel_blast() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Shrapnel Blast",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact,
+            count: 1,
+        }],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Player)),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}

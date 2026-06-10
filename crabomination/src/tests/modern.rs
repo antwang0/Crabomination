@@ -40824,6 +40824,52 @@ fn glissa_combat_damage_draws_and_loses_life() {
     assert_eq!(g.players[0].life, life - 1, "lost 1 life");
 }
 
+/// Stony Silence locks artifact activated abilities (mana rocks included).
+#[test]
+fn stony_silence_locks_artifact_abilities() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stony_silence());
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: rock, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "artifact ability locked");
+}
+
+/// Journey to Nowhere exiles on ETB and gives the creature back on leave.
+#[test]
+fn journey_to_nowhere_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let journey = g.add_card_to_hand(0, catalog::journey_to_nowhere());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: journey, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Journey castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled");
+    g.remove_from_battlefield_to_graveyard(journey);
+    assert!(g.battlefield_find(bear).is_some(), "creature returns when Journey leaves");
+}
+
+/// Shrapnel Blast: sac-an-artifact additional cost, 5 to any target.
+#[test]
+fn shrapnel_blast_sacs_artifact_for_five() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let blast = g.add_card_to_hand(0, catalog::shrapnel_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blast, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Shrapnel Blast castable with an artifact to sac");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "artifact sacrificed as cost");
+    assert_eq!(g.players[1].life, 15, "5 damage");
+}
+
 /// Azusa grants two extra land plays (three total per turn).
 #[test]
 fn azusa_allows_three_land_plays() {

@@ -502,6 +502,7 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         ranger_of_eos,
+        stony_silence,
         // Hideaway land (CR 702.76)
         windbrisk_heights,
         // Damage redirection (CR 614.9)
@@ -1861,6 +1862,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         magus_of_the_moon,
         fulminator_mage,
         hero_of_oxid_ridge,
+        shrapnel_blast,
         // Hideaway land (CR 702.76)
         spinerock_knoll,
         embereth_shieldbreaker,
