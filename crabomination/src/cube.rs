@@ -437,6 +437,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         ensnaring_bridge,
         kaldra_compleat,
         mox_opal,
+        thopter_foundry,
+        sword_of_the_meek,
         spine_of_ish_sah,
         ankh_of_mishra,
         // ── Push XXIV (session 8) — colorless cube additions ──
@@ -499,6 +501,7 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        ranger_of_eos,
         // Hideaway land (CR 702.76)
         windbrisk_heights,
         // Damage redirection (CR 614.9)
@@ -1857,6 +1860,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         blood_moon,
         magus_of_the_moon,
         fulminator_mage,
+        hero_of_oxid_ridge,
         // Hideaway land (CR 702.76)
         spinerock_knoll,
         embereth_shieldbreaker,
@@ -2324,6 +2328,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        azusa_lost_but_seeking,
         // Hideaway land (CR 702.76)
         mosswort_bridge,
         shifting_woodland,

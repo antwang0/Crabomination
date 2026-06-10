@@ -40824,6 +40824,89 @@ fn glissa_combat_damage_draws_and_loses_life() {
     assert_eq!(g.players[0].life, life - 1, "lost 1 life");
 }
 
+/// Azusa grants two extra land plays (three total per turn).
+#[test]
+fn azusa_allows_three_land_plays() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::azusa_lost_but_seeking());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 {
+        let land = g.add_card_to_hand(0, catalog::forest());
+        g.perform_action(GameAction::PlayLand(land)).expect("extra land play");
+    }
+    let fourth = g.add_card_to_hand(0, catalog::forest());
+    assert!(g.perform_action(GameAction::PlayLand(fourth)).is_err(), "fourth is too many");
+}
+
+/// Ranger of Eos tutors two one-drop creatures to hand.
+#[test]
+fn ranger_of_eos_fetches_two_one_drops() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::ornithopter());
+    let b = g.add_card_to_library(0, catalog::memnite());
+    let ranger = g.add_card_to_hand(0, catalog::ranger_of_eos());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(b)),
+    ]));
+    cast(&mut g, ranger);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a));
+    assert!(g.players[0].hand.iter().any(|c| c.id == b));
+}
+
+/// Hero of Oxid Ridge shuts off power-1-or-less blockers on attack.
+#[test]
+fn hero_of_oxid_ridge_locks_out_small_blockers() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::hero_of_oxid_ridge());
+    g.clear_sickness(hero);
+    let chump = g.add_card_to_battlefield(1, catalog::ornithopter()); // 0/2
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: hero, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(chump, hero)])).is_err(),
+        "power ≤1 creature can't block");
+}
+
+/// Thopter Foundry sacrifices a nontoken artifact for a Thopter + 1 life.
+#[test]
+fn thopter_foundry_mints_thopter_and_gains_life() {
+    let mut g = two_player_game();
+    let foundry = g.add_card_to_battlefield(0, catalog::thopter_foundry());
+    let fodder = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let life = g.players[0].life;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: foundry, ability_index: 0, target: None, x_value: None,
+    }).expect("sac a nontoken artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "rock sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Thopter" && c.is_token));
+    assert_eq!(g.players[0].life, life + 1);
+}
+
+/// Sword of the Meek hops back from the graveyard onto an entering 1/1.
+#[test]
+fn sword_of_the_meek_returns_onto_entering_one_one() {
+    let mut g = two_player_game();
+    let sword = g.add_card_to_graveyard(0, catalog::sword_of_the_meek());
+    let pup = g.add_card_to_hand(0, catalog::memnite()); // 1/1
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, pup);
+    let s = g.battlefield_find(sword).expect("Sword returned to the battlefield");
+    assert_eq!(s.attached_to, Some(pup), "attached to the 1/1");
+    assert_eq!(g.computed_permanent(pup).unwrap().toughness, 3, "+1/+2 applied");
+}
+
 /// Fulminator Mage sacrifices to blow up a nonbasic land; basics illegal.
 #[test]
 fn fulminator_mage_sacs_to_destroy_nonbasic_land() {

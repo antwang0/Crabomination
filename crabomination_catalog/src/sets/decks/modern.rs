@@ -39605,3 +39605,162 @@ pub fn mox_opal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Azusa, Lost but Seeking — {2}{G} Legendary 1/2 Human Monk. You may play
+/// two additional lands on each of your turns.
+pub fn azusa_lost_but_seeking() -> CardDefinition {
+    let extra = || StaticAbility {
+        description: "You may play two additional lands on each of your turns.",
+        effect: StaticEffect::ExtraLandPerTurn,
+    };
+    CardDefinition {
+        name: "Azusa, Lost but Seeking",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![extra(), extra()],
+        ..Default::default()
+    }
+}
+
+/// Ranger of Eos — {3}{W} 3/2 Human Soldier Ranger. ETB: search your library
+/// for up to two creature cards with mana value 1 or less, put them into
+/// your hand.
+pub fn ranger_of_eos() -> CardDefinition {
+    let fetch = || Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(1)),
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Ranger of Eos",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            fetch(),
+            fetch(),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Hero of Oxid Ridge — {2}{R}{R} 4/2 Human Knight, haste, battle cry.
+/// Whenever it attacks, creatures with power 1 or less can't block this turn.
+pub fn hero_of_oxid_ridge() -> CardDefinition {
+    let mut def = CardDefinition {
+        name: "Hero of Oxid Ridge",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(1)),
+                ),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    };
+    def.triggered_abilities.push(crate::effect::shortcut::battle_cry(1));
+    def
+}
+
+/// Thopter Foundry — {W/B}{U} Artifact. {1}, Sacrifice a nontoken artifact:
+/// create a 1/1 blue Thopter with flying; you gain 1 life.
+pub fn thopter_foundry() -> CardDefinition {
+    use crate::mana::hybrid;
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![Color::Blue],
+        keywords: vec![Keyword::Flying],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Thopter Foundry",
+        cost: ManaCost::new(vec![hybrid(Color::White, Color::Black), crate::mana::u()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.and(SelectionRequirement::NotToken),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: thopter,
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sword of the Meek — {2} Equipment, +1/+2, equip {2}. When a 1/1 creature
+/// you control enters, you may return this from your graveyard to the
+/// battlefield attached to it.
+pub fn sword_of_the_meek() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    let one_one = SelectionRequirement::Creature
+        .and(SelectionRequirement::PowerAtLeast(1))
+        .and(SelectionRequirement::PowerAtMost(1))
+        .and(SelectionRequirement::ToughnessAtLeast(1))
+        .and(SelectionRequirement::ToughnessAtMost(1));
+    CardDefinition {
+        name: "Sword of the Meek",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: one_one,
+                }),
+            effect: Effect::MayDo {
+                description: "Return Sword of the Meek to the battlefield attached?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::Attach { what: Selector::This, to: Selector::TriggerSource },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
