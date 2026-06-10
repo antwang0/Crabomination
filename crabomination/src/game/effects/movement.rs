@@ -125,6 +125,14 @@ impl GameState {
         if amount == 0 {
             return;
         }
+        // CR 615.7 — "prevent all damage [chosen source] would deal this
+        // turn" (Burrenton Forge-Tender), unless prevention is off (615.12).
+        if let Some(src) = source
+            && !self.damage_cant_be_prevented_this_turn
+            && self.damage_prevented_sources.contains(&src)
+        {
+            return;
+        }
         // CR 614.9 — redirect the whole event to a Palisade-Giant-style
         // permanent. One redirect per event (CR 614.5; the flag also stops
         // two redirectors ping-ponging).

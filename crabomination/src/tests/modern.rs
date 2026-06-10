@@ -45592,3 +45592,283 @@ fn restless_vents_loots_on_attack() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spare), "discarded");
     assert_eq!(g.players[0].hand.len(), hand, "discard then draw nets zero");
 }
+
+// ── Search hate (CR 701.19 — Aven Mindcensor / Leonin Arbiter) ───────────────
+
+/// Aven Mindcensor restricts an opponent's search to the top four cards.
+#[test]
+fn aven_mindcensor_limits_opponent_search_to_top_four() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::aven_mindcensor());
+    // Forest is the fifth card down — out of Mindcensor range.
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let fetch = g.add_card_to_battlefield(0, catalog::prismatic_vista());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch, ability_index: 0, target: None, x_value: None,
+    }).expect("crack fetch");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(forest).is_none(),
+        "Forest below the top four can't be found (the pick is rejected)"
+    );
+}
+
+/// The searcher's own Mindcensor doesn't restrict their search.
+#[test]
+fn aven_mindcensor_does_not_limit_your_own_search() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aven_mindcensor());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let fetch = g.add_card_to_battlefield(0, catalog::prismatic_vista());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch, ability_index: 0, target: None, x_value: None,
+    }).expect("crack fetch");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(forest).is_some(),
+        "own search unrestricted (fetches the only basic, fifth down)"
+    );
+}
+
+/// Leonin Arbiter blanks a search when the searcher can't pay {2}; with
+/// floating mana the tax is auto-paid and the search goes through.
+#[test]
+fn leonin_arbiter_taxes_searches() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::leonin_arbiter());
+    let forest_a = g.add_card_to_library(0, catalog::forest());
+    let fetch = g.add_card_to_battlefield(0, catalog::prismatic_vista());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest_a))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch, ability_index: 0, target: None, x_value: None,
+    }).expect("crack fetch");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(forest_a).is_none(),
+        "no floating mana → search finds nothing"
+    );
+
+    // Second fetch with {2} floating: the tax is paid, the search resolves.
+    let fetch2 = g.add_card_to_battlefield(0, catalog::prismatic_vista());
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest_a))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch2, ability_index: 0, target: None, x_value: None,
+    }).expect("crack fetch");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield_find(forest_a).is_some(),
+        "tax paid from floating mana → search succeeds"
+    );
+    assert_eq!(g.players[0].mana_pool.total(), 0, "tax consumed the floating mana");
+}
+
+/// Sanctifier en-Vec sweeps black/red graveyard cards on ETB and exiles
+/// later black/red cards bound for any graveyard (others still land there).
+#[test]
+fn sanctifier_en_vec_exiles_black_and_red_cards() {
+    let mut g = two_player_game();
+    let rotted = g.add_card_to_graveyard(1, catalog::lightning_bolt()); // red
+    let stays = g.add_card_to_graveyard(1, catalog::grizzly_bears()); // green
+    let id = g.add_card_to_hand(0, catalog::sanctifier_en_vec());
+    g.players[0].mana_pool.add(Color::White, 2);
+    cast(&mut g, id);
+    assert!(g.exile.iter().any(|c| c.id == rotted), "red gy card swept on ETB");
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == stays),
+        "green card untouched"
+    );
+
+    // A red spell cast afterwards is exiled instead of hitting the graveyard.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "resolved red spell exiled (614.6)");
+    // A green creature dying still goes to the graveyard.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(bear);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "green death unaffected");
+}
+
+/// Suppression Field taxes non-mana activated abilities by {2}; mana
+/// abilities are exempt.
+#[test]
+fn suppression_field_taxes_nonmana_activations() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::suppression_field());
+    // Prismatic Vista's fetch ability (free + tap) now costs {2}.
+    let fetch = g.add_card_to_battlefield(0, catalog::prismatic_vista());
+    g.add_card_to_library(0, catalog::forest());
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "no mana → taxed fetch rejected");
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch, ability_index: 0, target: None, x_value: None,
+    }).expect("taxed fetch payable with {2}");
+    // A basic's mana ability is exempt.
+    let isl = g.add_card_to_battlefield(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: isl, ability_index: 0, target: None, x_value: None,
+    }).expect("mana ability untaxed");
+}
+
+/// Reckoner Bankbuster enters with three charges, draws per activation, and
+/// mints a Treasure + Pilot when the last charge comes off.
+#[test]
+fn reckoner_bankbuster_draws_then_pays_out_when_empty() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::reckoner_bankbuster());
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::Charge),
+        3,
+        "enters with three charges"
+    );
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+    for i in 0..3 {
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, x_value: None,
+        }).expect("activate Bankbuster");
+        drain_stack(&mut g);
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
+            c.tapped = false;
+        }
+        let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+        let pilots = g.battlefield.iter().filter(|c| c.definition.name == "Pilot").count();
+        if i < 2 {
+            assert_eq!((treasures, pilots), (0, 0), "no payout while charges remain");
+        } else {
+            assert_eq!((treasures, pilots), (1, 1), "payout on the last charge");
+        }
+    }
+    assert_eq!(g.players[0].hand.len(), hand_before + 3, "drew once per activation");
+}
+
+/// Mizzium Mortars: targeted for {1}{R}, overloaded for {3}{R}{R}{R} it hits
+/// each creature you don't control (yours untouched).
+#[test]
+fn mizzium_mortars_overload_sweeps_only_their_board() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::arbor_colossus());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::arbor_colossus());
+    let id = g.add_card_to_hand(0, catalog::mizzium_mortars());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("overload cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none(), "2/2 swept");
+    assert_eq!(g.battlefield_find(big).unwrap().damage, 4, "6/6 damaged, alive");
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "own creature untouched");
+}
+
+// ── Fable of the Mirror-Breaker (DFC saga, CR 714.4) ─────────────────────────
+
+/// Fable mints the Goblin Shaman on chapter I and transforms into Reflection
+/// of Kiki-Jiki on chapter III instead of being sacrificed.
+#[test]
+fn fable_chapter_three_returns_transformed() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fable_of_the_mirror_breaker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id); // chapter I
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Goblin Shaman" && c.is_token),
+        "chapter I minted the Shaman"
+    );
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.saga_advance(id); // chapter II (rummage)
+    drain_stack(&mut g);
+    g.saga_advance(id); // chapter III (exile, return transformed)
+    drain_stack(&mut g);
+    let flipped = g.battlefield_find(id).expect("returned to the battlefield");
+    assert_eq!(flipped.definition.name, "Reflection of Kiki-Jiki");
+    assert!(flipped.transformed, "back face active");
+    assert_eq!(
+        flipped.counter_count(CounterType::Lore),
+        0,
+        "new object — lore counters gone"
+    );
+}
+
+/// Fable's Shaman token mints a Treasure when it attacks.
+#[test]
+fn fable_shaman_token_mints_treasure_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fable_of_the_mirror_breaker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    let shaman = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Goblin Shaman")
+        .map(|c| c.id)
+        .expect("shaman minted");
+    g.clear_sickness(shaman);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: shaman, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "attack trigger minted a Treasure"
+    );
+}
+
+/// Reflection of Kiki-Jiki copies a nonlegendary creature with haste; the
+/// copy is sacrificed at the next end step.
+#[test]
+fn reflection_of_kiki_jiki_copies_then_sacs_at_end_step() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let kiki = g.add_card_to_battlefield(0, catalog::reflection_of_kiki_jiki());
+    g.clear_sickness(kiki);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kiki, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate Kiki");
+    drain_stack(&mut g);
+    let copy = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .expect("token copy created");
+    assert!(copy.granted_keywords_eot.contains(&Keyword::Haste) || {
+        let cp = g.computed_permanent(copy.id).unwrap();
+        cp.keywords.contains(&Keyword::Haste)
+    }, "copy has haste");
+    let copy_id = copy.id;
+    // Advance to the end step — the delayed trigger sacrifices the copy.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(copy_id).is_none(), "copy gone at end step");
+}

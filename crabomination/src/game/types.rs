@@ -454,6 +454,11 @@ pub struct DelayedTrigger {
     pub effect: Effect,
     /// Optional target (e.g. Goryo's exiles the reanimated creature).
     pub target: Option<Target>,
+    /// Token created in the scheduling resolution, so a delayed body's
+    /// `Selector::LastCreatedToken` still finds it at fire time (Saheeli
+    /// Rai's +1, Reflection of Kiki-Jiki's sac-at-end-step rider).
+    #[serde(default)]
+    pub bound_token: Option<CardId>,
     /// True for one-shot triggers; removed after firing.
     pub fires_once: bool,
 }

@@ -391,7 +391,8 @@ impl GameState {
         // alongside the regular battlefield triggers. Fires-once triggers
         // are removed; this keeps `pact_of_negation`-style "next upkeep"
         // logic correct without leaking back into the next turn.
-        let mut delayed_to_fire: Vec<(CardId, Effect, usize, Option<Target>)> = Vec::new();
+        type DelayedFire = (CardId, Effect, usize, Option<Target>, Option<CardId>);
+        let mut delayed_to_fire: Vec<DelayedFire> = Vec::new();
         let mut keep: Vec<DelayedTrigger> = Vec::new();
         for dt in std::mem::take(&mut self.delayed_triggers) {
             let matches = match (dt.kind, step) {
@@ -403,7 +404,13 @@ impl GameState {
                 _ => false,
             };
             if matches {
-                delayed_to_fire.push((dt.source, dt.effect.clone(), dt.controller, dt.target.clone()));
+                delayed_to_fire.push((
+                    dt.source,
+                    dt.effect.clone(),
+                    dt.controller,
+                    dt.target.clone(),
+                    dt.bound_token,
+                ));
                 if !dt.fires_once {
                     keep.push(dt);
                 }
@@ -418,8 +425,12 @@ impl GameState {
         // `Decision::ChooseTarget` for wants_ui controllers instead of
         // silently auto-targeting them.
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
-        for (source, effect, controller, captured_target) in delayed_to_fire {
+        for (source, effect, controller, captured_target, bound_token) in delayed_to_fire {
             let mode = self.pick_trigger_mode(&effect, source);
+            // A bound token (Saheeli / Reflection of Kiki-Jiki) rides as
+            // the trigger's subject so `Selector::LastCreatedToken`
+            // re-finds it at fire time.
+            let subject = bound_token.map(crate::game::effects::EntityRef::Permanent);
             // Delayed triggers may have captured a target at registration
             // time (e.g. Pact's "lose the game"). If so, push immediately
             // with that target — we already passed the targeting moment.
@@ -429,7 +440,7 @@ impl GameState {
                         source,
                         controller,
                         effect,
-                        subject: None,
+                        subject,
                         event_amount: 0,
                         mode,
                         intervening_if: None,
@@ -442,7 +453,7 @@ impl GameState {
                 source,
                 controller,
                 effect,
-                subject: None,
+                subject,
                 event_amount: 0,
                 mode,
                 intervening_if: None,
@@ -748,6 +759,7 @@ impl GameState {
                                 ),
                             },
                             target: None,
+                            bound_token: None,
                             fires_once: true,
                         });
                     }
@@ -771,6 +783,7 @@ impl GameState {
                                 amount: crate::effect::Value::Const(1),
                             },
                             target: None,
+                            bound_token: None,
                             fires_once: true,
                         });
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
@@ -779,6 +792,7 @@ impl GameState {
                             kind: crate::game::types::DelayedKind::NextEndStep,
                             effect: Effect::SacrificeSource,
                             target: None,
+                            bound_token: None,
                             fires_once: true,
                         });
                     }
@@ -968,10 +982,44 @@ impl GameState {
             }
         }
 
+        // CR 728 — Effect::EndTheTurn fired during this resolution: exile
+        // the rest of the stack, clear combat, and jump to cleanup.
+        if self.end_turn_requested {
+            self.end_turn_requested = false;
+            return self.do_end_the_turn(events);
+        }
+
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
 
         Ok(events)
+    }
+
+    /// CR 728.1 — end the turn: exile every spell and ability still on the
+    /// stack (real cards go to exile; trigger items and token copies cease),
+    /// remove everything from combat, then advance from the end step
+    /// straight into cleanup (damage wear-off, "this turn" expiry, and the
+    /// discard-to-hand-size all happen there as normal).
+    pub(crate) fn do_end_the_turn(
+        &mut self,
+        mut events: Vec<GameEvent>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        while let Some(item) = self.stack.pop() {
+            if let StackItem::Spell { card, .. } = item
+                && !card.is_token
+            {
+                let cid = card.id;
+                self.exile.push(*card);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+            }
+        }
+        // CR 728.1b — remove all attackers and blockers from combat.
+        self.attacking.clear();
+        self.block_map.clear();
+        self.blockers_declared = false;
+        // CR 728.1d — the turn skips straight to the cleanup step.
+        self.step = TurnStep::End;
+        self.advance_step(events)
     }
 
     // ── Automatic step effects ────────────────────────────────────────────────
@@ -1441,6 +1489,8 @@ impl GameState {
         self.prevent_combat_damage_this_turn = false;
         self.combat_damage_prevented_creatures.clear();
         self.creature_etb_steal_this_turn.clear();
+        self.search_tax_paid_this_turn.clear();
+        self.damage_prevented_sources.clear();
         self.cant_block_pairs.clear();
         // CR 615 — prevention shields and the "can't be prevented" rider
         // are "this turn" effects; they expire at cleanup too.
@@ -2282,7 +2332,7 @@ impl GameState {
         match zone {
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
             // graveyard arrival to exile.
-            Zone::Graveyard if self.graveyard_exiled_for(owner) => self.exile.push(card),
+            Zone::Graveyard if self.graveyard_exiled_for(&card) => self.exile.push(card),
             Zone::Graveyard => self.players[owner].send_to_graveyard(card),
             Zone::Exile => self.exile.push(card),
             Zone::Hand => self.players[owner].hand.push(card),

@@ -432,6 +432,11 @@ pub struct GameState {
     /// `Effect::ExileResolvingSpell` — same shape, exile-bound.
     #[serde(skip)]
     pub(crate) exile_resolving_spell: bool,
+    /// CR 728 — set by `Effect::EndTheTurn`; consumed after the current
+    /// stack item finishes resolving (exile the stack, clear combat, jump
+    /// to cleanup).
+    #[serde(skip)]
+    pub(crate) end_turn_requested: bool,
     /// CR 702.46 — Cipher. Set by `Effect::Cipher` to the creature the
     /// resolving spell should be exiled "encoded on"; the post-resolution
     /// routing consumes it to send the card to exile (with `encoded_on` stamped)
@@ -575,6 +580,14 @@ pub struct GameState {
     /// turn. Cleared at cleanup.
     #[serde(default)]
     pub(crate) creature_etb_steal_this_turn: Vec<usize>,
+    /// Players who have paid the Leonin Arbiter search tax this turn
+    /// (covers further searches until end of turn). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) search_tax_paid_this_turn: Vec<usize>,
+    /// CR 615.7 — sources whose damage is prevented entirely this turn
+    /// (Burrenton Forge-Tender's chosen source). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damage_prevented_sources: Vec<CardId>,
     /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
     /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
     /// "{C}: Target creature can't block this creature this turn"). Cleared at
@@ -840,6 +853,7 @@ impl Clone for GameState {
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
             return_resolving_spell_to_hand: self.return_resolving_spell_to_hand,
             exile_resolving_spell: self.exile_resolving_spell,
+            end_turn_requested: self.end_turn_requested,
             cipher_encode_pending: self.cipher_encode_pending,
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
@@ -860,6 +874,8 @@ impl Clone for GameState {
             additional_combat_phases: self.additional_combat_phases,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
+            search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
+            damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
@@ -952,6 +968,7 @@ impl GameState {
             shuffle_resolving_spell_into_library: false,
             return_resolving_spell_to_hand: false,
             exile_resolving_spell: false,
+            end_turn_requested: false,
             cipher_encode_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
@@ -972,6 +989,8 @@ impl GameState {
             additional_combat_phases: 0,
             combat_damage_prevented_creatures: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
+            search_tax_paid_this_turn: Vec::new(),
+            damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
@@ -2078,21 +2097,73 @@ impl GameState {
         })
     }
 
-    /// CR 614.6 — true if cards bound for `owner`'s graveyard are exiled
-    /// instead (Rest in Peace exiles everyone's; Leyline of the Void exiles
-    /// an opponent's). Consulted by `route_to_graveyard` at every
-    /// graveyard-placement site.
-    pub fn graveyard_exiled_for(&self, owner: usize) -> bool {
+    /// CR 614.6 — true if `card` bound for its owner's graveyard is exiled
+    /// instead (Rest in Peace exiles everything; Leyline of the Void only
+    /// an opponent's cards; Sanctifier en-Vec only black/red cards).
+    /// Consulted by `route_to_graveyard` at every graveyard-placement site.
+    pub fn graveyard_exiled_for(&self, card: &crate::card::CardInstance) -> bool {
         use crate::effect::StaticEffect;
+        let owner = card.owner;
         self.battlefield.iter().any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                if let StaticEffect::ExileCardsBoundForGraveyard { opponents_only } = &sa.effect {
-                    !opponents_only || c.controller != owner
+                if let StaticEffect::ExileCardsBoundForGraveyard { opponents_only, colors } =
+                    &sa.effect
+                {
+                    (!opponents_only || c.controller != owner)
+                        && colors.as_ref().is_none_or(|cs| {
+                            card.definition.printed_colors().iter().any(|c| cs.contains(c))
+                        })
                 } else {
                     false
                 }
             })
         })
+    }
+
+    /// CR 701.19c (Aven Mindcensor) — the number of cards from the top of
+    /// the library `seat` may look at while searching, or `None` if
+    /// unrestricted. The minimum across every opposing
+    /// `OpponentsSearchTopN` static applies.
+    pub(crate) fn search_top_limit_for(&self, seat: usize) -> Option<usize> {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| !self.same_team(c.controller, seat))
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::OpponentsSearchTopN { count } => Some(count as usize),
+                _ => None,
+            })
+            .min()
+    }
+
+    /// Leonin Arbiter — charge `seat` the search tax before a library
+    /// search. Auto-pays {amount} per Arbiter from floating mana (the
+    /// payment covers the rest of the turn); returns `false` when the tax
+    /// is unpayable, in which case the search finds nothing.
+    pub(crate) fn pay_search_tax(&mut self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        if self.search_tax_paid_this_turn.contains(&seat) {
+            return true;
+        }
+        let tax: u32 = self
+            .battlefield
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .map(|sa| match sa.effect {
+                StaticEffect::SearchTax { amount } => amount,
+                _ => 0,
+            })
+            .sum();
+        if tax == 0 {
+            return true;
+        }
+        if self.players[seat].mana_pool.total() < tax {
+            return false;
+        }
+        self.players[seat].mana_pool.spend_generic(tax);
+        self.search_tax_paid_this_turn.push(seat);
+        true
     }
 
     /// CR 614.10 — true when a battlefield static makes `player` skip
@@ -2180,7 +2251,7 @@ impl GameState {
         events: &mut Vec<crate::game::GameEvent>,
     ) -> bool {
         let owner = card.owner;
-        if self.graveyard_exiled_for(owner) {
+        if self.graveyard_exiled_for(&card) {
             let cid = card.id;
             self.exile.push(card);
             events.push(crate::game::GameEvent::PermanentExiled { card_id: cid });
@@ -5895,6 +5966,7 @@ impl GameState {
                             kind: dk,
                             effect: body,
                             target: None,
+                            bound_token: None,
                             fires_once: true,
                         });
                     }
@@ -6536,6 +6608,7 @@ impl GameState {
                 kind: DelayedKind::YourNextUpkeep,
                 effect: body,
                 target: None, // re-pick at fire time
+                bound_token: None,
                 fires_once: true,
             });
             self.exile.push(card);
@@ -6616,6 +6689,13 @@ impl GameState {
             let mut card = card;
             card.adventuring = false;
             card.on_adventure = true;
+            self.exile.push(card);
+            return Ok(events);
+        }
+        // CR 728.1a — a spell that ended the turn is exiled along with the
+        // rest of the stack instead of going to the graveyard (Day's
+        // Undoing). The flag stays set; `resolve_top_of_stack` consumes it.
+        if self.end_turn_requested {
             self.exile.push(card);
             return Ok(events);
         }
@@ -7420,6 +7500,14 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // Void) — consulted at graveyard-placement time via
             // `graveyard_exiled_for`; no layer effect.
             | StaticEffect::ExileCardsBoundForGraveyard { .. }
+            // Search statics (Aven Mindcensor / Leonin Arbiter) — consulted
+            // in `Effect::Search` via `search_top_limit_for` /
+            // `pay_search_tax`; no layer effect.
+            | StaticEffect::OpponentsSearchTopN { .. }
+            | StaticEffect::SearchTax { .. }
+            // ActivationTax (Suppression Field) — consulted in
+            // `activate_ability`; no layer effect.
+            | StaticEffect::ActivationTax { .. }
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAllYoursEachUntapStep

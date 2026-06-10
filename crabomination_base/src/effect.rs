@@ -1833,6 +1833,9 @@ pub enum Effect {
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
+    /// Shuffle `who`'s hand and graveyard into their library (Day's
+    /// Undoing, Timetwister).
+    ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s library (CR 103.2c). Mind's Desire's pre-exile shuffle.
     ShuffleLibrary { who: PlayerRef },
     /// Move the resolving spell (`ctx.source`) from the stack into its
@@ -1928,8 +1931,12 @@ pub enum Effect {
     /// cards. Devious Cover-Up's graveyard-strip rider.
     ExileAnyNumberFromGraveyards { filter: crate::card::SelectionRequirement },
     /// "Exile all cards from all graveyards." (Rest in Peace's ETB — a
-    /// non-optional graveyard wipe across every player.)
-    ExileAllGraveyards,
+    /// non-optional graveyard wipe across every player.) `filter` restricts
+    /// the wipe to matching cards (Sanctifier en-Vec's black/red sweep).
+    ExileAllGraveyards {
+        #[serde(default)]
+        filter: Option<crate::card::SelectionRequirement>,
+    },
     /// "Exile that player's graveyard" — graveyard hate scoped to a single
     /// player (Go Blank). `who` resolves to the affected player.
     ExilePlayerGraveyard { who: PlayerRef },
@@ -2843,6 +2850,22 @@ pub enum Effect {
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
     /// -7 coin-flip emblem.
     TakeExtraTurn { who: PlayerRef, count: Value },
+    /// CR 728 — "End the turn." Exiles all spells and abilities from the
+    /// stack (including the resolving card), removes everything from combat,
+    /// and skips straight to the cleanup step. Sundial of the Infinite,
+    /// Day's Undoing.
+    EndTheTurn,
+    /// CR 615.7 — "Prevent all damage a [filter] source of your choice would
+    /// deal this turn." The source is chosen as the effect resolves among
+    /// battlefield permanents and stack spells matching `filter` (AutoDecider
+    /// picks a stack spell first, else the highest-power permanent).
+    /// Burrenton Forge-Tender.
+    PreventAllDamageFromChosenSourceThisTurn { filter: crate::card::SelectionRequirement },
+    /// CR 714.4 (DFC sagas) — "Exile this Saga, then return it to the
+    /// battlefield transformed under your control." The return is a new
+    /// object: lore counters clear and the back face's ETB fires. Fable of
+    /// the Mirror-Breaker chapter III.
+    ExileSelfReturnTransformed,
     /// CR 505.1b — "there is an additional combat phase after this one."
     /// Banks `count` onto `GameState.additional_combat_phases`; when the
     /// active player leaves the End of Combat step with the counter set, the

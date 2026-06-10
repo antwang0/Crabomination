@@ -357,6 +357,10 @@ pub enum StaticEffect {
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).
     ActivationCostReduction { amount: u32 },
+    /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
+    /// unless they're mana abilities." Applies to every player's
+    /// activations (Suppression Field).
+    ActivationTax { amount: u32 },
     /// "During each of your turns, you may cast a permanent spell of each
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).
@@ -551,8 +555,24 @@ pub enum StaticEffect {
     /// the redirect applies only to cards bound for a graveyard belonging to
     /// an *opponent* of the static's controller (Leyline of the Void);
     /// otherwise it applies to every player's graveyard (Rest in Peace).
-    /// Consulted at every graveyard-placement site via `graveyard_exiled_for`.
-    ExileCardsBoundForGraveyard { opponents_only: bool },
+    /// `colors: Some(..)` restricts the redirect to cards of those printed
+    /// colors (Sanctifier en-Vec's black/red filter). Consulted at every
+    /// graveyard-placement site via `graveyard_exiled_for`.
+    ExileCardsBoundForGraveyard {
+        opponents_only: bool,
+        #[serde(default)]
+        colors: Option<Vec<crate::mana::Color>>,
+    },
+    /// CR 701.19c — "If an opponent would search a library, that player
+    /// searches the top `count` cards of that library instead." Consulted by
+    /// `Effect::Search`: an opponent of this static's controller only sees
+    /// candidates among the top N. Aven Mindcensor.
+    OpponentsSearchTopN { count: u32 },
+    /// "Players can't search libraries. Any player may pay {amount} for that
+    /// player to ignore this effect until end of turn." Leonin Arbiter. The
+    /// searcher auto-pays from floating mana (once per turn per player); an
+    /// unpayable tax makes the search find nothing.
+    SearchTax { amount: u32 },
     /// CR 502.3 — "Untap all permanents you control during each other player's
     /// untap step." Seedborn Muse / Prophet of Kruphix. Consulted by
     /// `do_untap`: while the active player is *not* this static's controller,

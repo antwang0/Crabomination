@@ -1259,7 +1259,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CreateEmblem { .. } => "Get an emblem",
         Effect::TakeExtraTurn { .. } => "Take an extra turn",
         Effect::ExileAnyNumberFromGraveyards { .. } => "Exile cards from graveyards",
-        Effect::ExileAllGraveyards => "Exile all graveyards",
+        Effect::ExileAllGraveyards { .. } => "Exile all graveyards",
         Effect::CreateTokenAttacking { .. } => "Create attacking tokens",
         Effect::Amass { .. } => "Amass",
         Effect::Myriad => "Myriad",

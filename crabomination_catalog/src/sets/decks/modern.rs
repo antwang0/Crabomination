@@ -22004,10 +22004,10 @@ pub fn rest_in_peace() -> CardDefinition {
         name: "Rest in Peace",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::ExileAllGraveyards)],
+        triggered_abilities: vec![etb(Effect::ExileAllGraveyards { filter: None })],
         static_abilities: vec![StaticAbility {
             description: "If a card would be put into a graveyard from anywhere, exile it instead.",
-            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false },
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false, colors: None },
         }],
         ..Default::default()
     }
@@ -22025,7 +22025,7 @@ pub fn leyline_of_the_void() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "If a card would be put into an opponent's graveyard from anywhere, exile it instead.",
-            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: true },
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: true, colors: None },
         }],
         ..Default::default()
     }
@@ -39839,6 +39839,382 @@ pub fn exalted_angel() -> CardDefinition {
             Keyword::Lifelink,
             Keyword::Morph(cost(&[generic(2), w(), w()])),
         ],
+        ..Default::default()
+    }
+}
+
+// ── End the turn (CR 728) ────────────────────────────────────────────────────
+
+/// Sundial of the Infinite — {2} Artifact. {1}, {T}: End the turn. Activate
+/// only during your turn.
+pub fn sundial_of_the_infinite() -> CardDefinition {
+    CardDefinition {
+        name: "Sundial of the Infinite",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::EndTheTurn,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Day's Undoing — {2}{U} Sorcery. Each player shuffles their hand and
+/// graveyard into their library, then draws seven cards. If it's your turn,
+/// end the turn.
+pub fn days_undoing() -> CardDefinition {
+    CardDefinition {
+        name: "Day's Undoing",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(7),
+            },
+            Effect::If {
+                cond: Predicate::IsTurnOf(PlayerRef::You),
+                then: Box::new(Effect::EndTheTurn),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Search hate (CR 701.19) ──────────────────────────────────────────────────
+
+/// Aven Mindcensor — {2}{W} 2/1 Bird Wizard. Flash, flying. If an opponent
+/// would search a library, that player searches the top four cards instead.
+pub fn aven_mindcensor() -> CardDefinition {
+    CardDefinition {
+        name: "Aven Mindcensor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If an opponent would search a library, that player \
+                          searches the top four cards of that library instead.",
+            effect: StaticEffect::OpponentsSearchTopN { count: 4 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Leonin Arbiter — {1}{W} 2/2 Cat Cleric. Players can't search libraries
+/// unless they pay {2} (auto-paid from floating mana, once per turn).
+pub fn leonin_arbiter() -> CardDefinition {
+    CardDefinition {
+        name: "Leonin Arbiter",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Players can't search libraries. Any player may pay \
+                          {2} for that player to ignore this effect until end \
+                          of turn.",
+            effect: StaticEffect::SearchTax { amount: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sanctifier en-Vec — {W}{W} 2/2 Human Cleric. Protection from black and
+/// from red; ETB exiles all black/red cards from all graveyards; black/red
+/// cards bound for any graveyard are exiled instead (CR 614.6).
+pub fn sanctifier_en_vec() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    let black_or_red = SelectionRequirement::HasColor(Color::Black)
+        .or(SelectionRequirement::HasColor(Color::Red));
+    CardDefinition {
+        name: "Sanctifier en-Vec",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::Black), Keyword::Protection(Color::Red)],
+        triggered_abilities: vec![etb(Effect::ExileAllGraveyards {
+            filter: Some(black_or_red.clone()),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "If a black or red card would be put into a graveyard \
+                          from anywhere, exile it instead.",
+            effect: StaticEffect::ExileCardsBoundForGraveyard {
+                opponents_only: false,
+                colors: Some(vec![Color::Black, Color::Red]),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Suppression Field — {1}{W} Enchantment. Activated abilities cost {2} more
+/// to activate unless they're mana abilities. (Loyalty activations are not
+/// taxed yet — only regular activated abilities.)
+pub fn suppression_field() -> CardDefinition {
+    CardDefinition {
+        name: "Suppression Field",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities cost {2} more to activate \
+                          unless they're mana abilities.",
+            effect: StaticEffect::ActivationTax { amount: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Burrenton Forge-Tender — {W} 1/1 Kithkin Wizard. Protection from red;
+/// sacrifice: prevent all damage a red source of your choice would deal
+/// this turn (CR 615.7 — source chosen as the ability resolves).
+pub fn burrenton_forge_tender() -> CardDefinition {
+    CardDefinition {
+        name: "Burrenton Forge-Tender",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Protection(Color::Red)],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PreventAllDamageFromChosenSourceThisTurn {
+                filter: SelectionRequirement::HasColor(Color::Red),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reckoner Bankbuster — {2} Artifact — Vehicle 4/4, Crew 3. Enters with
+/// three charge counters; {2}, {T}, remove a charge: draw a card, then if
+/// empty, create a Treasure and a 1/1 Pilot (the Pilot's crew-boost rider
+/// is dropped).
+pub fn reckoner_bankbuster() -> CardDefinition {
+    CardDefinition {
+        name: "Reckoner Bankbuster",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Crew(3)],
+        enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            remove_counter_cost: Some((CounterType::Charge, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueEquals(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Charge,
+                        },
+                        Value::Const(0),
+                    ),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: treasure_token(),
+                        },
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: TokenDefinition {
+                                name: "Pilot".into(),
+                                power: 1,
+                                toughness: 1,
+                                card_types: vec![CardType::Creature],
+                                subtypes: Subtypes {
+                                    creature_types: vec![CreatureType::Pilot],
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mizzium Mortars — {1}{R} Sorcery. 4 damage to target creature you don't
+/// control; Overload {3}{R}{R}{R} hits each creature you don't control.
+pub fn mizzium_mortars() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    let foes = SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent);
+    CardDefinition {
+        name: "Mizzium Mortars",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(foes.clone()),
+            amount: Value::Const(4),
+        },
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(3), r(), r(), r()]),
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(foes),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(4),
+                }),
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+// ── DFC saga (CR 714.4) ──────────────────────────────────────────────────────
+
+/// Reflection of Kiki-Jiki — back face of Fable of the Mirror-Breaker.
+/// {1}, {T}: Create a token copy of another target nonlegendary creature you
+/// control, except it has haste. Sacrifice it at the next end step.
+pub fn reflection_of_kiki_jiki() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Reflection of Kiki-Jiki",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::HasSupertype(Supertype::Legendary).negate())
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                    non_legendary: false,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedToken,
+                    keyword: Keyword::Haste,
+                    duration: Duration::Permanent,
+                },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Move {
+                        what: Selector::LastCreatedToken,
+                        to: ZoneDest::Graveyard,
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fable of the Mirror-Breaker — {2}{R} Saga. I: 2/2 Goblin Shaman that
+/// mints a Treasure when it attacks. II: discard up to two, draw that many.
+/// III: exile this Saga, return it transformed (Reflection of Kiki-Jiki).
+pub fn fable_of_the_mirror_breaker() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Fable of the Mirror-Breaker",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Goblin Shaman".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Red],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+                            ..Default::default()
+                        },
+                        triggered_abilities: vec![TriggeredAbility {
+                            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                            effect: Effect::CreateToken {
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                                definition: treasure_token(),
+                            },
+                        }],
+                        ..Default::default()
+                    },
+                },
+            ),
+            (
+                2,
+                Effect::MayDo {
+                    description: "Discard up to two cards, then draw that many?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                            random: false,
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::CardsDiscardedThisEffect,
+                        },
+                    ])),
+                },
+            ),
+            (3, Effect::ExileSelfReturnTransformed),
+        ],
+        back_face: Some(Box::new(reflection_of_kiki_jiki())),
         ..Default::default()
     }
 }

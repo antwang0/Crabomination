@@ -1646,6 +1646,34 @@ impl CardDefinition {
         self.is_instant() || self.keywords.contains(&Keyword::Flash)
     }
 
+    /// Printed colors from the mana cost's colored pips (CR 105.2), with
+    /// the Devoid CDA (CR 702.114) yielding colorless.
+    pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
+        use crate::mana::ManaSymbol;
+        if self.keywords.contains(&Keyword::Devoid) {
+            return Vec::new();
+        }
+        let mut colors = Vec::new();
+        let mut push = |c: crate::mana::Color| {
+            if !colors.contains(&c) {
+                colors.push(c);
+            }
+        };
+        for sym in &self.cost.symbols {
+            match sym {
+                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {
+                    push(*c)
+                }
+                ManaSymbol::Hybrid(a, b) => {
+                    push(*a);
+                    push(*b);
+                }
+                _ => {}
+            }
+        }
+        colors
+    }
+
     pub fn is_legendary(&self) -> bool { self.supertypes.contains(&Supertype::Legendary) }
     pub fn is_basic(&self) -> bool { self.supertypes.contains(&Supertype::Basic) }
     pub fn is_snow(&self) -> bool { self.supertypes.contains(&Supertype::Snow) }

@@ -414,6 +414,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks-17 ──
         lightning_greaves,
         stonecoil_serpent,
+        // ── modern_decks-18 ──
+        sundial_of_the_infinite,
+        reckoner_bankbuster,
         // ── equip-granted dies trigger (CR 702.6e) ──
         skullclamp,
         // ── modern_decks: equip-trigger that charges the equipment ──
@@ -504,6 +507,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         ranger_of_eos,
         stony_silence,
         exalted_angel,
+        // ── modern_decks-18: search hate (CR 701.19) ──
+        aven_mindcensor,
+        leonin_arbiter,
+        sanctifier_en_vec,
+        suppression_field,
+        burrenton_forge_tender,
         // Hideaway land (CR 702.76)
         windbrisk_heights,
         // Damage redirection (CR 614.9)
@@ -1107,6 +1116,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         winged_sliver,
         switcheroo,
         coastal_piracy,
+        // ── modern_decks-18 ──
+        days_undoing,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1863,6 +1874,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         blood_moon,
         magus_of_the_moon,
         fulminator_mage,
+        // ── modern_decks-18 ──
+        mizzium_mortars,
+        fable_of_the_mirror_breaker,
         hero_of_oxid_ridge,
         shrapnel_blast,
         // Hideaway land (CR 702.76)

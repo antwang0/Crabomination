@@ -249,7 +249,8 @@ impl Effect {
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
-            Effect::ShuffleGraveyardIntoLibrary { who } => player_has_target(who),
+            Effect::ShuffleGraveyardIntoLibrary { who }
+            | Effect::ShuffleHandAndGraveyardIntoLibrary { who } => player_has_target(who),
             Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::AddMana { who, pool } => {
@@ -380,7 +381,9 @@ impl Effect {
             Effect::RevealTopOpponentChoosesToHand { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
             Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),
-            Effect::BecomeDay | Effect::BecomeNight => false,
+            Effect::BecomeDay | Effect::BecomeNight | Effect::EndTheTurn => false,
+            Effect::PreventAllDamageFromChosenSourceThisTurn { .. } => false,
+            Effect::ExileSelfReturnTransformed => false,
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -394,7 +397,7 @@ impl Effect {
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
             Effect::PayLifeLookTake { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
-            Effect::ExileAllGraveyards => false,
+            Effect::ExileAllGraveyards { .. } => false,
             Effect::ExilePlayerGraveyard { who } => player_has_target(who),
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)

@@ -6447,6 +6447,22 @@ impl GameState {
                 effective_mana_cost.reduce_generic(total.min(max_cut));
             }
         }
+        // Suppression Field — non-mana activated abilities cost {N} more,
+        // for every player's activations.
+        if !is_mana_ability(&ability.effect) {
+            let tax: u32 = self
+                .battlefield
+                .iter()
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::ActivationTax { amount } => amount,
+                    _ => 0,
+                })
+                .sum();
+            if tax > 0 {
+                effective_mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
+            }
+        }
 
         // CR 601.2g — float-spend confirmation. Before tapping anything, if the
         // activator has pre-existing floating mana the mana cost could either

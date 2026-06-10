@@ -1284,7 +1284,9 @@ impl GameState {
                     // — a Maze-of-Ith'd attacker deals no combat damage either.
                     should_deal: attacker_filter(kws)
                         && !kws.contains(&Keyword::DealsNoCombatDamage)
-                        && !self.combat_damage_prevented_creatures.contains(&cp.id),
+                        && !self.combat_damage_prevented_creatures.contains(&cp.id)
+                        // CR 615.7 — chosen-source prevention (Forge-Tender).
+                        && !self.damage_prevented_sources.contains(&cp.id),
                 })
             })
             .collect();
@@ -1487,6 +1489,8 @@ impl GameState {
                         .is_some_and(|bc| blocker_filter(&bc.keywords)))
                     // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
                     .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
+                    // CR 615.7 — chosen-source prevention (Forge-Tender).
+                    .filter(|bid| !self.damage_prevented_sources.contains(bid))
                     // CR 702.16e — a blocker whose color the attacker has
                     // protection from deals no combat damage to it.
                     .filter(|&bid| !self.damage_prevented_by_protection(bid, atk.id))

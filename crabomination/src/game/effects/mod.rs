@@ -2668,6 +2668,7 @@ impl GameState {
                         kind: DelayedKind::NextEndStep,
                         effect: body,
                         target: Some(Target::Permanent(cid)),
+                        bound_token: None,
                         fires_once: true,
                     });
                 }
@@ -2737,12 +2738,20 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileAllGraveyards => {
-                // Rest in Peace ETB — move every graveyard card to exile.
+            Effect::ExileAllGraveyards { filter } => {
+                // Rest in Peace ETB — move every (matching) graveyard card
+                // to exile (Sanctifier en-Vec passes a color filter).
                 for p in 0..self.players.len() {
                     let cards: Vec<CardInstance> =
                         std::mem::take(&mut self.players[p].graveyard);
                     for card in cards {
+                        let matches = filter
+                            .as_ref()
+                            .is_none_or(|f| self.evaluate_requirement_on_card(f, &card, p));
+                        if !matches {
+                            self.players[p].graveyard.push(card);
+                            continue;
+                        }
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
@@ -4324,7 +4333,7 @@ impl GameState {
                                 let card = self.players[affected_controller].hand.remove(0);
                                 let card_id = card.id;
                                 // CR 614.6 — graveyard-hate exiles the discard.
-                                if self.graveyard_exiled_for(affected_controller) {
+                                if self.graveyard_exiled_for(&card) {
                                     self.exile.push(card);
                                 } else {
                                     self.players[affected_controller].graveyard.push(card);
@@ -4785,6 +4794,7 @@ impl GameState {
                             kind: crate::game::types::DelayedKind::NextEndStep,
                             effect: Effect::SacrificeSource,
                             target: None,
+                            bound_token: None,
                             fires_once: true,
                         });
                     }
@@ -4855,11 +4865,20 @@ impl GameState {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
 
+                // Leonin Arbiter — an unpayable search tax means the search
+                // happens but finds nothing (CR 701.19d).
+                if !self.pay_search_tax(p) {
+                    return Ok(());
+                }
+                // Aven Mindcensor — an opponent's search only sees the top N.
+                let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
+
                 // Collect candidates from the library using definition-level evaluation
                 // (cards are not on the battlefield so battlefield_find would fail).
                 let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()
+                    .take(limit)
                     .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
@@ -5412,6 +5431,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ShuffleHandAndGraveyardIntoLibrary { who } => {
+                use rand::seq::SliceRandom;
+                for p in self.resolve_players(who, ctx) {
+                    let hand = std::mem::take(&mut self.players[p].hand);
+                    let gy = std::mem::take(&mut self.players[p].graveyard);
+                    self.players[p].library.extend(hand);
+                    self.players[p].library.extend(gy);
+                    self.players[p].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
             Effect::ExchangeHandAndGraveyard { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let (hand, gy) = (
@@ -5448,6 +5479,11 @@ impl GameState {
 
             Effect::ExileResolvingSpell => {
                 self.exile_resolving_spell = true;
+                Ok(())
+            }
+
+            Effect::EndTheTurn => {
+                self.end_turn_requested = true;
                 Ok(())
             }
 
@@ -6101,6 +6137,9 @@ impl GameState {
                     kind: delayed_kind_from_effect(*kind),
                     effect: (**body).clone(),
                     target,
+                    // Bind a token minted earlier in this resolution so the
+                    // delayed body's `LastCreatedToken` still finds it.
+                    bound_token: self.last_created_token,
                     fires_once: true,
                 });
                 Ok(())
@@ -6121,6 +6160,7 @@ impl GameState {
                         kind: crate::game::types::DelayedKind::WhenCardDies(cid),
                         effect: (**body).clone(),
                         target: Some(crate::game::Target::Player(controller)),
+                        bound_token: None,
                         fires_once: true,
                     });
                 }
@@ -6135,6 +6175,7 @@ impl GameState {
                     kind: crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn,
                     effect: (**body).clone(),
                     target: None,
+                    bound_token: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -6198,6 +6239,7 @@ impl GameState {
                     kind: crate::game::types::DelayedKind::YourNextSpellCastThisTurn,
                     effect: (**body).clone(),
                     target: None,
+                    bound_token: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -6211,6 +6253,7 @@ impl GameState {
                     kind: crate::game::types::DelayedKind::YourNextSpellCastThisTurn,
                     effect: (**body).clone(),
                     target: None,
+                    bound_token: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -6886,6 +6929,82 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllDamageFromChosenSourceThisTurn { filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                // CR 615.7 / 609.7b — the source is chosen as this resolves,
+                // among matching stack spells and battlefield permanents.
+                let p = ctx.controller;
+                let mut candidates: Vec<(CardId, String)> = self
+                    .stack
+                    .iter()
+                    .filter_map(|item| match item {
+                        crate::game::types::StackItem::Spell { card, .. }
+                            if self.evaluate_requirement_on_card(filter, card, p) =>
+                        {
+                            Some((card.id, card.definition.name.to_string()))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                candidates.extend(
+                    self.battlefield
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .map(|c| (c.id, c.definition.name.to_string())),
+                );
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let chosen = if candidates.len() == 1 {
+                    candidates[0].0
+                } else {
+                    let source = ctx.source.unwrap_or(CardId(0));
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Prevent all damage from which source this turn?".to_string(),
+                        candidates: candidates.clone(),
+                        min: 1,
+                        max: 1,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(v) if !v.is_empty() => v[0],
+                        _ => candidates[0].0,
+                    }
+                };
+                if !self.damage_prevented_sources.contains(&chosen) {
+                    self.damage_prevented_sources.push(chosen);
+                }
+                Ok(())
+            }
+
+            Effect::ExileSelfReturnTransformed => {
+                // CR 714.4 — exile this Saga, then return it transformed
+                // under its controller's control. Routed through
+                // `place_card_in_dest` so new-object state (counters clear,
+                // summoning sickness) and the back face's ETB fire normally.
+                let Some(id) = ctx.source else { return Ok(()); };
+                let Some(pos) = self.battlefield.iter().position(|c| c.id == id) else {
+                    return Ok(());
+                };
+                if self.battlefield[pos].definition.back_face.is_none() {
+                    return Ok(());
+                }
+                let mut card = self.battlefield.remove(pos);
+                events.push(GameEvent::PermanentExiled { card_id: id });
+                let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
+                card.front_face = Some(card.definition.clone());
+                card.definition = std::sync::Arc::new(back);
+                card.transformed = true;
+                events.push(GameEvent::Transformed { card_id: id });
+                self.place_card_in_dest(
+                    card,
+                    ctx.controller,
+                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    events,
+                );
+                Ok(())
+            }
+
             Effect::CantBlockSourceThisTurn { target } => {
                 // Record (blocker, attacker=source) so the declare-blockers
                 // validator bars only this pairing (Kozilek's Pathfinder).
@@ -7449,6 +7568,7 @@ impl GameState {
                     kind: DelayedKind::YourNextMainPhase,
                     effect: Effect::CastFreeParadigmCopy,
                     target: None,
+                    bound_token: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -7687,6 +7807,19 @@ impl GameState {
                 .collect(),
             Selector::LastCreatedToken => self
                 .last_created_token
+                // Delayed-trigger fire: the scheduling resolution's token
+                // rides in as `trigger_source` (DelayedTrigger.bound_token).
+                .or(match ctx.trigger_source {
+                    Some(EntityRef::Permanent(id))
+                        if self
+                            .battlefield
+                            .iter()
+                            .any(|c| c.id == id && c.is_token) =>
+                    {
+                        Some(id)
+                    }
+                    _ => None,
+                })
                 .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                 .map(EntityRef::Permanent)
                 .into_iter()

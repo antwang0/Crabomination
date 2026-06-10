@@ -462,3 +462,118 @@ fn cr_702_103_jump_start_requires_a_discard() {
         card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "no card to discard → can't jump-start");
 }
+
+// ── CR 728 — Ending the Turn ──────────────────────────────────────────────────
+
+/// Sundial of the Infinite ends the turn: a spell still on the stack is
+/// exiled (not resolved), combat state clears, and play skips to cleanup.
+#[test]
+fn cr_728_sundial_exiles_the_stack_and_skips_to_cleanup() {
+    let mut g = two_player_game();
+    let sundial = g.add_card_to_battlefield(0, catalog::sundial_of_the_infinite());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast bolt");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sundial, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Sundial");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "bolt exiled off the stack (728.1a)");
+    assert_eq!(g.players[1].life, 20, "bolt never resolved");
+    assert_eq!(g.step, TurnStep::Cleanup, "turn skipped to cleanup (728.1d)");
+}
+
+/// Sundial's "activate only during your turn" gate rejects an off-turn use.
+#[test]
+fn cr_728_sundial_rejects_activation_on_opponents_turn() {
+    let mut g = two_player_game();
+    let sundial = g.add_card_to_battlefield(1, catalog::sundial_of_the_infinite());
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: sundial, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "only during your turn");
+}
+
+/// Day's Undoing wheels both players (hand + graveyard shuffled into
+/// library, draw seven) and, on the caster's turn, ends the turn — the
+/// sorcery itself is exiled with the stack (728.1a).
+#[test]
+fn cr_728_days_undoing_wheels_then_ends_the_turn() {
+    let mut g = two_player_game();
+    let du = g.add_card_to_hand(0, catalog::days_undoing());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::island());
+    g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, du);
+    assert_eq!(g.players[0].hand.len(), 7, "caster drew seven");
+    assert_eq!(g.players[1].hand.len(), 7, "opponent drew seven");
+    assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
+    assert!(g.exile.iter().any(|c| c.id == du), "Day's Undoing exiled, not in graveyard");
+    assert_eq!(g.step, TurnStep::Cleanup, "caster's turn ended");
+}
+
+// ── CR 615.7 — "a source of your choice" prevention ──────────────────────────
+
+/// Burrenton Forge-Tender sacrificed in response to a red sweeper prevents
+/// all the damage that spell would deal this turn.
+#[test]
+fn cr_615_7_forge_tender_blanks_a_red_spell() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let tender = g.add_card_to_battlefield(0, catalog::burrenton_forge_tender());
+    g.clear_sickness(tender);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(mine)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast bolt at the bear");
+    // In response: sacrifice the Forge-Tender choosing the bolt as source.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bolt])]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tender, ability_index: 0, target: None, x_value: None,
+    }).expect("sac the Forge-Tender");
+    drain_stack(&mut g);
+    let bear = g.battlefield_find(mine).expect("bear survives");
+    assert_eq!(bear.damage, 0, "all bolt damage prevented (615.7)");
+    assert!(g.battlefield_find(tender).is_none(), "Forge-Tender sacrificed");
+}
+
+/// The chosen red creature deals no combat damage this turn; damage TO it
+/// still applies.
+#[test]
+fn cr_615_7_forge_tender_prevents_a_creatures_combat_damage() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let tender = g.add_card_to_battlefield(1, catalog::burrenton_forge_tender());
+    g.clear_sickness(tender);
+    let raider = g.add_card_to_battlefield(0, catalog::ball_lightning());
+    g.clear_sickness(raider);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![raider])]));
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tender, ability_index: 0, target: None, x_value: None,
+    }).expect("sac the Forge-Tender");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.attacking = vec![Attack { attacker: raider, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat");
+    assert_eq!(g.players[1].life, 20, "prevented source deals no combat damage");
+}

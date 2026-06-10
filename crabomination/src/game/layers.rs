@@ -459,30 +459,10 @@ fn compute_permanent(
     }
 }
 
-/// Determine which colors a card has from its mana cost symbols.
+/// Determine which colors a card has from its mana cost symbols
+/// (CR 105.2 + the Devoid CDA).
 fn colors_from_card(card: &crate::card::CardInstance) -> Vec<Color> {
-    use crate::mana::ManaSymbol;
-    // CR 702.114 — Devoid: the object is colorless (CDA), ignore cost pips.
-    if card.definition.keywords.contains(&crate::card::Keyword::Devoid) {
-        return Vec::new();
-    }
-    let mut colors = Vec::new();
-    for sym in &card.definition.cost.symbols {
-        match sym {
-            ManaSymbol::Colored(c) if !colors.contains(c) => { colors.push(*c); }
-            ManaSymbol::Colored(_) => {}
-            ManaSymbol::Hybrid(a, b) => {
-                if !colors.contains(a) { colors.push(*a); }
-                if !colors.contains(b) { colors.push(*b); }
-            }
-            ManaSymbol::Phyrexian(c) if !colors.contains(c) => { colors.push(*c); }
-            ManaSymbol::Phyrexian(_) => {}
-            ManaSymbol::MonoHybrid(_, c) if !colors.contains(c) => { colors.push(*c); }
-            ManaSymbol::MonoHybrid(_, _) => {}
-            _ => {}
-        }
-    }
-    colors
+    card.definition.printed_colors()
 }
 
 /// Returns true if `effect` affects `card`.
