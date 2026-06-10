@@ -44,8 +44,6 @@ pub fn strict_proctor() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "If a permanent entering the battlefield causes a triggered ability of a permanent to trigger, that ability's controller sacrifices the permanent unless they pay {2}.",
             effect: StaticEffect::EtbTriggerTax { amount: 2 },
@@ -73,7 +71,6 @@ pub fn sedgemoor_witch() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::Life(3))],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_pest()],
         ..Default::default()
     }
@@ -103,7 +100,6 @@ pub fn spectacle_mage() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Prowess],
-        effect: Effect::Noop,
         triggered_abilities: vec![prowess()],
         ..Default::default()
     }
@@ -125,10 +121,6 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
         name: "Mage Hunters' Onslaught",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -138,7 +130,6 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -161,10 +152,6 @@ pub fn heroic_defiance() -> CardDefinition {
         name: "Heroic Defiance",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
@@ -185,7 +172,6 @@ pub fn heroic_defiance() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -214,8 +200,6 @@ pub fn tome_shredder() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DiscardChosen {
@@ -253,7 +237,6 @@ pub fn mascot_acolyte() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -285,10 +268,6 @@ pub fn lorehold_strikeforce() -> CardDefinition {
         name: "Lorehold Strikeforce",
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::EachPermanent(
@@ -308,7 +287,6 @@ pub fn lorehold_strikeforce() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -329,10 +307,6 @@ pub fn hunt_the_library() -> CardDefinition {
         name: "Hunt the Library",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,
@@ -341,7 +315,6 @@ pub fn hunt_the_library() -> CardDefinition {
                 tapped: true,
             },
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -372,7 +345,6 @@ pub fn field_researcher() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -409,8 +381,6 @@ pub fn spellbook_studier() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -440,11 +410,6 @@ pub fn strixhaven_vigil() -> CardDefinition {
         name: "Strixhaven Vigil",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
@@ -483,8 +448,6 @@ pub fn bombastic_strixhaven_mage() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -517,17 +480,12 @@ pub fn mage_hunters_strike() -> CardDefinition {
         name: "Mage Hunters' Strike",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-3),
             toughness: Value::Const(-3),
             duration: crate::effect::Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -555,8 +513,6 @@ pub fn mascot_researcher() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -599,8 +555,6 @@ pub fn strixhaven_tutor() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -640,8 +594,6 @@ pub fn strixhaven_archmage() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -666,17 +618,12 @@ pub fn mage_hunters_riposte() -> CardDefinition {
         name: "Mage Hunters' Riposte",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-3),
             toughness: Value::Const(-3),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -694,10 +641,6 @@ pub fn strixhaven_field_trip() -> CardDefinition {
         name: "Strixhaven Field Trip",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
@@ -716,7 +659,6 @@ pub fn strixhaven_field_trip() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -742,7 +684,6 @@ pub fn lorehold_spiritbringer() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -776,8 +717,6 @@ pub fn witherbloom_pestcaster() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_pest()],
         ..Default::default()
     }
@@ -811,8 +750,6 @@ pub fn silverquill_novice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -838,7 +775,6 @@ pub fn silverquill_headmaster() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -863,8 +799,6 @@ pub fn witherbloom_neophyte() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -892,8 +826,6 @@ pub fn pestpod_lurker() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -940,8 +872,6 @@ pub fn lorehold_neophyte() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
@@ -982,7 +912,6 @@ pub fn lorehold_recallmage() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -1020,7 +949,6 @@ pub fn quandrix_reach_mage() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -1049,10 +977,6 @@ pub fn fractal_sumcaster() -> CardDefinition {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -1085,8 +1009,6 @@ pub fn prismari_vandal() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_treasure()],
         ..Default::default()
     }
@@ -1113,7 +1035,6 @@ pub fn prismari_flameseeker() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamageDivided {
@@ -1148,8 +1069,6 @@ pub fn strixhaven_basicseeker() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -1182,7 +1101,6 @@ pub fn strixhaven_pondkeeper() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flash],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -1213,8 +1131,6 @@ pub fn strixhaven_rotcaster() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Discard {
@@ -1248,7 +1164,6 @@ pub fn strixhaven_spellfletcher() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Haste],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_ping_any(1)],
         ..Default::default()
     }
@@ -1274,7 +1189,6 @@ pub fn strixhaven_forager() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -1288,10 +1202,6 @@ pub fn magecraft_volley() -> CardDefinition {
         name: "Magecraft Volley",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -1300,7 +1210,6 @@ pub fn magecraft_volley() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1318,10 +1227,6 @@ pub fn strixhaven_curriculum() -> CardDefinition {
         name: "Strixhaven Curriculum",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::RevealUntilFind {
             who: PlayerRef::You,
             find: SelectionRequirement::Any,
@@ -1330,7 +1235,6 @@ pub fn strixhaven_curriculum() -> CardDefinition {
             life_per_revealed: 0,
             miss_dest: crate::effect::RevealMissDest::BottomRandom,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1350,10 +1254,6 @@ pub fn witherbloom_recursion() -> CardDefinition {
         name: "Witherbloom Recursion",
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
@@ -1371,7 +1271,6 @@ pub fn witherbloom_recursion() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1391,11 +1290,6 @@ pub fn lorehold_battle_banner() -> CardDefinition {
         name: "Lorehold Battle Banner",
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
             effect: Effect::PumpPT {
@@ -1422,16 +1316,11 @@ pub fn silverquill_inkpact() -> CardDefinition {
         name: "Silverquill Inkpact",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1453,10 +1342,6 @@ pub fn professor_onyx() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
@@ -1552,8 +1437,6 @@ pub fn conspiracy_theorist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -1609,8 +1492,6 @@ pub fn dina_soul_steeper() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::LoseLife {
@@ -1639,8 +1520,6 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -1657,7 +1536,6 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
             life_cost: 0,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1672,10 +1550,6 @@ pub fn adventurous_impulse() -> CardDefinition {
         name: "Adventurous Impulse",
         cost: cost(&[crate::mana::g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::LookPickToHand {
             who: PlayerRef::You,
             count: Value::Const(3),
@@ -1686,7 +1560,6 @@ pub fn adventurous_impulse() -> CardDefinition {
         
             take: None,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

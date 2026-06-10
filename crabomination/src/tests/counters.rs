@@ -129,10 +129,8 @@ fn melee_pumps_the_attacker() {
         name: "Melee Tester",
         cost: crate::mana::cost(&[crate::mana::generic(2)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes::default(),
         power: 2,
         toughness: 2,
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::melee()],
         ..Default::default()
     };
@@ -549,7 +547,8 @@ fn amasser(n: i32) -> crate::card::CardDefinition {
             creature_types: vec![crate::card::CreatureType::Soldier],
             ..Default::default()
         },
-        power: 1, toughness: 1,
+        power: 1,
+        toughness: 1,
         triggered_abilities: vec![shortcut::etb(shortcut::amass(n))],
         ..Default::default()
     }
@@ -599,8 +598,11 @@ fn cr_701_32_support_two_puts_a_counter_on_each_of_two_targets() {
     let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let spell = CardDefinition {
-        name: "Rally", cost: crate::mana::cost(&[crate::mana::generic(1)]),
-        card_types: vec![CardType::Sorcery], effect: shortcut::support(2), ..Default::default()
+        name: "Rally",
+        cost: crate::mana::cost(&[crate::mana::generic(1)]),
+        card_types: vec![CardType::Sorcery],
+        effect: shortcut::support(2),
+        ..Default::default()
     };
     let id = g.add_card_to_hand(0, spell);
     g.players[0].mana_pool.add_colorless(1);

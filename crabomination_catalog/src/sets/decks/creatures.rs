@@ -63,8 +63,6 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         power: 6,
         toughness: 7,
         keywords: vec![Keyword::Reach, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
             kind: DelayedTriggerKind::YourNextMainPhase,
             body: Effect::AddMana {
@@ -94,11 +92,7 @@ pub fn cosmogoyf() -> CardDefinition {
         },
         // Base power/toughness — overridden per-frame by the layer-7 set-PT
         // effect injected in `compute_battlefield` based on graveyard contents.
-        power: 0,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -118,8 +112,6 @@ pub fn devourer_of_destiny() -> CardDefinition {
         },
         power: 6,
         toughness: 6,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
             effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
@@ -155,7 +147,6 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
             Keyword::Deathtouch,
             Keyword::Lifelink,
         ],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::RevealTopTakeOnePerType {
@@ -186,7 +177,6 @@ pub fn griselbrand() -> CardDefinition {
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -208,7 +198,6 @@ pub fn griselbrand() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -230,7 +219,6 @@ pub fn psychic_frog() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -299,7 +287,6 @@ pub fn quantum_riddler() -> CardDefinition {
         power: 4,
         toughness: 6,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -336,7 +323,6 @@ pub fn solitude() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Exile {
@@ -624,8 +610,6 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
             // Fire on the upkeep so the first spell each opponent casts
             // **next turn** is taxed (the engine fires this delayed
@@ -668,8 +652,6 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         power: 4,
         toughness: 7,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         // The ETB-trigger-spotlight static; `etb_trigger_multiplier`
         // scans the battlefield for any permanent carrying this static
         // ability (rather than matching on the printed name).
@@ -714,11 +696,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Teferi],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![
             StaticAbility {
                 description: "Each opponent can cast spells only any time they could cast a sorcery.",

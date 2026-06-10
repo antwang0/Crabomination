@@ -191,9 +191,7 @@ pub fn aether_hub() -> CardDefinition {
     use crate::effect::ManaPayload;
     CardDefinition {
         name: "Aether Hub",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(1)))],
         activated_abilities: vec![
             ActivatedAbility {
@@ -258,7 +256,6 @@ pub fn dynavolt_tower() -> CardDefinition {
         name: "Dynavolt Tower",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
         triggered_abilities: vec![magecraft(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,

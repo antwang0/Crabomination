@@ -45,16 +45,11 @@ fn school_land(
     };
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![type_a, type_b],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), surveil],
         triggered_abilities: vec![etb_tap()],
         ..Default::default()
@@ -173,16 +168,9 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     };
     CardDefinition {
         name: "Great Hall of the Biblioplex",
-        cost: ManaCost::default(),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add_colorless(), pay_life_for_any],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -232,15 +220,8 @@ pub fn skycoach_waypoint() -> CardDefinition {
     };
     CardDefinition {
         name: "Skycoach Waypoint",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add_colorless(), prepare_target],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -262,15 +243,8 @@ pub fn petrified_hamlet() -> CardDefinition {
     use super::super::tap_add_colorless;
     CardDefinition {
         name: "Petrified Hamlet",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add_colorless()],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

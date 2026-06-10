@@ -106,9 +106,6 @@ pub fn dig_site_inventory() -> CardDefinition {
         name: "Dig Site Inventory",
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
@@ -124,7 +121,6 @@ pub fn dig_site_inventory() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -158,9 +154,6 @@ pub fn daydream() -> CardDefinition {
         name: "Daydream",
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::Exile {
@@ -181,7 +174,6 @@ pub fn daydream() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -209,9 +201,6 @@ pub fn practiced_offense() -> CardDefinition {
         name: "Practiced Offense",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::ForEach {
@@ -238,7 +227,6 @@ pub fn practiced_offense() -> CardDefinition {
                 },
             ]),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -284,9 +272,6 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
         name: "Antiquities on the Loose",
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
@@ -313,7 +298,6 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -331,9 +315,6 @@ pub fn group_project() -> CardDefinition {
         name: "Group Project",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         // Push (modern_decks, batch 83): "Flashback—Tap three untapped
         // creatures you control" is wired via the new
         // `Keyword::FlashbackTap(3)` keyword + `GameAction::
@@ -348,7 +329,6 @@ pub fn group_project() -> CardDefinition {
             count: Value::Const(1),
             definition: spirit_token(),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -364,10 +344,6 @@ pub fn procrastinate() -> CardDefinition {
         name: "Procrastinate",
         cost: cost(&[x(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -381,7 +357,6 @@ pub fn procrastinate() -> CardDefinition {
                 ),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -402,15 +377,10 @@ pub fn mathemagics() -> CardDefinition {
         name: "Mathemagics",
         cost: cost(&[x(), x(), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Draw {
             who: Selector::You,
             amount: Value::Pow2(Box::new(Value::XFromCost)),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -428,10 +398,6 @@ pub fn oracles_restoration() -> CardDefinition {
         name: "Oracle's Restoration",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             E::PumpPT {
                 what: target_filtered(
@@ -450,7 +416,6 @@ pub fn oracles_restoration() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -469,10 +434,6 @@ pub fn send_in_the_pest() -> CardDefinition {
         name: "Send in the Pest",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -485,7 +446,6 @@ pub fn send_in_the_pest() -> CardDefinition {
                 definition: pest_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -504,10 +464,6 @@ pub fn dinas_guidance() -> CardDefinition {
         name: "Dina's Guidance",
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             // Mode 0: search → hand.
             Effect::Search {
@@ -522,7 +478,6 @@ pub fn dinas_guidance() -> CardDefinition {
                 to: ZoneDest::Graveyard,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -535,10 +490,6 @@ pub fn grapple_with_death() -> CardDefinition {
         name: "Grapple with Death",
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(
@@ -551,7 +502,6 @@ pub fn grapple_with_death() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -573,10 +523,6 @@ pub fn pull_from_the_grave() -> CardDefinition {
         name: "Pull from the Grave",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::take(
@@ -594,7 +540,6 @@ pub fn pull_from_the_grave() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -623,10 +568,6 @@ pub fn end_of_the_hunt() -> CardDefinition {
         name: "End of the Hunt",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Exile {
             what: target_filtered(
                 SelectionRequirement::ControlledByOpponent
@@ -635,7 +576,6 @@ pub fn end_of_the_hunt() -> CardDefinition {
                     )),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -658,10 +598,6 @@ pub fn vicious_rivalry() -> CardDefinition {
         name: "Vicious Rivalry",
         cost: spell_cost,
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Approximate "pay X life" additional cost.
             Effect::LoseLife {
@@ -689,7 +625,6 @@ pub fn vicious_rivalry() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -722,10 +657,6 @@ pub fn borrowed_knowledge() -> CardDefinition {
         name: "Borrowed Knowledge",
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             // Mode 0: discard hand, then draw = target opponent's hand size.
             Effect::Seq(vec![
@@ -754,7 +685,6 @@ pub fn borrowed_knowledge() -> CardDefinition {
                 },
             ]),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -782,9 +712,6 @@ pub fn pursue_the_past() -> CardDefinition {
         name: "Pursue the Past",
         cost: cost(&[r(), w_mana()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::GainLife {
@@ -806,7 +733,6 @@ pub fn pursue_the_past() -> CardDefinition {
                 ])),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -829,10 +755,6 @@ pub fn render_speechless() -> CardDefinition {
         name: "Render Speechless",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Slot 0: target opponent reveals + chosen-discard.
             Effect::DiscardChosen {
@@ -850,7 +772,6 @@ pub fn render_speechless() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -876,10 +797,6 @@ pub fn moment_of_reckoning() -> CardDefinition {
         name: "Moment of Reckoning",
         cost: cost(&[generic(3), w(), w(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             // Mode 0: destroy target nonland permanent.
             Effect::Destroy {
@@ -897,7 +814,6 @@ pub fn moment_of_reckoning() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -916,16 +832,11 @@ pub fn arcane_omens() -> CardDefinition {
         name: "Arcane Omens",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Discard {
             who: target_filtered(SelectionRequirement::Player),
             amount: Value::ConvergedValue,
             random: false,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -945,10 +856,6 @@ pub fn together_as_one() -> CardDefinition {
         name: "Together as One",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Slot 0: target player draws X.
             Effect::Draw {
@@ -970,7 +877,6 @@ pub fn together_as_one() -> CardDefinition {
                 amount: Value::ConvergedValue,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -997,10 +903,6 @@ pub fn wisdom_of_ages() -> CardDefinition {
         name: "Wisdom of Ages",
         cost: cost(&[generic(4), u(), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::CardsInZone {
@@ -1013,7 +915,6 @@ pub fn wisdom_of_ages() -> CardDefinition {
             },
             Effect::SetNoMaxHandSize { who: Selector::You },
         ]),
-        triggered_abilities: vec![],
         exile_on_resolve: true,
         ..Default::default()
     }
@@ -1033,10 +934,6 @@ pub fn rapturous_moment() -> CardDefinition {
         name: "Rapturous Moment",
         cost: cost(&[generic(4), u(), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -1058,7 +955,6 @@ pub fn rapturous_moment() -> CardDefinition {
                 ]),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1082,16 +978,11 @@ pub fn visionarys_dance() -> CardDefinition {
         name: "Visionary's Dance",
         cost: cost(&[generic(5), u(), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
             definition: elemental_token(),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1105,10 +996,6 @@ pub fn splatter_technique() -> CardDefinition {
         name: "Splatter Technique",
         cost: cost(&[generic(1), u(), u(), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             // Mode 0: draw 4.
             Effect::Draw {
@@ -1124,7 +1011,6 @@ pub fn splatter_technique() -> CardDefinition {
                 amount: Value::Const(4),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1147,10 +1033,6 @@ pub fn cost_of_brilliance() -> CardDefinition {
         name: "Cost of Brilliance",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Slot 0: target player draws 2 + loses 2 life.
             Effect::Draw {
@@ -1172,7 +1054,6 @@ pub fn cost_of_brilliance() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1198,10 +1079,6 @@ pub fn mind_roots() -> CardDefinition {
         name: "Mind Roots",
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Each opponent discards 2 cards. The Discard handler stamps
             // every discarded card's id onto
@@ -1227,7 +1104,6 @@ pub fn mind_roots() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1254,10 +1130,6 @@ pub fn mind_into_matter() -> CardDefinition {
         name: "Mind into Matter",
         cost: spell_cost,
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -1290,7 +1162,6 @@ pub fn mind_into_matter() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1311,10 +1182,6 @@ pub fn growth_curve() -> CardDefinition {
         name: "Growth Curve",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(
@@ -1332,7 +1199,6 @@ pub fn growth_curve() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1362,10 +1228,6 @@ pub fn killians_confidence() -> CardDefinition {
         name: "Killian's Confidence",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -1412,10 +1274,6 @@ pub fn planar_engineering() -> CardDefinition {
         name: "Planar Engineering",
         cost: cost(&[generic(3), gm()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::You,
@@ -1434,7 +1292,6 @@ pub fn planar_engineering() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1459,10 +1316,6 @@ pub fn pox_plague() -> CardDefinition {
         name: "Pox Plague",
         cost: cost(&[b(), b(), b(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::Player(PlayerRef::EachPlayer),
             body: Box::new(Effect::Seq(vec![
@@ -1484,7 +1337,6 @@ pub fn pox_plague() -> CardDefinition {
                 },
             ])),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1503,10 +1355,6 @@ pub fn withering_curse() -> CardDefinition {
         name: "Withering Curse",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::If {
             cond: Predicate::LifeGainedThisTurnAtLeast {
                 who: PlayerRef::You,
@@ -1528,7 +1376,6 @@ pub fn withering_curse() -> CardDefinition {
                 }),
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1564,10 +1411,6 @@ pub fn root_manipulation() -> CardDefinition {
         name: "Root Manipulation",
         cost: cost(&[generic(3), b(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1591,7 +1434,6 @@ pub fn root_manipulation() -> CardDefinition {
                 },
             ])),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1619,10 +1461,6 @@ pub fn chelonian_tackle() -> CardDefinition {
         name: "Chelonian Tackle",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         // Push (modern_decks): slot-0 = friendly creature to pump +0/+10
         // EOT; slot-1 = optional opp creature defender (picked via the
         // multi-target prompt — `Selector::TargetFiltered { slot: 1 }`).
@@ -1648,7 +1486,6 @@ pub fn chelonian_tackle() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1685,10 +1522,6 @@ pub fn steal_the_show() -> CardDefinition {
         name: "Steal the Show",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseN {
             picks: vec![0, 1],
             modes: vec![
@@ -1716,7 +1549,6 @@ pub fn steal_the_show() -> CardDefinition {
                 },
             ],
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1742,10 +1574,6 @@ pub fn snarl_song() -> CardDefinition {
         name: "Snarl Song",
         cost: cost(&[generic(5), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -1772,7 +1600,6 @@ pub fn snarl_song() -> CardDefinition {
                 amount: x(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1795,10 +1622,6 @@ pub fn wild_hypothesis() -> CardDefinition {
         name: "Wild Hypothesis",
         cost: spell_cost,
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -1815,7 +1638,6 @@ pub fn wild_hypothesis() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1861,10 +1683,6 @@ pub fn artistic_process() -> CardDefinition {
         name: "Artistic Process",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             // Mode 0: 6 damage to target creature.
             Effect::DealDamage {
@@ -1893,7 +1711,6 @@ pub fn artistic_process() -> CardDefinition {
                 },
             ]),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1914,10 +1731,6 @@ pub fn decorum_dissertation() -> CardDefinition {
         name: "Decorum Dissertation",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: target_filtered(SelectionRequirement::Player),
@@ -1929,7 +1742,6 @@ pub fn decorum_dissertation() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        triggered_abilities: vec![],
         exile_on_resolve: true,
         ..Default::default()
     }
@@ -1949,10 +1761,6 @@ pub fn germination_practicum() -> CardDefinition {
         name: "Germination Practicum",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::ForEach {
                 selector: Selector::EachPermanent(
@@ -1966,7 +1774,6 @@ pub fn germination_practicum() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        triggered_abilities: vec![],
         exile_on_resolve: true,
         ..Default::default()
     }
@@ -1985,10 +1792,6 @@ pub fn restoration_seminar() -> CardDefinition {
         name: "Restoration Seminar",
         cost: cost(&[generic(5), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(SelectionRequirement::Nonland),
@@ -1999,7 +1802,6 @@ pub fn restoration_seminar() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        triggered_abilities: vec![],
         exile_on_resolve: true,
         ..Default::default()
     }
@@ -2012,10 +1814,6 @@ pub fn zimones_experiment() -> CardDefinition {
         name: "Zimone's Experiment",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Push (modern_decks, batch 94): the printed "look at top 5,
             // partition revealed creature/land cards into hand/bf and
@@ -2050,7 +1848,6 @@ pub fn zimones_experiment() -> CardDefinition {
                 miss_dest: crate::effect::RevealMissDest::BottomRandom,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2073,10 +1870,6 @@ pub fn flow_state() -> CardDefinition {
         name: "Flow State",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::If {
             cond: Predicate::All(vec![
                 Predicate::SelectorExists(Selector::CardsInZone {
@@ -2109,7 +1902,6 @@ pub fn flow_state() -> CardDefinition {
                 take: None,
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2131,9 +1923,6 @@ pub fn molten_note() -> CardDefinition {
         name: "Molten Note",
         cost: cost(&[x(), r(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(cost(&[generic(6), r(), w()]))],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
@@ -2148,7 +1937,6 @@ pub fn molten_note() -> CardDefinition {
                 up_to: None,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2168,10 +1956,6 @@ pub fn social_snub() -> CardDefinition {
         name: "Social Snub",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachPlayer),
@@ -2231,10 +2015,6 @@ pub fn fix_whats_broken() -> CardDefinition {
         name: "Fix What's Broken",
         cost: spell_cost,
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Additional cost: pay X life (X read off the {X} pip).
             Effect::LoseLife {
@@ -2268,7 +2048,6 @@ pub fn fix_whats_broken() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2313,10 +2092,6 @@ pub fn follow_the_lumarets() -> CardDefinition {
         name: "Follow the Lumarets",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::If {
             cond: Predicate::LifeGainedThisTurnAtLeast {
                 who: PlayerRef::You,
@@ -2330,7 +2105,6 @@ pub fn follow_the_lumarets() -> CardDefinition {
             // Mainline: pull one creature/land card.
             else_: Box::new(single_pull),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2368,9 +2142,6 @@ pub fn echocasting_symposium() -> CardDefinition {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         // Push (modern_decks, batch 81): "Target player creates a token
         // that's a copy of target creature you control." Wired via
         // `Effect::CreateTokenCopyOf { who: You, source: target Creature
@@ -2394,7 +2165,6 @@ pub fn echocasting_symposium() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        triggered_abilities: vec![],
         exile_on_resolve: true,
         ..Default::default()
     }
@@ -2462,10 +2232,6 @@ pub fn improvisation_capstone() -> CardDefinition {
         name: "Improvisation Capstone",
         cost: cost(&[generic(5), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Walk top of library exiling cards until running MV sum
             // reaches ≥ 4 (printed Oracle exact). Each card walked is
@@ -2491,7 +2257,6 @@ pub fn improvisation_capstone() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        triggered_abilities: vec![],
         exile_on_resolve: true,
         ..Default::default()
     }

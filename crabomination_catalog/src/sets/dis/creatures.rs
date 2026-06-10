@@ -19,8 +19,6 @@ pub fn azorius_first_wing() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

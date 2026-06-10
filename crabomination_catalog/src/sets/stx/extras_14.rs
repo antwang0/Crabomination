@@ -476,7 +476,6 @@ pub fn overgrown_arch() -> CardDefinition {
             creature_types: vec![CreatureType::Plant, CreatureType::Wall],
             ..Default::default()
         },
-        power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![

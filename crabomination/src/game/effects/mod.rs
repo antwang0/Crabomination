@@ -3324,6 +3324,73 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Meld { partner, into } => {
+                // CR 701.37 — meld the source with the named partner. Both
+                // must be owned AND controlled by the resolving player
+                // (701.37b: otherwise nothing happens — the source stays).
+                let Some(source) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let owns_and_controls = |c: &crate::card::CardInstance| {
+                    c.owner == p && c.controller == p
+                };
+                let src_ok = self
+                    .battlefield
+                    .iter()
+                    .any(|c| c.id == source && owns_and_controls(c));
+                let partner_id = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.definition.name == partner.as_str() && owns_and_controls(c))
+                    .map(|c| c.id);
+                let (Some(partner_id), true) = (partner_id, src_ok) else { return Ok(()) };
+                let Some(melded_def) = crate::card_registry::lookup_by_name(into) else {
+                    return Ok(());
+                };
+                // Lift both components off the battlefield (continuous
+                // effects / combat / linked exiles all release), exile them,
+                // then stash them inside the new melded object.
+                let mut parts = Vec::new();
+                for id in [source, partner_id] {
+                    let Some(pos) = self.battlefield.iter().position(|c| c.id == id) else {
+                        continue;
+                    };
+                    let card = self.battlefield.remove(pos);
+                    self.remove_effects_from_source(id);
+                    self.remove_from_combat(id);
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                    self.on_left_battlefield(id, events);
+                    parts.push(card);
+                }
+                if parts.len() != 2 {
+                    // One half vanished mid-resolution — leave the survivor
+                    // in exile rather than melding (CR 701.37b).
+                    for card in parts {
+                        self.exile.push(card);
+                    }
+                    return Ok(());
+                }
+                let id = self.next_id();
+                let mut melded =
+                    crate::card::CardInstance::new(id, std::sync::Arc::new(melded_def), p);
+                melded.meld_parts = parts;
+                self.place_card_in_dest(
+                    melded,
+                    p,
+                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    events,
+                );
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::SpellsCostLessThisTurn { filter, amount } => {
+                self.players[ctx.controller]
+                    .turn_spell_discounts
+                    .push((filter.clone(), *amount));
+                Ok(())
+            }
+
             Effect::BecomeChosenColor { what, duration } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;

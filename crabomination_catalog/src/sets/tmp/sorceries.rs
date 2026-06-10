@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, Effect, SelectionRequirement, Subtypes, Value};
+use crate::card::{CardDefinition, CardType, Effect, SelectionRequirement, Value};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost};
@@ -16,10 +16,6 @@ pub fn reanimate() -> CardDefinition {
         name: "Reanimate",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: Selector::You,
@@ -33,7 +29,6 @@ pub fn reanimate() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

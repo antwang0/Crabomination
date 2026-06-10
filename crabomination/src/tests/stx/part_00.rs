@@ -3446,7 +3446,6 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
     let pest_def = CardDefinition {
         name: "Pest",
         cost: crate::mana::ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Pest],
@@ -3454,33 +3453,8 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
         effect: crate::effect::Effect::Noop,
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     };
     let pest_id = g.add_card_to_battlefield(0, pest_def);
     g.clear_sickness(pest_id);
@@ -3542,9 +3516,12 @@ fn first_day_of_class_buffs_creatures_entering_this_turn() {
 fn draconic_intervention_burns_non_dragons_and_exiles_the_dead() {
     use crate::card::{CardDefinition, CardType, CreatureType, Subtypes};
     let dragon_def = |name: &'static str| CardDefinition {
-        name, card_types: vec![CardType::Creature],
+        name,
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
-        power: 2, toughness: 2, ..Default::default()
+        power: 2,
+        toughness: 2,
+        ..Default::default()
     };
     let mut g = two_player_game();
     // A 2-MV instant in the graveyard → X = 2.

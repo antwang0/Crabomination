@@ -2314,6 +2314,15 @@ impl GameState {
         card: crate::card::CardInstance,
         events: &mut Vec<crate::game::GameEvent>,
     ) -> bool {
+        // CR 712.16 — a melded shell dies as its two component cards.
+        if !card.meld_parts.is_empty() {
+            let mut card = card;
+            let mut any_exiled = false;
+            for part in std::mem::take(&mut card.meld_parts) {
+                any_exiled |= self.route_to_graveyard(part, events);
+            }
+            return any_exiled;
+        }
         let owner = card.owner;
         if self.graveyard_exiled_for(&card) {
             let cid = card.id;
@@ -5545,7 +5554,10 @@ impl GameState {
         if !self.battlefield[pos].definition.is_planeswalker() {
             return Err(GameError::InvalidTarget);
         }
-        if self.battlefield[pos].used_loyalty_ability_this_turn {
+        // CR 606.3 — once per turn, or twice with Urza, Planeswalker's
+        // printed override.
+        let allowed = if self.battlefield[pos].definition.loyalty_twice_each_turn { 2 } else { 1 };
+        if self.battlefield[pos].loyalty_uses_this_turn >= allowed {
             return Err(GameError::LoyaltyAbilityAlreadyUsed(card_id));
         }
 
@@ -5605,7 +5617,8 @@ impl GameState {
         self.battlefield[pos]
             .counters
             .insert(crate::card::CounterType::Loyalty, new_loyalty as u32);
-        self.battlefield[pos].used_loyalty_ability_this_turn = true;
+        self.battlefield[pos].loyalty_uses_this_turn =
+            self.battlefield[pos].loyalty_uses_this_turn.saturating_add(1);
         let mut events = vec![
             GameEvent::LoyaltyAbilityActivated {
                 planeswalker: card_id,

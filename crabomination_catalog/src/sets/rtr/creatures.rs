@@ -39,7 +39,6 @@ pub fn ghor_clan_rampager() -> CardDefinition {
         name: "Ghor-Clan Rampager",
         cost: cost(&[generic(2), r(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes::default(),
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample],

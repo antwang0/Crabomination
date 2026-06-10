@@ -1103,6 +1103,10 @@ pub struct CardDefinition {
     pub activated_abilities: Vec<ActivatedAbility>,
     pub triggered_abilities: Vec<TriggeredAbility>,
     pub loyalty_abilities: Vec<LoyaltyAbility>,
+    /// CR 606.3 override — "You may activate the loyalty abilities of [this]
+    /// twice each turn rather than only once." (Urza, Planeswalker.)
+    #[serde(default)]
+    pub loyalty_twice_each_turn: bool,
     /// Optional alternative ("pitch") cost. When `Some`, the player can cast
     /// this spell by paying the alternative cost instead of `cost` — typically
     /// some life and exiling a card from hand matching `exile_filter`.
@@ -2055,7 +2059,9 @@ pub struct CardInstance {
     /// doors' abilities (`room_definition_with`).
     pub unlocked_doors: u8,
     pub is_token: bool,
-    pub used_loyalty_ability_this_turn: bool,
+    /// CR 606.3 — loyalty activations so far this turn (normally capped at
+    /// one; two with `CardDefinition.loyalty_twice_each_turn`).
+    pub loyalty_uses_this_turn: u8,
     /// True if this card was cast via an evoke alternative cost — it will
     /// be sacrificed on ETB after its ETB triggers fire.
     pub evoked: bool,
@@ -2250,6 +2256,10 @@ pub struct CardInstance {
     /// player's turn). `None` for the common undetained case. Round-trips with
     /// `#[serde(default)]`.
     pub detained_by: Option<usize>,
+    /// CR 712.16 — the two component cards of a melded permanent. Non-empty
+    /// only on a melded object; when it leaves the battlefield, the parts go
+    /// to that zone instead and the melded shell ceases to exist.
+    pub meld_parts: Vec<CardInstance>,
 }
 
 impl CardInstance {
@@ -2288,7 +2298,7 @@ impl CardInstance {
             face_up_def: None,
             cloaked: false,
             is_token: false,
-            used_loyalty_ability_this_turn: false,
+            loyalty_uses_this_turn: 0,
             evoked: false,
             dashed: false,
             cast_from_suspend: false,
@@ -2325,6 +2335,7 @@ impl CardInstance {
             split_cast: None,
             entered_turn: None,
             detained_by: None,
+            meld_parts: Vec::new(),
         }
     }
 
@@ -2485,7 +2496,7 @@ impl CardInstance {
     pub fn clear_end_of_turn_effects(&mut self) {
         self.power_bonus = 0;
         self.toughness_bonus = 0;
-        self.used_loyalty_ability_this_turn = false;
+        self.loyalty_uses_this_turn = 0;
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
         self.granted_flashback_eot = None;
@@ -2567,7 +2578,8 @@ struct CardInstanceWire {
     #[serde(default)]
     transformed: bool,
     is_token: bool,
-    used_loyalty_ability_this_turn: bool,
+    #[serde(default)]
+    loyalty_uses_this_turn: u8,
     evoked: bool,
     #[serde(default)]
     dashed: bool,
@@ -2665,6 +2677,10 @@ struct CardInstanceWire {
     /// `None`.
     #[serde(default)]
     detained_by: Option<usize>,
+    /// CR 712.16 melded-component cards. `#[serde(default)]` so older
+    /// snapshots load as empty.
+    #[serde(default)]
+    meld_parts: Vec<CardInstance>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -2700,7 +2716,7 @@ impl serde::Serialize for CardInstance {
             cloaked: self.cloaked,
             transformed: self.transformed,
             is_token: self.is_token,
-            used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
+            loyalty_uses_this_turn: self.loyalty_uses_this_turn,
             evoked: self.evoked,
             dashed: self.dashed,
             cast_from_suspend: self.cast_from_suspend,
@@ -2734,6 +2750,7 @@ impl serde::Serialize for CardInstance {
             exiled_with: self.exiled_with,
             entered_turn: self.entered_turn,
             detained_by: self.detained_by,
+            meld_parts: self.meld_parts.clone(),
         };
         wire.serialize(ser)
     }
@@ -2783,7 +2800,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.definition = Arc::new(c.definition.room_definition_with(wire.unlocked_doors));
         }
         c.is_token = wire.is_token;
-        c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;
+        c.loyalty_uses_this_turn = wire.loyalty_uses_this_turn;
         c.evoked = wire.evoked;
         c.dashed = wire.dashed;
         c.cast_from_suspend = wire.cast_from_suspend;
@@ -2813,6 +2830,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.exiled_with = wire.exiled_with;
         c.entered_turn = wire.entered_turn;
         c.detained_by = wire.detained_by;
+        c.meld_parts = wire.meld_parts;
         Ok(c)
     }
 }

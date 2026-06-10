@@ -72,18 +72,12 @@ pub fn copperline_gorge() -> CardDefinition {
 fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDefinition {
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![land_type],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(color)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -252,13 +246,7 @@ pub fn gemstone_mine() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {
         name: "Gemstone Mine",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -333,14 +321,8 @@ pub fn gemstone_caverns() -> CardDefinition {
     use crate::effect::OpeningHandEffect;
     CardDefinition {
         name: "Gemstone Caverns",
-        cost: ManaCost::default(),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![
             // {T}: Add {C}.
             ActivatedAbility {
@@ -402,7 +384,6 @@ pub fn gemstone_caverns() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![],
         opening_hand: Some(OpeningHandEffect::StartInPlay {
             tapped: false,
             // The engine has no dedicated `Luck` counter type, so we reuse
@@ -466,13 +447,7 @@ pub fn cavern_of_souls() -> CardDefinition {
 pub fn cephalid_coliseum() -> CardDefinition {
     CardDefinition {
         name: "Cephalid Coliseum",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![
             tap_add(Color::Blue),
             ActivatedAbility {
@@ -522,7 +497,6 @@ pub fn shelldock_isle() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {
         name: "Shelldock Isle",
-        cost: ManaCost::default(),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
         activated_abilities: vec![
@@ -1558,7 +1532,6 @@ fn checkland(
 ) -> CardDefinition {
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(a), tap_add(b)],
         triggered_abilities: vec![checkland_etb_conditional_tap(type_a, type_b)],

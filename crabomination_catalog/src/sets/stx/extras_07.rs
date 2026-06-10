@@ -37,7 +37,6 @@ pub fn prismari_channeler() -> CardDefinition {
     CardDefinition {
         name: "Prismari Channeler",
         cost: cost(&[generic(2), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -45,33 +44,8 @@ pub fn prismari_channeler() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Blue), tap_add(Color::Red)],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -87,15 +61,7 @@ pub fn lorehold_anthem() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Anthem",
         cost: cost(&[generic(2), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
@@ -107,28 +73,7 @@ pub fn lorehold_anthem() -> CardDefinition {
                 toughness: 1,
             },
         }],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -148,7 +93,6 @@ pub fn strixhaven_diplomat() -> CardDefinition {
     CardDefinition {
         name: "Strixhaven Diplomat",
         cost: cost(&[generic(2), w(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -157,8 +101,6 @@ pub fn strixhaven_diplomat() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -166,29 +108,7 @@ pub fn strixhaven_diplomat() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -203,41 +123,12 @@ pub fn lorehold_banishment() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Banishment",
         cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Exile,
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -252,12 +143,7 @@ pub fn quandrix_mass_counter() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mass Counter",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -268,31 +154,7 @@ pub fn quandrix_mass_counter() -> CardDefinition {
                 amount: Value::Const(2),
             }),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -307,12 +169,7 @@ pub fn prismari_storm() -> CardDefinition {
     CardDefinition {
         name: "Prismari Storm",
         cost: cost(&[generic(2), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 amount: Value::Const(4),
@@ -323,31 +180,7 @@ pub fn prismari_storm() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -363,12 +196,7 @@ pub fn witherbloom_plague() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Plague",
         cost: cost(&[generic(2), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ToughnessAtMost(2)),
@@ -377,31 +205,7 @@ pub fn witherbloom_plague() -> CardDefinition {
                 what: Selector::TriggerSource,
             }),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -418,14 +222,7 @@ pub fn silverquill_aerie() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Aerie",
         cost: cost(&[generic(3), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -434,29 +231,7 @@ pub fn silverquill_aerie() -> CardDefinition {
                 definition: inkling_token(),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -479,42 +254,13 @@ pub fn silverquill_tutor() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Tutor",
         cost: cost(&[generic(2), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::ManaValueAtMost(2),
             to: ZoneDest::Hand(PlayerRef::You),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -530,7 +276,6 @@ pub fn witherbloom_apprentices_familiar() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Apprentice's Familiar",
         cost: cost(&[b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
@@ -538,33 +283,8 @@ pub fn witherbloom_apprentices_familiar() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -580,7 +300,6 @@ pub fn lorehold_investigator() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Investigator",
         cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -588,9 +307,6 @@ pub fn lorehold_investigator() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -604,29 +320,7 @@ pub fn lorehold_investigator() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -642,7 +336,6 @@ pub fn prismari_ember_mage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Mage",
         cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -650,33 +343,8 @@ pub fn prismari_ember_mage() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -691,7 +359,6 @@ pub fn quandrix_calculator() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculator",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -699,9 +366,6 @@ pub fn quandrix_calculator() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ForEach {
@@ -716,29 +380,7 @@ pub fn quandrix_calculator() -> CardDefinition {
                 }),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -753,12 +395,7 @@ pub fn lorehold_spark() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spark",
         cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 amount: Value::Const(2),
@@ -773,31 +410,7 @@ pub fn lorehold_spark() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -813,42 +426,13 @@ pub fn witherbloom_tonic() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Tonic",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -864,7 +448,6 @@ pub fn silverquill_scribe() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Scribe",
         cost: cost(&[generic(2), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -872,9 +455,6 @@ pub fn silverquill_scribe() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -889,29 +469,7 @@ pub fn silverquill_scribe() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -927,12 +485,7 @@ pub fn prismari_maelstrom() -> CardDefinition {
     CardDefinition {
         name: "Prismari Maelstrom",
         cost: cost(&[generic(3), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
                 what: target_filtered(
@@ -950,31 +503,7 @@ pub fn prismari_maelstrom() -> CardDefinition {
                 },
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -990,42 +519,13 @@ pub fn lorehold_beacon() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Beacon",
         cost: cost(&[generic(3), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
             definition: spirit_token(),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1042,7 +542,6 @@ pub fn quandrix_mentor() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mentor",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -1050,9 +549,6 @@ pub fn quandrix_mentor() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1074,29 +570,7 @@ pub fn quandrix_mentor() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1111,12 +585,7 @@ pub fn silverquill_riposte() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Riposte",
         cost: cost(&[w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.and(
@@ -1125,31 +594,7 @@ pub fn silverquill_riposte() -> CardDefinition {
                 ),
             ),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1167,7 +612,6 @@ pub fn witherbloom_druid_in_training() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Druid-in-Training",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
@@ -1175,9 +619,6 @@ pub fn witherbloom_druid_in_training() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -1186,29 +627,7 @@ pub fn witherbloom_druid_in_training() -> CardDefinition {
                 definition: pest_token(),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1225,12 +644,7 @@ pub fn lorehold_recurrence() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recurrence",
         cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -1243,31 +657,7 @@ pub fn lorehold_recurrence() -> CardDefinition {
                 tapped: false,
             },
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1284,7 +674,6 @@ pub fn prismari_sage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sage",
         cost: cost(&[generic(2), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1292,9 +681,6 @@ pub fn prismari_sage() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1312,29 +698,7 @@ pub fn prismari_sage() -> CardDefinition {
             },
             magecraft_self_pump(1, 1),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1351,7 +715,6 @@ pub fn quandrix_aviator() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Aviator",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Bird],
@@ -1360,8 +723,6 @@ pub fn quandrix_aviator() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1377,29 +738,7 @@ pub fn quandrix_aviator() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1416,7 +755,6 @@ pub fn witherbloom_necromancer() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Necromancer",
         cost: cost(&[generic(2), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie, CreatureType::Druid],
@@ -1424,9 +762,6 @@ pub fn witherbloom_necromancer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1451,29 +786,7 @@ pub fn witherbloom_necromancer() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1489,42 +802,13 @@ pub fn silverquill_edict() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Edict",
         cost: cost(&[generic(2), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Sacrifice {
             who: Selector::Player(PlayerRef::Target(0)),
             count: Value::Const(1),
             filter: SelectionRequirement::Creature,
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1541,12 +825,7 @@ pub fn lorehold_recall() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recall",
         cost: cost(&[generic(1), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::Target(0),
@@ -1561,31 +840,7 @@ pub fn lorehold_recall() -> CardDefinition {
                 },
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1599,12 +854,7 @@ pub fn quandrix_refraction() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Refraction",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
                 what: target_filtered(
@@ -1617,31 +867,7 @@ pub fn quandrix_refraction() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1659,7 +885,6 @@ pub fn prismari_architect() -> CardDefinition {
     CardDefinition {
         name: "Prismari Architect",
         cost: cost(&[generic(3), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -1667,9 +892,6 @@ pub fn prismari_architect() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1681,29 +903,7 @@ pub fn prismari_architect() -> CardDefinition {
             },
             magecraft_self_pump(1, 0),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1719,7 +919,6 @@ pub fn witherbloom_briarmage() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Briarmage",
         cost: cost(&[generic(2), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
@@ -1727,9 +926,6 @@ pub fn witherbloom_briarmage() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -1738,29 +934,7 @@ pub fn witherbloom_briarmage() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1777,7 +951,6 @@ pub fn silverquill_strategist() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Strategist",
         cost: cost(&[generic(1), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
@@ -1786,8 +959,6 @@ pub fn silverquill_strategist() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             magecraft_drain_each_opp(1),
             TriggeredAbility {
@@ -1798,29 +969,7 @@ pub fn silverquill_strategist() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1845,7 +994,6 @@ pub fn lorehold_scholar() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Scholar",
         cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1853,9 +1001,6 @@ pub fn lorehold_scholar() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1877,29 +1022,7 @@ pub fn lorehold_scholar() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1915,7 +1038,6 @@ pub fn witherbloom_sapfeeder() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Sapfeeder",
         cost: cost(&[b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Pest, CreatureType::Druid],
@@ -1924,32 +1046,8 @@ pub fn witherbloom_sapfeeder() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -1966,7 +1064,6 @@ pub fn quandrix_mathematician() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathematician",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1974,9 +1071,6 @@ pub fn quandrix_mathematician() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1991,29 +1085,7 @@ pub fn quandrix_mathematician() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2029,7 +1101,6 @@ pub fn prismari_mage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mage",
         cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2037,9 +1108,6 @@ pub fn prismari_mage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Loot".into(),
             body: Box::new(Effect::Seq(vec![
@@ -2054,29 +1122,7 @@ pub fn prismari_mage() -> CardDefinition {
                 },
             ])),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2092,7 +1138,6 @@ pub fn silverquill_initiate_first_strike() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Initiate (First Strike)",
         cost: cost(&[w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -2101,32 +1146,8 @@ pub fn silverquill_initiate_first_strike() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2141,7 +1162,6 @@ pub fn lorehold_sparkmage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkmage",
         cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
@@ -2150,8 +1170,6 @@ pub fn lorehold_sparkmage() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Haste],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -2163,29 +1181,7 @@ pub fn lorehold_sparkmage() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2202,7 +1198,6 @@ pub fn witherbloom_loremage() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Loremage",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
@@ -2210,8 +1205,6 @@ pub fn witherbloom_loremage() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2238,29 +1231,7 @@ pub fn witherbloom_loremage() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2276,12 +1247,7 @@ pub fn quandrix_surge_spell() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Surge Spell",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
@@ -2296,31 +1262,7 @@ pub fn quandrix_surge_spell() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2337,7 +1279,6 @@ pub fn prismari_volcanist() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volcanist",
         cost: cost(&[generic(2), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2345,9 +1286,6 @@ pub fn prismari_volcanist() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2363,29 +1301,7 @@ pub fn prismari_volcanist() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2401,7 +1317,6 @@ pub fn lorehold_spellsage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spellsage",
         cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2410,8 +1325,6 @@ pub fn lorehold_spellsage() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -2426,29 +1339,7 @@ pub fn lorehold_spellsage() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2463,7 +1354,6 @@ pub fn silverquill_penmate() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Penmate",
         cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
@@ -2472,8 +1362,6 @@ pub fn silverquill_penmate() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -2482,29 +1370,7 @@ pub fn silverquill_penmate() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2523,7 +1389,6 @@ pub fn witherbloom_apothecary() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Apothecary",
         cost: cost(&[generic(2), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warlock],
@@ -2531,8 +1396,6 @@ pub fn witherbloom_apothecary() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2564,30 +1427,7 @@ pub fn witherbloom_apothecary() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2604,7 +1444,6 @@ pub fn quandrix_trampler() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Trampler",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -2613,37 +1452,14 @@ pub fn quandrix_trampler() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
             Value::CountOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ))),
         )),
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2662,7 +1478,6 @@ pub fn prismari_painter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Painter",
         cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -2670,8 +1485,6 @@ pub fn prismari_painter() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2715,29 +1528,7 @@ pub fn prismari_painter() -> CardDefinition {
                 definition: crate::game::effects::treasure_token(),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2754,7 +1545,6 @@ pub fn lorehold_archivist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Archivist",
         cost: cost(&[generic(1), r(), w(), generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2763,8 +1553,6 @@ pub fn lorehold_archivist() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Move {
@@ -2777,29 +1565,7 @@ pub fn lorehold_archivist() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2815,7 +1581,6 @@ pub fn silverquill_scrivener() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Scrivener",
         cost: cost(&[generic(2), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
@@ -2824,8 +1589,6 @@ pub fn silverquill_scrivener() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayDo {
@@ -2843,29 +1606,7 @@ pub fn silverquill_scrivener() -> CardDefinition {
                 ])),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2882,7 +1623,6 @@ pub fn witherbloom_geneticist() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Geneticist",
         cost: cost(&[generic(2), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -2890,9 +1630,6 @@ pub fn witherbloom_geneticist() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2917,29 +1654,7 @@ pub fn witherbloom_geneticist() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -2956,7 +1671,6 @@ pub fn quandrix_resonator() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Resonator",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -2964,9 +1678,6 @@ pub fn quandrix_resonator() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::CounterAdded(CounterType::PlusOnePlusOne),
@@ -2977,29 +1688,7 @@ pub fn quandrix_resonator() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3016,7 +1705,6 @@ pub fn prismari_wavecaller() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavecaller",
         cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3025,8 +1713,6 @@ pub fn prismari_wavecaller() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Haste],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3037,29 +1723,7 @@ pub fn prismari_wavecaller() -> CardDefinition {
             },
             magecraft_self_pump(1, 0),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3075,12 +1739,7 @@ pub fn lorehold_spiritguide() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritguide",
         cost: cost(&[r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
@@ -3105,31 +1764,7 @@ pub fn lorehold_spiritguide() -> CardDefinition {
                 ])),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3148,12 +1783,7 @@ pub fn silverquill_verse() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Verse",
         cost: cost(&[generic(1), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseN {
             picks: vec![0, 2],
             modes: vec![
@@ -3175,31 +1805,7 @@ pub fn silverquill_verse() -> CardDefinition {
                 },
             ],
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3217,7 +1823,6 @@ pub fn witherbloom_quagmage() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Quagmage",
         cost: cost(&[generic(3), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
@@ -3226,8 +1831,6 @@ pub fn witherbloom_quagmage() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Deathtouch],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb_drain(2),
             TriggeredAbility {
@@ -3238,29 +1841,7 @@ pub fn witherbloom_quagmage() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3276,7 +1857,6 @@ pub fn quandrix_surveyor() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Surveyor",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -3284,9 +1864,6 @@ pub fn quandrix_surveyor() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -3295,29 +1872,7 @@ pub fn quandrix_surveyor() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3333,12 +1888,7 @@ pub fn prismari_glitterbomb() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glitterbomb",
         cost: cost(&[generic(2), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
@@ -3350,31 +1900,7 @@ pub fn prismari_glitterbomb() -> CardDefinition {
                 definition: crate::game::effects::treasure_token(),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3397,12 +1923,7 @@ pub fn pestilent_haze() -> CardDefinition {
     CardDefinition {
         name: "Pestilent Haze",
         cost: cost(&[generic(1), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         // ChooseMode with -2/-2 (mode 0) and -1/-1 (mode 1). The auto-
         // decider picks mode 0 by default for maximum kill potential.
         // The "if you've cast another spell this turn, you may choose
@@ -3422,31 +1943,7 @@ pub fn pestilent_haze() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3471,43 +1968,15 @@ pub fn vanquish_the_horde() -> CardDefinition {
     CardDefinition {
         name: "Vanquish the Horde",
         cost: cost(&[generic(6), w(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
             body: Box::new(Effect::Destroy {
                 what: Selector::TriggerSource,
             }),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
         affinity_filter: Some(SelectionRequirement::Creature),
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3529,7 +1998,6 @@ pub fn quandrix_doublewright() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doublewright",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -3537,9 +2005,6 @@ pub fn quandrix_doublewright() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3559,29 +2024,7 @@ pub fn quandrix_doublewright() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3601,7 +2044,6 @@ pub fn lorehold_theorizer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Theorizer",
         cost: cost(&[generic(1), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -3610,32 +2052,8 @@ pub fn lorehold_theorizer() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 
@@ -3656,7 +2074,6 @@ pub fn prismari_inventor() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inventor",
         cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -3664,32 +2081,7 @@ pub fn prismari_inventor() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_treasure()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }

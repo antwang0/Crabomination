@@ -20,9 +20,6 @@ pub fn savannah_lions() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -40,8 +37,6 @@ pub fn white_knight() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Protection(Color::Black)],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -59,8 +54,6 @@ pub fn serra_angel() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -78,8 +71,6 @@ pub fn mahamoti_djinn() -> CardDefinition {
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -96,8 +87,6 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -115,7 +104,6 @@ pub fn prodigal_sorcerer() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -133,8 +121,6 @@ pub fn black_knight() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Protection(Color::White)],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -155,7 +141,6 @@ pub fn hypnotic_specter() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
@@ -187,8 +172,6 @@ pub fn sengir_vampire() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -206,8 +189,6 @@ pub fn shivan_dragon() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -224,9 +205,6 @@ pub fn grizzly_bears() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -241,10 +219,8 @@ pub fn birds_of_paradise() -> CardDefinition {
             creature_types: vec![CreatureType::Bird],
             ..Default::default()
         },
-        power: 0,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -265,7 +241,6 @@ pub fn birds_of_paradise() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -282,10 +257,7 @@ pub fn llanowar_elves() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Green)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -303,8 +275,6 @@ pub fn elvish_archers() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -321,9 +291,6 @@ pub fn craw_wurm() -> CardDefinition {
         },
         power: 6,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -341,7 +308,6 @@ pub fn samite_healer() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -598,7 +564,6 @@ pub fn wall_of_wood() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
-        power: 0,
         toughness: 3,
         keywords: vec![Keyword::Defender],
         ..Default::default()
@@ -612,7 +577,6 @@ pub fn wall_of_stone() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
-        power: 0,
         toughness: 8,
         keywords: vec![Keyword::Defender],
         ..Default::default()
@@ -665,7 +629,6 @@ pub fn wall_of_fire() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
-        power: 0,
         toughness: 5,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![pump_one_zero(&[r()])],

@@ -16,7 +16,6 @@ pub fn baleful_strix() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),

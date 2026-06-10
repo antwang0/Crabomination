@@ -18944,8 +18944,10 @@ fn one_shot_is_discount_applies_to_next_spell_then_lapses() {
     let mut g = two_player_game();
     // A {3} generic instant.
     let make = || CardDefinition {
-        name: "Test Bolt", cost: crate::mana::cost(&[crate::mana::generic(3)]),
-        card_types: vec![CardType::Instant], effect: Effect::Noop, ..Default::default()
+        name: "Test Bolt",
+        cost: crate::mana::cost(&[crate::mana::generic(3)]),
+        card_types: vec![CardType::Instant],
+        ..Default::default()
     };
     let spell = crate::card::CardInstance::new(crate::card::CardId(999), make(), 0);
     // No discount yet.
@@ -20304,7 +20306,9 @@ fn growing_ranks_populates_a_token_on_upkeep() {
         name: "Centaur",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Centaur], ..Default::default() },
-        power: 3, toughness: 3, ..Default::default()
+        power: 3,
+        toughness: 3,
+        ..Default::default()
     });
     g.battlefield_find_mut(tok).unwrap().is_token = true;
     g.active_player_idx = 0;
@@ -38614,9 +38618,12 @@ fn drogskol_captain_buffs_other_spirits() {
     let mut g = two_player_game();
     let cap = g.add_card_to_battlefield(0, catalog::drogskol_captain());
     let spirit = g.add_card_to_battlefield(0, CardDefinition {
-        name: "Test Spirit", card_types: vec![CardType::Creature],
+        name: "Test Spirit",
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
-        power: 1, toughness: 1, ..Default::default()
+        power: 1,
+        toughness: 1,
+        ..Default::default()
     });
     let cp = g.compute_battlefield();
     let s = cp.iter().find(|c| c.id == spirit).unwrap();
@@ -38633,9 +38640,12 @@ fn lord_of_the_unreal_buffs_illusions() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::lord_of_the_unreal());
     let illusion = g.add_card_to_battlefield(0, CardDefinition {
-        name: "Phantom", card_types: vec![CardType::Creature],
+        name: "Phantom",
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
-        power: 2, toughness: 2, ..Default::default()
+        power: 2,
+        toughness: 2,
+        ..Default::default()
     });
     let cp = g.compute_battlefield();
     let i = cp.iter().find(|c| c.id == illusion).unwrap();
@@ -38650,9 +38660,12 @@ fn lord_of_atlantis_buffs_merfolk_with_islandwalk() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::lord_of_atlantis());
     let fish = g.add_card_to_battlefield(0, CardDefinition {
-        name: "Merperson", card_types: vec![CardType::Creature],
+        name: "Merperson",
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
-        power: 1, toughness: 1, ..Default::default()
+        power: 1,
+        toughness: 1,
+        ..Default::default()
     });
     let cp = g.compute_battlefield();
     let f = cp.iter().find(|c| c.id == fish).unwrap();
@@ -38667,9 +38680,12 @@ fn death_baron_buffs_zombies_and_skeletons() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::death_baron());
     let mk = |name: &'static str, ct: CreatureType| CardDefinition {
-        name, card_types: vec![CardType::Creature],
+        name,
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
-        power: 1, toughness: 1, ..Default::default()
+        power: 1,
+        toughness: 1,
+        ..Default::default()
     };
     let zombie = g.add_card_to_battlefield(0, mk("Z", CreatureType::Zombie));
     let skeleton = g.add_card_to_battlefield(0, mk("S", CreatureType::Skeleton));
@@ -38742,9 +38758,12 @@ fn imperious_perfect_anthem_and_token() {
     let mut g = two_player_game();
     let perfect = g.add_card_to_battlefield(0, catalog::imperious_perfect());
     let elf = g.add_card_to_battlefield(0, CardDefinition {
-        name: "Llanowar", card_types: vec![CardType::Creature],
+        name: "Llanowar",
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
-        power: 1, toughness: 1, ..Default::default()
+        power: 1,
+        toughness: 1,
+        ..Default::default()
     });
     let cp = g.compute_battlefield();
     assert_eq!(cp.iter().find(|c| c.id == elf).map(|c| (c.power, c.toughness)), Some((2, 2)),
@@ -38770,9 +38789,12 @@ fn diregraf_captain_drains_on_zombie_death() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::diregraf_captain());
     let zombie = g.add_card_to_battlefield(0, CardDefinition {
-        name: "Walker", card_types: vec![CardType::Creature],
+        name: "Walker",
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
-        power: 2, toughness: 2, ..Default::default()
+        power: 2,
+        toughness: 2,
+        ..Default::default()
     });
     // Kill our own Zombie via lethal damage so the SBA death path dispatches
     // CreatureDied to the Captain's listener.
@@ -47369,4 +47391,111 @@ fn aftermath_analyst_mills_then_returns_lands() {
     assert!(lands.iter().all(|c| c.tapped), "returned tapped");
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
         "nonland stays in graveyard");
+}
+
+// ── Meld (CR 701.37): Urza, Lord Protector + The Mightstone and Weakstone ───
+
+/// Urza's {7} melds with the Mightstone into Urza, Planeswalker (loyalty 7);
+/// both components are gone from the battlefield.
+#[test]
+fn meld_urza_creates_planeswalker() {
+    let mut g = two_player_game();
+    let urza = g.add_card_to_battlefield(0, catalog::urza_lord_protector());
+    g.add_card_to_battlefield(0, catalog::the_mightstone_and_weakstone());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: urza, ability_index: 0, target: None, x_value: None,
+    }).expect("meld");
+    drain_stack(&mut g);
+    let pw = g.battlefield.iter().find(|c| c.definition.name == "Urza, Planeswalker")
+        .expect("melded planeswalker");
+    assert_eq!(pw.counter_count(CounterType::Loyalty), 7);
+    assert_eq!(pw.meld_parts.len(), 2);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Urza, Lord Protector"));
+}
+
+/// CR 701.37b — without the partner, the {7} ability does nothing.
+#[test]
+fn meld_without_partner_is_noop() {
+    let mut g = two_player_game();
+    let urza = g.add_card_to_battlefield(0, catalog::urza_lord_protector());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: urza, ability_index: 0, target: None, x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == urza), "Urza stays");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Urza, Planeswalker"));
+}
+
+/// CR 701.37b — an opponent-owned partner can't meld ("you both own and
+/// control").
+#[test]
+fn meld_requires_owning_both() {
+    let mut g = two_player_game();
+    let urza = g.add_card_to_battlefield(0, catalog::urza_lord_protector());
+    let stone = g.add_card_to_battlefield(1, catalog::the_mightstone_and_weakstone());
+    // steal it: controller 0, owner stays 1
+    g.battlefield_find_mut(stone).unwrap().controller = 0;
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: urza, ability_index: 0, target: None, x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Urza, Planeswalker"));
+}
+
+/// CR 712.16 — a dying melded permanent goes to the graveyard as both
+/// component cards.
+#[test]
+fn melded_permanent_dies_as_both_cards() {
+    let mut g = two_player_game();
+    let urza = g.add_card_to_battlefield(0, catalog::urza_lord_protector());
+    g.add_card_to_battlefield(0, catalog::the_mightstone_and_weakstone());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: urza, ability_index: 0, target: None, x_value: None,
+    }).expect("meld");
+    drain_stack(&mut g);
+    let pw = g.battlefield.iter().find(|c| c.definition.name == "Urza, Planeswalker")
+        .unwrap().id;
+    g.remove_from_battlefield_to_graveyard(pw);
+    let names: Vec<&str> = g.players[0].graveyard.iter()
+        .map(|c| c.definition.name).collect();
+    assert!(names.contains(&"Urza, Lord Protector"));
+    assert!(names.contains(&"The Mightstone and Weakstone"));
+    assert!(!names.contains(&"Urza, Planeswalker"));
+}
+
+/// CR 606.3 override — Urza, Planeswalker activates twice per turn, not
+/// three times; +2 grants the artifact/instant/sorcery discount.
+#[test]
+fn urza_planeswalker_twice_per_turn_and_discount() {
+    let mut g = two_player_game();
+    let urza = g.add_card_to_battlefield(0, catalog::urza_lord_protector());
+    g.add_card_to_battlefield(0, catalog::the_mightstone_and_weakstone());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: urza, ability_index: 0, target: None, x_value: None,
+    }).expect("meld");
+    drain_stack(&mut g);
+    let pw = g.battlefield.iter().find(|c| c.definition.name == "Urza, Planeswalker")
+        .unwrap().id;
+    g.step = TurnStep::PreCombatMain;
+    for i in 0..2 {
+        g.perform_action(GameAction::ActivateLoyaltyAbility {
+            card_id: pw, ability_index: 0, target: None, x_value: None,
+        }).unwrap_or_else(|e| panic!("activation {i}: {e:?}"));
+        drain_stack(&mut g);
+    }
+    let third = g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: pw, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(third.is_err(), "third activation rejected");
+    assert_eq!(g.players[0].life, 24, "+2 gained twice");
+    assert_eq!(g.players[0].turn_spell_discounts.len(), 2);
+    // {4} artifact now costs {0}
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    cast(&mut g, stone);
+    assert!(g.battlefield.iter().any(|c| c.id == stone), "free artifact cast");
 }

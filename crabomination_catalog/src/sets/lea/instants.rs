@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, SelectionRequirement, Subtypes};
+use crate::card::{CardDefinition, CardType, SelectionRequirement};
 use crate::effect::shortcut::{
     add_mana, counter_target_spell, deal, exile_target, pump_target, target, target_filtered,
 };
@@ -11,12 +11,7 @@ pub fn swords_to_plowshares() -> CardDefinition {
         name: "Swords to Plowshares",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: exile_target(),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -27,12 +22,7 @@ pub fn counterspell() -> CardDefinition {
         name: "Counterspell",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: counter_target_spell(),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -43,10 +33,6 @@ pub fn ancestral_recall() -> CardDefinition {
         name: "Ancestral Recall",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         // "Target player draws three cards" — the caster picks any player
         // (themselves or an opponent), so the draw resolves on the chosen
         // target rather than always the caster.
@@ -54,7 +40,6 @@ pub fn ancestral_recall() -> CardDefinition {
             who: target_filtered(SelectionRequirement::Player),
             amount: crate::effect::Value::Const(3),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -65,12 +50,7 @@ pub fn dark_ritual() -> CardDefinition {
         name: "Dark Ritual",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: add_mana(vec![Color::Black, Color::Black, Color::Black]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -85,12 +65,7 @@ pub fn terror() -> CardDefinition {
         name: "Terror",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DestroyNoRegen { what: target_filtered(filter) },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -101,12 +76,7 @@ pub fn lightning_bolt() -> CardDefinition {
         name: "Lightning Bolt",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: deal(3, target()),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -117,12 +87,7 @@ pub fn giant_growth() -> CardDefinition {
         name: "Giant Growth",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: pump_target(3, 3),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

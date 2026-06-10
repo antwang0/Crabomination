@@ -155,9 +155,12 @@ fn blex_anthems_kin_and_gains_life_on_death() {
     let mut g = two_player_game();
     let blex = g.add_card_to_battlefield(0, catalog::blex_vexing_pest());
     let pest = g.add_card_to_battlefield(0, CardDefinition {
-        name: "Pest", card_types: vec![CardType::Creature],
+        name: "Pest",
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Pest], ..Default::default() },
-        power: 1, toughness: 1, ..Default::default()
+        power: 1,
+        toughness: 1,
+        ..Default::default()
     });
     let view = |g: &GameState, id| {
         let v = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
@@ -309,7 +312,7 @@ fn will_plus_one_sets_base_zero_two_and_minus_three_draws_two() {
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let hand_before = g.players[0].hand.len();
     // Reset the once-per-turn loyalty gate to exercise the -3 in the same test.
-    g.battlefield_find_mut(will).unwrap().used_loyalty_ability_this_turn = false;
+    g.battlefield_find_mut(will).unwrap().loyalty_uses_this_turn = 0;
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: will, ability_index: 1, target: None, x_value: None,
     }).expect("Will -3 draws two");

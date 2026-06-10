@@ -8,7 +8,7 @@
 use super::sorceries::{fractal_token, spirit_token};
 use crate::card::{
     CardDefinition, CardType, CounterType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement, Subtypes, TriggeredAbility,
+    Predicate, SelectionRequirement, TriggeredAbility,
 };
 use crate::effect::shortcut::{repartee, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, Value};
@@ -28,11 +28,6 @@ pub fn graduation_day() -> CardDefinition {
         name: "Graduation Day",
         cost: cost(&[w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -64,11 +59,6 @@ pub fn living_history() -> CardDefinition {
         name: "Living History",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: create a 2/2 R/W Spirit creature token.
             TriggeredAbility {
@@ -120,11 +110,6 @@ pub fn comforting_counsel() -> CardDefinition {
         name: "Comforting Counsel",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -160,11 +145,6 @@ pub fn primary_research() -> CardDefinition {
         name: "Primary Research",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: return ≤MV3 nonland permanent card from your gy → bf.
             TriggeredAbility {
@@ -222,11 +202,6 @@ pub fn additive_evolution() -> CardDefinition {
         name: "Additive Evolution",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: create a 0/0 green-blue Fractal token + 3 +1/+1 counters.
             TriggeredAbility {
@@ -299,12 +274,6 @@ pub fn top_of_the_class() -> CardDefinition {
         name: "Top of the Class",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![
             StaticAbility {
                 description: "Prepared creatures you control get +1/+1",

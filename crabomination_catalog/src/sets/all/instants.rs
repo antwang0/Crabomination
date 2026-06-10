@@ -1,4 +1,4 @@
-use crate::card::{AlternativeCost, CardDefinition, CardType, SelectionRequirement, Subtypes};
+use crate::card::{AlternativeCost, CardDefinition, CardType, SelectionRequirement};
 use crate::effect::shortcut::counter_target_spell;
 use crate::mana::{Color, ManaCost, cost, generic, u};
 
@@ -10,12 +10,7 @@ pub fn force_of_will() -> CardDefinition {
         name: "Force of Will",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: counter_target_spell(),
-        triggered_abilities: vec![],
         alternative_cost: Some(AlternativeCost {
             mana_cost: ManaCost::default(),
             life_cost: 1,

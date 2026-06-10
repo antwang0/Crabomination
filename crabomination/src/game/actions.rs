@@ -308,6 +308,13 @@ pub(crate) fn cost_reduction_for_spell(
             }
         }
     }
+    // Turn-scoped "[filter] spells you cast this turn cost {N} less"
+    // grants (Urza, Planeswalker's +2). Cleared at cleanup.
+    for (filter, amount) in &state.players[caster].turn_spell_discounts {
+        if state.evaluate_requirement_on_card(filter, card, caster) {
+            reduction = reduction.saturating_add(*amount);
+        }
+    }
     // Transient "sacrifice any number, {N} less each" additional-cost
     // reduction (Awaken the Blood Avatar). Stamped on the state for the
     // duration of one cast by `cast_spell_sacrifice_reduce`.

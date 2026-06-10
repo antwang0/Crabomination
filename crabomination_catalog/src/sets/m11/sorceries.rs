@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, Subtypes};
+use crate::card::{CardDefinition, CardType};
 use crate::effect::shortcut::draw;
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{cost, u};
@@ -9,15 +9,10 @@ pub fn preordain() -> CardDefinition {
         name: "Preordain",
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             draw(1),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

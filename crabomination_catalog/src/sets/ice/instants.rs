@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, Subtypes};
+use crate::card::{CardDefinition, CardType};
 use crate::effect::shortcut::draw;
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{cost, u};
@@ -9,15 +9,10 @@ pub fn brainstorm() -> CardDefinition {
         name: "Brainstorm",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             draw(3),
             Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

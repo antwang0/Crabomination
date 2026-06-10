@@ -500,6 +500,15 @@ impl GameState {
             ZoneDest::Graveyard => crate::card::Zone::Graveyard,
             ZoneDest::Exile => crate::card::Zone::Exile,
         };
+        // CR 712.16/712.17 — a melded permanent leaving the battlefield
+        // leaves as its two component cards; the melded shell ceases to
+        // exist.
+        if !card.meld_parts.is_empty() && intended != crate::card::Zone::Battlefield {
+            for part in std::mem::take(&mut card.meld_parts) {
+                self.place_card_in_dest(part, default_player, dest, events);
+            }
+            return;
+        }
         let resolved = self.resolve_zone_change(
             card.id,
             crate::card::Zone::Battlefield,

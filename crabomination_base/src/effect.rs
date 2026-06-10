@@ -1922,6 +1922,19 @@ pub enum Effect {
     /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event
     /// fires per permanent so "when this transforms" triggers can react.
     Transform { what: Selector },
+    /// CR 701.37 — Meld. If the source's controller both owns and controls
+    /// the source and a permanent named `partner`, exile both, then put the
+    /// melded card (resolved from the registry by `into`) onto the
+    /// battlefield under their control. The two component cards ride in
+    /// `CardInstance.meld_parts`, so the melded permanent leaves the
+    /// battlefield as both cards (CR 712.16/712.17). No-op otherwise
+    /// (701.37b).
+    Meld { partner: String, into: String },
+    /// "[Filter] spells you cast this turn cost {amount} less to cast" —
+    /// turn-scoped generic cost reduction (Urza, Planeswalker's +2).
+    /// Pushed onto `Player.turn_spell_discounts`, consulted by
+    /// `cost_reduction_for_spell`, cleared at cleanup (CR 514.2).
+    SpellsCostLessThisTurn { filter: SelectionRequirement, amount: u32 },
     /// "Exile target [permanent], then search its owner's graveyard, hand,
     /// and library for any number of cards with the same name as that
     /// [permanent] and exile them. Then that player shuffles." Crumble to

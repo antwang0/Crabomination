@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, SelectionRequirement, Subtypes};
+use crate::card::{CardDefinition, CardType, SelectionRequirement};
 use crate::effect::shortcut::{deal, gain_life, target, target_filtered};
 use crate::effect::Effect;
 use crate::mana::{b, cost, g, generic, r, w};
@@ -9,12 +9,7 @@ pub fn lightning_helix() -> CardDefinition {
         name: "Lightning Helix",
         cost: cost(&[r(), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![deal(3, target()), gain_life(3)]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -29,16 +24,11 @@ pub fn putrefy() -> CardDefinition {
         name: "Putrefy",
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DestroyNoRegen {
             what: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

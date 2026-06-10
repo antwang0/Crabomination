@@ -20,7 +20,6 @@ pub fn goblin_guide() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Haste],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::RevealTopAndDrawIf {

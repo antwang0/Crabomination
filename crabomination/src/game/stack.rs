@@ -1448,6 +1448,8 @@ impl GameState {
             for card in &mut player.graveyard {
                 card.granted_flashback_eot = None;
             }
+            // "[Filter] spells cost {N} less this turn" grants end (CR 514.2).
+            player.turn_spell_discounts.clear();
         }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();
@@ -2330,10 +2332,18 @@ impl GameState {
     ) {
         use crate::card::Zone;
         let owner = card.owner;
+        // CR 712.16/712.17 — a melded permanent leaves the battlefield as
+        // its two component cards.
+        let mut card = card;
+        if !card.meld_parts.is_empty() && zone != Zone::Battlefield {
+            for part in std::mem::take(&mut card.meld_parts) {
+                self.place_card_at_resolved_zone(part, zone);
+            }
+            return;
+        }
         // CR 702.95h — a card leaving the battlefield is no longer Soulbond-
         // paired. Clear its own link so a later re-entry can re-pair cleanly
         // (the SBA in `check_state_based_actions` clears the partner's side).
-        let mut card = card;
         card.soulbond_partner = None;
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).

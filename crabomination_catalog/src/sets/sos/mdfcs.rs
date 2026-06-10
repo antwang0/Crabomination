@@ -57,8 +57,6 @@ fn vanilla_front(
         power,
         toughness,
         keywords,
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         back_face: Some(Box::new(back)),
         ..Default::default()
     }
@@ -75,12 +73,7 @@ fn spell_back(
         name,
         cost,
         card_types: vec![card_type],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

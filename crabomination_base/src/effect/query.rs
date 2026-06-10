@@ -149,6 +149,8 @@ impl Effect {
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::Transform { what } => sel_has_target(what),
+            Effect::Meld { .. } => false,
+            Effect::SpellsCostLessThisTurn { .. } => false,
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {
                 pred_has_target(cond) || then.requires_target() || else_.requires_target()

@@ -1,6 +1,6 @@
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, SelectionRequirement,
-    StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
+    StaticAbility, StaticEffect, TriggeredAbility,
 };
 use crate::effect::{PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, generic, r, w};
@@ -12,12 +12,6 @@ pub fn glorious_anthem() -> CardDefinition {
         name: "Glorious Anthem",
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control get +1/+1",
             effect: StaticEffect::PumpPT {
@@ -93,11 +87,6 @@ pub fn animate_dead() -> CardDefinition {
         name: "Animate Dead",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {

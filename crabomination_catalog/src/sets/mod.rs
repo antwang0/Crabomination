@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate};
-use crate::mana::{Color, ManaCost};
+use crate::mana::Color;
 
 pub fn tap_add(color: Color) -> ActivatedAbility {
     ActivatedAbility {
@@ -99,7 +99,6 @@ pub fn tap_pay_life_add(color: Color, life: u32) -> ActivatedAbility {
 pub fn horizon_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             tap_pay_life_add(color_a, 1),
@@ -147,7 +146,6 @@ pub fn verge_land(
     };
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add(uncond), gated],
         ..Default::default()
@@ -241,16 +239,11 @@ pub fn dual_land_with(
 ) -> CardDefinition {
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![type_a, type_b],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
         triggered_abilities: triggers,
         ..Default::default()

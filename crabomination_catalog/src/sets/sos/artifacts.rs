@@ -36,11 +36,6 @@ pub fn cauldron_of_essence() -> CardDefinition {
         name: "Cauldron of Essence",
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -94,11 +89,6 @@ pub fn diary_of_dreams() -> CardDefinition {
         name: "Diary of Dreams",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -159,11 +149,6 @@ pub fn tablet_of_discovery() -> CardDefinition {
         name: "Tablet of Discovery",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
@@ -245,11 +230,6 @@ pub fn potioners_trove() -> CardDefinition {
         name: "Potioner's Trove",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
@@ -300,7 +280,6 @@ pub fn potioners_trove() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -323,11 +302,6 @@ pub fn resonating_lute() -> CardDefinition {
         name: "Resonating Lute",
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -351,7 +325,6 @@ pub fn resonating_lute() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         // "Lands you control have '{T}: Add two mana of any one color.
         // Spend this mana only to cast instant and sorcery spells.'"
         static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color_restricted(
@@ -385,11 +358,6 @@ pub fn ark_of_hunger() -> CardDefinition {
         name: "Ark of Hunger",
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -463,8 +431,6 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Crew(2)],
-        effect: Effect::Noop,
-        activated_abilities: vec![],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {

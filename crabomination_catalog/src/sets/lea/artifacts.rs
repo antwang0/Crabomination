@@ -1,5 +1,5 @@
 use super::tap_add;
-use crate::card::{ActivatedAbility, CardDefinition, CardType, Effect, SelectionRequirement, Subtypes};
+use crate::card::{ActivatedAbility, CardDefinition, CardType, Effect, SelectionRequirement};
 use crate::effect::{ManaPayload, PlayerRef, Selector, Value};
 use crate::mana::{Color, ManaCost, cost, generic};
 
@@ -7,15 +7,8 @@ use crate::mana::{Color, ManaCost, cost, generic};
 pub fn mox_pearl() -> CardDefinition {
     CardDefinition {
         name: "Mox Pearl",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::White)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -24,15 +17,8 @@ pub fn mox_pearl() -> CardDefinition {
 pub fn mox_sapphire() -> CardDefinition {
     CardDefinition {
         name: "Mox Sapphire",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Blue)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -41,15 +27,8 @@ pub fn mox_sapphire() -> CardDefinition {
 pub fn mox_jet() -> CardDefinition {
     CardDefinition {
         name: "Mox Jet",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Black)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -58,15 +37,8 @@ pub fn mox_jet() -> CardDefinition {
 pub fn mox_ruby() -> CardDefinition {
     CardDefinition {
         name: "Mox Ruby",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Red)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -75,15 +47,8 @@ pub fn mox_ruby() -> CardDefinition {
 pub fn mox_emerald() -> CardDefinition {
     CardDefinition {
         name: "Mox Emerald",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Green)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -92,13 +57,7 @@ pub fn mox_emerald() -> CardDefinition {
 pub fn black_lotus() -> CardDefinition {
     CardDefinition {
         name: "Black Lotus",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -119,7 +78,6 @@ pub fn black_lotus() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -130,11 +88,6 @@ pub fn sol_ring() -> CardDefinition {
         name: "Sol Ring",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -155,7 +108,6 @@ pub fn sol_ring() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -166,11 +118,6 @@ pub fn nevinyrrals_disk() -> CardDefinition {
         name: "Nevinyrral's Disk",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -198,7 +145,6 @@ pub fn nevinyrrals_disk() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

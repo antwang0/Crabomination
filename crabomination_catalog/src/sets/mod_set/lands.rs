@@ -188,18 +188,13 @@ fn artifact_land(
 ) -> CardDefinition {
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land, CardType::Artifact],
         subtypes: Subtypes {
             land_types: vec![land_type],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
         keywords,
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add(color)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -237,13 +232,8 @@ pub fn tree_of_tales() -> CardDefinition {
 pub fn darksteel_citadel() -> CardDefinition {
     CardDefinition {
         name: "Darksteel Citadel",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land, CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Indestructible],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -264,7 +254,6 @@ pub fn darksteel_citadel() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -281,15 +270,8 @@ pub fn exotic_orchard() -> CardDefinition {
     use super::super::tap_add_any_color;
     CardDefinition {
         name: "Exotic Orchard",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![tap_add_any_color()],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -303,7 +285,6 @@ pub fn command_tower() -> CardDefinition {
     use super::super::tap_add_any_color;
     CardDefinition {
         name: "Command Tower",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![tap_add_any_color()],
         ..Default::default()
@@ -318,7 +299,6 @@ pub fn command_tower() -> CardDefinition {
 pub fn reflecting_pool() -> CardDefinition {
     CardDefinition {
         name: "Reflecting Pool",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -337,7 +317,6 @@ pub fn reflecting_pool() -> CardDefinition {
 pub fn gaeas_cradle() -> CardDefinition {
     CardDefinition {
         name: "Gaea's Cradle",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -359,7 +338,6 @@ pub fn karns_bastion() -> CardDefinition {
     use super::super::tap_add_colorless;
     CardDefinition {
         name: "Karn's Bastion",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             tap_add_colorless(),

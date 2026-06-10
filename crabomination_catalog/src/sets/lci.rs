@@ -101,8 +101,6 @@ pub fn goldvein_hydra() -> CardDefinition {
         cost: cost(&[x(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         triggered_abilities: vec![on_dies(Effect::CreateToken {

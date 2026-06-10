@@ -4,7 +4,7 @@
 
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec,
-    SelectionRequirement, StaticAbility, Subtypes, TriggeredAbility,
+    SelectionRequirement, StaticAbility, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, StaticEffect, Value};
@@ -16,16 +16,11 @@ pub fn disenchant() -> CardDefinition {
         name: "Disenchant",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -36,16 +31,11 @@ pub fn naturalize() -> CardDefinition {
         name: "Naturalize",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -57,10 +47,6 @@ pub fn natures_claim() -> CardDefinition {
         name: "Nature's Claim",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
@@ -72,7 +58,6 @@ pub fn natures_claim() -> CardDefinition {
                 ),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -83,14 +68,9 @@ pub fn negate() -> CardDefinition {
         name: "Negate",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::Noncreature),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -101,14 +81,9 @@ pub fn dispel() -> CardDefinition {
         name: "Dispel",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::HasCardType(CardType::Instant)),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -123,14 +98,10 @@ pub fn dovins_veto() -> CardDefinition {
         name: "Dovin's Veto",
         cost: cost(&[w(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::CantBeCountered],
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::Noncreature),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -180,12 +151,6 @@ pub fn exploration() -> CardDefinition {
         name: "Exploration",
         cost: cost(&[g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "You may play an additional land on each of your turns.",
             effect: StaticEffect::ExtraLandPerTurn,

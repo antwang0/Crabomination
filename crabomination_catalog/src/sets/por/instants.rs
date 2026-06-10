@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, Subtypes};
+use crate::card::{CardDefinition, CardType};
 use crate::effect::shortcut::{deal, target};
 use crate::mana::{cost, r};
 
@@ -8,12 +8,7 @@ pub fn shock() -> CardDefinition {
         name: "Shock",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: deal(2, target()),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

@@ -85,10 +85,6 @@ pub fn plumb_the_forbidden() -> CardDefinition {
         name: "Plumb the Forbidden",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::You,
@@ -105,7 +101,6 @@ pub fn plumb_the_forbidden() -> CardDefinition {
                 amount: Value::XFromCost,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -149,7 +144,6 @@ pub fn frost_trickster() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -203,10 +197,6 @@ pub fn body_of_research() -> CardDefinition {
         name: "Body of Research",
         cost: cost(&[generic(4), g(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -219,7 +209,6 @@ pub fn body_of_research() -> CardDefinition {
                 amount: Value::LibrarySizeOf(PlayerRef::You),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -237,10 +226,6 @@ pub fn show_of_confidence() -> CardDefinition {
         name: "Show of Confidence",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -248,7 +233,6 @@ pub fn show_of_confidence() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Sum(vec![Value::StormCount, Value::Const(1)]),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -263,10 +247,6 @@ pub fn bury_in_books() -> CardDefinition {
         name: "Bury in Books",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Library {
@@ -274,7 +254,6 @@ pub fn bury_in_books() -> CardDefinition {
                 pos: LibraryPosition::Top,
             },
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -299,10 +278,6 @@ pub fn test_of_talents() -> CardDefinition {
         name: "Test of Talents",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CounterSpell {
             what: target_filtered(
                 SelectionRequirement::IsSpellOnStack
@@ -312,7 +287,6 @@ pub fn test_of_talents() -> CardDefinition {
                     ),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -356,10 +330,6 @@ pub fn multiple_choice() -> CardDefinition {
         name: "Multiple Choice",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseN {
             picks: vec![0, 1, 2, 3],
             modes: vec![
@@ -393,7 +363,6 @@ pub fn multiple_choice() -> CardDefinition {
                 Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             ],
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -411,15 +380,10 @@ pub fn quick_study() -> CardDefinition {
         name: "Quick Study",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Draw {
             who: Selector::Player(PlayerRef::You),
             amount: Value::Const(2),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -446,9 +410,6 @@ pub fn lash_of_malice() -> CardDefinition {
         name: "Lash of Malice",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
@@ -456,7 +417,6 @@ pub fn lash_of_malice() -> CardDefinition {
             toughness: Value::Const(-2),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -534,8 +494,6 @@ pub fn professor_of_symbology() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Learn { who: crate::effect::PlayerRef::You },
@@ -564,9 +522,6 @@ pub fn academic_probation() -> CardDefinition {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -577,7 +532,6 @@ pub fn academic_probation() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -593,10 +547,6 @@ pub fn elemental_expressionism() -> CardDefinition {
         name: "Elemental Expressionism",
         cost: cost(&[generic(3), u(), crate::mana::r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             return_target_to_hand(),
             Effect::CreateToken {
@@ -622,7 +572,6 @@ pub fn elemental_expressionism() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -637,12 +586,7 @@ pub fn rush_of_knowledge() -> CardDefinition {
         name: "Rush of Knowledge",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: draw(4),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -660,8 +604,6 @@ pub fn unwilling_ingredient() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             // "When Unwilling Ingredient dies, you may pay {2}{B}. If you
@@ -689,10 +631,6 @@ pub fn tangletrap() -> CardDefinition {
         name: "Tangletrap",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             deal(5, target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
@@ -701,7 +639,6 @@ pub fn tangletrap() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Artifact),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -720,9 +657,6 @@ pub fn introduction_to_prophecy() -> CardDefinition {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -733,7 +667,6 @@ pub fn introduction_to_prophecy() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -754,13 +687,9 @@ pub fn introduction_to_annihilation() -> CardDefinition {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Exile {
             what: target_filtered(SelectionRequirement::Nonland),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -781,9 +710,6 @@ pub fn environmental_sciences() -> CardDefinition {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
@@ -795,7 +721,6 @@ pub fn environmental_sciences() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

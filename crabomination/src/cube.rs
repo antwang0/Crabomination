@@ -1077,6 +1077,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(azorius_signet);
         // ── modern_decks-16 ──
         v.push(spell_queller);
+        v.push(urza_lord_protector);
     }
     v
 }

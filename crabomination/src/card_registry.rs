@@ -37,6 +37,9 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         all.push(f);
     }
     all.push(sets::decks::rofellos_llanowar_emissary as CardFactory);
+    // Urza, Planeswalker — only ever created by melding (CR 701.37), so it's
+    // in no deck/cube pool; registered so melded snapshots round-trip.
+    all.push(sets::decks::urza_planeswalker as CardFactory);
     // Khans life-gain taplands (sets::decks::lands) — not in any demo deck,
     // so registered here for snapshot name→factory round-trip.
     let gainlands: [CardFactory; 5] = [

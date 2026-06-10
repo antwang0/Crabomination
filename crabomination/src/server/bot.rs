@@ -1466,7 +1466,8 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
         if !card.definition.is_planeswalker() {
             continue;
         }
-        if card.used_loyalty_ability_this_turn {
+        let allowed = if card.definition.loyalty_twice_each_turn { 2 } else { 1 };
+        if card.loyalty_uses_this_turn >= allowed {
             continue;
         }
         // Walk abilities in order; prefer non-suicidal positive-loyalty
@@ -2139,7 +2140,6 @@ mod tests {
         CardDefinition {
             name,
             card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(),
             power: 2,
             toughness: 2,
             triggered_abilities: vec![TriggeredAbility {
@@ -2190,7 +2190,6 @@ mod tests {
         let pw = CardDefinition {
             name: "Test Walker",
             card_types: vec![CardType::Planeswalker],
-            subtypes: Subtypes::default(),
             base_loyalty: 3,
             loyalty_abilities: vec![
                 // Highest loyalty, but needs a creature target (none exist).
@@ -2266,7 +2265,6 @@ mod tests {
         let def = CardDefinition {
             name: "PayDownside",
             card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(),
             power: 2,
             toughness: 2,
             triggered_abilities: vec![TriggeredAbility {
@@ -2289,7 +2287,6 @@ mod tests {
         CardDefinition {
             name,
             card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(),
             power: 1,
             toughness: 1,
             cost: crate::mana::cost(&[crate::mana::generic(cmc)]),
@@ -2692,8 +2689,12 @@ mod tests {
         use crate::game::types::{Attack, AttackTarget};
         fn beater(name: &'static str, kws: Vec<Keyword>) -> CardDefinition {
             CardDefinition {
-                name, card_types: vec![CardType::Creature], subtypes: Subtypes::default(),
-                power: 4, toughness: 4, keywords: kws, ..Default::default()
+                name,
+                card_types: vec![CardType::Creature],
+                power: 4,
+                toughness: 4,
+                keywords: kws,
+                ..Default::default()
             }
         }
         let mut g = two_player_game();
@@ -2702,8 +2703,12 @@ mod tests {
         // One 0/3 wall that can't kill either — only a chump is possible.
         let wall = g.add_card_to_battlefield(1, beater("Wall", vec![]));
         if let Some(w) = g.battlefield_find_mut(wall) { w.definition = std::sync::Arc::new(
-            CardDefinition { name: "Wall", card_types: vec![CardType::Creature],
-                power: 0, toughness: 3, ..Default::default() }); }
+            CardDefinition {
+                name: "Wall",
+                card_types: vec![CardType::Creature],
+                toughness: 3,
+                ..Default::default()
+            }); }
         g.players[1].life = 3; // 8 incoming ≫ 3 → life threatened
         g.attacking = vec![
             Attack { attacker: vanilla, target: AttackTarget::Player(1) },
@@ -2723,13 +2728,19 @@ mod tests {
         use crate::game::types::{Attack, AttackTarget};
         let mut g = two_player_game();
         let atk = g.add_card_to_battlefield(0, CardDefinition {
-            name: "Beater", card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(), power: 4, toughness: 4, ..Default::default()
+            name: "Beater",
+            card_types: vec![CardType::Creature],
+            power: 4,
+            toughness: 4,
+            ..Default::default()
         });
         let zombie = g.add_card_to_battlefield(1, CardDefinition {
-            name: "Decayed Zombie", card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(), power: 2, toughness: 2,
-            keywords: vec![Keyword::Decayed], ..Default::default()
+            name: "Decayed Zombie",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Decayed],
+            ..Default::default()
         });
         g.players[1].life = 1; // life-threatened → the bot would chump if it could
         g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
@@ -2747,15 +2758,21 @@ mod tests {
         use crate::mana::{cost, r, Color};
         let mut g = two_player_game();
         let mut red_atk = CardDefinition {
-            name: "Red Beater", card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(), power: 3, toughness: 3, ..Default::default()
+            name: "Red Beater",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            ..Default::default()
         };
         red_atk.cost = cost(&[r()]);
         let atk = g.add_card_to_battlefield(0, red_atk);
         let prot = CardDefinition {
-            name: "Warded Blocker", card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(), power: 3, toughness: 3,
-            keywords: vec![Keyword::Protection(Color::Red)], ..Default::default()
+            name: "Warded Blocker",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::Protection(Color::Red)],
+            ..Default::default()
         };
         let blk = g.add_card_to_battlefield(1, prot);
         // Not life-threatened (only a chump would otherwise be declined).
@@ -2773,13 +2790,19 @@ mod tests {
         use crate::game::types::{Attack, AttackTarget};
         let mut g = two_player_game();
         let glass = CardDefinition {
-            name: "Glass Cannon", card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(), power: 5, toughness: 1, ..Default::default()
+            name: "Glass Cannon",
+            card_types: vec![CardType::Creature],
+            power: 5,
+            toughness: 1,
+            ..Default::default()
         };
         let atk = g.add_card_to_battlefield(0, glass);
         let beater = CardDefinition {
-            name: "Big Beater", card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(), power: 5, toughness: 5, ..Default::default()
+            name: "Big Beater",
+            card_types: vec![CardType::Creature],
+            power: 5,
+            toughness: 5,
+            ..Default::default()
         };
         let big = g.add_card_to_battlefield(1, beater);
         g.players[1].life = 20; // not threatened by 5 damage
@@ -2814,9 +2837,12 @@ mod tests {
         use crate::game::types::{Attack, AttackTarget};
         let mut g = two_player_game();
         let infect = CardDefinition {
-            name: "Plague Beast", card_types: vec![CardType::Creature],
-            subtypes: Subtypes::default(), power: 9, toughness: 9,
-            keywords: vec![Keyword::Infect], ..Default::default()
+            name: "Plague Beast",
+            card_types: vec![CardType::Creature],
+            power: 9,
+            toughness: 9,
+            keywords: vec![Keyword::Infect],
+            ..Default::default()
         };
         let atk = g.add_card_to_battlefield(0, infect);
         let chump = g.add_card_to_battlefield(1, catalog::grizzly_bears());

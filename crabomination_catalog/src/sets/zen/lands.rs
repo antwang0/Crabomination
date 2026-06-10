@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, LandType, SelectionRequirement, Subtypes};
+use crate::card::{CardDefinition, CardType, LandType, SelectionRequirement};
 use crate::effect::{
     ActivatedAbility, Effect, PlayerRef, Selector, Value, ZoneDest,
 };
@@ -52,15 +52,8 @@ fn fetch_land(
 ) -> CardDefinition {
     CardDefinition {
         name,
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![fetch_ability(type_a, type_b)],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -114,7 +107,6 @@ pub fn marsh_flats() -> CardDefinition {
 pub fn prismatic_vista() -> CardDefinition {
     CardDefinition {
         name: "Prismatic Vista",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,

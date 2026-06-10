@@ -116,7 +116,14 @@ pub struct CardSnapshot {
     #[serde(default)]
     pub transformed: bool,
     pub is_token: bool,
-    pub used_loyalty_ability_this_turn: bool,
+    /// CR 606.3 loyalty activations this turn. `#[serde(default)]` for
+    /// back-compat with pre-counter (bool) snapshots.
+    #[serde(default)]
+    pub loyalty_uses_this_turn: u8,
+    /// CR 712.16 melded-component cards (recursive snapshots).
+    /// `#[serde(default)]` so older snapshots load as empty.
+    #[serde(default)]
+    pub meld_parts: Vec<CardSnapshot>,
     pub evoked: bool,
     pub cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field load as
@@ -289,7 +296,8 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
         face_down: c.face_down,
         transformed: c.transformed,
         is_token: c.is_token,
-        used_loyalty_ability_this_turn: c.used_loyalty_ability_this_turn,
+        loyalty_uses_this_turn: c.loyalty_uses_this_turn,
+        meld_parts: c.meld_parts.iter().map(card_snap).collect(),
         evoked: c.evoked,
         cast_from_hand: c.cast_from_hand,
         cast_via_flashback: c.cast_via_flashback,
@@ -471,7 +479,12 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
         c.transformed = true;
     }
     c.is_token = cs.is_token;
-    c.used_loyalty_ability_this_turn = cs.used_loyalty_ability_this_turn;
+    c.loyalty_uses_this_turn = cs.loyalty_uses_this_turn;
+    c.meld_parts = cs
+        .meld_parts
+        .into_iter()
+        .map(restore_card)
+        .collect::<Result<Vec<_>, _>>()?;
     c.evoked = cs.evoked;
     c.cast_from_hand = cs.cast_from_hand;
     c.cast_via_flashback = cs.cast_via_flashback;
@@ -859,7 +872,8 @@ mod tests {
             face_down: false,
             transformed: false,
             is_token: false,
-            used_loyalty_ability_this_turn: false,
+            loyalty_uses_this_turn: 0,
+            meld_parts: vec![],
             evoked: false,
             cast_from_hand: false,
             cast_via_flashback: false,

@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
+use crate::card::{CardDefinition, CardType, CreatureType, Keyword, Subtypes};
 use crate::mana::{cost, g, u};
 
 /// Gaea's Skyfolk — {G}{U} 2/2 Merfolk Flying
@@ -14,8 +14,6 @@ pub fn gaeas_skyfolk() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

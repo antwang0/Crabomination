@@ -18,7 +18,6 @@ fn body(name: &'static str, p: i32, t: i32, trig: Vec<TriggeredAbility>) -> Card
     CardDefinition {
         name,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes::default(),
         power: p,
         toughness: t,
         triggered_abilities: trig,
@@ -384,8 +383,10 @@ fn cr_702_19_deathtouch_trample_assigns_one_then_tramples_rest() {
     use crate::card::{CardType, Keyword, Subtypes};
     let mut g = two_player_game();
     let atk = g.add_card_to_battlefield(0, CardDefinition {
-        name: "Wurm", card_types: vec![CardType::Creature], subtypes: Subtypes::default(),
-        power: 5, toughness: 5,
+        name: "Wurm",
+        card_types: vec![CardType::Creature],
+        power: 5,
+        toughness: 5,
         keywords: vec![Keyword::Trample, Keyword::Deathtouch],
         ..Default::default()
     });
@@ -497,7 +498,8 @@ fn cr_702_46_soulshift_returns_a_spirit_from_graveyard() {
         name: "Test Spirit Warden",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
-        power: 2, toughness: 2,
+        power: 2,
+        toughness: 2,
         triggered_abilities: vec![shortcut::soulshift(5)],
         ..Default::default()
     });
@@ -507,7 +509,8 @@ fn cr_702_46_soulshift_returns_a_spirit_from_graveyard() {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
-        power: 1, toughness: 1,
+        power: 1,
+        toughness: 1,
         ..Default::default()
     });
     // Kill the warden via SBA.

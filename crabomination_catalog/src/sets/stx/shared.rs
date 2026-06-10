@@ -64,15 +64,11 @@ pub fn inkling_summoning() -> CardDefinition {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
             definition: inkling,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -97,10 +93,6 @@ pub fn tend_the_pests() -> CardDefinition {
         name: "Tend the Pests",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::SacrificeAndRemember {
                 who: PlayerRef::You,
@@ -116,7 +108,6 @@ pub fn tend_the_pests() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -152,15 +143,11 @@ pub fn spirit_summoning() -> CardDefinition {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
             definition: spirit,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

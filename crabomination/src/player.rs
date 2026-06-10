@@ -201,6 +201,12 @@ pub struct Player {
     /// (Mutated Cultist): `(amount, spells_cast_this_turn at grant)`.
     #[serde(default)]
     pub pending_spell_discounts: Vec<(u32, u32)>,
+    /// "[Filter] spells you cast this turn cost {N} less" grants
+    /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
+    /// Each entry applies to every matching spell for the rest of the
+    /// turn; cleared in `finish_cleanup` (CR 514.2).
+    #[serde(default)]
+    pub turn_spell_discounts: Vec<(crate::card::SelectionRequirement, u32)>,
     /// Number of creature spells this player has cast on the current
     /// turn. Reset to 0 in `do_untap`. Powers creature-cast magecraft
     /// payoffs ("if you've cast a creature spell this turn, …") and
@@ -373,6 +379,7 @@ impl Player {
             instants_or_sorceries_cast_this_turn: 0,
             pending_is_discounts: Vec::new(),
             pending_spell_discounts: Vec::new(),
+            turn_spell_discounts: Vec::new(),
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,

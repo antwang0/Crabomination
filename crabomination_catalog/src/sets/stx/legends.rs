@@ -39,7 +39,6 @@ pub fn galazeth_prismari() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         // ETB: create a Treasure token.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -92,7 +91,6 @@ pub fn beledros_witherbloom() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Lifelink],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -116,7 +114,6 @@ pub fn beledros_witherbloom() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -142,7 +139,6 @@ pub fn velomachus_lorehold() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
-        effect: Effect::Noop,
         // Push (modern_decks, batch 74): "Whenever Velomachus attacks,
         // reveal cards from the top of your library until you reveal an
         // instant or sorcery card with mana value less than or equal to
@@ -220,7 +216,6 @@ pub fn tanazir_quandrix() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Trample],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: double the number of +1/+1 counters on each creature
             // you control.
@@ -301,7 +296,6 @@ pub fn shadrix_silverquill() -> CardDefinition {
         power: 2,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             // Choose-two. Picks 1 + 2 by default (counter + Inklings).

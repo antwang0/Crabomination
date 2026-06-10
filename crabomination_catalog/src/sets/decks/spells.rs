@@ -7,7 +7,7 @@
 //! what's missing; promote as engine features land.
 
 use crate::card::{
-    AlternativeCost, CardDefinition, CardType, Effect, Predicate, SelectionRequirement, Subtypes,
+    AlternativeCost, CardDefinition, CardType, Effect, Predicate, SelectionRequirement,
 };
 use crate::effect::shortcut::{counter_target_spell, target_filtered};
 use crate::effect::{DelayedTriggerKind, PlayerRef, Selector, Value, ZoneDest};
@@ -18,15 +18,10 @@ use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w, x};
 /// Pact of Negation — {0} Instant. Counter target spell. "At the beginning of
 /// your next upkeep, pay {3}{U}{U}. If you don't, you lose the game."
 pub fn pact_of_negation() -> CardDefinition {
-    use crate::mana::{ManaCost, u as u_mana};
+    use crate::mana::u as u_mana;
     CardDefinition {
         name: "Pact of Negation",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             counter_target_spell(),
             Effect::DelayUntil {
@@ -37,7 +32,6 @@ pub fn pact_of_negation() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -89,11 +83,6 @@ pub fn serum_powder() -> CardDefinition {
         name: "Serum Powder",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -114,7 +103,6 @@ pub fn serum_powder() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         opening_hand: Some(OpeningHandEffect::MulliganHelper),
         ..Default::default()
     }
@@ -152,15 +140,10 @@ pub fn spoils_of_the_vault() -> CardDefinition {
 /// reveal, put into hand, shuffle. "At the beginning of your next upkeep,
 /// pay {2}{G}{G}. If you don't, you lose the game."
 pub fn summoners_pact() -> CardDefinition {
-    use crate::mana::{ManaCost, g as g_mana};
+    use crate::mana::g as g_mana;
     CardDefinition {
         name: "Summoner's Pact",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Search {
                 who: PlayerRef::You,
@@ -176,7 +159,6 @@ pub fn summoners_pact() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -190,10 +172,6 @@ pub fn thud() -> CardDefinition {
         name: "Thud",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::SacrificeAndRemember {
                 who: PlayerRef::You,
@@ -205,7 +183,6 @@ pub fn thud() -> CardDefinition {
                 amount: Value::SacrificedPower,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -249,12 +226,6 @@ pub fn leyline_of_sanctity() -> CardDefinition {
         name: "Leyline of Sanctity",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "You have hexproof.",
             effect: StaticEffect::ControllerHasHexproof,
@@ -289,9 +260,6 @@ pub fn ephemerate() -> CardDefinition {
         name: "Ephemerate",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![crate::card::Keyword::Rebound],
         effect: Effect::Seq(vec![
             Effect::Exile {
@@ -308,7 +276,6 @@ pub fn ephemerate() -> CardDefinition {
                 },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -329,9 +296,6 @@ pub fn faithful_mending() -> CardDefinition {
         name: "Faithful Mending",
         cost: cost(&[w(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         // "You gain 2 life, draw two cards, then discard two cards."
         effect: Effect::Seq(vec![
@@ -339,7 +303,6 @@ pub fn faithful_mending() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -353,14 +316,9 @@ pub fn force_of_negation() -> CardDefinition {
         name: "Force of Negation",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::Noncreature),
         },
-        triggered_abilities: vec![],
         alternative_cost: Some(AlternativeCost {
             mana_cost: ManaCost::default(),
             life_cost: 0,
@@ -396,10 +354,6 @@ pub fn goryos_vengeance() -> CardDefinition {
         name: "Goryo's Vengeance",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
@@ -427,7 +381,6 @@ pub fn goryos_vengeance() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -445,10 +398,6 @@ pub fn prismatic_ending() -> CardDefinition {
         name: "Prismatic Ending",
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::If {
             cond: Predicate::ValueAtMost(
                 Value::ManaValueOf(Box::new(Selector::Target(0))),
@@ -461,7 +410,6 @@ pub fn prismatic_ending() -> CardDefinition {
             }),
             else_: Box::new(Effect::Noop),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -476,10 +424,6 @@ pub fn thoughtseize() -> CardDefinition {
         name: "Thoughtseize",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -488,7 +432,6 @@ pub fn thoughtseize() -> CardDefinition {
             },
             Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -511,10 +454,6 @@ pub fn consign_to_memory() -> CardDefinition {
         name: "Consign to Memory",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             // Mode 0: counter target ability (the Goryo's-matchup default).
             Effect::CounterAbility {
@@ -528,7 +467,6 @@ pub fn consign_to_memory() -> CardDefinition {
                 ),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -552,12 +490,6 @@ pub fn damping_sphere() -> CardDefinition {
         name: "Damping Sphere",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![
             StaticAbility {
                 description: "Each spell a player casts after their first this turn costs {1} more.",
@@ -589,16 +521,11 @@ pub fn mystical_dispute() -> CardDefinition {
         name: "Mystical Dispute",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(3)]),
             exile: false,
         },
-        triggered_abilities: vec![],
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[u()]),
             life_cost: 0,
@@ -637,9 +564,6 @@ pub fn pest_control() -> CardDefinition {
         name: "Pest Control",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Convoke],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Nonland),
@@ -652,7 +576,6 @@ pub fn pest_control() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -671,9 +594,6 @@ pub fn wrath_of_the_skies() -> CardDefinition {
         name: "Wrath of the Skies",
         cost: cost(&[x(), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Convoke],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Nonland),
@@ -692,7 +612,6 @@ pub fn wrath_of_the_skies() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

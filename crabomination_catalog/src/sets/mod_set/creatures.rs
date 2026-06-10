@@ -29,8 +29,6 @@ pub fn thalia_guardian_of_thraben() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells cost {1} more to cast.",
             effect: StaticEffect::AdditionalCost {
@@ -63,8 +61,6 @@ pub fn dark_confidant() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
@@ -296,11 +292,8 @@ pub fn sylvan_caryatid() -> CardDefinition {
         name: "Sylvan Caryatid",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes::default(),
-        power: 0,
         toughness: 3,
         keywords: vec![Keyword::Hexproof, Keyword::Defender],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -321,7 +314,6 @@ pub fn sylvan_caryatid() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -346,7 +338,6 @@ pub fn restoration_angel() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Flash],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::EntersBattlefield,
@@ -395,7 +386,6 @@ pub fn flickerwisp() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::EntersBattlefield,
@@ -442,7 +432,6 @@ pub fn loran_of_the_third_path() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -497,7 +486,6 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Ward(WardCost::generic(2))],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -539,8 +527,6 @@ pub fn ranger_captain_of_eos() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::EntersBattlefield,
@@ -593,7 +579,6 @@ pub fn cathar_commando() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Flash],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -616,7 +601,6 @@ pub fn cathar_commando() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -636,8 +620,6 @@ pub fn haywire_mite() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -664,7 +646,6 @@ pub fn haywire_mite() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -688,8 +669,6 @@ pub fn voldaren_epicure() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -735,7 +714,6 @@ pub fn goldspan_dragon() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -774,8 +752,6 @@ pub fn tireless_tracker() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -844,8 +820,6 @@ pub fn bloodtithe_harvester() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -886,11 +860,6 @@ pub fn phyrexian_arena() -> CardDefinition {
         name: "Phyrexian Arena",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
@@ -919,11 +888,6 @@ pub fn up_the_beanstalk() -> CardDefinition {
         name: "Up the Beanstalk",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: draw a card.
             TriggeredAbility {
@@ -972,7 +936,6 @@ pub fn tishanas_tidebinder() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CounterAbility {
@@ -1007,8 +970,6 @@ pub fn sylvan_safekeeper() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -1036,7 +997,6 @@ pub fn sylvan_safekeeper() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1059,8 +1019,6 @@ pub fn grim_lavamancer() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -1083,7 +1041,6 @@ pub fn grim_lavamancer() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2622,8 +2579,6 @@ pub fn eternal_witness() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             // Filter excludes players — `Selector::TargetFiltered` with
@@ -2652,11 +2607,9 @@ pub fn heliod_sun_crowned() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature, CardType::Enchantment],
-        subtypes: Subtypes::default(),
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Indestructible],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2714,7 +2667,6 @@ pub fn indulgent_tormentor() -> CardDefinition {
         power: 5,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
             effect: Effect::Punisher {
@@ -3836,11 +3788,6 @@ pub fn temur_ascendancy() -> CardDefinition {
         name: "Temur Ascendancy",
         cost: cost(&[u(), r(), g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::ValueAtLeast(
@@ -4525,7 +4472,6 @@ pub fn finale_of_devastation() -> CardDefinition {
 pub fn rishadan_port() -> CardDefinition {
     CardDefinition {
         name: "Rishadan Port",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             ActivatedAbility {
@@ -4781,7 +4727,6 @@ pub fn guardian_scalelord() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::MayDo {
@@ -4905,7 +4850,6 @@ pub fn basking_broodscale() -> CardDefinition {
             creature_types: vec![CreatureType::Lizard],
             ..Default::default()
         },
-        power: 0,
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         triggered_abilities: vec![TriggeredAbility {
@@ -4957,8 +4901,6 @@ pub fn ursine_monstrosity() -> CardDefinition {
             creature_types: vec![CreatureType::Bear],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Trample],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(5))),
         triggered_abilities: vec![TriggeredAbility {
@@ -5143,7 +5085,6 @@ pub fn descendant_of_storms() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -5344,7 +5285,6 @@ pub fn cloudfin_raptor() -> CardDefinition {
             creature_types: vec![CreatureType::Bird],
             ..Default::default()
         },
-        power: 0,
         toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![evolve()],
@@ -5436,7 +5376,6 @@ pub fn carven_caryatid() -> CardDefinition {
             creature_types: vec![CreatureType::Wall],
             ..Default::default()
         },
-        power: 0,
         toughness: 5,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![etb(Effect::Draw {
@@ -6535,8 +6474,6 @@ pub fn master_of_etherium() -> CardDefinition {
             creature_types: vec![CreatureType::Vedalken, CreatureType::Artificer],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
         static_abilities: vec![
             StaticAbility {
                 description: "Power/toughness each equal the number of artifacts you control.",
@@ -7313,7 +7250,6 @@ pub fn adeline_resplendent_cathar() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Knight],
             ..Default::default()
         },
-        power: 0,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         static_abilities: vec![StaticAbility {
@@ -7614,7 +7550,6 @@ pub fn steppe_lynx() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
-        power: 0,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -8294,7 +8229,6 @@ pub fn ignoble_hierarch() -> CardDefinition {
             creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
             ..Default::default()
         },
-        power: 0,
         toughness: 1,
         triggered_abilities: vec![crate::effect::shortcut::exalted()],
         activated_abilities: vec![ActivatedAbility {
@@ -8442,7 +8376,6 @@ pub fn wall_of_blood() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
-        power: 0,
         toughness: 2,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {

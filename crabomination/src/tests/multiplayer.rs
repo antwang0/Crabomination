@@ -649,7 +649,6 @@ fn apnap_orders_simultaneous_triggers_active_pushed_first() {
     let pinger = |name: &'static str| CardDefinition {
         name,
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::AnyPlayer),
             effect: Effect::Draw {
@@ -709,7 +708,6 @@ fn apnap_skips_eliminated_seat_in_cycle() {
     let pinger = |name: &'static str| CardDefinition {
         name,
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::AnyPlayer),
             effect: Effect::Draw {
@@ -1203,7 +1201,6 @@ fn test_commander() -> crate::card::CardDefinition {
         cost: crate::mana::ManaCost::default(),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes::default(),
         power: 1,
         toughness: 1,
         ..Default::default()
@@ -1527,7 +1524,6 @@ fn two_headed_giant_lifegain_fires_partner_yourcontrol_trigger() {
     let pinger = |name: &'static str| CardDefinition {
         name,
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::Draw {
@@ -1679,7 +1675,8 @@ fn cr_702_115_myriad_copies_attack_each_other_opponent_then_exile() {
         name: "Myriad Marauder",
         card_types: vec![CardType::Creature],
         subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
-        power: 3, toughness: 3,
+        power: 3,
+        toughness: 3,
         triggered_abilities: vec![shortcut::myriad()],
         ..Default::default()
     };

@@ -128,7 +128,6 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
         CardDefinition {
             name: "Test Annihilator",
             cost: cost(&[generic(10)]),
-            supertypes: vec![],
             card_types: vec![CardType::Creature],
             subtypes: Subtypes {
                 creature_types: vec![CreatureType::Eldrazi],
@@ -137,32 +136,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             power: 10,
             toughness: 10,
             keywords: vec![Keyword::Annihilator(1)],
-            effect: Effect::Noop,
-            activated_abilities: vec![],
-            triggered_abilities: vec![],
-            static_abilities: vec![],
-            base_loyalty: 0,
-            loyalty_abilities: vec![],
-            alternative_cost: None,
-            back_face: None,
-            opening_hand: None,
-            enters_with_counters: None,
-            enters_as_copy: None,
-            max_counters_of_kind: None,
-            exile_on_resolve: false,
-            affinity_filter: None,
-            affinity_graveyard_filter: None,
-            equipped_bonus: None,
-            soulbond_bonus: None,
-            additional_cast_cost: vec![],
-            bestow: None,
-            foretell_cost: None,
-            adventure: None,
-            plot_cost: None,
-            split: None,
-            saga_chapters: vec![],
-            miracle: None,
-            room: None,
+            ..Default::default()
         }
     }
 
@@ -5305,41 +5279,13 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
     let mill_def = crate::card::CardDefinition {
         name: "Test Mill 10",
         cost: crate::mana::ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: crate::card::Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Mill {
             who: crate::effect::Selector::Player(crate::effect::PlayerRef::Target(0)),
             amount: Value::Const(10),
         },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {
@@ -5780,7 +5726,6 @@ fn cr_121_2b_draw_cap_truncates_draws() {
     let lock = CardDefinition {
         name: "Labyrinth Lock",
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
         static_abilities: vec![StaticAbility {
             description: "Each player can't draw more than one card each turn.",
             effect: StaticEffect::CapDrawsPerTurn {
@@ -6011,7 +5956,6 @@ fn vanilla_body(name: &'static str, p: i32, t: i32, kws: Vec<crate::card::Keywor
     CardDefinition {
         name,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes::default(),
         power: p,
         toughness: t,
         keywords: kws,
@@ -6515,7 +6459,6 @@ fn cr_122_7_nth_counter_threshold_trigger() {
     let watcher = crate::card::CardDefinition {
         name: "Counter Watcher",
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes::default(),
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {

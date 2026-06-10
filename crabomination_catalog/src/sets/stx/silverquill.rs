@@ -49,8 +49,6 @@ pub fn spirited_companion() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -78,8 +76,6 @@ pub fn eyetwitch() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             // Learn (CR 701.45): reveal a Lesson from your sideboard into
@@ -107,10 +103,6 @@ pub fn closing_statement() -> CardDefinition {
         name: "Closing Statement",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(
@@ -122,7 +114,6 @@ pub fn closing_statement() -> CardDefinition {
                 amount: Value::XFromCost,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -141,10 +132,6 @@ pub fn vanishing_verse() -> CardDefinition {
         name: "Vanishing Verse",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Exile {
             what: target_filtered(
                 SelectionRequirement::Permanent
@@ -152,7 +139,6 @@ pub fn vanishing_verse() -> CardDefinition {
                     .and(SelectionRequirement::Monocolored),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -182,8 +168,6 @@ pub fn killian_ink_duelist() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Spells you cast that target a creature cost {2} less to cast.",
             effect: StaticEffect::CostReductionTargetingFilter {
@@ -213,17 +197,12 @@ pub fn devastating_mastery() -> CardDefinition {
         name: "Devastating Mastery",
         cost: cost(&[generic(2), w(), w(), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Nonland),
             body: Box::new(Effect::Destroy {
                 what: Selector::TriggerSource,
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -261,7 +240,6 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -313,7 +291,6 @@ pub fn mavinda_students_advocate() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -344,7 +321,6 @@ pub fn mavinda_students_advocate() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -386,10 +362,6 @@ pub fn hunt_for_specimens() -> CardDefinition {
         name: "Hunt for Specimens",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PR::You,
@@ -399,7 +371,6 @@ pub fn hunt_for_specimens() -> CardDefinition {
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn { who: PR::You },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -427,7 +398,6 @@ pub fn silverquill_pledgemage() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }
@@ -455,8 +425,6 @@ pub fn archmage_emeritus() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),
@@ -529,9 +497,6 @@ pub fn tenured_inkcaster() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control get +2/+2.",
             effect: StaticEffect::PumpPT {
@@ -581,8 +546,6 @@ pub fn selfless_glyphweaver() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -607,7 +570,6 @@ pub fn selfless_glyphweaver() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -643,8 +605,6 @@ pub fn silverquill_loremender() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_gain_life` shortcut.
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
@@ -676,8 +636,6 @@ pub fn inkling_verselord() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control have lifelink.",
             effect: StaticEffect::GrantKeyword {
@@ -714,8 +672,6 @@ pub fn silverquill_drainmaster() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![etb_drain(3)],
         ..Default::default()
@@ -745,7 +701,6 @@ pub fn inkrise_lifedrainer() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
@@ -784,7 +739,6 @@ pub fn silverquill_penman() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayDo {
@@ -834,8 +788,6 @@ pub fn silverquill_anthemwriter() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control get +1/+0.",
             effect: StaticEffect::PumpPT {
@@ -877,7 +829,6 @@ pub fn silverquill_quillmage() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -910,8 +861,6 @@ pub fn silverquill_memorialist() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -949,8 +898,6 @@ pub fn inkling_aspirant() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -970,16 +917,11 @@ pub fn witherspell_drain() -> CardDefinition {
         name: "Witherspell Drain",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1005,8 +947,6 @@ pub fn inkling_scribe() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -1035,7 +975,6 @@ pub fn silverquill_erudite() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -1065,7 +1004,6 @@ pub fn inkling_bloodscribe() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
             effect: Effect::Drain {
@@ -1094,17 +1032,12 @@ pub fn silverquill_reprimand() -> CardDefinition {
         name: "Silverquill Reprimand",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
             ),
             to: ZoneDest::Exile,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1125,16 +1058,11 @@ pub fn silverquill_inquisition() -> CardDefinition {
         name: "Silverquill Inquisition",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DiscardChosen {
             from: Selector::Player(PlayerRef::Target(0)),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1160,8 +1088,6 @@ pub fn silverquill_archivist() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1200,7 +1126,6 @@ pub fn silverquill_witness() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(1),
@@ -1232,7 +1157,6 @@ pub fn silverquill_judge() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Tap {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -1265,7 +1189,6 @@ pub fn inkling_brigade() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 2)],
         ..Default::default()
     }
@@ -1293,7 +1216,6 @@ pub fn silverquill_pen_pusher() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
@@ -1321,10 +1243,6 @@ pub fn silverquill_chronicle() -> CardDefinition {
         name: "Silverquill Chronicle",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain_eff(2),
             Effect::Move {
@@ -1337,7 +1255,6 @@ pub fn silverquill_chronicle() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1363,8 +1280,6 @@ pub fn inkling_vanguard() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1391,8 +1306,6 @@ pub fn silverquill_marshal() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_gain_life` shortcut.
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
@@ -1422,8 +1335,6 @@ pub fn inkling_sanctifier() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1450,8 +1361,6 @@ pub fn silverquill_pupil() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -1472,10 +1381,6 @@ pub fn defend_the_inkwell() -> CardDefinition {
         name: "Defend the Inkwell",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -1484,7 +1389,6 @@ pub fn defend_the_inkwell() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1514,7 +1418,6 @@ pub fn inkling_witness() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -1554,7 +1457,6 @@ pub fn inkling_coursebinder() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -1577,16 +1479,11 @@ pub fn silverquill_sermon() -> CardDefinition {
         name: "Silverquill Sermon",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
             definition: inkling_token(),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1609,10 +1506,6 @@ pub fn silverquill_censure() -> CardDefinition {
         name: "Silverquill Censure",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
@@ -1626,7 +1519,6 @@ pub fn silverquill_censure() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1653,8 +1545,6 @@ pub fn silverquill_castigant() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
@@ -1678,12 +1568,7 @@ pub fn silverquill_heartrender() -> CardDefinition {
         name: "Silverquill Heartrender",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_scry(3, 1),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1711,7 +1596,6 @@ pub fn inkling_confessor() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -1737,10 +1621,6 @@ pub fn silverquill_quillblade() -> CardDefinition {
         name: "Silverquill Quillblade",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1749,7 +1629,6 @@ pub fn silverquill_quillblade() -> CardDefinition {
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1770,10 +1649,6 @@ pub fn inkling_decree() -> CardDefinition {
         name: "Inkling Decree",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -1786,7 +1661,6 @@ pub fn inkling_decree() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1814,8 +1688,6 @@ pub fn inkling_inkrider() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1845,7 +1717,6 @@ pub fn silverquill_lawkeeper() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_tap_opp_creature()],
         ..Default::default()
     }
@@ -1875,7 +1746,6 @@ pub fn inkling_penmaster() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_inkling()],
         ..Default::default()
     }
@@ -1896,10 +1766,6 @@ pub fn silverquill_dictation() -> CardDefinition {
         name: "Silverquill Dictation",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: target_filtered(SelectionRequirement::Player),
@@ -1910,7 +1776,6 @@ pub fn silverquill_dictation() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1938,7 +1803,6 @@ pub fn inkling_stormcaller() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Drain {
@@ -1966,10 +1830,6 @@ pub fn silverquill_discipline() -> CardDefinition {
         name: "Silverquill Discipline",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -1983,7 +1843,6 @@ pub fn silverquill_discipline() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2009,8 +1868,6 @@ pub fn silverquill_inkscholar() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2049,7 +1906,6 @@ pub fn inkling_battlecaster() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Drain {
@@ -2077,16 +1933,11 @@ pub fn silverquill_compulsion() -> CardDefinition {
         name: "Silverquill Compulsion",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DiscardChosen {
             from: target_filtered(SelectionRequirement::Player),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2112,7 +1963,6 @@ pub fn silverquill_sealwriter() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Drain {
@@ -2148,7 +1998,6 @@ pub fn inkling_acolyte() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -2175,10 +2024,6 @@ pub fn silverquill_conviction() -> CardDefinition {
         name: "Silverquill Conviction",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -2187,7 +2032,6 @@ pub fn silverquill_conviction() -> CardDefinition {
             },
             Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2211,7 +2055,6 @@ pub fn silverquill_bookbearer() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
@@ -2240,7 +2083,6 @@ pub fn inkling_inquisitor() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DiscardChosen {
@@ -2266,10 +2108,6 @@ pub fn silverquill_reckoning() -> CardDefinition {
         name: "Silverquill Reckoning",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
             Effect::CreateToken {
@@ -2278,7 +2116,6 @@ pub fn silverquill_reckoning() -> CardDefinition {
                 definition: crate::catalog::sets::sos::inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2305,7 +2142,6 @@ pub fn silverquill_lifeglyph() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(SelectionRequirement::Creature),
             1,
@@ -2336,8 +2172,6 @@ pub fn inkling_aristocrat() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
             effect: Effect::GainLife {
@@ -2371,8 +2205,6 @@ pub fn silverquill_quillscribe() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2409,10 +2241,6 @@ pub fn silverquill_hush() -> CardDefinition {
         name: "Silverquill Hush",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -2425,7 +2253,6 @@ pub fn silverquill_hush() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2449,7 +2276,6 @@ pub fn inkling_lorewright() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2480,10 +2306,6 @@ pub fn silverquill_battle_hymn() -> CardDefinition {
         name: "Silverquill Battle Hymn",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: each_your_creature(),
@@ -2497,7 +2319,6 @@ pub fn silverquill_battle_hymn() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2524,8 +2345,6 @@ pub fn silverquill_eulogist() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -2555,8 +2374,6 @@ pub fn silverquill_notetaker() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2596,7 +2413,6 @@ pub fn inkling_pamphleteer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
@@ -2616,10 +2432,6 @@ pub fn silverquill_indictment() -> CardDefinition {
         name: "Silverquill Indictment",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
@@ -2632,7 +2444,6 @@ pub fn silverquill_indictment() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2657,8 +2468,6 @@ pub fn inkling_banner_bearer() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control get +1/+0.",
             effect: StaticEffect::PumpPT {
@@ -2689,10 +2498,6 @@ pub fn silverquill_tribunal() -> CardDefinition {
         name: "Silverquill Tribunal",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::Target(0)),
@@ -2704,7 +2509,6 @@ pub fn silverquill_tribunal() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2731,7 +2535,6 @@ pub fn inkling_quillwarden() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -2758,7 +2561,6 @@ pub fn inkling_sage() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2782,7 +2584,6 @@ pub fn inkling_sage() -> CardDefinition {
                     tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2810,7 +2611,6 @@ pub fn silverquill_memorist() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -2853,8 +2653,6 @@ pub fn silverquill_inkmaster() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -2880,7 +2678,6 @@ pub fn inkling_censurer() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Tap {
@@ -2907,10 +2704,6 @@ pub fn silverquill_loredrain() -> CardDefinition {
         name: "Silverquill Loredrain",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -2923,7 +2716,6 @@ pub fn silverquill_loredrain() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2968,7 +2760,6 @@ pub fn inkling_verseweaver() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -2992,10 +2783,6 @@ pub fn silverquill_hightutor() -> CardDefinition {
         name: "Silverquill Hightutor",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::HasCardType(CardType::Instant)
@@ -3003,7 +2790,6 @@ pub fn silverquill_hightutor() -> CardDefinition {
                 .and(SelectionRequirement::ManaValueAtMost(2)),
             to: ZoneDest::Hand(PlayerRef::You),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3028,7 +2814,6 @@ pub fn silverquill_lifebinder() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -3053,8 +2838,6 @@ pub fn inkling_drainmaster() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Drain {
@@ -3092,8 +2875,6 @@ pub fn silverquill_heraldist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3131,7 +2912,6 @@ pub fn inkling_spireguard() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -3164,8 +2944,6 @@ pub fn silverquill_quillwitch() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::LoseLife {
@@ -3190,10 +2968,6 @@ pub fn silverquill_inkpurge() -> CardDefinition {
         name: "Silverquill Inkpurge",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::ForEach {
                 selector: Selector::Player(PlayerRef::EachOpponent),
@@ -3208,7 +2982,6 @@ pub fn silverquill_inkpurge() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3232,7 +3005,6 @@ pub fn inkrise_schoolwarden() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -3265,7 +3037,6 @@ pub fn silverquill_drafter_b30() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LoseLife {
@@ -3293,8 +3064,6 @@ pub fn silverquill_scrivener_b30() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand {
@@ -3327,7 +3096,6 @@ pub fn inkling_cantor() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -3352,10 +3120,6 @@ pub fn silverquill_pact() -> CardDefinition {
         name: "Silverquill Pact",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -3367,7 +3131,6 @@ pub fn silverquill_pact() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3391,7 +3154,6 @@ pub fn silverquill_vellumweaver() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -3406,10 +3168,6 @@ pub fn inkling_sermon() -> CardDefinition {
         name: "Inkling Sermon",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -3422,7 +3180,6 @@ pub fn inkling_sermon() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3441,8 +3198,6 @@ pub fn silverquill_lorescribe() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3477,7 +3232,6 @@ pub fn inkling_warden() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -3502,10 +3256,6 @@ pub fn silverquill_inkletter() -> CardDefinition {
         name: "Silverquill Inkletter",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -3517,7 +3267,6 @@ pub fn silverquill_inkletter() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3539,7 +3288,6 @@ pub fn silverquill_drainlord() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![etb_drain(3)],
         ..Default::default()
@@ -3561,7 +3309,6 @@ pub fn inkling_quillbearer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-1),
@@ -3587,7 +3334,6 @@ pub fn silverquill_indoctrinator() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Discard {
@@ -3615,7 +3361,6 @@ pub fn inkling_choirsinger() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -3629,10 +3374,6 @@ pub fn silverquill_ovation() -> CardDefinition {
         name: "Silverquill Ovation",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -3651,7 +3392,6 @@ pub fn silverquill_ovation() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3671,7 +3411,6 @@ pub fn inkling_loremaster() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3702,10 +3441,6 @@ pub fn silverquill_litany() -> CardDefinition {
         name: "Silverquill Litany",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -3718,7 +3453,6 @@ pub fn silverquill_litany() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3741,7 +3475,6 @@ pub fn inkling_calligrapher() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-1),
@@ -3768,7 +3501,6 @@ pub fn silverquill_spellscribe() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -3788,16 +3520,11 @@ pub fn inkling_strikemark() -> CardDefinition {
         name: "Inkling Strikemark",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(2),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3815,8 +3542,6 @@ pub fn silverquill_scribe_tutor() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Surveil {
@@ -3836,10 +3561,6 @@ pub fn silverquill_magemark() -> CardDefinition {
         name: "Silverquill Magemark",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -3852,7 +3573,6 @@ pub fn silverquill_magemark() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3874,8 +3594,6 @@ pub fn silverquill_standardbearer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
@@ -3909,7 +3627,6 @@ pub fn silverquill_drainwriter() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
@@ -3924,10 +3641,6 @@ pub fn silverquill_battle_chant() -> CardDefinition {
         name: "Silverquill Battle Chant",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::EachPermanent(
@@ -3947,7 +3660,6 @@ pub fn silverquill_battle_chant() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3960,10 +3672,6 @@ pub fn silverquill_homily() -> CardDefinition {
         name: "Silverquill Homily",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -3975,7 +3683,6 @@ pub fn silverquill_homily() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3995,7 +3702,6 @@ pub fn inkling_avenger() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -4019,15 +3725,10 @@ pub fn silverquill_mandate() -> CardDefinition {
         name: "Silverquill Mandate",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::SacrificeAndRemember {
             who: PlayerRef::EachOpponent,
             filter: SelectionRequirement::Creature,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4047,7 +3748,6 @@ pub fn silverquill_spellquill() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             magecraft_gain_life(1),
             TriggeredAbility {
@@ -4078,8 +3778,6 @@ pub fn silverquill_penitent() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         // Refactored in batch 40: ETB drain wired via the canonical
         // `etb_drain(1)` shortcut from batch 39.
         triggered_abilities: vec![etb_drain(1)],
@@ -4101,8 +3799,6 @@ pub fn inkling_echobringer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4115,10 +3811,6 @@ pub fn silverquill_verseblade() -> CardDefinition {
         name: "Silverquill Verseblade",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -4131,7 +3823,6 @@ pub fn silverquill_verseblade() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4149,8 +3840,6 @@ pub fn silverquill_lifepenner() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(2)],
         ..Default::default()
     }
@@ -4171,7 +3860,6 @@ pub fn inkling_maverick() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
@@ -4185,10 +3873,6 @@ pub fn silverquill_antiphony() -> CardDefinition {
         name: "Silverquill Antiphony",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -4200,7 +3884,6 @@ pub fn silverquill_antiphony() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4215,10 +3898,6 @@ pub fn silverquill_stylepoint() -> CardDefinition {
         name: "Silverquill Stylepoint",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -4232,7 +3911,6 @@ pub fn silverquill_stylepoint() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4251,8 +3929,6 @@ pub fn inkling_b36_sentinel() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4265,10 +3941,6 @@ pub fn silverquill_forge() -> CardDefinition {
         name: "Silverquill Forge",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -4281,7 +3953,6 @@ pub fn silverquill_forge() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4300,7 +3971,6 @@ pub fn inkling_cardinal() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_gain_life` shortcut.
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
@@ -4323,8 +3993,6 @@ pub fn silverquill_essayist() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -4354,7 +4022,6 @@ pub fn inkling_scriptwarden() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         // Refactored in batch 40 to use the `etb_drain` shortcut.
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
@@ -4369,10 +4036,6 @@ pub fn silverquill_pinion() -> CardDefinition {
         name: "Silverquill Pinion",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -4386,7 +4049,6 @@ pub fn silverquill_pinion() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4399,10 +4061,6 @@ pub fn silverquill_battle_oration() -> CardDefinition {
         name: "Silverquill Battle Oration",
         cost: cost(&[generic(4), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -4415,7 +4073,6 @@ pub fn silverquill_battle_oration() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4427,10 +4084,6 @@ pub fn silverquill_manuscript() -> CardDefinition {
         name: "Silverquill Manuscript",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -4441,7 +4094,6 @@ pub fn silverquill_manuscript() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4460,8 +4112,6 @@ pub fn inkling_ambassador() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4480,7 +4130,6 @@ pub fn inkling_calligraphist() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -4502,7 +4151,6 @@ pub fn silverquill_liturgist() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -4522,8 +4170,6 @@ pub fn inkling_bookwarden() -> CardDefinition {
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4542,8 +4188,6 @@ pub fn silverquill_soulbinder() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb_drain(2),
             magecraft(Effect::AddCounter {
@@ -4570,7 +4214,6 @@ pub fn inkling_magister() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(3), magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -4584,10 +4227,6 @@ pub fn silverquill_inkproclamation() -> CardDefinition {
         name: "Silverquill Inkproclamation",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -4600,7 +4239,6 @@ pub fn silverquill_inkproclamation() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4613,10 +4251,6 @@ pub fn inkling_loredrain() -> CardDefinition {
         name: "Inkling Loredrain",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -4629,7 +4263,6 @@ pub fn inkling_loredrain() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4652,8 +4285,6 @@ pub fn silverquill_scriptwright() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::HasCreatureType(CreatureType::Inkling)
@@ -4683,8 +4314,6 @@ pub fn inkling_bookcrier() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4706,7 +4335,6 @@ pub fn silverquill_cantorist() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -4728,7 +4356,6 @@ pub fn inkling_treasurer() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -4753,10 +4380,6 @@ pub fn silverquill_memorize() -> CardDefinition {
         name: "Silverquill Memorize",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -4770,7 +4393,6 @@ pub fn silverquill_memorize() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4792,7 +4414,6 @@ pub fn inkling_bellringer() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Discard {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -4811,10 +4432,6 @@ pub fn silverquill_encore() -> CardDefinition {
         name: "Silverquill Encore",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::EachPermanent(
@@ -4832,7 +4449,6 @@ pub fn silverquill_encore() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4853,7 +4469,6 @@ pub fn inkling_sentencer() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
@@ -4877,10 +4492,6 @@ pub fn silverquill_inkflood() -> CardDefinition {
         name: "Silverquill Inkflood",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -4892,7 +4503,6 @@ pub fn silverquill_inkflood() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4914,7 +4524,6 @@ pub fn inkling_quilltender() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::HasCreatureType(CreatureType::Inkling)
@@ -4941,8 +4550,6 @@ pub fn silverquill_purifier() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb_gain_life(2),
             magecraft(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
@@ -4967,7 +4574,6 @@ pub fn inkling_proxy() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Discard {
             who: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(1),
@@ -4985,10 +4591,6 @@ pub fn silverquill_witnessing() -> CardDefinition {
         name: "Silverquill Witnessing",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -4997,7 +4599,6 @@ pub fn silverquill_witnessing() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5017,7 +4618,6 @@ pub fn inkling_avant_garde() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -5032,10 +4632,6 @@ pub fn silverquill_convocation() -> CardDefinition {
         name: "Silverquill Convocation",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -5051,7 +4647,6 @@ pub fn silverquill_convocation() -> CardDefinition {
                 )),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5075,7 +4670,6 @@ pub fn silverquill_spellbinder() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -5097,7 +4691,6 @@ pub fn inkling_recruiter() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -5116,17 +4709,12 @@ pub fn silverquill_censure_v2() -> CardDefinition {
         name: "Silverquill Censure II",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-3),
             toughness: Value::Const(-3),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5146,8 +4734,6 @@ pub fn silverquill_drafter_v2() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Discard {
             who: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(1),
@@ -5166,10 +4752,6 @@ pub fn silverquill_inkflame() -> CardDefinition {
         name: "Silverquill Inkflame",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -5181,7 +4763,6 @@ pub fn silverquill_inkflame() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5202,7 +4783,6 @@ pub fn silverquill_penlord() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(3)],
         ..Default::default()
     }
@@ -5223,7 +4803,6 @@ pub fn inkling_disciple() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(1)],
         ..Default::default()
     }
@@ -5246,8 +4825,6 @@ pub fn silverquill_blackquill_acolyte() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -5269,7 +4846,6 @@ pub fn silverquill_ravenmage() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
@@ -5295,7 +4871,6 @@ pub fn silverquill_inkjet_scribe() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -5317,7 +4892,6 @@ pub fn silverquill_grand_inkmaster() -> CardDefinition {
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(4)],
         ..Default::default()
     }
@@ -5330,10 +4904,6 @@ pub fn silverquill_diatribe() -> CardDefinition {
         name: "Silverquill Diatribe",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: target_filtered(SelectionRequirement::Player),
@@ -5344,7 +4914,6 @@ pub fn silverquill_diatribe() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5365,7 +4934,6 @@ pub fn inkling_saboteur() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
@@ -5398,7 +4966,6 @@ pub fn silverquill_sealwright() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -5433,10 +5000,6 @@ pub fn silverquill_maxim() -> CardDefinition {
         name: "Silverquill Maxim",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             deal(
                 3,
@@ -5451,7 +5014,6 @@ pub fn silverquill_maxim() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5470,7 +5032,6 @@ pub fn inkling_vassal() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -5483,16 +5044,11 @@ pub fn silverquill_vellum() -> CardDefinition {
         name: "Silverquill Vellum",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(2),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5512,7 +5068,6 @@ pub fn inkling_decreemaster() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Discard {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -5536,7 +5091,6 @@ pub fn silverquill_penbringer() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -5557,7 +5111,6 @@ pub fn silverquill_ravenswing() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
@@ -5580,8 +5133,6 @@ pub fn inkling_magistrate() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb_drain_each_opp(2)],
         ..Default::default()
     }
@@ -5597,10 +5148,6 @@ pub fn silverquill_liturgy() -> CardDefinition {
         name: "Silverquill Liturgy",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -5612,7 +5159,6 @@ pub fn silverquill_liturgy() -> CardDefinition {
             },
             draw(1),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5631,8 +5177,6 @@ pub fn inkling_bookbinder() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -5653,7 +5197,6 @@ pub fn silverquill_scribebearer() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(2)],
         ..Default::default()
     }
@@ -5672,8 +5215,6 @@ pub fn silverquill_adept() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -5695,7 +5236,6 @@ pub fn silverquill_spellguard() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -5716,8 +5256,6 @@ pub fn inkling_sageling() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_dies(draw(1))],
         ..Default::default()
     }
@@ -5737,8 +5275,6 @@ pub fn silverquill_inkcaller() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -5751,16 +5287,11 @@ pub fn silverquill_lecture() -> CardDefinition {
         name: "Silverquill Lecture",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5780,7 +5311,6 @@ pub fn inkling_battlescholar() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack(Effect::PumpPT {
             what: Selector::This,
             power: Value::Const(1),
@@ -5805,7 +5335,6 @@ pub fn silverquill_final_year() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -5825,8 +5354,6 @@ pub fn inkling_devotee() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -5839,16 +5366,11 @@ pub fn silverquill_inkspear() -> CardDefinition {
         name: "Silverquill Inkspear",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::Target(0)),
             to: Selector::You,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5866,9 +5388,6 @@ pub fn inkling_sergeant() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inklings you control get +1/+0.",
             effect: StaticEffect::PumpPT {
@@ -5895,10 +5414,6 @@ pub fn silverquill_verdict() -> CardDefinition {
         name: "Silverquill Verdict",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(
@@ -5910,7 +5425,6 @@ pub fn silverquill_verdict() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5930,8 +5444,6 @@ pub fn silverquill_curator() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -5960,7 +5472,6 @@ pub fn inkling_bondsmith() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
@@ -5999,8 +5510,6 @@ pub fn inkling_aspect() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::This,
@@ -6036,7 +5545,6 @@ pub fn silverquill_quillbinder() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -6058,7 +5566,6 @@ pub fn inkling_quillblade() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }
@@ -6080,7 +5587,6 @@ pub fn silverquill_reprover() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -6104,10 +5610,6 @@ pub fn silverquill_refrain() -> CardDefinition {
         name: "Silverquill Refrain",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -6119,7 +5621,6 @@ pub fn silverquill_refrain() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6141,7 +5642,6 @@ pub fn silverquill_wingweaver() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Surveil {
@@ -6162,10 +5662,6 @@ pub fn silverquill_recital() -> CardDefinition {
         name: "Silverquill Recital",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -6177,7 +5673,6 @@ pub fn silverquill_recital() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6198,8 +5693,6 @@ pub fn inkling_heralder() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6214,10 +5707,6 @@ pub fn silverquill_inkdraft() -> CardDefinition {
         name: "Silverquill Inkdraft",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -6229,7 +5718,6 @@ pub fn silverquill_inkdraft() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6250,7 +5738,6 @@ pub fn silverquill_lawscribe() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Tap {
@@ -6272,10 +5759,6 @@ pub fn inkling_ascendancy() -> CardDefinition {
         name: "Inkling Ascendancy",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -6291,7 +5774,6 @@ pub fn inkling_ascendancy() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6314,7 +5796,6 @@ pub fn inkling_scriptmaster() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -6335,8 +5816,6 @@ pub fn silverquill_inkdancer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -6350,10 +5829,6 @@ pub fn silverquill_vermilion() -> CardDefinition {
         name: "Silverquill Vermilion",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -6366,7 +5841,6 @@ pub fn silverquill_vermilion() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6385,8 +5859,6 @@ pub fn silverquill_drainmaster_v2() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(3)],
         ..Default::default()
     }
@@ -6400,10 +5872,6 @@ pub fn silverquill_bookbond() -> CardDefinition {
         name: "Silverquill Bookbond",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
@@ -6418,7 +5886,6 @@ pub fn silverquill_bookbond() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6440,8 +5907,6 @@ pub fn inkling_scrollwarden() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6460,8 +5925,6 @@ pub fn silverquill_pencrafter() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -6486,16 +5949,11 @@ pub fn inkling_inkblot() -> CardDefinition {
         name: "Inkling Inkblot",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6518,7 +5976,6 @@ pub fn silverquill_inkscribe() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(1)],
         ..Default::default()
     }
@@ -6539,8 +5996,6 @@ pub fn silverquill_bookmender() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -6565,16 +6020,11 @@ pub fn silverquill_lifeskein() -> CardDefinition {
         name: "Silverquill Lifeskein",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: target_filtered(SelectionRequirement::Player),
             to: Selector::You,
             amount: Value::Const(2),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6595,7 +6045,6 @@ pub fn inkling_aerialist_v2() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -6615,8 +6064,6 @@ pub fn silverquill_censurewright() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -6646,7 +6093,6 @@ pub fn inkling_cipherwing() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -6661,17 +6107,12 @@ pub fn silverquill_inkstrike() -> CardDefinition {
         name: "Silverquill Inkstrike",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::ToughnessAtMost(2)),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6693,7 +6134,6 @@ pub fn silverquill_penmistress() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }
@@ -6719,8 +6159,6 @@ pub fn silverquill_cantor() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(1)],
         ..Default::default()
     }
@@ -6741,8 +6179,6 @@ pub fn silverquill_inkscholar_b50() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_draw(1)],
         ..Default::default()
     }
@@ -6764,7 +6200,6 @@ pub fn silverquill_quillrunner() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -6785,7 +6220,6 @@ pub fn inkling_stylescribe() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -6806,7 +6240,6 @@ pub fn silverquill_pageturner() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -6826,7 +6259,6 @@ pub fn inkling_stormwriter() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -6846,8 +6278,6 @@ pub fn silverquill_inkbinder() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -6881,17 +6311,12 @@ pub fn silverquill_quietus() -> CardDefinition {
         name: "Silverquill Quietus",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-3),
             toughness: Value::Const(-3),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -6911,7 +6336,6 @@ pub fn inkling_skywriter() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -6937,7 +6361,6 @@ pub fn silverquill_glyphmaster() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -6958,7 +6381,6 @@ pub fn inkling_mournful() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::Drain {
@@ -6984,8 +6406,6 @@ pub fn silverquill_pen_squire() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -7005,8 +6425,6 @@ pub fn inkling_spellbinder() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7018,10 +6436,6 @@ pub fn silverquill_diction() -> CardDefinition {
         name: "Silverquill Diction",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -7033,7 +6447,6 @@ pub fn silverquill_diction() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7045,10 +6458,6 @@ pub fn silverquill_quietude() -> CardDefinition {
         name: "Silverquill Quietude",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -7060,7 +6469,6 @@ pub fn silverquill_quietude() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7079,7 +6487,6 @@ pub fn inkling_beautisage() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(3)],
         ..Default::default()
     }
@@ -7100,7 +6507,6 @@ pub fn silverquill_inkmender() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -7124,10 +6530,6 @@ pub fn silverquill_memorial() -> CardDefinition {
         name: "Silverquill Memorial",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
@@ -7146,7 +6548,6 @@ pub fn silverquill_memorial() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7164,8 +6565,6 @@ pub fn inkling_inkstain() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -7186,10 +6585,6 @@ pub fn silverquill_convene() -> CardDefinition {
         name: "Silverquill Convene",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -7201,7 +6596,6 @@ pub fn silverquill_convene() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7220,7 +6614,6 @@ pub fn silverquill_sermoneer() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -7252,8 +6645,6 @@ pub fn inkling_pageboy() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7265,16 +6656,11 @@ pub fn silverquill_inkstrike_page() -> CardDefinition {
         name: "Silverquill Inkstrike-Page",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7294,7 +6680,6 @@ pub fn silverquill_mentor() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -7324,8 +6709,6 @@ pub fn silverquill_necroscribe() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -7349,10 +6732,6 @@ pub fn silverquill_pronouncement() -> CardDefinition {
         name: "Silverquill Pronouncement",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -7365,7 +6744,6 @@ pub fn silverquill_pronouncement() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7377,10 +6755,6 @@ pub fn silverquill_cipher() -> CardDefinition {
         name: "Silverquill Cipher",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -7392,7 +6766,6 @@ pub fn silverquill_cipher() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7411,8 +6784,6 @@ pub fn inkling_quillpoint() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7430,8 +6801,6 @@ pub fn silverquill_memoriam() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -7464,7 +6833,6 @@ pub fn inkling_sigilbearer() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -7489,10 +6857,6 @@ pub fn silverquill_eulogize() -> CardDefinition {
         name: "Silverquill Eulogize",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
@@ -7508,7 +6872,6 @@ pub fn silverquill_eulogize() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7527,8 +6890,6 @@ pub fn inkling_voidwalker() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Menace],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7546,8 +6907,6 @@ pub fn silverquill_festscribe() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -7582,8 +6941,6 @@ pub fn silverquill_scryward() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1), magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -7604,7 +6961,6 @@ pub fn inkling_archivist() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1), magecraft_scry(1)],
         ..Default::default()
     }
@@ -7624,8 +6980,6 @@ pub fn silverquill_ledgermage() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -7645,8 +6999,6 @@ pub fn inkling_inkscribe() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7658,10 +7010,6 @@ pub fn silverquill_codex() -> CardDefinition {
         name: "Silverquill Codex",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -7672,7 +7020,6 @@ pub fn silverquill_codex() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7691,7 +7038,6 @@ pub fn silverquill_studyhall() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -7712,7 +7058,6 @@ pub fn silverquill_pronouncer() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -7725,16 +7070,11 @@ pub fn silverquill_etching() -> CardDefinition {
         name: "Silverquill Etching",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(2),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7756,7 +7096,6 @@ pub fn silverquill_inkblot() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack(Effect::PumpPT {
             what: Selector::This,
             power: Value::Const(1),
@@ -7782,8 +7121,6 @@ pub fn inkling_chaplain() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7802,7 +7139,6 @@ pub fn silverquill_warden() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -7821,8 +7157,6 @@ pub fn inkling_acolyte_v2() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -7836,10 +7170,6 @@ pub fn silverquill_reflect() -> CardDefinition {
         name: "Silverquill Reflect",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::Surveil {
@@ -7847,7 +7177,6 @@ pub fn silverquill_reflect() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7867,7 +7196,6 @@ pub fn inkling_evangel() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::HasCreatureType(CreatureType::Inkling)
@@ -7888,16 +7216,11 @@ pub fn silverquill_invocation() -> CardDefinition {
         name: "Silverquill Invocation",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
             definition: inkling_token(),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7915,8 +7238,6 @@ pub fn inkling_ghostwriter() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -7930,12 +7251,7 @@ pub fn silverquill_doom() -> CardDefinition {
         name: "Silverquill Doom",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(4),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7955,7 +7271,6 @@ pub fn inkling_attendant() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -7969,10 +7284,6 @@ pub fn silverquill_psalm() -> CardDefinition {
         name: "Silverquill Psalm",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::Draw {
@@ -7980,7 +7291,6 @@ pub fn silverquill_psalm() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -7992,10 +7302,6 @@ pub fn inkling_pageant() -> CardDefinition {
         name: "Inkling Pageant",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -8007,7 +7313,6 @@ pub fn inkling_pageant() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8028,8 +7333,6 @@ pub fn silverquill_pen_scholar() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -8059,8 +7362,6 @@ pub fn silverquill_mortician() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
             effect: drain(1),
@@ -8083,8 +7384,6 @@ pub fn inkling_sentinel_b55() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8097,10 +7396,6 @@ pub fn silverquill_inksong() -> CardDefinition {
         name: "Silverquill Inksong",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(1),
             Effect::Scry {
@@ -8108,7 +7403,6 @@ pub fn silverquill_inksong() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8128,7 +7422,6 @@ pub fn inkling_pact_caller() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -8156,7 +7449,6 @@ pub fn silverquill_bloodscribe() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
             effect: Effect::Draw {
@@ -8185,7 +7477,6 @@ pub fn inkling_penblade() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(1),
@@ -8205,10 +7496,6 @@ pub fn silverquill_litany_b56() -> CardDefinition {
         name: "Silverquill Litany II",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -8220,7 +7507,6 @@ pub fn silverquill_litany_b56() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8240,7 +7526,6 @@ pub fn inkling_inkmaster() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -8259,8 +7544,6 @@ pub fn silverquill_acolyte_b56() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -8284,7 +7567,6 @@ pub fn silverquill_inkscribe_b57() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_dies(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(2),
@@ -8307,8 +7589,6 @@ pub fn silverquill_scriptmaster() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             drain(2),
             Effect::Scry {
@@ -8335,8 +7615,6 @@ pub fn inkling_bladerunner() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8356,8 +7634,6 @@ pub fn silverquill_sentinel_b57() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8378,7 +7654,6 @@ pub fn silverquill_pen_master() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -8412,8 +7687,6 @@ pub fn silverquill_wordmaiden() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -8438,8 +7711,6 @@ pub fn inkling_quillblade_b58() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8459,8 +7730,6 @@ pub fn silverquill_scribecaller() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8480,8 +7749,6 @@ pub fn silverquill_lecturer_b58() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -8512,7 +7779,6 @@ pub fn silverquill_inkmaster_b58() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -8535,8 +7801,6 @@ pub fn silverquill_scrivener_b59() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb_surveil(1),
             magecraft_scry(1),
@@ -8560,7 +7824,6 @@ pub fn silverquill_inkflight_b59() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -8580,7 +7843,6 @@ pub fn silverquill_pen_priest() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -8602,7 +7864,6 @@ pub fn inkling_summit_b59() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::HasCreatureType(CreatureType::Inkling)
@@ -8632,7 +7893,6 @@ pub fn silverquill_drainbearer() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         triggered_abilities: vec![dies_drain(1)],
         ..Default::default()
     }
@@ -8654,8 +7914,6 @@ pub fn silverquill_mageblade() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -8682,7 +7940,6 @@ pub fn inkling_sigilwarden() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::HasCreatureType(CreatureType::Inkling)
@@ -8711,8 +7968,6 @@ pub fn silverquill_quillthane() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             drain(2),
             Effect::Surveil {
@@ -8740,8 +7995,6 @@ pub fn silverquill_pentor_b61() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb_gain_life(2),
             crate::effect::shortcut::magecraft_scry(1),
@@ -8764,8 +8017,6 @@ pub fn inkling_arbiter() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8783,8 +8034,6 @@ pub fn silverquill_inkmage_b61() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -8806,7 +8055,6 @@ pub fn inkling_letterer() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -8827,7 +8075,6 @@ pub fn silverquill_drainpoet() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb_drain(3),
             magecraft_gain_life(1),
@@ -8854,7 +8101,6 @@ pub fn inkling_calligrapher_b62() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -8876,7 +8122,6 @@ pub fn silverquill_lecturer_b62() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             drain(1),
             Effect::Surveil {
@@ -8904,7 +8149,6 @@ pub fn inkling_scribesage() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -8923,8 +8167,6 @@ pub fn silverquill_dirgesage() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -8943,8 +8185,6 @@ pub fn silverquill_hymnsmith() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -8958,10 +8198,6 @@ pub fn silverquill_quillchorus() -> CardDefinition {
         name: "Silverquill Quillchorus",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -8970,7 +8206,6 @@ pub fn silverquill_quillchorus() -> CardDefinition {
             },
             drain(1),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -8989,7 +8224,6 @@ pub fn inkling_riftcaster() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -9016,8 +8250,6 @@ pub fn inkling_recitalist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(SelectionRequirement::Creature.and(
                 SelectionRequirement::HasCreatureType(CreatureType::Inkling),
@@ -9038,10 +8270,6 @@ pub fn silverquill_vespersong() -> CardDefinition {
         name: "Silverquill Vespersong",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::Draw {
@@ -9049,7 +8277,6 @@ pub fn silverquill_vespersong() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9068,7 +8295,6 @@ pub fn inkling_battlechoir() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(3)],
         ..Default::default()
     }
@@ -9089,7 +8315,6 @@ pub fn silverquill_inkmuse() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_surveil(1)],
         ..Default::default()
     }
@@ -9110,7 +8335,6 @@ pub fn inkling_heraldcourier() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             definition: inkling_token(),
@@ -9127,10 +8351,6 @@ pub fn silverquill_inkscale() -> CardDefinition {
         name: "Silverquill Inkscale",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -9144,7 +8364,6 @@ pub fn silverquill_inkscale() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9163,8 +8382,6 @@ pub fn inkling_pallidwing() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9182,8 +8399,6 @@ pub fn silverquill_cantillator() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2), magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -9203,7 +8418,6 @@ pub fn inkling_stormpenner() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -9223,8 +8437,6 @@ pub fn inkling_bannerer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_pump_each_creature_type(
             CreatureType::Inkling,
             1,
@@ -9241,10 +8453,6 @@ pub fn silverquill_inkmark() -> CardDefinition {
         name: "Silverquill Inkmark",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::Target(0)),
@@ -9255,7 +8463,6 @@ pub fn silverquill_inkmark() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9276,8 +8483,6 @@ pub fn silverquill_inkbearer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9296,8 +8501,6 @@ pub fn silverquill_quietkeeper() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -9327,8 +8530,6 @@ pub fn inkling_lorebearer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9346,8 +8547,6 @@ pub fn silverquill_inkcrier() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -9367,7 +8566,6 @@ pub fn silverquill_drainscribe() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -9380,10 +8578,6 @@ pub fn silverquill_inksong_b67() -> CardDefinition {
         name: "Silverquill Inksong (b67)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -9394,7 +8588,6 @@ pub fn silverquill_inksong_b67() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9416,8 +8609,6 @@ pub fn silverquill_inkdiplomat() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -9446,7 +8637,6 @@ pub fn inkling_glyphkeeper() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -9459,16 +8649,11 @@ pub fn silverquill_scriptdrain() -> CardDefinition {
         name: "Silverquill Scriptdrain",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9489,7 +8674,6 @@ pub fn inkling_scrollwarden_b68() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -9507,10 +8691,6 @@ pub fn silverquill_bookmark() -> CardDefinition {
         name: "Silverquill Bookmark",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
@@ -9528,7 +8708,6 @@ pub fn silverquill_bookmark() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9549,8 +8728,6 @@ pub fn silverquill_stridemage_b125() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(1)],
         ..Default::default()
     }
@@ -9571,7 +8748,6 @@ pub fn inkling_skyhunter_b125() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_gain_life(1)],
         ..Default::default()
     }
@@ -9592,7 +8768,6 @@ pub fn silverquill_soulscholar_b125() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -9613,7 +8788,6 @@ pub fn inkling_drainsage_b125() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -9626,10 +8800,6 @@ pub fn silverquill_ravenstrike_b125() -> CardDefinition {
         name: "Silverquill Ravenstrike (b125)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -9641,7 +8811,6 @@ pub fn silverquill_ravenstrike_b125() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9662,8 +8831,6 @@ pub fn silverquill_glyphmage_b126() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -9682,8 +8849,6 @@ pub fn silverquill_pen_sage_b126() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -9703,8 +8868,6 @@ pub fn inkling_squire_b126() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9724,7 +8887,6 @@ pub fn inkling_sigilrider_b126() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -9738,12 +8900,7 @@ pub fn silverquill_glyphcaller_b126() -> CardDefinition {
         name: "Silverquill Glyphcaller (b126)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_surveil(2, 1),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9764,7 +8921,6 @@ pub fn silverquill_aristocrat_b127() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -9784,7 +8940,6 @@ pub fn inkling_quillmender_b127() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_gain_life(1)],
         ..Default::default()
     }
@@ -9805,8 +8960,6 @@ pub fn silverquill_lecturist_b127() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -9825,7 +8978,6 @@ pub fn inkling_battle_drone_b127() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -9849,7 +9001,6 @@ pub fn inkling_skyraider_b127() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_unblocked(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::Player(PlayerRef::You),
@@ -9873,7 +9024,6 @@ pub fn silverquill_quillplate_b127() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -9896,7 +9046,6 @@ pub fn inkling_quillstrike_b128() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -9918,7 +9067,6 @@ pub fn silverquill_inkmaster_b128() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -9938,8 +9086,6 @@ pub fn silverquill_drafter_b128() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_surveil(1)],
         ..Default::default()
     }
@@ -9960,7 +9106,6 @@ pub fn silverquill_sermonist_b128() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::etb_scry(1)],
         ..Default::default()
     }
@@ -9980,7 +9125,6 @@ pub fn inkling_vellumbinder_b128() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -9993,10 +9137,6 @@ pub fn silverquill_inkblot_b128() -> CardDefinition {
         name: "Silverquill Inkblot (b128)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -10008,7 +9148,6 @@ pub fn silverquill_inkblot_b128() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10028,8 +9167,6 @@ pub fn inkling_watchwarden_b128() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10051,8 +9188,6 @@ pub fn silverquill_inkwriter_b129() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -10084,7 +9219,6 @@ pub fn inkling_stormpaper_b129() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token_and_drain(inkling_token(), 2)],
         ..Default::default()
     }
@@ -10097,16 +9231,11 @@ pub fn silverquill_quillrender_b129() -> CardDefinition {
         name: "Silverquill Quillrender (b129)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(3),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10125,8 +9254,6 @@ pub fn inkling_loreward_b129() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10149,7 +9276,6 @@ pub fn silverquill_pageturner_b130() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -10170,7 +9296,6 @@ pub fn inkling_archivist_b130() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![dies_drain(1)],
         ..Default::default()
     }
@@ -10184,10 +9309,6 @@ pub fn silverquill_inkclaw_b130() -> CardDefinition {
         name: "Silverquill Inkclaw (b130)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -10200,7 +9321,6 @@ pub fn silverquill_inkclaw_b130() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10220,8 +9340,6 @@ pub fn silverquill_quillsworn_b130() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10243,8 +9361,6 @@ pub fn silverquill_inkblade_b131() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10256,10 +9372,6 @@ pub fn inkling_sermon_ii_b131() -> CardDefinition {
         name: "Inkling Sermon II (b131)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::CreateToken {
@@ -10268,7 +9380,6 @@ pub fn inkling_sermon_ii_b131() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10287,7 +9398,6 @@ pub fn silverquill_serene_voice_b131() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -10300,10 +9410,6 @@ pub fn silverquill_quill_blade_b131() -> CardDefinition {
         name: "Silverquill Quill Blade (b131)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::PumpPT {
@@ -10315,7 +9421,6 @@ pub fn silverquill_quill_blade_b131() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10337,8 +9442,6 @@ pub fn silverquill_ink_apprentice_b132() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10359,7 +9462,6 @@ pub fn inkling_quill_striker_b132() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(1)],
         ..Default::default()
     }
@@ -10380,8 +9482,6 @@ pub fn silverquill_scrivener_apprentice_b132() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry_and_draw(1)],
         ..Default::default()
     }
@@ -10403,7 +9503,6 @@ pub fn inkling_pamphleteer_ii_b132() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain(1)],
         ..Default::default()
     }
@@ -10427,8 +9526,6 @@ pub fn silverquill_inkwriter_ii_b133() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token_and_gain_life(inkling_token(), 1)],
         ..Default::default()
     }
@@ -10449,7 +9546,6 @@ pub fn inkling_skydeath_b133() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![dies_drain(2)],
         ..Default::default()
     }
@@ -10464,12 +9560,7 @@ pub fn silverquill_pure_touch_b133() -> CardDefinition {
         name: "Silverquill Pure Touch (b133)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: pump_and_grant_keyword(1, 1, Keyword::Lifelink),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10485,12 +9576,7 @@ pub fn silverquill_inkflight_b134() -> CardDefinition {
         name: "Silverquill Inkflight (b134)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: pump_and_grant_keyword(1, 1, Keyword::Flying),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10511,7 +9597,6 @@ pub fn inkling_lifemender_b134() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -10534,7 +9619,6 @@ pub fn silverquill_penwarden_b135() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -10555,8 +9639,6 @@ pub fn inkling_quill_cleric_b135() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10570,10 +9652,6 @@ pub fn silverquill_edict_speaker_b135() -> CardDefinition {
         name: "Silverquill Edict-Speaker (b135)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::Target(0)),
@@ -10589,7 +9667,6 @@ pub fn silverquill_edict_speaker_b135() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10607,8 +9684,6 @@ pub fn silverquill_bookworm_b135() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -10632,8 +9707,6 @@ pub fn inkling_forewing_b136() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::generic(1))],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10653,8 +9726,6 @@ pub fn silverquill_honor_witness_b136() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -10681,7 +9752,6 @@ pub fn inkling_battle_scribe_b136() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -10705,7 +9775,6 @@ pub fn silverquill_pen_master_b137() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_draw(1)],
         ..Default::default()
     }
@@ -10729,7 +9798,6 @@ pub fn inkling_wingmother_b137() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_create_token(inkling_token())],
         ..Default::default()
     }
@@ -10744,10 +9812,6 @@ pub fn silverquill_pristine_sermon_b136() -> CardDefinition {
         name: "Silverquill Pristine Sermon (b136)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -10764,7 +9828,6 @@ pub fn silverquill_pristine_sermon_b136() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10786,7 +9849,6 @@ pub fn silverquill_inksworn_b138() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -10806,7 +9868,6 @@ pub fn inkling_ledgerwarden_b138() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -10819,10 +9880,6 @@ pub fn silverquill_quillstrike_b138() -> CardDefinition {
         name: "Silverquill Quillstrike (b138)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -10834,7 +9891,6 @@ pub fn silverquill_quillstrike_b138() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10854,7 +9910,6 @@ pub fn inkling_quillforge_b138() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_draw(1)],
         ..Default::default()
     }
@@ -10876,7 +9931,6 @@ pub fn silverquill_inkdrinker_b139() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -10889,12 +9943,7 @@ pub fn inkling_scribesong_b139() -> CardDefinition {
         name: "Inkling Scribesong (b139)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_surveil(2, 2),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -10912,8 +9961,6 @@ pub fn silverquill_pearlcaller_b139() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(2)],
         ..Default::default()
     }
@@ -10932,8 +9979,6 @@ pub fn silverquill_memorialist_ii_b138() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -10955,7 +10000,6 @@ pub fn inkling_lifeharvester_b141() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -10969,10 +10013,6 @@ pub fn silverquill_penblade_b141() -> CardDefinition {
         name: "Silverquill Penblade (b141)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -10989,7 +10029,6 @@ pub fn silverquill_penblade_b141() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11008,8 +10047,6 @@ pub fn silverquill_initiate_b141() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_surveil(1)],
         ..Default::default()
     }
@@ -11031,7 +10068,6 @@ pub fn inkling_quill_knight_b141() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token_and_drain(inkling_token(), 1)],
         ..Default::default()
     }
@@ -11046,12 +10082,7 @@ pub fn inkling_magistry_b142() -> CardDefinition {
         name: "Inkling Magistry (b142)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_surveil(3, 2),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11071,7 +10102,6 @@ pub fn silverquill_inkmaster_b142() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -11092,10 +10122,6 @@ pub fn silverquill_decree_b142() -> CardDefinition {
         name: "Silverquill Decree (b142)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -11108,7 +10134,6 @@ pub fn silverquill_decree_b142() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11128,7 +10153,6 @@ pub fn inkling_heartbinder_b142() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(2)],
         ..Default::default()
     }
@@ -11148,8 +10172,6 @@ pub fn silverquill_ledgerward_b142() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_surveil(1, 1)],
         ..Default::default()
     }
@@ -11171,8 +10193,6 @@ pub fn silverquill_inkflight_b143() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11192,7 +10212,6 @@ pub fn silverquill_pyremaster_b143() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_scry(2, 1)],
         ..Default::default()
     }
@@ -11212,7 +10231,6 @@ pub fn inkling_quillwhisper_b143() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -11235,17 +10253,12 @@ pub fn silverquill_quillcleave_b143() -> CardDefinition {
         name: "Silverquill Quillcleave (b143)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-4),
             toughness: Value::Const(-4),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11265,7 +10278,6 @@ pub fn inkling_ledgerlord_b143() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Sacrifice another creature to mint 2 Inkling tokens".to_string(),
             body: Box::new(Effect::Seq(vec![
@@ -11294,10 +10306,6 @@ pub fn silverquill_resonance_b143() -> CardDefinition {
         name: "Silverquill Resonance (b143)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -11309,7 +10317,6 @@ pub fn silverquill_resonance_b143() -> CardDefinition {
                 random: false,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11329,7 +10336,6 @@ pub fn inkling_inkcaller_b143() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -11342,10 +10348,6 @@ pub fn silverquill_devotional_b143() -> CardDefinition {
         name: "Silverquill Devotional (b143)",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -11356,7 +10358,6 @@ pub fn silverquill_devotional_b143() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11378,8 +10379,6 @@ pub fn silverquill_quillscholar_b144() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11398,7 +10397,6 @@ pub fn inkling_vanquisher_b144() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(2)],
         ..Default::default()
     }
@@ -11417,8 +10415,6 @@ pub fn silverquill_devout_b144() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -11438,7 +10434,6 @@ pub fn inkling_sanctioner_b144() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2), magecraft_scry(1)],
         ..Default::default()
     }
@@ -11451,10 +10446,6 @@ pub fn silverquill_reproach_b144() -> CardDefinition {
         name: "Silverquill Reproach (b144)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -11462,7 +10453,6 @@ pub fn silverquill_reproach_b144() -> CardDefinition {
                     .and(SelectionRequirement::ControlledByOpponent),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11481,8 +10471,6 @@ pub fn inkling_mercenary_b144() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11496,11 +10484,6 @@ pub fn silverquill_ascension_b144() -> CardDefinition {
         name: "Silverquill Ascension (b144)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::End),
@@ -11532,8 +10515,6 @@ pub fn silverquill_hexbearer_b145() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -11566,8 +10547,6 @@ pub fn silverquill_spellbearer_b145() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control have lifelink.",
             effect: StaticEffect::GrantKeyword {
@@ -11598,8 +10577,6 @@ pub fn silverquill_sage_b145() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Cycling(cost(&[w()]))],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11611,15 +10588,10 @@ pub fn silverquill_heartmender_b145() -> CardDefinition {
         name: "Silverquill Heartmender (b145)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(4),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11639,7 +10611,6 @@ pub fn inkling_wraith_b145() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![dies_lose_life_each_opp(2)],
         ..Default::default()
     }
@@ -11663,7 +10634,6 @@ pub fn silverquill_inkmaster_adept_b146() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain(1)],
         ..Default::default()
     }
@@ -11677,10 +10647,6 @@ pub fn silverquill_inkglyph_b146() -> CardDefinition {
         name: "Silverquill Inkglyph (b146)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -11692,7 +10658,6 @@ pub fn silverquill_inkglyph_b146() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11711,8 +10676,6 @@ pub fn inkling_pyrescribe_b146() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb_gain_life(1),
             magecraft_gain_life(1),
@@ -11735,8 +10698,6 @@ pub fn silverquill_inkbinder_b146() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Discard {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -11760,7 +10721,6 @@ pub fn inkling_inkbearer_b146() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -11775,10 +10735,6 @@ pub fn silverquill_ledgerblade_b146() -> CardDefinition {
         name: "Silverquill Ledgerblade (b146)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::Target(0),
@@ -11792,7 +10748,6 @@ pub fn silverquill_ledgerblade_b146() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11812,7 +10767,6 @@ pub fn silverquill_hex_cleric_b146() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(2),
@@ -11836,7 +10790,6 @@ pub fn inkling_verseguard_b146() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -11849,10 +10802,6 @@ pub fn silverquill_inkriot_b146() -> CardDefinition {
         name: "Silverquill Inkriot (b146)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -11864,7 +10813,6 @@ pub fn silverquill_inkriot_b146() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11884,8 +10832,6 @@ pub fn inkling_wingblade_b146() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -11909,8 +10855,6 @@ pub fn silverquill_lifeward_b146() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Your opponents can't lose life.",
             effect: StaticEffect::PlayerCannotLoseLife {
@@ -12001,7 +10945,6 @@ pub fn silverquill_penmaster_b147() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump_and_drain(1)],
         ..Default::default()
     }
@@ -12022,8 +10965,6 @@ pub fn silverquill_cantorscribe_b147() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_draw_one(1)],
         ..Default::default()
     }
@@ -12036,10 +10977,6 @@ pub fn silverquill_inkdrip_b147() -> CardDefinition {
         name: "Silverquill Inkdrip (b147)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -12051,7 +10988,6 @@ pub fn silverquill_inkdrip_b147() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12070,8 +11006,6 @@ pub fn inkling_lifesong_b147() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12091,7 +11025,6 @@ pub fn silverquill_aggressor_b147() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(1)],
         ..Default::default()
     }
@@ -12113,8 +11046,6 @@ pub fn silverquill_mortarscribe_b148() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::LoseLife {
@@ -12140,8 +11071,6 @@ pub fn inkling_crusader_b148() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Menace, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12153,17 +11082,12 @@ pub fn silverquill_cinderglyph_b148() -> CardDefinition {
         name: "Silverquill Cinderglyph (b148)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: Selector::Target(0),
             power: Value::Const(-2),
             toughness: Value::Const(-2),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12184,9 +11108,6 @@ pub fn inkling_glyphmaster_b148() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control get +0/+1.",
             effect: StaticEffect::PumpPT {
@@ -12211,10 +11132,6 @@ pub fn silverquill_lifesong_b148() -> CardDefinition {
         name: "Silverquill Lifesong (b148)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -12225,7 +11142,6 @@ pub fn silverquill_lifesong_b148() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12249,8 +11165,6 @@ pub fn silverquill_ink_knight_b149() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink, Keyword::Indestructible],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12269,8 +11183,6 @@ pub fn silverquill_soulpenitent_b149() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Hexproof],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12291,8 +11203,6 @@ pub fn silverquill_penmaster_general_b150() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12312,8 +11222,6 @@ pub fn inkling_quillveteran_b150() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12331,8 +11239,6 @@ pub fn silverquill_lifebringer_b150() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(3)],
         ..Default::default()
     }
@@ -12351,8 +11257,6 @@ pub fn silverquill_doomscribe_b150() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(2),
@@ -12370,10 +11274,6 @@ pub fn silverquill_verseblade_b150() -> CardDefinition {
         name: "Silverquill Verseblade (b150)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
@@ -12391,7 +11291,6 @@ pub fn silverquill_verseblade_b150() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12403,12 +11302,7 @@ pub fn silverquill_funerary_rite_b150() -> CardDefinition {
         name: "Silverquill Funerary Rite (b150)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(2),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12427,8 +11321,6 @@ pub fn inkling_edgewriter_b150() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12449,8 +11341,6 @@ pub fn silverquill_disciple_b151() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12469,8 +11359,6 @@ pub fn inkling_scout_b151() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12483,11 +11371,6 @@ pub fn silverquill_sanctuary_b151() -> CardDefinition {
         name: "Silverquill Sanctuary (b151)",
         cost: cost(&[generic(4), w(), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
@@ -12512,8 +11395,6 @@ pub fn silverquill_recruiter_b151() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -12536,14 +11417,9 @@ pub fn silverquill_smite_b151() -> CardDefinition {
         name: "Silverquill Smite (b151)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(SelectionRequirement::Creature),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12563,8 +11439,6 @@ pub fn silverquill_pen_striker_b151() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12582,8 +11456,6 @@ pub fn inkling_conjurer_b151() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 2)],
         ..Default::default()
     }
@@ -12605,8 +11477,6 @@ pub fn silverquill_verseguard_b152() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12618,10 +11488,6 @@ pub fn silverquill_memoryflame_b152() -> CardDefinition {
         name: "Silverquill Memoryflame (b152)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(1),
             Effect::Surveil {
@@ -12629,7 +11495,6 @@ pub fn silverquill_memoryflame_b152() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12648,8 +11513,6 @@ pub fn silverquill_champion_b152() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12667,8 +11530,6 @@ pub fn silverquill_mortarscribe_b152() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -12687,8 +11548,6 @@ pub fn silverquill_sacrificemage_b152() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(2)],
         ..Default::default()
     }
@@ -12709,7 +11568,6 @@ pub fn inkling_tactician_b152() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: Selector::EachPermanent(
                 SelectionRequirement::HasCreatureType(CreatureType::Inkling)
@@ -12743,7 +11601,6 @@ pub fn silverquill_inkmancer_b154() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_mint_inkling()],
         ..Default::default()
     }
@@ -12764,8 +11621,6 @@ pub fn silverquill_recitalist_b154() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -12787,7 +11642,6 @@ pub fn silverquill_pacifier_b154() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_tap_opp_creature()],
         ..Default::default()
     }
@@ -12808,7 +11662,6 @@ pub fn inkling_drainreaver_b154() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(3), magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -12821,10 +11674,6 @@ pub fn silverquill_quilledict_b154() -> CardDefinition {
         name: "Silverquill Quilledict (b154)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(3),
             Effect::CreateToken {
@@ -12833,7 +11682,6 @@ pub fn silverquill_quilledict_b154() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12853,7 +11701,6 @@ pub fn silverquill_sentinel_b154() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![mgl(1)],
         ..Default::default()
     }
@@ -12866,12 +11713,7 @@ pub fn silverquill_sphereturn_b154() -> CardDefinition {
         name: "Silverquill Sphereturn (b154)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(4),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12890,8 +11732,6 @@ pub fn inkling_bookwarden_b154() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -12911,7 +11751,6 @@ pub fn silverquill_reciter_b155() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![mgl(2)],
         ..Default::default()
     }
@@ -12931,7 +11770,6 @@ pub fn inkling_striplark_b155() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -12950,8 +11788,6 @@ pub fn silverquill_manuscriber_b155() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
             magecraft(Effect::MayDo {
@@ -12977,7 +11813,6 @@ pub fn inkling_lifepoet_b155() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -12990,10 +11825,6 @@ pub fn silverquill_adjudicator_b155() -> CardDefinition {
         name: "Silverquill Adjudicator (b155)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -13001,7 +11832,6 @@ pub fn silverquill_adjudicator_b155() -> CardDefinition {
             },
             drain(1),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13021,7 +11851,6 @@ pub fn inkling_spellbinder_b155() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_mint_inkling()],
         ..Default::default()
     }
@@ -13035,10 +11864,6 @@ pub fn silverquill_quillplay_b155() -> CardDefinition {
         name: "Silverquill Quillplay (b155)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(1),
             Effect::CreateToken {
@@ -13047,7 +11872,6 @@ pub fn silverquill_quillplay_b155() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13067,8 +11891,6 @@ pub fn inkling_glyphwarden_b155() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control have lifelink.",
             effect: StaticEffect::GrantKeyword {
@@ -13093,10 +11915,6 @@ pub fn silverquill_curatorial_b155() -> CardDefinition {
         name: "Silverquill Curatorial (b155)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::Move {
@@ -13108,7 +11926,6 @@ pub fn silverquill_curatorial_b155() -> CardDefinition {
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13127,7 +11944,6 @@ pub fn inkling_slipscribe_b155() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -13141,10 +11957,6 @@ pub fn silverquill_recital_b155() -> CardDefinition {
         name: "Silverquill Recital (b155)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -13158,7 +11970,6 @@ pub fn silverquill_recital_b155() -> CardDefinition {
             },
             Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13178,7 +11989,6 @@ pub fn inkling_vespermage_b155() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -13198,17 +12008,12 @@ pub fn silverquill_caesura_b155() -> CardDefinition {
         name: "Silverquill Caesura (b155)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13228,7 +12033,6 @@ pub fn inkling_pen_verseman_b155() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_scry(1, 1)],
         ..Default::default()
     }
@@ -13247,8 +12051,6 @@ pub fn silverquill_liturgist_ii_b155() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -13269,7 +12071,6 @@ pub fn inkling_skydrifter_b155() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -13296,8 +12097,6 @@ pub fn inkling_standardbearer_b154() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
@@ -13331,8 +12130,6 @@ pub fn silverquill_confidant_b155() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -13352,7 +12149,6 @@ pub fn inkling_veteran_b155() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -13373,8 +12169,6 @@ pub fn silverquill_critic_b155() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![dies_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -13393,8 +12187,6 @@ pub fn silverquill_wordsmith_b155() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
@@ -13417,8 +12209,6 @@ pub fn inkling_avenger_b155() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13431,17 +12221,12 @@ pub fn silverquill_eulogist_b155() -> CardDefinition {
         name: "Silverquill Eulogist (b155)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
             },
             Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13453,10 +12238,6 @@ pub fn silverquill_discipline_b155() -> CardDefinition {
         name: "Silverquill Discipline (b155)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -13466,7 +12247,6 @@ pub fn silverquill_discipline_b155() -> CardDefinition {
             },
             drain(1),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13485,8 +12265,6 @@ pub fn inkling_strider_b155() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13507,8 +12285,6 @@ pub fn silverquill_tactician_b156() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
             effect: Effect::CreateToken {
@@ -13537,7 +12313,6 @@ pub fn silverquill_inkwarden_b158() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -13558,8 +12333,6 @@ pub fn inkling_pinionguard_b158() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13578,8 +12351,6 @@ pub fn silverquill_pen_crier_b158() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -13598,8 +12369,6 @@ pub fn silverquill_pen_bearer_b158() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -13618,8 +12387,6 @@ pub fn inkling_scriptor_b158() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -13639,8 +12406,6 @@ pub fn silverquill_penkeeper_b158() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -13654,12 +12419,7 @@ pub fn silverquill_vow_b158() -> CardDefinition {
         name: "Silverquill Vow (b158)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_draw(1),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13678,7 +12438,6 @@ pub fn inkling_penlord_b158() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(3)],
         ..Default::default()
     }
@@ -13699,7 +12458,6 @@ pub fn silverquill_censurer_b158() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_tap_opp_creature()],
         ..Default::default()
     }
@@ -13712,12 +12470,7 @@ pub fn silverquill_inkdrain_b158() -> CardDefinition {
         name: "Silverquill Inkdrain (b158)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(3),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13736,8 +12489,6 @@ pub fn inkling_aerogate_b158() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13756,8 +12507,6 @@ pub fn silverquill_battlescholar_b158() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_scry(1, 1)],
         ..Default::default()
     }
@@ -13777,8 +12526,6 @@ pub fn inkling_veilwarden_b158() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13790,10 +12537,6 @@ pub fn silverquill_edicter_b158() -> CardDefinition {
         name: "Silverquill Edicter (b158)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -13802,7 +12545,6 @@ pub fn silverquill_edicter_b158() -> CardDefinition {
             },
             Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13822,7 +12564,6 @@ pub fn inkling_heraldscribe_b158() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -13844,8 +12585,6 @@ pub fn inkling_lawkeeper_b159() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13864,8 +12603,6 @@ pub fn silverquill_pen_director_b159() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13878,12 +12615,7 @@ pub fn silverquill_pen_sketch_b159() -> CardDefinition {
         name: "Silverquill Pen-Sketch (b159)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_draw(1),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13901,9 +12633,6 @@ pub fn inkling_stalwart_b159() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13921,8 +12650,6 @@ pub fn silverquill_pen_sage_b159() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
@@ -13944,8 +12671,6 @@ pub fn inkling_pen_adept_b159() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }
@@ -13965,8 +12690,6 @@ pub fn silverquill_soulbinder_ii_b159() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain_and_counter_self(1)],
         ..Default::default()
     }
@@ -13988,8 +12711,6 @@ pub fn silverquill_scribecadet_b160() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14008,8 +12729,6 @@ pub fn inkling_coursemate_b160() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14027,8 +12746,6 @@ pub fn silverquill_penblade_b160() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }
@@ -14041,15 +12758,10 @@ pub fn silverquill_pendrop_b160() -> CardDefinition {
         name: "Silverquill Pendrop (b160)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(1),
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14068,8 +12780,6 @@ pub fn inkling_verseknight_b160() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14081,11 +12791,6 @@ pub fn silverquill_lectern_b160() -> CardDefinition {
         name: "Silverquill Lectern (b160)",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -14105,7 +12810,6 @@ pub fn silverquill_lectern_b160() -> CardDefinition {
             self_counter_cost_reduction: None,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14124,7 +12828,6 @@ pub fn inkling_penbearer_b160() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }
@@ -14137,17 +12840,12 @@ pub fn silverquill_inkstrike_b160() -> CardDefinition {
         name: "Silverquill Inkstrike (b160)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-2),
             toughness: Value::Const(-2),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14168,8 +12866,6 @@ pub fn silverquill_inkmaster_b161() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14188,8 +12884,6 @@ pub fn inkling_quillsoldier_b161() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14201,10 +12895,6 @@ pub fn silverquill_penkeeper_b161() -> CardDefinition {
         name: "Silverquill Penkeeper (b161)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::CreateToken {
@@ -14213,7 +12903,6 @@ pub fn silverquill_penkeeper_b161() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14232,8 +12921,6 @@ pub fn silverquill_quillsaint_b161() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14252,8 +12939,6 @@ pub fn inkling_vowscribe_b161() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14274,8 +12959,6 @@ pub fn silverquill_devotionseer_b162() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14294,8 +12977,6 @@ pub fn inkling_plumefall_b162() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14307,12 +12988,7 @@ pub fn silverquill_inksong_b162() -> CardDefinition {
         name: "Silverquill Inksong (b162)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(3),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14331,8 +13007,6 @@ pub fn silverquill_apprentice_ii_b162() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(drain(1))],
         ..Default::default()
     }
@@ -14352,8 +13026,6 @@ pub fn inkling_sentry_b162() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14374,7 +13046,6 @@ pub fn silverquill_quillkeeper_b164() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(1)],
         ..Default::default()
     }
@@ -14394,7 +13065,6 @@ pub fn inkling_herald_b164() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![{
             use crate::effect::shortcut::etb_loot;
             etb_loot()
@@ -14417,7 +13087,6 @@ pub fn silverquill_commandant_b164() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -14437,7 +13106,6 @@ pub fn inkling_skirmisher_b164() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![{
             use crate::effect::shortcut::dies_drain;
             dies_drain(1)
@@ -14453,12 +13121,7 @@ pub fn silverquill_verdict_b164() -> CardDefinition {
         name: "Silverquill Verdict (b164)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_surveil(2, 1),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14477,8 +13140,6 @@ pub fn inkling_duelist_b164() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14490,17 +13151,12 @@ pub fn silverquill_denouncement_b164() -> CardDefinition {
         name: "Silverquill Denouncement (b164)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: Selector::Target(0),
             power: Value::Const(-3),
             toughness: Value::Const(-3),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14522,7 +13178,6 @@ pub fn inkling_shadowcaster_b165() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_draw(1)],
         ..Default::default()
     }
@@ -14542,8 +13197,6 @@ pub fn silverquill_spiritspeaker_b165() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry { who: crate::effect::PlayerRef::You, amount: Value::Const(1) },
             Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
@@ -14559,15 +13212,10 @@ pub fn silverquill_vindict_b165() -> CardDefinition {
         name: "Silverquill Vindict (b165)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Destroy { what: Selector::Target(0) },
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14586,8 +13234,6 @@ pub fn inkling_skywarden_b165() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14599,10 +13245,6 @@ pub fn silverquill_deathmark_b165() -> CardDefinition {
         name: "Silverquill Deathmark (b165)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::Target(0),
@@ -14612,7 +13254,6 @@ pub fn silverquill_deathmark_b165() -> CardDefinition {
             },
             Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14637,7 +13278,6 @@ pub fn inkling_bonecaster_b166() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -14665,7 +13305,6 @@ pub fn silverquill_auditor_b166() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -14688,8 +13327,6 @@ pub fn inkling_squire_b166() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14707,8 +13344,6 @@ pub fn silverquill_quill_wielder_b166() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb(Effect::Scry {
                 who: PlayerRef::You,
@@ -14742,7 +13377,6 @@ pub fn inkling_soulkeeper_b166() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
         ..Default::default()
     }
@@ -14755,15 +13389,10 @@ pub fn silverquill_ascription_b166() -> CardDefinition {
         name: "Silverquill Ascription (b166)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: {
             use crate::effect::shortcut::drain_and_scry;
             drain_and_scry(3, 2)
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14781,8 +13410,6 @@ pub fn inkling_vellumkeeper_b166() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
             effect: Effect::GainLife {
@@ -14801,15 +13428,10 @@ pub fn silverquill_recital_b166() -> CardDefinition {
         name: "Silverquill Recital (b166)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: {
             use crate::effect::shortcut::drain_and_draw;
             drain_and_draw(1)
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14828,8 +13450,6 @@ pub fn inkling_lifegiver_b166() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14841,10 +13461,6 @@ pub fn silverquill_sentencing_b166() -> CardDefinition {
         name: "Silverquill Sentencing (b166)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
@@ -14858,7 +13474,6 @@ pub fn silverquill_sentencing_b166() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14879,16 +13494,11 @@ pub fn silverquill_curse_b167() -> CardDefinition {
         name: "Silverquill Curse (b167)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddCounter {
             what: target_filtered(SelectionRequirement::Creature),
             kind: CounterType::Finality,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14907,8 +13517,6 @@ pub fn silverquill_inkbond_b167() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
@@ -14933,15 +13541,10 @@ pub fn silverquill_penbinder_b167() -> CardDefinition {
         name: "Silverquill Penbinder (b167)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Surveil {
             who: PlayerRef::You,
             amount: Value::Const(2),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14961,7 +13564,6 @@ pub fn inkling_diviner_b167() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_draw(1)],
         ..Default::default()
     }
@@ -14981,8 +13583,6 @@ pub fn silverquill_bulwark_b167() -> CardDefinition {
         power: 1,
         toughness: 5,
         keywords: vec![Keyword::Defender],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -14995,10 +13595,6 @@ pub fn silverquill_stunning_b167() -> CardDefinition {
         name: "Silverquill Stunning (b167)",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -15009,7 +13605,6 @@ pub fn silverquill_stunning_b167() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15024,10 +13619,6 @@ pub fn silverquill_banisher_b168() -> CardDefinition {
         name: "Silverquill Banisher (b168)",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -15035,7 +13626,6 @@ pub fn silverquill_banisher_b168() -> CardDefinition {
             ),
             to: ZoneDest::Exile,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15054,8 +13644,6 @@ pub fn inkling_sage_ii_b168() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15073,8 +13661,6 @@ pub fn silverquill_penlord_b168() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -15103,10 +13689,6 @@ pub fn silverquill_command() -> CardDefinition {
         name: "Silverquill Command",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -15119,7 +13701,6 @@ pub fn silverquill_command() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15134,10 +13715,6 @@ pub fn umbral_juke() -> CardDefinition {
         name: "Umbral Juke",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ChooseMode(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -15151,7 +13728,6 @@ pub fn umbral_juke() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15172,7 +13748,6 @@ pub fn silverquill_silencer() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
         triggered_abilities: vec![
             etb(Effect::NameCard { what: Selector::This }),
             TriggeredAbility {
@@ -15199,10 +13774,6 @@ pub fn fracture() -> CardDefinition {
         name: "Fracture",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact
@@ -15210,7 +13781,6 @@ pub fn fracture() -> CardDefinition {
                     .or(SelectionRequirement::Planeswalker),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15250,10 +13820,7 @@ pub fn clever_lumimancer() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 0,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(2, 0)],
         ..Default::default()
     }
@@ -15276,8 +13843,6 @@ pub fn silverquill_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -15306,7 +13871,6 @@ pub fn shadewing_laureate() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -15343,7 +13907,6 @@ pub fn silverquill_spectralist_b169() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Surveil {
             who: PlayerRef::You,
             amount: Value::Const(1),
@@ -15362,10 +13925,6 @@ pub fn silverquill_finalizer_b169() -> CardDefinition {
         name: "Silverquill Finalizer (b169)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -15378,7 +13937,6 @@ pub fn silverquill_finalizer_b169() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15397,7 +13955,6 @@ pub fn inkling_banshee_b169() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::dies_lose_life_each_opp(1)],
         ..Default::default()
     }
@@ -15411,10 +13968,6 @@ pub fn silverquill_verdict_b169() -> CardDefinition {
         name: "Silverquill Verdict (b169)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -15425,7 +13978,6 @@ pub fn silverquill_verdict_b169() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15445,7 +13997,6 @@ pub fn inkling_quill_captain_b169() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -15462,10 +14013,6 @@ pub fn silverquill_edict_b169() -> CardDefinition {
         name: "Silverquill Edict (b169)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -15477,7 +14024,6 @@ pub fn silverquill_edict_b169() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15495,8 +14041,6 @@ pub fn silverquill_bookmage_b169() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -15526,8 +14070,6 @@ pub fn silverquill_aegismage_b170() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -15557,7 +14099,6 @@ pub fn silverquill_quillsmith_b171() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -15584,8 +14125,6 @@ pub fn inkling_vanguard_ii_b171() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15610,8 +14149,6 @@ pub fn silverquill_inkbinder_b174() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_add_counter_self()],
         ..Default::default()
     }
@@ -15631,8 +14168,6 @@ pub fn inkling_stylist_b174() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15645,12 +14180,7 @@ pub fn silverquill_lifeleach_b174() -> CardDefinition {
         name: "Silverquill Lifeleach (b174)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_scry(2, 1),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15669,7 +14199,6 @@ pub fn inkling_scrollguard_b174() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -15688,8 +14217,6 @@ pub fn silverquill_inkfiend_b174() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_other_dies(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
@@ -15715,8 +14242,6 @@ pub fn silverquill_stenographer_b175() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_loot()],
         ..Default::default()
     }
@@ -15736,8 +14261,6 @@ pub fn inkling_mortician_b175() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15756,8 +14279,6 @@ pub fn silverquill_reapcrier_b175() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![dies_drain(1)],
         ..Default::default()
     }
@@ -15779,7 +14300,6 @@ pub fn inkling_cantor_b175() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -15808,8 +14328,6 @@ pub fn silverquill_penkeeper_b175() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -15829,7 +14347,6 @@ pub fn inkling_hatchling_b175() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -15850,12 +14367,7 @@ pub fn silverquill_doomgrant_b176() -> CardDefinition {
         name: "Silverquill Doomgrant (b176)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: add_finality_to_target_creature(),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15877,8 +14389,6 @@ pub fn silverquill_anthem_bearer_b177() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control get +1/+0.",
             effect: StaticEffect::PumpPT {
@@ -15909,8 +14419,6 @@ pub fn inkling_stylekeeper_b177() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -15934,7 +14442,6 @@ pub fn silverquill_glyphmaker_b186() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(
@@ -15965,16 +14472,11 @@ pub fn silverquill_wordsharpener_b184() -> CardDefinition {
         name: "Silverquill Wordsharpener (b184)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddKeywordCounter {
             what: target_filtered(SelectionRequirement::Creature),
             keyword: Keyword::FirstStrike,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15987,10 +14489,6 @@ pub fn silverquill_drainmark_b184() -> CardDefinition {
         name: "Silverquill Drainmark (b184)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddKeywordCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -15998,7 +14496,6 @@ pub fn silverquill_drainmark_b184() -> CardDefinition {
             keyword: Keyword::Deathtouch,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16013,16 +14510,11 @@ pub fn silverquill_skystudent_b183() -> CardDefinition {
         name: "Silverquill Skystudent (b183)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddKeywordCounter {
             what: target_filtered(SelectionRequirement::Creature),
             keyword: Keyword::Flying,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16043,8 +14535,6 @@ pub fn silverquill_ascendant_b182() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16063,8 +14553,6 @@ pub fn silverquill_stampcrafter_b182() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(drain_and_scry(1, 1))],
         ..Default::default()
     }
@@ -16078,10 +14566,6 @@ pub fn inkling_tutor_b179() -> CardDefinition {
         name: "Inkling Tutor (b179)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Discard {
                 who: Selector::You,
@@ -16093,7 +14577,6 @@ pub fn inkling_tutor_b179() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16113,7 +14596,6 @@ pub fn inkling_heraldscribe_b179() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(1)],
         ..Default::default()
     }
@@ -16132,8 +14614,6 @@ pub fn silverquill_penquill_b179() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16147,12 +14627,7 @@ pub fn inkling_lifesong_b178() -> CardDefinition {
         name: "Inkling Lifesong (b178)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_draw(2),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16172,7 +14647,6 @@ pub fn silverquill_pridecrier_b178() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(2)],
         ..Default::default()
     }
@@ -16194,7 +14668,6 @@ pub fn silverquill_wordweaver_b177() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -16208,12 +14681,7 @@ pub fn silverquill_aegis_b176() -> CardDefinition {
         name: "Silverquill Aegis (b176)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: add_shield_to_target_creature(),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16226,17 +14694,12 @@ pub fn silverquill_verdictbearer_b175() -> CardDefinition {
         name: "Silverquill Verdictbearer (b175)",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
             ),
             to: ZoneDest::Exile,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16256,7 +14719,6 @@ pub fn silverquill_pyremist_b174() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(drain_and_scry(2, 1))],
         ..Default::default()
     }
@@ -16276,8 +14738,6 @@ pub fn silverquill_wardlord_b173() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_add_shield_self()],
         ..Default::default()
     }
@@ -16297,8 +14757,6 @@ pub fn silverquill_doomspeaker_b173() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_add_finality_self()],
         ..Default::default()
     }
@@ -16318,8 +14776,6 @@ pub fn silverquill_sentinel_b172() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16337,8 +14793,6 @@ pub fn silverquill_inkmage_b172() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(drain(2))],
         ..Default::default()
     }
@@ -16358,7 +14812,6 @@ pub fn inkling_skywatch_b172() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_gain_life(1)],
         ..Default::default()
     }
@@ -16378,7 +14831,6 @@ pub fn silverquill_tombwarden_b171() -> CardDefinition {
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_other_dies(Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(1),
@@ -16394,16 +14846,11 @@ pub fn silverquill_wardward_b170() -> CardDefinition {
         name: "Silverquill Wardward (b170)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddCounter {
             what: target_filtered(SelectionRequirement::Creature),
             kind: CounterType::Shield,
             amount: Value::Const(2),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16423,8 +14870,6 @@ pub fn inkling_standard_bearer_b169() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control have lifelink.",
             effect: StaticEffect::GrantKeyword {
@@ -16453,16 +14898,11 @@ pub fn silverquill_reachseal_b187() -> CardDefinition {
         name: "Silverquill Reachseal (b187)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddKeywordCounter {
             what: target_filtered(SelectionRequirement::Creature),
             keyword: Keyword::Reach,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16481,7 +14921,6 @@ pub fn silverquill_mentordrain_b187() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -16507,8 +14946,6 @@ pub fn inkling_vigilkeeper_b187() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddKeywordCounter {
             what: Selector::This,
             keyword: Keyword::Vigilance,
@@ -16532,7 +14969,6 @@ pub fn silverquill_skytutor_b187() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2)),
@@ -16549,15 +14985,10 @@ pub fn silverquill_inkletter_ii_b187() -> CardDefinition {
         name: "Silverquill Inkletter II (b187)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16576,9 +15007,6 @@ pub fn inkling_spellguard_b187() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Inkling creatures you control have lifelink.",
             effect: StaticEffect::GrantKeyword {
@@ -16605,10 +15033,6 @@ pub fn silverquill_inkdrain_b191() -> CardDefinition {
         name: "Silverquill Inkdrain (b191)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(3),
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -16618,7 +15042,6 @@ pub fn silverquill_inkdrain_b191() -> CardDefinition {
                 definition: inkling_token(),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16639,7 +15062,6 @@ pub fn inkling_highscribe_b191() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
             magecraft_gain_life(1),
@@ -16661,8 +15083,6 @@ pub fn silverquill_vampirebond_b191() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16676,10 +15096,6 @@ pub fn silverquill_doublecurse_b190() -> CardDefinition {
         name: "Silverquill Doublecurse (b190)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::AddKeywordCounter {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -16692,7 +15108,6 @@ pub fn silverquill_doublecurse_b190() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16704,10 +15119,6 @@ pub fn silverquill_wardseal_b190() -> CardDefinition {
         name: "Silverquill Wardseal (b190)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddKeywordCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -16715,7 +15126,6 @@ pub fn silverquill_wardseal_b190() -> CardDefinition {
             keyword: Keyword::Vigilance,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16727,16 +15137,11 @@ pub fn silverquill_lifeward_b190() -> CardDefinition {
         name: "Silverquill Lifeward (b190)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::AddKeywordCounter {
             what: target_filtered(SelectionRequirement::Creature),
             keyword: Keyword::Lifelink,
             amount: Value::Const(1),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16756,8 +15161,6 @@ pub fn silverquill_drainmaster_ii_b189() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(3)],
         ..Default::default()
     }
@@ -16777,7 +15180,6 @@ pub fn inkling_vassalking_b189() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(1)],
         ..Default::default()
     }
@@ -16790,15 +15192,10 @@ pub fn silverquill_exilewright_b189() -> CardDefinition {
         name: "Silverquill Exilewright (b189)",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Exile,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16812,10 +15209,6 @@ pub fn silverquill_cantrap_b188() -> CardDefinition {
         name: "Silverquill Cantrap (b188)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -16829,7 +15222,6 @@ pub fn silverquill_cantrap_b188() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16848,7 +15240,6 @@ pub fn inkling_tribune_b188() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2), magecraft_self_pump(1, 0)],
         ..Default::default()
     }
@@ -16861,15 +15252,10 @@ pub fn silverquill_litany_b188() -> CardDefinition {
         name: "Silverquill Litany (b188)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16881,10 +15267,6 @@ pub fn silverquill_wardlock_b187() -> CardDefinition {
         name: "Silverquill Wardlock (b187)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -16895,7 +15277,6 @@ pub fn silverquill_wardlock_b187() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16915,8 +15296,6 @@ pub fn silverquill_inkbreaker_b193() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_gain_life(1)],
         ..Default::default()
     }
@@ -16936,8 +15315,6 @@ pub fn silverquill_sealkeeper_b193() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16955,8 +15332,6 @@ pub fn silverquill_drainwight_b193() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -16969,15 +15344,10 @@ pub fn silverquill_inkflood_b193() -> CardDefinition {
         name: "Silverquill Inkflood (b193)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             drain(2),
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -16996,8 +15366,6 @@ pub fn silverquill_inklingbond_b193() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17015,8 +15383,6 @@ pub fn silverquill_pridescholar_b193() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         ..Default::default()
     }
@@ -17031,10 +15397,6 @@ pub fn silverquill_wardstamp_b194() -> CardDefinition {
         name: "Silverquill Wardstamp (b194)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -17048,7 +15410,6 @@ pub fn silverquill_wardstamp_b194() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17067,8 +15428,6 @@ pub fn silverquill_tutorquill_b194() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17086,8 +15445,6 @@ pub fn silverquill_drainscholar_b194() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2), magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -17107,8 +15464,6 @@ pub fn silverquill_glyphstudent_b194() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17120,10 +15475,6 @@ pub fn silverquill_exilescribe_b194() -> CardDefinition {
         name: "Silverquill Exilescribe (b194)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -17132,7 +15483,6 @@ pub fn silverquill_exilescribe_b194() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17147,16 +15497,11 @@ pub fn silverquill_wordstamp_b195() -> CardDefinition {
         name: "Silverquill Wordstamp (b195)",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
             definition: inkling_token(),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17175,8 +15520,6 @@ pub fn silverquill_inkmark_b195() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17188,17 +15531,12 @@ pub fn silverquill_painlace_b195() -> CardDefinition {
         name: "Silverquill Painlace (b195)",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(-2),
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17216,8 +15554,6 @@ pub fn silverquill_drainlord_b195() -> CardDefinition {
         },
         power: 5,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(1)],
         ..Default::default()
     }
@@ -17240,7 +15576,6 @@ pub fn silverquill_loremaster_b196() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(2)],
         ..Default::default()
     }
@@ -17260,8 +15595,6 @@ pub fn silverquill_penmage_b196() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17273,12 +15606,7 @@ pub fn silverquill_pact_b196() -> CardDefinition {
         name: "Silverquill Pact (b196)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(4),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17316,8 +15644,6 @@ pub fn silverquill_sergeant_b196() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_mint_token(soldier, 1)],
         ..Default::default()
     }
@@ -17339,8 +15665,6 @@ pub fn silverquill_wordcaller_b197() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(SelectionRequirement::Creature),
             1,
@@ -17363,8 +15687,6 @@ pub fn silverquill_glyphmark_b197() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -17386,8 +15708,6 @@ pub fn silverquill_lifesinger_b198() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17407,7 +15727,6 @@ pub fn inkling_conductor_b198() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -17427,7 +15746,6 @@ pub fn silverquill_ascetic_b198() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(3)],
         ..Default::default()
     }
@@ -17447,8 +15765,6 @@ pub fn inkling_streamer_b198() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17467,8 +15783,6 @@ pub fn silverquill_forewing_b198() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17481,16 +15795,11 @@ pub fn silverquill_edict_b198() -> CardDefinition {
         name: "Silverquill Edict (b198)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Sacrifice {
             who: each_opponent(),
             count: Value::Const(1),
             filter: SelectionRequirement::Creature,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17502,12 +15811,7 @@ pub fn silverquill_tithe_b198() -> CardDefinition {
         name: "Silverquill Tithe (b198)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(2),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17526,8 +15830,6 @@ pub fn silverquill_sentinel_b198() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17548,8 +15850,6 @@ pub fn silverquill_cleric_b199() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17562,12 +15862,7 @@ pub fn silverquill_inkdraw_b199() -> CardDefinition {
         name: "Silverquill Inkdraw (b199)",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17586,8 +15881,6 @@ pub fn inkling_beacon_b199() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17600,12 +15893,7 @@ pub fn silverquill_hymn_b199() -> CardDefinition {
         name: "Silverquill Hymn (b199)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: gain_life(4),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17617,16 +15905,11 @@ pub fn silverquill_smiter_b199() -> CardDefinition {
         name: "Silverquill Smiter (b199)",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17646,8 +15929,6 @@ pub fn silverquill_quietkeeper_b200() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17658,12 +15939,7 @@ pub fn silverquill_indrain_b200() -> CardDefinition {
         name: "Silverquill Indrain (b200)",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(4),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17682,8 +15958,6 @@ pub fn inkling_wraith_b200() -> CardDefinition {
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17705,7 +15979,6 @@ pub fn inkling_skybinder_b201() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -17721,16 +15994,11 @@ pub fn silverquill_whitewash_b201() -> CardDefinition {
         name: "Silverquill Whitewash (b201)",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Exile {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(3)),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17752,7 +16020,6 @@ pub fn inkling_bloodbearer_b202() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -17765,16 +16032,11 @@ pub fn silverquill_excoriator_b202() -> CardDefinition {
         name: "Silverquill Excoriator (b202)",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(4)),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17793,8 +16055,6 @@ pub fn inkling_bookbinder_ii_b202() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
         ..Default::default()
     }
@@ -17814,8 +16074,6 @@ pub fn silverquill_crestwalker_b202() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17828,10 +16086,6 @@ pub fn silverquill_quillforge_b202() -> CardDefinition {
         name: "Silverquill Quillforge (b202)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -17840,7 +16094,6 @@ pub fn silverquill_quillforge_b202() -> CardDefinition {
             },
             drain(3),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17859,8 +16112,6 @@ pub fn inkling_quillward_b202() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::AddKeywordCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -17879,12 +16130,7 @@ pub fn silverquill_dirge_b202() -> CardDefinition {
         name: "Silverquill Dirge (b202)",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain_and_surveil(2, 1),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17904,8 +16150,6 @@ pub fn inkling_heartcaller_b202() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -17929,12 +16173,7 @@ pub fn silverquill_inkblade_b202() -> CardDefinition {
         name: "Silverquill Inkblade (b202)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: pump_and_grant_keyword(2, 0, Keyword::FirstStrike),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -17955,7 +16194,6 @@ pub fn inkling_glyphlord_b202() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),
@@ -17996,7 +16234,6 @@ pub fn silverquill_inkmaster_b202() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -18017,10 +16254,6 @@ pub fn silverquill_edictsong_b202() -> CardDefinition {
         name: "Silverquill Edictsong (b202)",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -18030,7 +16263,6 @@ pub fn silverquill_edictsong_b202() -> CardDefinition {
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18049,8 +16281,6 @@ pub fn inkling_plumegrower_b202() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(drain_and_scry(1, 1))],
         ..Default::default()
     }
@@ -18065,12 +16295,7 @@ pub fn silverquill_quillstrike_b202() -> CardDefinition {
         name: "Silverquill Quillstrike (b202)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: pump_and_grant_keyword(1, 0, Keyword::Lifelink),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18090,7 +16315,6 @@ pub fn inkling_lifecaller_b202() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -18112,11 +16336,6 @@ pub fn silverquill_pendant_b202() -> CardDefinition {
         name: "Silverquill Pendant (b202)",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -18142,8 +16361,6 @@ pub fn silverquill_vellumguard_b202() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Defender, Keyword::Vigilance, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18156,10 +16373,6 @@ pub fn silverquill_recap_b202() -> CardDefinition {
         name: "Silverquill Recap (b202)",
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         // Push (claude/modern_decks batch 202 round-3): Now uses
         // `Selector::take(.., 2)` to pull up to two low-MV creature
         // cards out of the graveyard in one Move. The take-N selector
@@ -18177,7 +16390,6 @@ pub fn silverquill_recap_b202() -> CardDefinition {
             ),
             to: ZoneDest::Hand(PlayerRef::You),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18196,7 +16408,6 @@ pub fn inkling_drainling_b202() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_attack_drain(1)],
         ..Default::default()
     }
@@ -18209,16 +16420,11 @@ pub fn silverquill_sumptuous_b202() -> CardDefinition {
         name: "Silverquill Sumptuous (b202)",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(3),
             definition: inkling_token(),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18237,7 +16443,6 @@ pub fn inkling_cantrix_b202() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -18250,17 +16455,12 @@ pub fn silverquill_pinionbreaker_b202() -> CardDefinition {
         name: "Silverquill Pinionbreaker (b202)",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18279,8 +16479,6 @@ pub fn inkling_augur_b202() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry_and_draw(2)],
         ..Default::default()
     }
@@ -18299,8 +16497,6 @@ pub fn silverquill_drainscholar_ii_b202() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -18315,12 +16511,7 @@ pub fn silverquill_wardrune_b202() -> CardDefinition {
         name: "Silverquill Wardrune (b202)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: pump_and_grant_keyword(0, 3, Keyword::Vigilance),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18341,8 +16532,6 @@ pub fn silverquill_cantor_b203() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_scry(1)],
         ..Default::default()
     }
@@ -18362,7 +16551,6 @@ pub fn inkling_whisperer_b203() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_scry(1)],
         ..Default::default()
     }
@@ -18383,7 +16571,6 @@ pub fn silverquill_censurer_b203() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_combat_damage_to_player_drain(1)],
         ..Default::default()
     }
@@ -18403,7 +16590,6 @@ pub fn inkling_mentor_b203() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -18416,16 +16602,11 @@ pub fn silverquill_edict_b203() -> CardDefinition {
         name: "Silverquill Edict (b203)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Sacrifice {
             who: Selector::Player(PlayerRef::EachOpponent),
             count: Value::Const(1),
             filter: SelectionRequirement::Creature,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18444,8 +16625,6 @@ pub fn silverquill_hospitaller_b203() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Lifelink, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18464,7 +16643,6 @@ pub fn inkling_sage_apprentice_b203() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_gain_life(1)],
         ..Default::default()
     }
@@ -18477,12 +16655,7 @@ pub fn silverquill_lay_faith_b203() -> CardDefinition {
         name: "Silverquill Lay-Faith (b203)",
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: gain_life(4),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18501,8 +16674,6 @@ pub fn inkling_sheriff_b203() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18515,11 +16686,6 @@ pub fn silverquill_mausoleum_b203() -> CardDefinition {
         name: "Silverquill Mausoleum (b203)",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -18528,7 +16694,6 @@ pub fn silverquill_mausoleum_b203() -> CardDefinition {
             effect: drain(1),
             ..ActivatedAbility::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18549,8 +16714,6 @@ pub fn inkling_vanguard_ii_b204() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18562,12 +16725,7 @@ pub fn silverquill_drainstrike_b204() -> CardDefinition {
         name: "Silverquill Drainstrike (b204)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(3),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18580,12 +16738,7 @@ pub fn silverquill_bond_b204() -> CardDefinition {
         name: "Silverquill Bond (b204)",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: pump_and_grant_keyword(1, 1, Keyword::Lifelink),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18604,8 +16757,6 @@ pub fn inkling_champion_b204() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18624,8 +16775,6 @@ pub fn silverquill_censer_b204() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18648,8 +16797,6 @@ pub fn silverquill_lightscribe_b205() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(3)],
         ..Default::default()
     }
@@ -18670,7 +16817,6 @@ pub fn silverquill_grimquill_b205() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -18683,12 +16829,7 @@ pub fn silverquill_final_edict_b205() -> CardDefinition {
         name: "Silverquill Final Edict (b205)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: drain(3),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18707,8 +16848,6 @@ pub fn silverquill_inkguard_b205() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18727,8 +16866,6 @@ pub fn silverquill_deathscribe_b205() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_other_dies(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
@@ -18756,8 +16893,6 @@ pub fn silverquill_dictator_b206() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18769,16 +16904,11 @@ pub fn silverquill_purge_b206() -> CardDefinition {
         name: "Silverquill Purge (b206)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Exile {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18801,7 +16931,6 @@ pub fn silverquill_inkbinder_b207() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         ..Default::default()
     }
@@ -18820,8 +16949,6 @@ pub fn silverquill_eulogist_b207() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_drain(2)],
         ..Default::default()
     }
@@ -18834,10 +16961,6 @@ pub fn silverquill_edict_ii_b207() -> CardDefinition {
         name: "Silverquill Edict II (b207)",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -18849,7 +16972,6 @@ pub fn silverquill_edict_ii_b207() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18868,8 +16990,6 @@ pub fn inkling_highflier_b207() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18881,10 +17001,6 @@ pub fn silverquill_sanction_b207() -> CardDefinition {
         name: "Silverquill Sanction (b207)",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -18894,7 +17010,6 @@ pub fn silverquill_sanction_b207() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -18912,8 +17027,6 @@ pub fn silverquill_coursemate_b207() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![on_other_dies(Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(1),
@@ -18938,8 +17051,6 @@ pub fn silverquill_duelmaster_b207() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![exalted()],
         ..Default::default()
     }

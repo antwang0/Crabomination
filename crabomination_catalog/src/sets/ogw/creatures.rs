@@ -36,7 +36,6 @@ pub fn stormchaser_mage() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Prowess],
-        effect: Effect::Noop,
         triggered_abilities: vec![prowess_trigger()],
         ..Default::default()
     }
@@ -1776,7 +1775,6 @@ pub fn tajuru_stalwart() -> CardDefinition {
             creature_types: vec![CreatureType::Elf, CreatureType::Scout, CreatureType::Ally],
             ..Default::default()
         },
-        power: 0,
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
         ..Default::default()
@@ -2524,7 +2522,6 @@ pub fn wall_of_resurgence() -> CardDefinition {
         cost: cost(&[generic(2), crate::mana::w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
-        power: 0,
         toughness: 6,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![TriggeredAbility {

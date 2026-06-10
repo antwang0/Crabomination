@@ -30,8 +30,6 @@ pub fn eager_glyphmage() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -64,7 +62,6 @@ pub fn stirring_hopesinger() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
         // Repartee — "Whenever you cast an instant or sorcery spell that
         // targets a creature, put a +1/+1 counter on each creature you
         // control." Iterate via `ForEach` over creatures controlled by
@@ -106,7 +103,6 @@ pub fn rehearsed_debater() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee_self_pump(1, 1)],
         ..Default::default()
     }
@@ -133,7 +129,6 @@ pub fn informed_inkwright() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -163,7 +158,6 @@ pub fn owlin_historian() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: Surveil 1.
             TriggeredAbility {
@@ -211,7 +205,6 @@ pub fn inkshape_demonstrator() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(2))],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee(Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::This,
@@ -250,8 +243,6 @@ pub fn inkling_mascot() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee(Effect::Seq(vec![
             Effect::GrantKeyword {
                 what: Selector::This,
@@ -281,7 +272,6 @@ pub fn imperious_inkmage() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Surveil {
@@ -310,7 +300,6 @@ pub fn sneering_shadewriter() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -342,7 +331,6 @@ pub fn burrog_banemaker() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -365,7 +353,6 @@ pub fn burrog_banemaker() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -387,7 +374,6 @@ pub fn noxious_newt() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -408,7 +394,6 @@ pub fn noxious_newt() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -429,8 +414,6 @@ pub fn mindful_biomancer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -473,7 +456,6 @@ pub fn shopkeepers_bane() -> CardDefinition {
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::GainLife {
@@ -507,10 +489,6 @@ pub fn studious_first_year() -> CardDefinition {
         name: "Rampant Growth",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,
@@ -519,7 +497,6 @@ pub fn studious_first_year() -> CardDefinition {
                 tapped: true,
             },
         },
-        triggered_abilities: vec![],
         ..Default::default()
     };
     CardDefinition {
@@ -532,9 +509,6 @@ pub fn studious_first_year() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         back_face: Some(Box::new(back)),
         ..Default::default()
     }
@@ -559,8 +533,6 @@ pub fn bogwater_lumaret() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -592,7 +564,6 @@ pub fn pest_mascot() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -630,8 +601,6 @@ pub fn blech_loafing_pest() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::ForEach {
@@ -673,8 +642,6 @@ pub fn rearing_embermare() -> CardDefinition {
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Reach, Keyword::Haste],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -705,7 +672,6 @@ pub fn ascendant_dustspeaker() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -751,7 +717,6 @@ pub fn shattered_acolyte() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -774,7 +739,6 @@ pub fn shattered_acolyte() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -802,7 +766,6 @@ pub fn summoned_dromedary() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -823,7 +786,6 @@ pub fn summoned_dromedary() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -861,8 +823,6 @@ pub fn stirring_honormancer() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::RevealUntilFind {
@@ -911,8 +871,6 @@ pub fn conciliators_duelist() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -972,8 +930,6 @@ pub fn lecturing_scornmage() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -998,8 +954,6 @@ pub fn melancholic_poet() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
@@ -1033,8 +987,6 @@ pub fn snooping_page() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             repartee(Effect::GrantKeyword {
                 what: Selector::This,
@@ -1103,7 +1055,6 @@ pub fn scolding_administrator() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // Repartee — +1/+1 counter on this creature.
             repartee(Effect::AddCounter {
@@ -1160,8 +1111,6 @@ pub fn zealous_lorecaster() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -1195,8 +1144,6 @@ pub fn environmental_scientist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -1231,7 +1178,6 @@ pub fn pestbrood_sloth() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -1269,7 +1215,6 @@ pub fn old_growth_educator() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::If {
@@ -1306,7 +1251,6 @@ pub fn teachers_pest() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -1368,7 +1312,6 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -1411,8 +1354,6 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Tap three untapped creatures you control to copy that spell?"
                 .to_string(),
@@ -1467,7 +1408,6 @@ pub fn startled_relic_sloth() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::Lifelink],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::BeginCombat),
@@ -1515,7 +1455,6 @@ pub fn hardened_academic() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -1588,8 +1527,6 @@ pub fn slumbering_trudge() -> CardDefinition {
         },
         power: 6,
         toughness: 6,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1638,7 +1575,6 @@ pub fn tenured_concocter() -> CardDefinition {
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecameTarget, EventScope::OpponentControl),
             effect: Effect::MayDo {
@@ -1680,8 +1616,6 @@ pub fn rancorous_archaic() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Trample, Keyword::Reach],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
         ..Default::default()
     }
@@ -1713,9 +1647,7 @@ pub fn pterafractyl() -> CardDefinition {
             ..Default::default()
         },
         power: 1,
-        toughness: 0,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![etb_gain_life(2)],
         // CR 614.12 — "enters with X +1/+1 counters on it" reads the
         // cast's `Value::XFromCost`, applied before SBA / ETB.
@@ -1742,7 +1674,6 @@ pub fn fractal_mascot() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1796,8 +1727,6 @@ pub fn stadium_tidalmage() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1827,7 +1756,6 @@ pub fn charging_strifeknight() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Haste],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -1855,7 +1783,6 @@ pub fn charging_strifeknight() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -1890,7 +1817,6 @@ pub fn cuboid_colony() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Trample],
-        effect: Effect::Noop,
         triggered_abilities: vec![increment_self_plus_one()],
         ..Default::default()
     }
@@ -1930,7 +1856,6 @@ pub fn fractal_tender() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(2))],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             increment_self_plus_one(),
             // Push (modern_decks, batch 82): "At the beginning of each
@@ -1986,8 +1911,6 @@ pub fn thornfist_striker() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1))],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2013,7 +1936,6 @@ pub fn hungry_graffalon() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![increment_self_plus_one()],
         ..Default::default()
     }
@@ -2040,10 +1962,7 @@ pub fn pensive_professor() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 0,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             increment_self_plus_one(),
             // Secondary rider: "Whenever one or more +1/+1 counters are
@@ -2094,8 +2013,6 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             increment_self_plus_one(),
             // Push (modern_decks, batch 86): "At the beginning of combat
@@ -2167,8 +2084,6 @@ pub fn muse_seeker() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             // small body: draw + discard.
             Effect::Seq(vec![draw_one(), discard_one()]),
@@ -2203,7 +2118,6 @@ pub fn aberrant_manawurm() -> CardDefinition {
         power: 2,
         toughness: 5,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: Selector::This,
             power: Value::CastSpellManaSpent,
@@ -2237,7 +2151,6 @@ pub fn tackle_artist() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             // small body: +1/+1 counter
             Effect::AddCounter {
@@ -2280,7 +2193,6 @@ pub fn thunderdrum_soloist() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             // small body: 1 damage to each opponent
             Effect::DealDamage {
@@ -2327,7 +2239,6 @@ pub fn molten_core_maestro() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             // small: +1/+1 counter only.
             counter(),
@@ -2376,8 +2287,6 @@ pub fn expressive_firedancer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             // small body: +1/+1 EOT.
             small_pump(),
@@ -2410,8 +2319,6 @@ pub fn eternal_student() -> CardDefinition {
         },
         power: 4,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2433,7 +2340,6 @@ pub fn eternal_student() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -2464,7 +2370,6 @@ pub fn postmortem_professor() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::CantBlock],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2528,8 +2433,6 @@ pub fn spirit_mascot() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -2575,8 +2478,6 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         // "Instant and sorcery spells you cast have affinity for creatures."
         // Wired via `StaticEffect::GrantAffinityToISSpells` (batch 25): at
         // cast time, every IS spell the controller casts gets {1} less per
@@ -2633,7 +2534,6 @@ pub fn quandrix_the_proof() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample],
-        effect: Effect::Noop,
         // Push (modern_decks, batch 79): Cascade. "When you cast this
         // spell, exile cards from the top of your library until you
         // exile a nonland card with mana value less than this spell's
@@ -2710,7 +2610,6 @@ pub fn garrison_excavator() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
             effect: Effect::CreateToken {
@@ -2749,8 +2648,6 @@ pub fn topiary_lecturer() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2803,7 +2700,6 @@ pub fn transcendent_archaic() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             // Push (modern_decks): printed "you may" optionality now honored via
@@ -2868,8 +2764,6 @@ pub fn sundering_archaic() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2936,8 +2830,6 @@ pub fn poisoners_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::If {
@@ -2983,8 +2875,6 @@ pub fn hydro_channeler() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
@@ -3033,7 +2923,6 @@ pub fn hydro_channeler() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3063,8 +2952,6 @@ pub fn ulna_alley_shopkeep() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Menace],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -3097,8 +2984,6 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -3130,7 +3015,6 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control with +1/+1 counters on them have trample.",
             effect: StaticEffect::GrantKeyword {
@@ -3174,8 +3058,6 @@ pub fn abstract_paintmage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::PreCombatMain),
@@ -3220,8 +3102,6 @@ pub fn geometers_arthropod() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![cast_has_x_trigger(Effect::RevealUntilFind {
             who: PlayerRef::You,
             find: SelectionRequirement::Any,
@@ -3263,8 +3143,6 @@ pub fn matterbending_mage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3308,8 +3186,6 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -3377,10 +3253,7 @@ pub fn exhibition_tidecaller() -> CardDefinition {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 0,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             Effect::Mill {
                 who: target_player(),
@@ -3433,7 +3306,6 @@ pub fn practiced_scrollsmith() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3484,8 +3356,6 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
         },
         power: 6,
         toughness: 6,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3546,8 +3416,6 @@ pub fn soaring_stoneglider() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(2), w()]),
             life_cost: 0,
@@ -3594,7 +3462,6 @@ pub fn spectacular_skywhale() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         // ✅ Opus fully wired via `shortcut::opus_trigger`. Small body
         // (<5 mana) is +3/+0 EOT on the Skywhale. Big body (≥5 mana)
         // replaces the pump with three +1/+1 counters — the printed
@@ -3642,7 +3509,6 @@ pub fn colorstorm_stallion() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1)), Keyword::Haste],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             // Small body: +1/+1 until end of turn.
             Effect::PumpPT {
@@ -3699,7 +3565,6 @@ pub fn elemental_mascot() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![opus_trigger(
             // Small body: +1/+0 until end of turn.
             Effect::PumpPT {
@@ -3766,8 +3631,6 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
         },
         power: 5,
         toughness: 7,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::PreCombatMain),
@@ -3847,7 +3710,6 @@ pub fn lorehold_the_historian() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        effect: Effect::Noop,
         triggered_abilities: vec![miracle_grant, TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
@@ -3897,8 +3759,6 @@ pub fn mage_tower_referee() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -3951,8 +3811,6 @@ pub fn ennis_debate_moderator() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: exile a target creature you control + delayed return at
             // next end step.
@@ -4036,7 +3894,6 @@ pub fn tragedy_feaster() -> CardDefinition {
         power: 7,
         toughness: 6,
         keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::Discard(1))],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::End),
@@ -4082,7 +3939,6 @@ pub fn forum_necroscribe() -> CardDefinition {
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Ward(crate::card::WardCost::Discard(1))],
-        effect: Effect::Noop,
         triggered_abilities: vec![repartee(Effect::Move {
             what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Battlefield {
@@ -4140,8 +3996,6 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -4219,7 +4073,6 @@ pub fn paradox_surveyor() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::RevealUntilFind {
@@ -4270,7 +4123,6 @@ pub fn magmablood_archaic() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Trample, Keyword::Reach],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // Converge ETB — gain +1/+1 counters equal to colors spent.
             TriggeredAbility {
@@ -4327,11 +4179,7 @@ pub fn wildgrowth_archaic() -> CardDefinition {
             creature_types: vec![CreatureType::Avatar],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Trample, Keyword::Reach],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         // Two statics: (a) the Converge "enters with X counters on it"
         // for the Archaic itself (CR 614.12 — counters land before
         // SBA so 0/0 + X survives); (b) the "creature spells you cast
@@ -4422,8 +4270,6 @@ pub fn ambitious_augmenter() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![increment_self_plus_one(), death_trigger],
         ..Default::default()
     }
@@ -4458,8 +4304,6 @@ pub fn rubble_rouser() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -4537,11 +4381,6 @@ pub fn professor_dellian_fel() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Dellian],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         base_loyalty: 5,
         loyalty_abilities: vec![
             // +2: You gain 3 life.
@@ -4625,11 +4464,6 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Ral],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         base_loyalty: 3,
         loyalty_abilities: vec![
             // +1: Surveil 2.
@@ -4712,10 +4546,7 @@ pub fn textbook_tabulator() -> CardDefinition {
             creature_types: vec![CreatureType::Frog, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 0,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4767,8 +4598,6 @@ pub fn deluge_virtuoso() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4831,7 +4660,6 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4888,8 +4716,6 @@ pub fn stone_docent() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -4916,7 +4742,6 @@ pub fn stone_docent() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -4959,10 +4784,7 @@ pub fn page_loose_leaf() -> CardDefinition {
             creature_types: vec![CreatureType::Construct],
             ..Default::default()
         },
-        power: 0,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![
             tap_add_colorless(),
             ActivatedAbility {
@@ -5003,7 +4825,6 @@ pub fn page_loose_leaf() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -5036,8 +4857,6 @@ pub fn essenceknit_scholar() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![
             // ETB: create a 1/1 B/G Pest token (with on-attack lifegain rider).
             TriggeredAbility {
@@ -5107,8 +4926,6 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ChooseMode(vec![
@@ -5161,7 +4978,6 @@ pub fn the_dawning_archaic() -> CardDefinition {
             SelectionRequirement::HasCardType(CardType::Instant)
                 .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
         ),
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
@@ -5211,7 +5027,6 @@ pub fn silverquill_the_disputant() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),
@@ -5284,8 +5099,6 @@ pub fn nita_forum_conciliator() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -5363,7 +5176,6 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Ward(crate::card::WardCost::Life(3))],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Mica, Reader of Ruins: sacrifice an artifact to copy the spell?".into(),
             body: Box::new(Effect::Seq(vec![
@@ -5423,7 +5235,6 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::Life(5))],
-        effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),

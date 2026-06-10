@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
+use crate::card::{CardDefinition, CardType, CreatureType, Keyword, Subtypes};
 use crate::mana::{Color, cost, generic, hybrid};
 
 /// Mourning Thrull — {1}{W/B} 1/1 Flying Lifelink
@@ -14,8 +14,6 @@ pub fn mourning_thrull() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

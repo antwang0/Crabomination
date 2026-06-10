@@ -43,7 +43,6 @@ pub fn yoked_ox() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Ox], ..Default::default() },
-        power: 0,
         toughness: 4,
         ..Default::default()
     }
@@ -294,7 +293,6 @@ pub fn mnemonic_wall() -> CardDefinition {
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
-        power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![etb(Effect::Move {
@@ -359,7 +357,6 @@ pub fn guardians_of_meletis() -> CardDefinition {
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
-        power: 0,
         toughness: 6,
         keywords: vec![Keyword::Defender],
         ..Default::default()

@@ -1,4 +1,4 @@
-use crate::card::{CardDefinition, CardType, Subtypes};
+use crate::card::{CardDefinition, CardType};
 use crate::effect::shortcut::{destroy_target_no_regen, draw};
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{b, cost, r, u};
@@ -10,12 +10,7 @@ pub fn terminate() -> CardDefinition {
         name: "Terminate",
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: destroy_target_no_regen(),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -26,15 +21,10 @@ pub fn opt() -> CardDefinition {
         name: "Opt",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
             draw(1),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

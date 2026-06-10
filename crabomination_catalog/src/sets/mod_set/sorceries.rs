@@ -19,10 +19,6 @@ pub fn anger_of_the_gods() -> CardDefinition {
         name: "Anger of the Gods",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::ExileIfWouldDieThisTurn {
                 what: Selector::EachPermanent(SelectionRequirement::Creature),
@@ -35,7 +31,6 @@ pub fn anger_of_the_gods() -> CardDefinition {
                 }),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -123,15 +118,10 @@ pub fn disentomb() -> CardDefinition {
         name: "Disentomb",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Hand(PlayerRef::You),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -144,17 +134,12 @@ pub fn vandalblast() -> CardDefinition {
         name: "Vandalblast",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact
                     .and(SelectionRequirement::ControlledByOpponent),
             ),
         },
-        triggered_abilities: vec![],
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(4), r()]),
             life_cost: 0,
@@ -198,17 +183,12 @@ pub fn natures_lore() -> CardDefinition {
         name: "Nature's Lore",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::Land
                 .and(SelectionRequirement::HasLandType(LandType::Forest)),
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -223,10 +203,6 @@ pub fn fell() -> CardDefinition {
         name: "Fell",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(
@@ -236,7 +212,6 @@ pub fn fell() -> CardDefinition {
             },
             Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -250,16 +225,11 @@ pub fn blasphemous_edict() -> CardDefinition {
         name: "Blasphemous Edict",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Sacrifice {
             who: Selector::Player(PlayerRef::EachPlayer),
             count: Value::Const(1),
             filter: SelectionRequirement::Creature,
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -272,10 +242,6 @@ pub fn upheaval() -> CardDefinition {
         name: "Upheaval",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Any),
             body: Box::new(Effect::Move {
@@ -283,7 +249,6 @@ pub fn upheaval() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -325,16 +290,11 @@ pub fn sundering_eruption() -> CardDefinition {
     use super::super::etb_tap;
     let back = CardDefinition {
         name: "Mount Tyrhus",
-        cost: ManaCost::default(),
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![LandType::Mountain],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![super::super::tap_add(crate::mana::Color::Red)],
         triggered_abilities: vec![etb_tap()],
         ..Default::default()
@@ -344,17 +304,12 @@ pub fn sundering_eruption() -> CardDefinition {
         // Real Oracle: `{1}{R}` Sorcery (DSK).
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             ),
             amount: Value::Const(3),
         },
-        triggered_abilities: vec![],
         back_face: Some(Box::new(back)),
         ..Default::default()
     }
@@ -397,10 +352,6 @@ pub fn windfall() -> CardDefinition {
         name: "Windfall",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Discard {
                 who: Selector::Player(PlayerRef::EachPlayer),
@@ -412,7 +363,6 @@ pub fn windfall() -> CardDefinition {
                 amount: Value::MaxCardsDiscardedThisEffectByAnyPlayer,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -428,10 +378,6 @@ pub fn blasphemous_act() -> CardDefinition {
         name: "Blasphemous Act",
         cost: cost(&[generic(8), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         affinity_filter: Some(SelectionRequirement::Creature),
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
@@ -440,7 +386,6 @@ pub fn blasphemous_act() -> CardDefinition {
                 amount: Value::Const(13),
             }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -463,9 +408,6 @@ pub fn reckless_charge() -> CardDefinition {
         name: "Reckless Charge",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
@@ -480,7 +422,6 @@ pub fn reckless_charge() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -494,15 +435,10 @@ pub fn boil() -> CardDefinition {
         name: "Boil",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::HasLandType(LandType::Island)),
             body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -518,15 +454,10 @@ pub fn compulsive_research() -> CardDefinition {
         name: "Compulsive Research",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::Draw { who: Selector::You, amount: Value::Const(3) },
             Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -537,16 +468,11 @@ pub fn demolish() -> CardDefinition {
         name: "Demolish",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact.or(SelectionRequirement::Land),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -557,15 +483,10 @@ pub fn mind_sculpt() -> CardDefinition {
         name: "Mind Sculpt",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Mill {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(7),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -596,16 +517,11 @@ pub fn wear_down() -> CardDefinition {
         name: "Wear Down",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
             ),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -710,10 +626,6 @@ pub fn explore() -> CardDefinition {
         name: "Explore",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::GrantExtraLandPlay {
                 who: PlayerRef::You,
@@ -724,7 +636,6 @@ pub fn explore() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
