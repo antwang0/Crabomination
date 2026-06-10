@@ -2095,6 +2095,21 @@ impl GameState {
         })
     }
 
+    /// CR 614.10 — true when a battlefield static makes `player` skip
+    /// `step` (Eon Hub's "players skip their upkeep steps", Stasis-style
+    /// untap skipping).
+    pub(crate) fn step_skipped_for(&self, player: usize, step: TurnStep) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                StaticEffect::SkipStep { step: s, all_players } if *s == step => {
+                    *all_players || c.controller == player
+                }
+                _ => false,
+            })
+        })
+    }
+
     /// Grafdigger's Cage — true while any battlefield permanent locks
     /// graveyards/libraries (no creature entries from them, no casts from
     /// them).
@@ -7317,6 +7332,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::GraveyardLibraryLockdown
+            // SkipStep — consulted by `advance_step` (CR 614.10); no layer.
+            | StaticEffect::SkipStep { .. }
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }

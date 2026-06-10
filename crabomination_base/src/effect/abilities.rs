@@ -331,6 +331,15 @@ pub enum StaticEffect {
     /// enter the battlefield, and players can't cast spells from graveyards
     /// or libraries.
     GraveyardLibraryLockdown,
+    /// CR 614.10 — skip-step replacement: "[players/you] skip [their/your]
+    /// <step> step(s)." The skipped step never occurs — no turn-based
+    /// actions, step triggers, or priority (a skipped untap also skips
+    /// phasing). Eon Hub (upkeep, all players), Stasis (untap, all players).
+    SkipStep {
+        step: crate::TurnStep,
+        /// `true` = every player's step; `false` = only the controller's.
+        all_players: bool,
+    },
     /// "Abilities you activate that aren't mana abilities cost {N} less to
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).

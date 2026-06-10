@@ -39277,6 +39277,22 @@ pub fn gonti_lord_of_luxury() -> CardDefinition {
     }
 }
 
+/// Eon Hub — {5} Artifact. Players skip their upkeep steps (CR 614.10).
+pub fn eon_hub() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Eon Hub",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Players skip their upkeep steps.",
+            effect: StaticEffect::SkipStep { step: TurnStep::Upkeep, all_players: true },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Grafdigger's Cage — {1} Artifact. Creature cards in graveyards and
 /// libraries can't enter the battlefield; players can't cast spells from
 /// graveyards or libraries.

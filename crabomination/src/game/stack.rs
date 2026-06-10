@@ -145,12 +145,27 @@ impl GameState {
         }
         events.push(GameEvent::StepChanged(next));
 
+        // CR 614.10 — skip-step replacements (Eon Hub / Stasis family). A
+        // skipped upkeep or draw step never occurs: no turn-based actions,
+        // step triggers, or priority — advance straight through. (A skipped
+        // untap is handled in the Untap arm so the turn still starts.)
+        if matches!(next, TurnStep::Upkeep | TurnStep::Draw)
+            && self.step_skipped_for(self.active_player_idx, next)
+        {
+            return self.advance_step(events);
+        }
+
         match next {
             // Untap has no priority window — auto-execute and move on.
             TurnStep::Untap => {
-                self.do_untap();
-                // CR 502.2 — day/night turn-based check (doesn't use the stack).
-                self.check_day_night_transition(&mut events);
+                // CR 614.10 — a skipped untap step skips its turn-based
+                // actions (untapping, phasing, day/night), but the turn
+                // itself still begins.
+                if !self.step_skipped_for(self.active_player_idx, TurnStep::Untap) {
+                    self.do_untap();
+                    // CR 502.2 — day/night turn-based check (doesn't use the stack).
+                    self.check_day_night_transition(&mut events);
+                }
                 events.push(GameEvent::TurnStarted {
                     player: self.active_player_idx,
                     turn: self.turn_number,

@@ -43698,6 +43698,55 @@ fn hidden_strings_untaps_first_and_taps_second_target() {
     assert!(g.battlefield_find(theirs).unwrap().tapped, "second target tapped");
 }
 
+/// CR 614.10 — Eon Hub: players skip their upkeep steps entirely (no
+/// upkeep triggers, no priority in the step).
+#[test]
+fn cr_614_10_eon_hub_skips_upkeep_steps() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::eon_hub());
+    g.add_card_to_battlefield(0, catalog::phyrexian_arena());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    for _ in 0..4 { g.add_card_to_library(1, catalog::forest()); }
+    let life_before = g.players[0].life;
+
+    // Roll forward a couple of turns — the Arena's upkeep trigger never fires.
+    g.step = TurnStep::Cleanup;
+    g.active_player_idx = 0;
+    let mut saw_upkeep = false;
+    for _ in 0..40 {
+        if g.is_game_over() { break; }
+        saw_upkeep |= g.step == TurnStep::Upkeep;
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    assert!(!saw_upkeep, "no upkeep step occurs under Eon Hub");
+    assert_eq!(g.players[0].life, life_before, "Arena upkeep trigger never fired");
+}
+
+/// CR 614.10 — Stasis: players skip their untap steps, so tapped
+/// permanents stay tapped across turns.
+#[test]
+fn cr_614_10_stasis_skips_untap_steps() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stasis());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    for _ in 0..4 { g.add_card_to_library(1, catalog::forest()); }
+    // Pay for Stasis at our upkeep so it sticks around.
+    g.players[0].mana_pool.add(Color::Blue, 4);
+
+    g.step = TurnStep::Cleanup;
+    g.active_player_idx = 1; // next turn is P0's
+    for _ in 0..40 {
+        if g.is_game_over() { break; }
+        if g.active_player_idx == 0 && g.step == TurnStep::PreCombatMain && g.stack.is_empty() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Bear never untapped under Stasis");
+}
+
 /// CR 608.2b — a spell whose battlefield target died before resolution
 /// doesn't resolve; the card is countered into its owner's graveyard.
 #[test]

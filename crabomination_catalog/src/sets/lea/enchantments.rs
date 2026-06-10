@@ -52,6 +52,34 @@ pub fn smoke() -> CardDefinition {
     }
 }
 
+/// Stasis — {1}{U} Enchantment (LEA). Players skip their untap steps
+/// (CR 614.10). At the beginning of your upkeep, sacrifice Stasis unless
+/// you pay {U}.
+pub fn stasis() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    use crate::mana::u;
+    CardDefinition {
+        name: "Stasis",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Players skip their untap steps.",
+            effect: StaticEffect::SkipStep { step: TurnStep::Untap, all_players: true },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::PayManaOrElse {
+                mana_cost: cost(&[u()]),
+                otherwise: Box::new(Effect::SacrificeSource),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Animate Dead — {1}{B} Enchantment — Aura.
 ///
 /// When Animate Dead enters the battlefield, return target creature card from
