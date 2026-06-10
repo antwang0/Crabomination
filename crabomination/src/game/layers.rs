@@ -324,9 +324,11 @@ fn compute_permanent(
         }
     }
 
-    // Base P/T from definition + counters (applied after layer 7c).
-    let base_power = card.definition.base_power() + card.power_bonus;
-    let base_toughness = card.definition.base_toughness() + card.toughness_bonus;
+    // Base P/T from the definition. Direct pump bonuses (`power_bonus`,
+    // from `Effect::PumpPT`) are layer-7c modifications and so apply
+    // *after* a 7b set (CR 613.7c — an animated manland keeps its pumps).
+    let base_power = card.definition.base_power();
+    let base_toughness = card.definition.base_toughness();
     // CR 613.7f — +1/+1, -1/-1, and the rarer -0/-1 / -1/-0 counters. The
     // last two affect only one of power/toughness, so track per-stat deltas.
     let (counter_power_delta, counter_toughness_delta) = {
@@ -436,8 +438,8 @@ fn compute_permanent(
     } else {
         (base_power, base_toughness)
     };
-    power += mod_power;
-    toughness += mod_toughness;
+    power += mod_power + card.power_bonus;
+    toughness += mod_toughness + card.toughness_bonus;
     // Counters applied after 7c (CR 613.7f).
     power += counter_power_delta;
     toughness += counter_toughness_delta;

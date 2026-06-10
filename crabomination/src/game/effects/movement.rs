@@ -52,10 +52,20 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> u32 {
         use crate::game::types::PreventionTarget;
-        if self.damage_cant_be_prevented_this_turn
-            || self.prevention_shields.is_empty()
-            || self.damage_cant_be_prevented_now()
+        if self.damage_cant_be_prevented_this_turn || self.damage_cant_be_prevented_now() {
+            return amount;
+        }
+        // Protection from everything (The One Ring) — all damage to the
+        // player is prevented until their next turn.
+        if let EntityRef::Player(p) = ent
+            && self.players[p].protected_from_everything
         {
+            if amount > 0 {
+                events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });
+            }
+            return 0;
+        }
+        if self.prevention_shields.is_empty() {
             return amount;
         }
         let (to_player, to_card, key) = match ent {
@@ -383,7 +393,7 @@ impl GameState {
             // consistent for downstream selectors and trigger dispatchers.
             self.remove_from_combat(cid);
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
-            self.return_linked_exiles(cid, events);
+            self.on_left_battlefield(cid, events);
             return;
         }
         // Then graveyards. Emit `CardLeftGraveyard` so Strixhaven
@@ -703,6 +713,39 @@ impl GameState {
                 // way casting does.
                 self.fire_self_etb_triggers(cid, p);
             }
+        }
+    }
+
+    /// Shared leaves-battlefield bookkeeping, called from every
+    /// battlefield-removal path: CR 603.6e linked-exile returns plus
+    /// "when [that permanent] leaves the battlefield" delayed triggers
+    /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
+    pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+        self.return_linked_exiles(id, events);
+        use crate::game::types::DelayedKind;
+        let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
+        self.delayed_triggers.retain(|dt| {
+            if dt.kind == DelayedKind::WhenCardLeavesBattlefield(id) {
+                fire.push(dt.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for dt in fire {
+            self.stack.push(crate::game::types::StackItem::Trigger {
+                source: dt.source,
+                controller: dt.controller,
+                effect: Box::new(dt.effect),
+                target: dt.target,
+                mode: None,
+                x_value: 0,
+                converged_value: 0,
+                trigger_source: Some(super::EntityRef::Card(id)),
+                mana_spent: 0,
+                event_amount: 0,
+                intervening_if: None,
+            });
         }
     }
 

@@ -455,6 +455,9 @@ pub enum Keyword {
     Delve,
     Cascade,
     Cycling(crate::mana::ManaCost),
+    /// CR 702.29 — Cycling whose cost is a life payment instead of mana
+    /// ("Cycling—Pay 2 life", Street Wraith).
+    CyclingLife(u32),
     /// CR 702.29e — Typecycling (landcycling). A variant of Cycling: pay the
     /// cost + discard this card, then search your library for a land card with
     /// the given land type, reveal it, and put it into your hand (then

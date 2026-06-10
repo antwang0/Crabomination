@@ -1131,6 +1131,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         flare_of_denial,
         nulldrifter,
         kappa_cannoneer,
+        twisted_image,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1463,6 +1464,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         surgical_extraction,
         smallpox,
         zealous_persecution,
+        street_wraith,
         // ── modern_decks-19 ──
         living_end,
         orcish_bowmasters,

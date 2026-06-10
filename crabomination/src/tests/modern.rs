@@ -46473,3 +46473,133 @@ fn guide_of_souls_energy_engine() {
     assert_eq!((cp.power, cp.toughness), (4, 4), "two +1/+1 counters");
     assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
 }
+
+// ── CR 613.7d — SwitchPT + animated-state abilities ─────────────────────────
+
+/// Twisted Image switches a creature's P/T (layer 7d) and cantrips; a
+/// switched 3/4 is 4/3, and a switched 0/4 wall dies to the 0-toughness SBA.
+#[test]
+fn twisted_image_switches_pt_and_draws() {
+    let mut g = two_player_game();
+    let wraith = g.add_card_to_battlefield(1, catalog::street_wraith());
+    g.add_card_to_library(0, catalog::island());
+    let img = g.add_card_to_hand(0, catalog::twisted_image());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: img, target: Some(Target::Permanent(wraith)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Twisted Image");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(wraith).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "3/4 switched to 4/3");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    g.expire_end_of_turn_effects();
+    let cp = g.computed_permanent(wraith).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "switch expires EOT");
+}
+
+/// The classic line: Twisted Image kills a 0/4 wall (4/0 → 0-toughness SBA).
+#[test]
+fn twisted_image_kills_a_wall() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_omens());
+    g.add_card_to_library(0, catalog::island());
+    let img = g.add_card_to_hand(0, catalog::twisted_image());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: img, target: Some(Target::Permanent(wall)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Twisted Image");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_none(), "4/0 wall died to SBA");
+}
+
+/// Wandering Fumarole's {0} switch is gated on being animated; switched it's 4/1.
+#[test]
+fn wandering_fumarole_switch_only_while_animated() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::wandering_fumarole());
+    // Not a creature yet — the {0} switch is rejected.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 3, target: None, x_value: None,
+    }).is_err(), "switch gated while not a creature");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 3, target: None, x_value: None,
+    }).expect("{0}: switch");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 1), "1/4 switched to 4/1");
+}
+
+/// Lavaclaw Reaches firebreathes for {X} while animated.
+#[test]
+fn lavaclaw_reaches_firebreathing() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::lavaclaw_reaches());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 3, target: None, x_value: Some(3),
+    }).expect("{X}: +X/+0");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 2), "2/2 pumped to 5/2");
+}
+
+// ── CR 702.29 — life-paid Cycling (Street Wraith) ───────────────────────────
+
+/// Street Wraith cycles for 2 life: discard, draw, no mana spent.
+#[test]
+fn street_wraith_cycles_for_life() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let wraith = g.add_card_to_hand(0, catalog::street_wraith());
+    let hand = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::Cycle { card_id: wraith }).expect("cycle");
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "replaced itself");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == wraith), "discarded");
+}
+
+// ── The One Ring — protection from everything until your next turn ──────────
+
+/// The One Ring's ETB protects its caster: untargetable, all damage prevented,
+/// expiring when their turn begins.
+#[test]
+fn the_one_ring_protection_until_your_next_turn() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_hand(0, catalog::the_one_ring());
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, ring);
+    assert!(g.players[0].protected_from_everything);
+    // Opponent's Bolt can't target the protected player.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "protected player can't be targeted");
+    // Non-targeted damage is prevented too (shared prevention funnel).
+    let mut evs = Vec::new();
+    let left = g.apply_prevention_shields(crate::game::effects::EntityRef::Player(0), 5, &mut evs);
+    assert_eq!(left, 0, "all damage to the protected player prevented");
+    // Expires when the protected player's turn begins.
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(!g.players[0].protected_from_everything, "expires on your turn");
+}

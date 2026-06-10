@@ -1273,6 +1273,9 @@ impl GameState {
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].graveyard_cast_types_this_turn.clear();
+        // "Protection from everything until your next turn" expires as that
+        // player's turn begins (The One Ring).
+        self.players[p].protected_from_everything = false;
         self.players[p].extra_land_plays = 0;
         // Raid (CR 702.108): the active player hasn't attacked yet this turn.
         self.players[p].attacked_this_turn = false;
@@ -2263,7 +2266,7 @@ impl GameState {
             }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
-            self.return_linked_exiles(id, &mut events);
+            self.on_left_battlefield(id, &mut events);
             // Fire Valentin's reflexive "when you do, …" for the static's
             // controller (CR 603.x reflexive trigger off the replacement).
             if let Some((controller, Some(effect))) = valentin_redirect {
@@ -2302,7 +2305,7 @@ impl GameState {
             }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
-            self.return_linked_exiles(id, &mut events);
+            self.on_left_battlefield(id, &mut events);
         }
     }
 

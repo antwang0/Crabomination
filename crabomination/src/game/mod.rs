@@ -4047,26 +4047,30 @@ impl GameState {
     fn cycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
         let seat = self.player_with_priority();
-        // Locate the card in `seat`'s hand and clone the cycling cost.
-        let cycling_cost = self.players[seat]
+        // Locate the card in `seat`'s hand and clone the cycling cost —
+        // mana (`Cycling`) or life ("Cycling—Pay 2 life", `CyclingLife`).
+        let (cycling_cost, life_cost) = self.players[seat]
             .hand
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| {
-                c.definition.keywords.iter().find_map(|kw| {
-                    if let Keyword::Cycling(mc) = kw {
-                        Some(mc.clone())
-                    } else {
-                        None
-                    }
+                c.definition.keywords.iter().find_map(|kw| match kw {
+                    Keyword::Cycling(mc) => Some((Some(mc.clone()), 0)),
+                    Keyword::CyclingLife(n) => Some((None, *n)),
+                    _ => None,
                 })
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
+        if life_cost > 0 && self.players[seat].life < life_cost as i32 {
+            return Err(GameError::InsufficientLife);
+        }
         // Pay the cycling cost from the floated mana pool.
-        self.players[seat]
-            .mana_pool
-            .pay(&cycling_cost)
-            .map_err(GameError::Mana)?;
+        if let Some(mc) = &cycling_cost {
+            self.players[seat].mana_pool.pay(mc).map_err(GameError::Mana)?;
+        }
+        if life_cost > 0 {
+            self.adjust_life(seat, -(life_cost as i32));
+        }
         // Discard the card from hand via the centralized path (handles the
         // graveyard move, CardDiscarded, discard-matters counters, and the
         // Madness replacement, CR 702.35).

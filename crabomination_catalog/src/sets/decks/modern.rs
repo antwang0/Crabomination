@@ -40633,10 +40633,9 @@ pub fn living_end() -> CardDefinition {
 
 // ── modern_decks-20 ──────────────────────────────────────────────────────────
 
-/// The One Ring — {4} Legendary Artifact, indestructible. {T}: add a burden
-/// counter, draw that many. Upkeep: lose 1 life per burden counter. (The
-/// cast-trigger "protection from everything until your next turn" is
-/// dropped.)
+/// The One Ring — {4} Legendary Artifact, indestructible. ETB: protection
+/// from everything until your next turn. {T}: add a burden counter, draw
+/// that many. Upkeep: lose 1 life per burden counter.
 pub fn the_one_ring() -> CardDefinition {
     CardDefinition {
         name: "The One Ring",
@@ -40644,19 +40643,25 @@ pub fn the_one_ring() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Indestructible],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
-                EventScope::ActivePlayer,
-            ),
-            effect: Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Burden,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::PlayerProtectionUntilNextTurn { who: PlayerRef::You },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Burden,
+                    },
                 },
             },
-        }],
+        ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
@@ -40847,6 +40852,41 @@ pub fn kappa_cannoneer() -> CardDefinition {
                 },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Twisted Image — {U} Instant. Switch target creature's power and
+/// toughness until end of turn; draw a card.
+pub fn twisted_image() -> CardDefinition {
+    CardDefinition {
+        name: "Twisted Image",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SwitchPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Street Wraith — {3}{B}{B} 3/4 Wraith. Swampwalk; Cycling—Pay 2 life.
+pub fn street_wraith() -> CardDefinition {
+    CardDefinition {
+        name: "Street Wraith",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wraith],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Landwalk(LandType::Swamp), Keyword::CyclingLife(2)],
         ..Default::default()
     }
 }

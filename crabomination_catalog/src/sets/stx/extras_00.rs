@@ -1185,6 +1185,14 @@ pub fn hofri_ghostforge() -> CardDefinition {
                     override_pt: None,
                     non_legendary: false,
                 },
+                // "When that token leaves the battlefield, return the exiled
+                // card to its owner's graveyard."
+                Effect::WhenLastCreatedTokenLeaves {
+                    body: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Graveyard,
+                    }),
+                },
             ]),
         }],
         static_abilities: vec![

@@ -4793,6 +4793,11 @@ impl GameState {
                 if *p != caster && self.player_has_static_hexproof(*p) {
                     return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
                 }
+                // Protection from everything (The One Ring) — can't be
+                // targeted by any spell or ability.
+                if self.players[*p].protected_from_everything {
+                    return Err(GameError::InvalidTarget);
+                }
                 return Ok(());
             }
             Target::Permanent(c) => c,

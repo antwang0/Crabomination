@@ -425,6 +425,9 @@ fn known_card(card: &CardInstance) -> KnownCard {
             None
         }
     });
+    let cycling_life = card.definition.keywords.iter().find_map(|kw| {
+        if let crate::card::Keyword::CyclingLife(n) = kw { Some(*n) } else { None }
+    });
     let landcycling_cost = card.definition.keywords.iter().find_map(|kw| {
         if let crate::card::Keyword::Landcycling(c, _) = kw {
             Some(c.clone())
@@ -463,10 +466,11 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .back_face
             .as_ref()
             .map(|b| b.name.to_string()),
-        has_cycling: cycling_cost.is_some(),
+        has_cycling: cycling_cost.is_some() || cycling_life.is_some(),
         cycling_cost_label: cycling_cost
             .as_ref()
             .map(format_mana_cost_for_label)
+            .or_else(|| cycling_life.map(|n| format!("Pay {n} life")))
             .unwrap_or_default(),
         has_landcycling: landcycling_cost.is_some(),
         landcycling_cost_label: landcycling_cost
@@ -1194,6 +1198,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Untap { .. } => "Untap",
         Effect::PumpPT { .. } => "Pump",
         Effect::SetBasePT { .. } => "Set base P/T",
+        Effect::SwitchPT { .. } => "Switch P/T",
         Effect::Process { then, .. } => {
             // Surface the rider's label — the "process from exile" step
             // resolves through the decision panel.

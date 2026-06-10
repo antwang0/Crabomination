@@ -615,6 +615,11 @@ pub enum Predicate {
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
     SourceIsMonstrous,
+    /// The source permanent is currently a creature, reading the *computed*
+    /// (layer-aware) types — true for an animated manland. Gates abilities
+    /// granted by animation (Wandering Fumarole's `{0}` switch, Lavaclaw
+    /// Reaches' firebreathing).
+    SourceIsCreature,
     /// CR 701.60 — the source permanent is suspected. Backed by
     /// `CardInstance.suspected`. Powers Repeat Offender's "if this creature
     /// is suspected, … otherwise, suspect it."
@@ -2013,6 +2018,10 @@ pub enum Effect {
     /// on top per CR 613.7f / 613.7c — so a +1/+1 counter on a Square-
     /// Upped creature makes it 1/5, not 1/1.
     SetBasePT { what: Selector, power: Value, toughness: Value, duration: Duration },
+    /// CR 613.7d — switch each resolved permanent's power and toughness for
+    /// `duration` (layer-7d, applied after all other P/T changes). Twisted
+    /// Image, Wandering Fumarole's animated `{0}` ability.
+    SwitchPT { what: Selector, duration: Duration },
     /// Animate each permanent picked by `what` into a creature for
     /// `duration` (the canonical "manland" effect — Celestial Colonnade,
     /// Creeping Tar Pit, Mutavault, …). Installs a stack of continuous
@@ -2959,6 +2968,18 @@ pub enum Effect {
     /// flag that suppresses every prevention shield for the rest of the
     /// turn. Skullcrack, Heated Debate, Impractical Joke's rider.
     DamageCantBePreventedThisTurn,
+
+    /// "`who` gains protection from everything until their next turn"
+    /// (The One Ring): can't be targeted, all damage prevented. Cleared
+    /// when that player's turn begins.
+    PlayerProtectionUntilNextTurn { who: PlayerRef },
+
+    /// Register "when [the token just created in this resolution] leaves the
+    /// battlefield, run `body`" as a delayed trigger. The current trigger
+    /// source (e.g. a card this resolution exiled) is captured as the body's
+    /// `Target(0)`. Hofri Ghostforge's "when that token leaves, return the
+    /// exiled card to its owner's graveyard".
+    WhenLastCreatedTokenLeaves { body: Box<Effect> },
 
     /// "Choose a creature type. Creatures other than creatures of the
     /// chosen type get -P/-T until end of turn." Crippling Fear-style

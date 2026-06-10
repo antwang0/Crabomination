@@ -4831,3 +4831,31 @@ fn dueling_coach_etb_lands_counter_on_friendly() {
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+/// Hofri's token rider: when the Spirit token copy leaves the battlefield,
+/// the exiled original returns to its owner's graveyard.
+#[test]
+fn hofri_ghostforge_token_leaving_returns_exiled_card_to_graveyard() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "original exiled");
+    let token = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .expect("token copy").id;
+    // Kill the token; the exiled Bear lands in its owner's graveyard.
+    g.battlefield_find_mut(token).unwrap().damage = 9;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(token).is_none(), "token gone");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "exiled card returned to its owner's graveyard");
+}

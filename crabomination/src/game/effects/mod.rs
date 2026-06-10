@@ -3097,6 +3097,31 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SwitchPT { what, duration } => {
+                // Layer-7d P/T switch (CR 613.7d) — applied after every other
+                // P/T change; two switches cancel.
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer,
+                };
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: AffectedPermanents::Specific(vec![cid]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Switch),
+                            duration: duration_kind.clone(),
+                            modification: Modification::SwitchPowerToughness,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BecomeCreature {
                 what,
                 power,
@@ -6221,6 +6246,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WhenLastCreatedTokenLeaves { body } => {
+                // Watch the token minted earlier in this resolution; capture
+                // the current trigger source (e.g. the card just exiled) as
+                // the body's Target(0).
+                if let Some(token) = self.last_created_token {
+                    let captured = match ctx.trigger_source {
+                        Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => {
+                            Some(crate::game::Target::Permanent(c))
+                        }
+                        _ => None,
+                    };
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        kind: crate::game::types::DelayedKind::WhenCardLeavesBattlefield(token),
+                        effect: (**body).clone(),
+                        target: captured,
+                        bound_token: Some(token),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::WhenTargetDiesThisTurn { body, slot } => {
                 // Watch the targeted creature's death; capture its controller
                 // as the body's Target(0) so it survives the creature leaving
@@ -7143,6 +7192,13 @@ impl GameState {
             Effect::DamageCantBePreventedThisTurn => {
                 // CR 615.12 — suppress every prevention shield for the turn.
                 self.damage_cant_be_prevented_this_turn = true;
+                Ok(())
+            }
+
+            Effect::PlayerProtectionUntilNextTurn { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].protected_from_everything = true;
+                }
                 Ok(())
             }
 

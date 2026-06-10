@@ -1657,10 +1657,10 @@ pub fn shambling_vent() -> CardDefinition {
     )
 }
 
-/// Lavaclaw Reaches — BR manland: 2/2 (the firebreathing {X} rider is
-/// dropped).
+/// Lavaclaw Reaches — BR manland: 2/2 with "{X}: This creature gets +X/+0
+/// until end of turn" while animated.
 pub fn lavaclaw_reaches() -> CardDefinition {
-    manland(
+    let mut d = manland(
         "Lavaclaw Reaches",
         LandType::Swamp,
         LandType::Mountain,
@@ -1670,7 +1670,19 @@ pub fn lavaclaw_reaches() -> CardDefinition {
         2,
         2,
         vec![],
-    )
+    );
+    d.activated_abilities.push(ActivatedAbility {
+        mana_cost: cost(&[crate::mana::ManaSymbol::X]),
+        condition: Some(Predicate::SourceIsCreature),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::XFromCost,
+            toughness: Value::ZERO,
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        ..Default::default()
+    });
+    d
 }
 
 /// Lumbering Falls — GU manland: 3/3 hexproof.
@@ -1689,10 +1701,10 @@ pub fn lumbering_falls() -> CardDefinition {
     )
 }
 
-/// Wandering Fumarole — UR manland: 1/4 (the {0} power/toughness switch is
-/// dropped).
+/// Wandering Fumarole — UR manland: 1/4 with "{0}: Switch this creature's
+/// power and toughness until end of turn" while animated.
 pub fn wandering_fumarole() -> CardDefinition {
-    manland(
+    let mut d = manland(
         "Wandering Fumarole",
         LandType::Island,
         LandType::Mountain,
@@ -1702,7 +1714,16 @@ pub fn wandering_fumarole() -> CardDefinition {
         1,
         4,
         vec![],
-    )
+    );
+    d.activated_abilities.push(ActivatedAbility {
+        condition: Some(Predicate::SourceIsCreature),
+        effect: Effect::SwitchPT {
+            what: Selector::This,
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        ..Default::default()
+    });
+    d
 }
 
 /// Slayers' Stronghold — Land. {T}: Add {C}; {R}{W}, {T}: target creature

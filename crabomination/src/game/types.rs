@@ -491,6 +491,10 @@ pub enum DelayedKind {
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.
     YourNextSpellCastThisTurn,
+    /// "When [that permanent] leaves the battlefield, …" — fires when the
+    /// watched card leaves the battlefield, any turn (not turn-scoped).
+    /// Hofri Ghostforge's token rider.
+    WhenCardLeavesBattlefield(crate::card::CardId),
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

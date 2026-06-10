@@ -311,6 +311,7 @@ impl Effect {
             Effect::SetBasePT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
+            Effect::SwitchPT { what, .. } => sel_has_target(what),
             Effect::BecomeCreature { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
@@ -444,6 +445,8 @@ impl Effect {
             }
             Effect::PreventAllDamageThisTurn { target } => sel_has_target(target),
             Effect::DamageCantBePreventedThisTurn => false,
+            Effect::PlayerProtectionUntilNextTurn { .. } => false,
+            Effect::WhenLastCreatedTokenLeaves { .. } => false,
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 value_has_target(power) || value_has_target(toughness)
             }
@@ -534,6 +537,7 @@ impl Effect {
             Effect::CreateTokenCopyOf { source, .. } => sel_filter(source),
             Effect::PumpPT { what, .. }
             | Effect::SetBasePT { what, .. }
+            | Effect::SwitchPT { what, .. }
             | Effect::DoublePower { what, .. } => {
                 sel_filter(what).or_else(|| implicit_creature_if_bare_target(what))
             }
@@ -961,6 +965,7 @@ impl Effect {
             | Effect::RemoveKeywordCounter { .. }
             | Effect::PumpPT { .. }
             | Effect::SetBasePT { .. }
+            | Effect::SwitchPT { .. }
             | Effect::BecomeCreature { .. }
             | Effect::GrantKeyword { .. }
             | Effect::GainControl { .. }
@@ -1212,6 +1217,7 @@ impl Effect {
                 }
                 Effect::PumpPT { what, .. }
                 | Effect::SetBasePT { what, .. }
+                | Effect::SwitchPT { what, .. }
                 | Effect::DoublePower { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_creature_for_slot(what, slot))
                 }

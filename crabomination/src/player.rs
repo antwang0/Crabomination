@@ -167,6 +167,11 @@ pub struct Player {
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
     pub silenced_this_turn: bool,
+    /// "You gain protection from everything until your next turn" (The One
+    /// Ring). While set: this player can't be targeted and all damage to
+    /// them is prevented. Cleared when their turn begins.
+    #[serde(default)]
+    pub protected_from_everything: bool,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -363,6 +368,7 @@ impl Player {
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
             silenced_this_turn: false,
+            protected_from_everything: false,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             pending_is_discounts: Vec::new(),
