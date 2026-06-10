@@ -866,6 +866,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         the_birth_of_meletis,
         // Attack-tax statics (CR 508.1g).
         ghostly_prison,
+        luminarch_ascension,
         propaganda,
         collective_restraint,
         windborn_muse,
@@ -1374,6 +1375,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         maddening_cacophony,
         bruvac_the_grandiloquent,
         chasm_skulker,
+        psychic_corrosion,
+        drowned_secrets,
         rite_of_replication,
         // ── Miracle (CR 702.94) ──
         temporal_mastery,
@@ -1764,6 +1767,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         marsh_casualties,
         bloodhusk_ritualist,
         wight_of_precinct_six,
+        gatekeeper_of_malakir,
+        malakir_bloodwitch,
         bloodghast,
         ichorid,
         silversmote_ghoul,

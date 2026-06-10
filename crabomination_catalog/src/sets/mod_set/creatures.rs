@@ -9213,3 +9213,69 @@ pub fn bruvac_the_grandiloquent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gatekeeper of Malakir — {B}{B} Creature — Vampire Warrior 2/2, Kicker
+/// {B}. When this enters, if it was kicked, target player sacrifices a
+/// creature.
+pub fn gatekeeper_of_malakir() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Gatekeeper of Malakir",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Kicker(cost(&[b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Malakir Bloodwitch — {3}{B}{B} Creature — Vampire Shaman 4/4, Flying,
+/// protection from white. ETB: each opponent loses life equal to your
+/// Vampire count; you gain that much.
+pub fn malakir_bloodwitch() -> CardDefinition {
+    use crate::mana::Color;
+    let vampires = || Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        filter: SelectionRequirement::HasCreatureType(CreatureType::Vampire),
+    };
+    CardDefinition {
+        name: "Malakir Bloodwitch",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Protection(Color::White)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: vampires(),
+                },
+                Effect::GainLife { who: Selector::You, amount: vampires() },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

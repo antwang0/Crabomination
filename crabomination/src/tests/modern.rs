@@ -49610,3 +49610,115 @@ fn consuming_aberration_scales_and_mills_on_cast() {
     let cp = g.compute_battlefield();
     assert_eq!(cp.iter().find(|c| c.id == ab).map(|c| c.power), Some(4), "1 + 3 milled");
 }
+
+/// Luminarch Ascension quests up on the opponent's end step (no life lost)
+/// and mints Angels once it has four counters.
+#[test]
+fn luminarch_ascension_quests_and_mints_angels() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let asc = g.add_card_to_battlefield(0, catalog::luminarch_ascension());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1; // opponent's turn
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 1);
+    // Gated activation: rejected below four counters.
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: asc, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "needs four quest counters");
+    g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: asc, ability_index: 0, target: None, x_value: None,
+    }).expect("four counters → activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Angel"));
+}
+
+/// No quest counter on an end step where you lost life.
+#[test]
+fn luminarch_ascension_blocked_by_life_loss() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let asc = g.add_card_to_battlefield(0, catalog::luminarch_ascension());
+    g.players[0].lost_life_this_turn = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 0);
+}
+
+// ── ZEN vampires + mill enchantments ─────────────────────────────────────────
+
+/// Kicked Gatekeeper edicts the opponent; unkicked it's just a body.
+#[test]
+fn gatekeeper_of_malakir_kicked_edicts() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gk = g.add_card_to_hand(0, catalog::gatekeeper_of_malakir());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: gk, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != bear), "opponent sacrificed");
+}
+
+/// Bloodwitch drains per Vampire you control.
+#[test]
+fn malakir_bloodwitch_drains_per_vampire() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+    let bw = g.add_card_to_hand(0, catalog::malakir_bloodwitch());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.players[0].mana_pool.add(Color::Black, 5);
+    cast(&mut g, bw);
+    drain_stack(&mut g);
+    // Nighthawk + the Bloodwitch itself = 2 Vampires.
+    assert_eq!(g.players[1].life, l1 - 2);
+    assert_eq!(g.players[0].life, l0 + 2);
+}
+
+/// Psychic Corrosion mills opponents on each of your draws.
+#[test]
+fn psychic_corrosion_mills_on_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::psychic_corrosion());
+    for _ in 0..4 { g.add_card_to_library(1, catalog::forest()); }
+    g.add_card_to_library(0, catalog::forest());
+    let lib = g.players[1].library.len();
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, opt);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 2);
+}
+
+/// Drowned Secrets only fires on blue spells.
+#[test]
+fn drowned_secrets_mills_on_blue_casts_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drowned_secrets());
+    for _ in 0..6 { g.add_card_to_library(1, catalog::forest()); }
+    let lib = g.players[1].library.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib, "red spell → no mill");
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.add_card_to_library(0, catalog::forest());
+    cast(&mut g, opt);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 2, "blue spell → mill 2");
+}

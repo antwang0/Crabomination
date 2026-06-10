@@ -452,3 +452,106 @@ pub fn collective_restraint() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Luminarch Ascension — {1}{W} Enchantment. At the beginning of each
+/// opponent's end step, if you didn't lose life this turn, you may put a
+/// quest counter on it. {1}{W}: Create a 4/4 white Angel with flying —
+/// activate only with four or more quest counters.
+pub fn luminarch_ascension() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType, CreatureType, Keyword, Predicate, Subtypes, TokenDefinition, Value as V};
+    use crate::mana::{Color, w};
+    CardDefinition {
+        name: "Luminarch Ascension",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::All(vec![
+                Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+                Predicate::Not(Box::new(Predicate::PlayerLostLifeThisTurn {
+                    who: PlayerRef::You,
+                })),
+            ])),
+            effect: Effect::MayDo {
+                description: "Put a quest counter on Luminarch Ascension".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Quest,
+                    amount: V::Const(1),
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            condition: Some(Predicate::ValueAtLeast(
+                V::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                V::Const(4),
+            )),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: V::Const(1),
+                definition: TokenDefinition {
+                    name: "Angel".into(),
+                    power: 4,
+                    toughness: 4,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    keywords: vec![Keyword::Flying],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Angel],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Psychic Corrosion — {2}{U} Enchantment. Whenever you draw a card, each
+/// opponent mills two cards.
+pub fn psychic_corrosion() -> CardDefinition {
+    CardDefinition {
+        name: "Psychic Corrosion",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Drowned Secrets — {1}{U} Enchantment. Whenever you cast a blue spell,
+/// target player mills two cards.
+pub fn drowned_secrets() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Drowned Secrets",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Blue),
+                },
+            ),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
