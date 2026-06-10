@@ -1752,6 +1752,10 @@ pub enum Effect {
         #[serde(default)]
         take: Option<Value>,
     },
+    /// Remove all counters from the selected permanent; the controller's
+    /// next spell this turn costs {1} less per counter removed (Mutated
+    /// Cultist's cast trigger — the "or opponent" half is dropped).
+    RemoveAllCountersDiscountNextSpell { what: Selector },
     /// Exile the selected card(s), stamping `exiled_with = source` (an
     /// imprint-style permanent link with no return rider). Agatha's Soul
     /// Cauldron's {T} ability.
@@ -2689,6 +2693,11 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "Whenever you cast a spell this turn, [body]" — like
+    /// `OnYourNextSpellCastThisTurn` but repeating until cleanup
+    /// (Rediscover the Way chapter III; gate the body with an
+    /// `Effect::If` over `Selector::TriggerSource` for spell-type filters).
+    OnEachSpellCastThisTurn { body: Box<Effect> },
     /// "When you cast your next spell this turn, [body]." Registers a
     /// one-shot turn-scoped delayed trigger (CR 603.7e); the cast spell is
     /// exposed to `body` as `Selector::TriggerSource`. Expires at cleanup.

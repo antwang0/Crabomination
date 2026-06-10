@@ -119,7 +119,7 @@ impl Effect {
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,
             Effect::TemptingOffer { body } => body.requires_target(),
-            Effect::ExileWithSource { what } => sel_has_target(what),
+            Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::ExileHand { who } => player_has_target(who),
             Effect::Demonstrate => false,
@@ -280,6 +280,8 @@ impl Effect {
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
+            | Effect::ExileWithSource { what }
+            | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
@@ -488,6 +490,8 @@ impl Effect {
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
+            | Effect::ExileWithSource { what }
+            | Effect::RemoveAllCountersDiscountNextSpell { what }
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }

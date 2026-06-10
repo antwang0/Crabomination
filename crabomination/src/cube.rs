@@ -253,6 +253,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         tempt_with_bunnies,
         muldrotha_the_gravetide,
         agathas_soul_cauldron,
+        mutated_cultist,
+        rediscover_the_way,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,

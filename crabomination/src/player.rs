@@ -192,6 +192,10 @@ pub struct Player {
     /// Cleared each turn alongside the tally.
     #[serde(default)]
     pub pending_is_discounts: Vec<(u32, u32)>,
+    /// Like `pending_is_discounts` but for *any* next spell this turn
+    /// (Mutated Cultist): `(amount, spells_cast_this_turn at grant)`.
+    #[serde(default)]
+    pub pending_spell_discounts: Vec<(u32, u32)>,
     /// Number of creature spells this player has cast on the current
     /// turn. Reset to 0 in `do_untap`. Powers creature-cast magecraft
     /// payoffs ("if you've cast a creature spell this turn, …") and
@@ -362,6 +366,7 @@ impl Player {
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             pending_is_discounts: Vec::new(),
+            pending_spell_discounts: Vec::new(),
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,

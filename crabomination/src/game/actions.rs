@@ -293,6 +293,17 @@ pub(crate) fn cost_reduction_for_spell(
             }
         }
     }
+    // One-shot "the next spell you cast this turn costs {N} less"
+    // discounts (Mutated Cultist) — any spell type; same lapse-by-tally
+    // scheme as `pending_is_discounts` above.
+    {
+        let cast_so_far = state.players[caster].spells_cast_this_turn;
+        for &(amount, granted_at) in &state.players[caster].pending_spell_discounts {
+            if granted_at == cast_so_far {
+                reduction = reduction.saturating_add(amount);
+            }
+        }
+    }
     // Transient "sacrifice any number, {N} less each" additional-cost
     // reduction (Awaken the Blood Avatar). Stamped on the state for the
     // duration of one cast by `cast_spell_sacrifice_reduce`.
@@ -4770,7 +4781,7 @@ impl GameState {
             self.stack.push(StackItem::Trigger {
                 source: dt.source,
                 controller: dt.controller,
-                effect: Box::new(dt.effect),
+                effect: Box::new(dt.effect.clone()),
                 target: None,
                 mode: None,
                 x_value: 0,
@@ -4780,6 +4791,11 @@ impl GameState {
                 event_amount: 0,
                 intervening_if: None,
             });
+            // Repeating watchers ("whenever you cast a spell this turn",
+            // Rediscover the Way III) survive until cleanup clears them.
+            if !dt.fires_once {
+                self.delayed_triggers.push(dt);
+            }
         }
         // CR 113.10b — permanents under a "loses all abilities" continuous
         // effect (Mercurial Transformation / Turn to Frog) don't fire

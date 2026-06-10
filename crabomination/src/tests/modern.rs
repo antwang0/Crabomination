@@ -44536,3 +44536,60 @@ fn agathas_cauldron_exiles_and_grants_abilities() {
     let granted = g.granted_abilities_for(bear);
     assert!(!granted.is_empty(), "Bear borrows the exiled creature's activated ability");
 }
+
+#[test]
+fn mutated_cultist_discounts_next_spell_by_counters_removed() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // A permanent holding three counters.
+    let walker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(walker).unwrap()
+        .add_counters(crate::card::CounterType::PlusOnePlusOne, 3);
+
+    let cultist = g.add_card_to_hand(0, catalog::mutated_cultist());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),                       // "you may"
+        DecisionAnswer::Target(Target::Permanent(walker)), // counter target
+    ]));
+    cast(&mut g, cultist);
+
+    assert_eq!(
+        g.battlefield_find(walker).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
+        0, "counters removed",
+    );
+    // Next spell ({3} Mind Stone... use a {2}+{G} bear: discount 3 → free generic).
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.perform_action(GameAction::CastSpell {
+        card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mind Stone free after a 3-counter discount (cost {2})");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stone).is_some());
+}
+
+#[test]
+fn rediscover_the_way_chapter_three_grants_double_strike_per_noncreature_spell() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::rediscover_the_way());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Jump straight to chapter III.
+    g.battlefield_find_mut(saga).unwrap().add_counters(crate::card::CounterType::Lore, 2);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+
+    // A noncreature spell grants the Bear double strike.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let computed = g.computed_permanent(bear).unwrap();
+    assert!(computed.keywords.contains(&crate::card::Keyword::DoubleStrike),
+        "noncreature cast after chapter III grants double strike");
+}
+

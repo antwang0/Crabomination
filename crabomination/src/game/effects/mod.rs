@@ -4925,6 +4925,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveAllCountersDiscountNextSpell { what } => {
+                let mut removed = 0u32;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        removed += c.counters.values().sum::<u32>();
+                        removed += c.keyword_counters.len() as u32;
+                        c.counters.clear();
+                        c.keyword_counters.clear();
+                    }
+                }
+                if removed > 0 {
+                    let cast_so_far = self.players[ctx.controller].spells_cast_this_turn;
+                    self.players[ctx.controller]
+                        .pending_spell_discounts
+                        .push((removed, cast_so_far));
+                }
+                Ok(())
+            }
+
             Effect::ExileWithSource { what } => {
                 let ids: Vec<CardId> = self
                     .resolve_selector(what, ctx)
@@ -6012,6 +6032,19 @@ impl GameState {
                         events,
                     );
                 }
+                Ok(())
+            }
+
+            Effect::OnEachSpellCastThisTurn { body } => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextSpellCastThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    fires_once: false,
+                });
                 Ok(())
             }
 

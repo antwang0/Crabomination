@@ -38982,3 +38982,82 @@ pub fn agathas_soul_cauldron() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mutated Cultist — {2}{B} 1/3 Eldrazi Horror. Devoid, deathtouch. Cast
+/// trigger: remove all counters from up to one target permanent; your
+/// next spell this turn costs {1} less per counter removed.
+pub fn mutated_cultist() -> CardDefinition {
+    CardDefinition {
+        name: "Mutated Cultist",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Devoid, Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Remove all counters from up to one target permanent".into(),
+                body: Box::new(Effect::RemoveAllCountersDiscountNextSpell {
+                    // Targeting a counterless permanent is pointless, so the
+                    // filter demands counters (helps auto-targeting too).
+                    what: target_filtered(SelectionRequirement::Permanent.and(
+                        SelectionRequirement::Not(Box::new(SelectionRequirement::HasNoCounters)),
+                    )),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rediscover the Way — {U}{R}{W} Saga. I, II: look at the top three, one
+/// to hand, rest to the bottom. III: whenever you cast a noncreature
+/// spell this turn, a creature you control gains double strike EOT.
+pub fn rediscover_the_way() -> CardDefinition {
+    use crate::effect::{Duration, Predicate};
+    fn dig() -> Effect {
+        Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: None,
+        }
+    }
+    CardDefinition {
+        name: "Rediscover the Way",
+        cost: cost(&[u(), r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, dig()),
+            (2, dig()),
+            (
+                3,
+                Effect::OnEachSpellCastThisTurn {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::Creature,
+                        })),
+                        then: Box::new(Effect::GrantKeyword {
+                            what: Selector::GreatestPowerYouControl,
+                            keyword: Keyword::DoubleStrike,
+                            duration: Duration::EndOfTurn,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
