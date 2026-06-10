@@ -20,8 +20,8 @@ pub use player_stats::{
     update_player_stats_chips, LifeFlashTracker,
 };
 pub use popups::{
-    handle_ability_menu, handle_alt_cast_buttons, spawn_ability_menu, spawn_alt_cast_modal,
-    trigger_reveal_animation,
+    handle_ability_menu, handle_alt_cast_buttons, handle_pay_times_buttons, spawn_ability_menu,
+    spawn_alt_cast_modal, spawn_pay_times_modal, trigger_reveal_animation,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -78,6 +78,7 @@ pub struct GameInputResources<'w> {
     pub debug_console: ResMut<'w, crate::systems::debug_console::DebugConsoleState>,
     pub legal_targets: ResMut<'w, crate::game::LegalTargets>,
     pub modal_cast: ResMut<'w, crate::game::PendingModalCast>,
+    pub pay_times: ResMut<'w, crate::game::PayTimesState>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -3220,11 +3221,9 @@ pub fn handle_game_input(
                             continue;
                         }
                         let mode = targeting.pending_mode;
-                        let action = if cast_back {
-                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
-                        } else {
-                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
-                        };
+                        let action = build_pending_cast(
+                            pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
+                        );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
@@ -3262,11 +3261,9 @@ pub fn handle_game_input(
                             continue;
                         }
                         let mode = targeting.pending_mode;
-                        let action = if cast_back {
-                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
-                        } else {
-                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
-                        };
+                        let action = build_pending_cast(
+                            pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
+                        );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
@@ -3312,11 +3309,9 @@ pub fn handle_game_input(
                         return;
                     }
                     let mode = targeting.pending_mode;
-                    let action = if cast_back {
-                        GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
-                    } else {
-                        GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
-                    };
+                    let action = build_pending_cast(
+                        pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
+                    );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                     return;
@@ -3360,6 +3355,12 @@ pub fn handle_game_input(
                 if let Some(k) = known {
                     if k.has_alternative_cost {
                         r.alt_cast.pending = Some(card_id);
+                    } else if cv.squadable_hand.contains(&card_id) {
+                        r.pay_times.pending = Some((card_id, false));
+                        r.pay_times.times = 1;
+                    } else if cv.replicatable_hand.contains(&card_id) {
+                        r.pay_times.pending = Some((card_id, true));
+                        r.pay_times.times = 1;
                     } else if k.back_face_name.is_some()
                         && !r.flipped_hand.flipped.insert(card_id) {
                             r.flipped_hand.flipped.remove(&card_id);
@@ -3712,6 +3713,31 @@ pub fn handle_game_input(
     }
 }
 
+/// Build the cast action for a pending spell-targeting session, honoring the
+/// MDFC back-face flag and any Squad / Replicate pay-times rider.
+fn build_pending_cast(
+    card_id: CardId,
+    target: Option<Target>,
+    mode: Option<usize>,
+    cast_back: bool,
+    pay_times: Option<(u32, bool)>,
+) -> GameAction {
+    match pay_times {
+        Some((times, true)) => GameAction::CastSpellReplicate {
+            card_id, times, target, additional_targets: vec![], mode, x_value: None,
+        },
+        Some((times, false)) => GameAction::CastSpellSquad {
+            card_id, times, target, additional_targets: vec![], mode, x_value: None,
+        },
+        None if cast_back => GameAction::CastSpellBack {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        },
+        None => GameAction::CastSpell {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        },
+    }
+}
+
 fn cancel_targeting(
     commands: &mut Commands,
     targeting: &mut TargetingState,
@@ -3726,6 +3752,7 @@ fn cancel_targeting(
     targeting.pending_decision_target = false;
     targeting.pending_mode = None;
     targeting.pending_equip_source = None;
+    targeting.pending_pay_times = None;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

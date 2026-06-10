@@ -286,6 +286,7 @@ fn main() {
         .insert_resource(BlockingState::default())
         .insert_resource(AttackingState::default())
         .insert_resource(AltCastState::default())
+        .insert_resource(game::PayTimesState::default())
         .insert_resource(FlippedHandCards::default())
         .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
@@ -691,6 +692,17 @@ fn main() {
         .add_systems(
             Update,
             (handle_alt_cast_buttons, spawn_alt_cast_modal)
+                .chain()
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Squad / Replicate "pay N times" stepper (CR 702.157 / 702.107).
+        .add_systems(
+            Update,
+            (
+                systems::game_ui::handle_pay_times_buttons,
+                systems::game_ui::spawn_pay_times_modal,
+            )
                 .chain()
                 .after(handle_game_input)
                 .run_if(in_state(AppState::InGame)),

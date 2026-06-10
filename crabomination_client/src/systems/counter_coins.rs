@@ -352,8 +352,12 @@ fn counter_label_color(kind: CounterType) -> Color {
 }
 
 /// Label text for a counter kind + count: "+1/+1 ×3", or just the token when
-/// there's a single counter (the "×1" is noise).
-fn counter_label_text(kind: CounterType, count: u32) -> String {
+/// there's a single counter (the "×1" is noise). Time counters on an
+/// Impending permanent (CR 702.183) badge the countdown instead.
+fn counter_label_text(kind: CounterType, count: u32, impending: bool) -> String {
+    if impending && kind == CounterType::Time {
+        return format!("Impending {count}");
+    }
     let token = counter_token(kind);
     if count > 1 {
         format!("{token} ×{count}")
@@ -409,13 +413,15 @@ pub fn sync_counter_labels(
         card_anchor.insert(gid.0, gtf.transform_point(anchor_local));
     }
 
-    // desired (card, kind) → (count, row). Row orders multiple counter types
-    // vertically in the same order as their coin columns (`sort_key`).
-    let mut desired: HashMap<(CardId, CounterType), (u32, usize)> = HashMap::new();
+    // desired (card, kind) → (count, row, impending). Row orders multiple
+    // counter types vertically in the same order as their coin columns
+    // (`sort_key`); `impending` flips the Time label into a countdown badge.
+    let mut desired: HashMap<(CardId, CounterType), (u32, usize, bool)> = HashMap::new();
     for p in &cv.battlefield {
         if !card_anchor.contains_key(&p.id) {
             continue;
         }
+        let impending = p.impending_counters.unwrap_or(0) > 0;
         let mut kinds: Vec<(CounterType, u32)> = p
             .counters
             .iter()
@@ -424,7 +430,7 @@ pub fn sync_counter_labels(
             .collect();
         kinds.sort_by_key(|(k, _)| sort_key(*k));
         for (row, (k, n)) in kinds.into_iter().enumerate() {
-            desired.insert((p.id, k), (n, row));
+            desired.insert((p.id, k), (n, row, impending));
         }
     }
 
@@ -432,7 +438,7 @@ pub fn sync_counter_labels(
     let mut seen: HashSet<(CardId, CounterType)> = HashSet::new();
     for (e, label, mut node, mut text, mut color) in &mut labels {
         match desired.get(&(label.card_id, label.kind)) {
-            Some(&(count, row)) => {
+            Some(&(count, row, impending)) => {
                 seen.insert((label.card_id, label.kind));
                 if let Some(world) = card_anchor.get(&label.card_id).copied()
                     && let Some((x, y)) = label_anchor(camera, cam_xform, world, row)
@@ -443,7 +449,7 @@ pub fn sync_counter_labels(
                 } else {
                     node.display = Display::None;
                 }
-                *text = Text::new(counter_label_text(label.kind, count));
+                *text = Text::new(counter_label_text(label.kind, count, impending));
                 *color = TextColor(counter_label_color(label.kind));
             }
             None => {
@@ -453,7 +459,7 @@ pub fn sync_counter_labels(
     }
 
     // Spawn labels for newly-present (card, kind) pairs.
-    for ((id, kind), (count, row)) in desired {
+    for ((id, kind), (count, row, impending)) in desired {
         if seen.contains(&(id, kind)) {
             continue;
         }
@@ -464,7 +470,7 @@ pub fn sync_counter_labels(
             .unwrap_or((-1000.0, -1000.0));
         commands.spawn((
             CounterLabel { card_id: id, kind },
-            Text::new(counter_label_text(kind, count)),
+            Text::new(counter_label_text(kind, count, impending)),
             ui_fonts.tf(14.0),
             TextColor(counter_label_color(kind)),
             BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.72)),

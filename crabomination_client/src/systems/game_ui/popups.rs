@@ -370,6 +370,247 @@ pub fn handle_alt_cast_buttons(
     }
 }
 
+// ── Squad / Replicate pay-times stepper ─────────────────────────────────────
+
+#[derive(Component)]
+pub struct PayTimesModal;
+
+#[derive(Component)]
+pub struct PayTimesStepButton {
+    /// +1 / -1 on the times counter.
+    pub delta: i32,
+}
+
+#[derive(Component)]
+pub struct PayTimesConfirmButton;
+
+#[derive(Component)]
+pub struct PayTimesCancelButton;
+
+/// Marker on the "×N" readout text so the handler can update it in place.
+#[derive(Component)]
+pub struct PayTimesReadout;
+
+/// Spawn or despawn the Squad/Replicate stepper based on `PayTimesState`.
+pub fn spawn_pay_times_modal(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
+    state: Res<crate::game::PayTimesState>,
+    existing: Query<Entity, With<PayTimesModal>>,
+) {
+    let want_open = state.pending.is_some();
+    let is_open = !existing.is_empty();
+    if want_open == is_open {
+        return;
+    }
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+    let Some((spell_id, is_replicate)) = state.pending else { return };
+    let Some(cv) = &view.0 else { return };
+    let name = cv
+        .players
+        .get(cv.your_seat)
+        .and_then(|p| {
+            p.hand.iter().find_map(|h| match h {
+                crabomination::net::HandCardView::Known(k) if k.id == spell_id => {
+                    Some(k.name.clone())
+                }
+                _ => None,
+            })
+        })
+        .unwrap_or_default();
+    let mechanic = if is_replicate { "Replicate" } else { "Squad" };
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            PayTimesModal,
+        ))
+        .with_children(|root| {
+            root.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
+                    row_gap: Val::Px(10.0),
+                    align_items: AlignItems::Center,
+                    min_width: Val::Px(320.0),
+                    ..default()
+                },
+                BackgroundColor(theme::PANEL_BG),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Text::new(format!("Cast {name} paying its {mechanic} cost…")),
+                    ui_fonts.tf(15.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                ));
+                panel
+                    .spawn(Node {
+                        flex_direction: FlexDirection::Row,
+                        column_gap: Val::Px(12.0),
+                        align_items: AlignItems::Center,
+                        ..default()
+                    })
+                    .with_children(|row| {
+                        for (delta, label) in [(-1, "−"), (1, "+")] {
+                            if delta < 0 {
+                                row.spawn((
+                                    Button,
+                                    Node {
+                                        padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(theme::BUTTON_INFO_BG),
+                                    PayTimesStepButton { delta },
+                                ))
+                                .with_children(|b| {
+                                    b.spawn((
+                                        Text::new(label),
+                                        ui_fonts.tf(16.0),
+                                        TextColor(theme::TEXT_PRIMARY),
+                                        bevy::picking::Pickable::IGNORE,
+                                    ));
+                                });
+                                row.spawn((
+                                    Text::new(format!("×{}", state.times.max(1))),
+                                    ui_fonts.tf(18.0),
+                                    TextColor(theme::TEXT_PRIMARY),
+                                    PayTimesReadout,
+                                ));
+                            } else {
+                                row.spawn((
+                                    Button,
+                                    Node {
+                                        padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(theme::BUTTON_INFO_BG),
+                                    PayTimesStepButton { delta },
+                                ))
+                                .with_children(|b| {
+                                    b.spawn((
+                                        Text::new(label),
+                                        ui_fonts.tf(16.0),
+                                        TextColor(theme::TEXT_PRIMARY),
+                                        bevy::picking::Pickable::IGNORE,
+                                    ));
+                                });
+                            }
+                        }
+                    });
+                panel
+                    .spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_INFO_BG),
+                        PayTimesConfirmButton,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new("Cast"),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            bevy::picking::Pickable::IGNORE,
+                        ));
+                    });
+                panel
+                    .spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_DANGER_BG),
+                        PayTimesCancelButton,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new("Cancel"),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            bevy::picking::Pickable::IGNORE,
+                        ));
+                    });
+            });
+        });
+}
+
+/// Step / confirm / cancel handling for the pay-times stepper. Confirm
+/// submits directly for untargeted spells; targeted ones arm the targeting
+/// cursor with the pay-times rider so the click-submit routes through
+/// `CastSpellSquad` / `CastSpellReplicate`.
+#[allow(clippy::too_many_arguments)]
+pub fn handle_pay_times_buttons(
+    mut state: ResMut<crate::game::PayTimesState>,
+    mut targeting: ResMut<TargetingState>,
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    step_q: Query<(&Interaction, &PayTimesStepButton), Changed<Interaction>>,
+    confirm_q: Query<&Interaction, (Changed<Interaction>, With<PayTimesConfirmButton>)>,
+    cancel_q: Query<&Interaction, (Changed<Interaction>, With<PayTimesCancelButton>)>,
+    mut readout: Query<&mut Text, With<PayTimesReadout>>,
+) {
+    if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
+        state.pending = None;
+        return;
+    }
+    for (interaction, btn) in &step_q {
+        if *interaction == Interaction::Pressed {
+            state.times = state.times.saturating_add_signed(btn.delta).max(1);
+            for mut t in &mut readout {
+                *t = Text::new(format!("×{}", state.times));
+            }
+        }
+    }
+    if confirm_q.iter().any(|i| *i == Interaction::Pressed)
+        && let Some((spell_id, is_replicate)) = state.pending
+    {
+        let times = state.times.max(1);
+        let needs_target = view.0.as_ref().is_some_and(|cv| {
+            cv.players.get(cv.your_seat).is_some_and(|p| {
+                p.hand.iter().any(|h| matches!(h,
+                    crabomination::net::HandCardView::Known(k)
+                    if k.id == spell_id && k.needs_target))
+            })
+        });
+        if needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = Some(spell_id);
+            targeting.back_face_pending = false;
+            targeting.pending_pay_times = Some((times, is_replicate));
+        } else if let Some(outbox) = &outbox {
+            let action = if is_replicate {
+                GameAction::CastSpellReplicate {
+                    card_id: spell_id, times, target: None,
+                    additional_targets: vec![], mode: None, x_value: None,
+                }
+            } else {
+                GameAction::CastSpellSquad {
+                    card_id: spell_id, times, target: None,
+                    additional_targets: vec![], mode: None, x_value: None,
+                }
+            };
+            outbox.submit(action);
+        }
+        state.pending = None;
+    }
+}
+
 // ── Reveal animation trigger ─────────────────────────────────────────────────
 
 /// When RevealPopupState activates, start a RevealPeekAnimation on the top

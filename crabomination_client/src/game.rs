@@ -137,6 +137,10 @@ pub struct TargetingState {
     /// controlled Equipment; cleared once the equip is submitted (or
     /// cancelled). Takes precedence over the spell/ability target paths.
     pub pending_equip_source: Option<CardId>,
+    /// When `Some((times, is_replicate))`, the pending cast pays its Squad /
+    /// Replicate cost `times` times — the eventual submit routes through
+    /// `CastSpellSquad` / `CastSpellReplicate`. Set by the pay-times stepper.
+    pub pending_pay_times: Option<(u32, bool)>,
 }
 
 /// Legal targets surfaced by the engine's `Decision::ChooseTarget`.
@@ -198,6 +202,17 @@ pub struct GraveyardBrowserState {
 pub struct AltCastState {
     /// The spell being cast via alt cost (the player's hand card).
     pub pending: Option<CardId>,
+}
+
+/// Squad / Replicate "pay N times" stepper (CR 702.157 / 702.107). Set when
+/// the user right-clicks a squadable/replicatable hand card; the modal lets
+/// them step the count and submits `CastSpellSquad` / `CastSpellReplicate`.
+#[derive(Resource, Default)]
+pub struct PayTimesState {
+    /// The spell being configured + `true` when it's Replicate (vs Squad).
+    pub pending: Option<(CardId, bool)>,
+    /// How many extra times to pay the cost (≥ 1).
+    pub times: u32,
 }
 
 /// Hand cards the viewer has flipped to their MDFC back face. Right-click on
