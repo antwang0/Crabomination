@@ -7243,6 +7243,33 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                     None => vec![],
                 }
             }
+            StaticEffect::LandTypeChanger { applies_to, land_type, replace } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => {
+                        let mk = |layer, modification| ContinuousEffect {
+                            timestamp,
+                            source,
+                            affected: affected.clone(),
+                            layer,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification,
+                        };
+                        if *replace {
+                            // Blood Moon — lose other land types + abilities;
+                            // the intrinsic mana ability follows the type.
+                            vec![
+                                mk(Layer::L4Type, Modification::SetLandTypes(vec![*land_type])),
+                                mk(Layer::L6Ability, Modification::RemoveAllAbilities),
+                            ]
+                        } else {
+                            // Urborg — the type in addition.
+                            vec![mk(Layer::L4Type, Modification::AddLandType(*land_type))]
+                        }
+                    }
+                    None => vec![],
+                }
+            }
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }

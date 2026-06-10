@@ -340,6 +340,15 @@ pub enum StaticEffect {
         /// `true` = every player's step; `false` = only the controller's.
         all_players: bool,
     },
+    /// CR 305.7 — "[lands] are <type>" statics. `replace: true` strips the
+    /// other land types and all abilities (Blood Moon / Magus of the Moon —
+    /// the intrinsic mana ability follows the computed type); `false` adds
+    /// the type alongside (Urborg, Tomb of Yawgmoth).
+    LandTypeChanger {
+        applies_to: Selector,
+        land_type: crate::card::LandType,
+        replace: bool,
+    },
     /// "Abilities you activate that aren't mana abilities cost {N} less to
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).

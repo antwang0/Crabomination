@@ -20905,6 +20905,73 @@ fn become_basic_land_taps_for_the_new_color() {
     assert!(g.battlefield.iter().find(|c| c.id == land).unwrap().tapped);
 }
 
+/// Blood Moon: nonbasic lands are Mountains — type line swapped, printed
+/// abilities gone, and the land taps for red. Basics untouched.
+#[test]
+fn blood_moon_turns_nonbasics_into_mountains() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_moon());
+    let manland = g.add_card_to_battlefield(1, catalog::celestial_colonnade());
+    let island = g.add_card_to_battlefield(1, catalog::island());
+    let cp = g.computed_permanent(manland).unwrap();
+    assert_eq!(cp.subtypes.land_types, vec![LandType::Mountain], "nonbasic is a Mountain");
+    assert!(cp.lost_all_abilities, "printed abilities stripped");
+    let cp = g.computed_permanent(island).unwrap();
+    assert_eq!(cp.subtypes.land_types, vec![LandType::Island], "basics unaffected");
+    // The moonscaped land taps for {R}.
+    g.battlefield_find_mut(manland).unwrap().summoning_sick = false;
+    let cost = crate::mana::cost(&[crate::mana::r()]);
+    g.auto_tap_for_cost(1, &cost);
+    assert_eq!(g.players[1].mana_pool.amount(Color::Red), 1, "taps for red");
+}
+
+/// Urborg: every land is a Swamp in addition — it taps for black, keeping
+/// its other types.
+#[test]
+fn urborg_makes_every_land_a_swamp_in_addition() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::urborg_tomb_of_yawgmoth());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let cp = g.computed_permanent(forest).unwrap();
+    assert!(cp.subtypes.land_types.contains(&LandType::Swamp), "Swamp in addition");
+    assert!(cp.subtypes.land_types.contains(&LandType::Forest), "keeps Forest");
+    let cost = crate::mana::cost(&[crate::mana::b()]);
+    g.auto_tap_for_cost(1, &cost);
+    assert_eq!(g.players[1].mana_pool.amount(Color::Black), 1, "Forest taps for black");
+}
+
+/// Mind Bend permanently swaps a color word (CR 612) — survives cleanup.
+#[test]
+fn mind_bend_swaps_color_word_permanently() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, crate::card::CardDefinition {
+        name: "Test Knight",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::Red)],
+        ..Default::default()
+    });
+    let mb = g.add_card_to_hand(0, catalog::mind_bend());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Color(Color::Red),
+        DecisionAnswer::Color(Color::Green),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: mb, target: Some(Target::Permanent(knight)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Mind Bend castable");
+    drain_stack(&mut g);
+    g.expire_end_of_turn_effects();
+    let computed = g.computed_permanent(knight).unwrap();
+    assert!(computed.keywords.contains(&Keyword::Protection(Color::Green)),
+        "swap survives end of turn");
+}
+
 #[test]
 fn toxic_deluge_sweeps_small_creatures() {
     let mut g = two_player_game();

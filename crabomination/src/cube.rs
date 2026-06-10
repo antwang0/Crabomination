@@ -409,6 +409,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         eldrazi_confluence,
         planar_nexus,
         maze_of_ith,
+        urborg_tomb_of_yawgmoth,
         // ── modern_decks-17 ──
         lightning_greaves,
         stonecoil_serpent,
@@ -1053,6 +1054,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         last_thoughts,
         hidden_strings,
         trait_doctoring,
+        mind_bend,
         aether_gust,
         thought_reflection,
         mirrorform,
@@ -1846,6 +1848,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        blood_moon,
+        magus_of_the_moon,
         // Hideaway land (CR 702.76)
         spinerock_knoll,
         embereth_shieldbreaker,

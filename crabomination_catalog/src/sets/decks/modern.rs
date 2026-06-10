@@ -39337,3 +39337,81 @@ pub fn duplicant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mind Bend — {U} Instant. Change the text of target permanent by replacing
+/// all instances of one color word with another or one basic land type with
+/// another (CR 612; permanent duration).
+pub fn mind_bend() -> CardDefinition {
+    let what = || target_filtered(SelectionRequirement::Permanent);
+    CardDefinition {
+        name: "Mind Bend",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::ReplaceColorWord { what: what(), duration: Duration::Permanent },
+            Effect::ReplaceBasicLandType { what: what(), duration: Duration::Permanent },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Blood Moon — {2}{R} Enchantment. Nonbasic lands are Mountains.
+pub fn blood_moon() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Moon",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Nonbasic lands are Mountains.",
+            effect: StaticEffect::LandTypeChanger {
+                applies_to: Selector::EachPermanent(SelectionRequirement::IsNonbasicLand),
+                land_type: LandType::Mountain,
+                replace: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Magus of the Moon — {2}{R} 2/2 Human Wizard. Nonbasic lands are Mountains.
+pub fn magus_of_the_moon() -> CardDefinition {
+    CardDefinition {
+        name: "Magus of the Moon",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Nonbasic lands are Mountains.",
+            effect: StaticEffect::LandTypeChanger {
+                applies_to: Selector::EachPermanent(SelectionRequirement::IsNonbasicLand),
+                land_type: LandType::Mountain,
+                replace: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Urborg, Tomb of Yawgmoth — Legendary Land. Each land is a Swamp in
+/// addition to its other land types.
+pub fn urborg_tomb_of_yawgmoth() -> CardDefinition {
+    CardDefinition {
+        name: "Urborg, Tomb of Yawgmoth",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "Each land is a Swamp in addition to its other land types.",
+            effect: StaticEffect::LandTypeChanger {
+                applies_to: Selector::EachPermanent(SelectionRequirement::Land),
+                land_type: LandType::Swamp,
+                replace: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
