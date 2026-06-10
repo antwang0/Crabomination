@@ -430,6 +430,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── Cube expansion: colorless bombs ──
         karn_liberated,
         myr_battlesphere,
+        duplicant,
+        eon_hub,
         spine_of_ish_sah,
         ankh_of_mishra,
         // ── Push XXIV (session 8) — colorless cube additions ──

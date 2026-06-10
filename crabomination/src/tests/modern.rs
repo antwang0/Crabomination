@@ -18433,20 +18433,24 @@ fn stillmoon_cavalier_grants_flying_eot() {
         "Gained flying EOT");
 }
 
+/// Printed protection from white AND black + the {W/B}{W/B}: +1/+0 pump.
 #[test]
-fn stillmoon_cavalier_grants_protection_from_black_eot() {
+fn stillmoon_cavalier_has_double_protection_and_pumps() {
     let mut g = two_player_game();
     let cav = g.add_card_to_battlefield(0, catalog::stillmoon_cavalier());
     g.clear_sickness(cav);
+    let c = g.battlefield_find(cav).unwrap();
+    assert!(c.has_keyword(&crate::card::Keyword::Protection(Color::White)));
+    assert!(c.has_keyword(&crate::card::Keyword::Protection(Color::Black)));
+    assert_eq!((c.power(), c.toughness()), (2, 1));
+    // {W/B}{W/B}: +1/+0 — payable with one white + one black.
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: cav, ability_index: 2, target: None, x_value: None,
-    }).expect("Stillmoon {1}{W}: pro-black");
+    }).expect("Stillmoon {W/B}{W/B}: +1/+0");
     drain_stack(&mut g);
-    let c = g.battlefield_find(cav).expect("Stillmoon alive");
-    assert!(c.has_keyword(&crate::card::Keyword::Protection(Color::Black)),
-        "Gained protection from black EOT");
+    assert_eq!(g.computed_permanent(cav).unwrap().power, 3, "+1/+0 applied");
 }
 
 /// Black Knight has protection from white: a white removal spell (Swords
@@ -20338,6 +20342,47 @@ fn maelstrom_archangel_is_5_5_flying_five_color() {
     assert_eq!(card.toughness, 5);
     assert!(card.keywords.contains(&Keyword::Flying));
     assert_eq!(card.cost.cmc(), 5, "WUBRG = 5 CMC");
+}
+
+/// Combat damage to a player → free-cast a spell from hand.
+#[test]
+fn maelstrom_archangel_free_casts_from_hand_on_combat_damage() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::maelstrom_archangel());
+    g.clear_sickness(angel);
+    let fatty = g.add_card_to_hand(0, catalog::serra_angel()); // no mana available
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: angel, target: AttackTarget::Player(1) },
+    ])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fatty).is_some(), "hand spell cast for free");
+    assert_eq!(g.players[1].life, 15, "5 combat damage dealt");
+}
+
+// ── Duplicant ───────────────────────────────────────────────────────────────
+
+/// Imprint: ETB exiles a creature; Duplicant's CDA takes its P/T.
+#[test]
+fn duplicant_imprints_and_copies_pt() {
+    let mut g = two_player_game();
+    let fatty = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let dup = g.add_card_to_hand(0, catalog::duplicant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dup, target: Some(Target::Permanent(fatty)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Duplicant castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fatty), "target exiled on ETB");
+    let cp = g.computed_permanent(dup).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "CDA copies the exiled card's P/T");
 }
 
 // ── Ramos, Dragon Engine ────────────────────────────────────────────────────

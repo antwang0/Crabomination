@@ -5025,8 +5025,9 @@ pub fn golos_tireless_pilgrim() -> CardDefinition {
     }
 }
 
-/// Maelstrom Archangel — {W}{U}{B}{R}{G} 5/5 Flying Angel.
-/// Combat damage to player -> draw 2 (approximation of free cast).
+/// Maelstrom Archangel — {W}{U}{B}{R}{G} 5/5 Flying Angel. Whenever it deals
+/// combat damage to a player, you may cast a spell from your hand without
+/// paying its mana cost.
 pub fn maelstrom_archangel() -> CardDefinition {
     CardDefinition {
         name: "Maelstrom Archangel",
@@ -5041,7 +5042,15 @@ pub fn maelstrom_archangel() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::CardsInZone {
+                    zone: crate::card::Zone::Hand,
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Nonland,
+                },
+                source_zone: crate::card::Zone::Hand,
+                exile_after: false,
+            },
         }],
         ..Default::default()
     }

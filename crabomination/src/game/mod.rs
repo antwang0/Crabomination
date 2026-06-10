@@ -2892,6 +2892,12 @@ impl GameState {
                             .count() as i32;
                     (n, base_t)
                 }
+                crate::card::DynamicPt::ExiledWithSourcePt { base_p, base_t } => self
+                    .exile
+                    .iter()
+                    .find(|c| c.exiled_with == Some(card.id) && c.definition.is_creature())
+                    .map(|c| (c.definition.base_power(), c.definition.base_toughness()))
+                    .unwrap_or((base_p, base_t)),
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.id.0 as u64,
@@ -6993,6 +6999,7 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
         "Lumra, Bellow of the Woods" | "Rubblehulk" => Some(DynamicPt::LandsControlled { base: 0 }),
         "Broodstar" => Some(DynamicPt::ArtifactsControlled { base: 0 }),
         "Crackling Drake" => Some(DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t: 4 }),
+        "Duplicant" => Some(DynamicPt::ExiledWithSourcePt { base_p: 2, base_t: 4 }),
         _ => None,
     }
 }

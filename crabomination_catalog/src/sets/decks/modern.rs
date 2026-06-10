@@ -15034,24 +15034,15 @@ pub fn mulldrifter() -> CardDefinition {
     }
 }
 
-/// Stillmoon Cavalier — {1}{W}{B} Creature — Zombie Knight. 2/2.
-/// • {W}: Stillmoon Cavalier gains flying until end of turn.
-/// • {B}: Stillmoon Cavalier gains first strike until end of turn.
-/// • {1}{W}: Stillmoon Cavalier gains protection from black until end
-///   of turn.
-/// • {1}{B}: Stillmoon Cavalier gains protection from white until end
-///   of turn.
-///
-/// Wired with four printed activated abilities (no costs collapsed). The
-/// protection grants use the engine's existing `Keyword::Protection`
-/// (which enforces combat unblockable + spell-target restriction in
-/// `can_block` and target validation). EOT grants clear at cleanup.
+/// Stillmoon Cavalier — {1}{W/B}{W/B} 2/1 Zombie Knight. Protection from
+/// white and from black. {W/B}: gains flying EOT. {W/B}: gains first strike
+/// EOT. {W/B}{W/B}: +1/+0 EOT.
 pub fn stillmoon_cavalier() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::Duration;
-    let activated = |mana: ManaCost, kw: Keyword| ActivatedAbility {
-        energy_cost: 0,
-        discard_cost: None,
+    use crate::mana::hybrid;
+    let wb = || hybrid(Color::White, Color::Black);
+    let gain = |mana: ManaCost, kw: Keyword| ActivatedAbility {
         mana_cost: mana,
         effect: Effect::GrantKeyword {
             what: Selector::This,
@@ -15062,19 +15053,28 @@ pub fn stillmoon_cavalier() -> CardDefinition {
     };
     CardDefinition {
         name: "Stillmoon Cavalier",
-        cost: cost(&[generic(1), w(), b()]),
+        cost: ManaCost::new(vec![generic(1), wb(), wb()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Protection(Color::White), Keyword::Protection(Color::Black)],
         activated_abilities: vec![
-            activated(cost(&[w()]), Keyword::Flying),
-            activated(cost(&[b()]), Keyword::FirstStrike),
-            activated(cost(&[generic(1), w()]), Keyword::Protection(Color::Black)),
-            activated(cost(&[generic(1), b()]), Keyword::Protection(Color::White)),
+            gain(ManaCost::new(vec![wb()]), Keyword::Flying),
+            gain(ManaCost::new(vec![wb()]), Keyword::FirstStrike),
+            ActivatedAbility {
+                mana_cost: ManaCost::new(vec![wb(), wb()]),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
         ],
         ..Default::default()
     }
@@ -39306,6 +39306,34 @@ pub fn grafdiggers_cage() -> CardDefinition {
             description: "Creature cards in graveyards and libraries can't enter the battlefield; players can't cast spells from graveyards or libraries.",
             effect: StaticEffect::GraveyardLibraryLockdown,
         }],
+        ..Default::default()
+    }
+}
+
+// ── modern_decks: cube tracker finishers ─────────────────────────────────────
+
+/// Duplicant — {6} 2/4 Artifact Creature Shapeshifter. Imprint — ETB: you may
+/// exile target nontoken creature; while a creature card is exiled with this,
+/// Duplicant has its power and toughness (CDA via `ExiledWithSourcePt`).
+pub fn duplicant() -> CardDefinition {
+    CardDefinition {
+        name: "Duplicant",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::MayDo {
+            description: "Exile target nontoken creature".into(),
+            body: Box::new(Effect::ExileTaggedWithSource {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::NotToken),
+                ),
+            }),
+        })],
         ..Default::default()
     }
 }
