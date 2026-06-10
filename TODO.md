@@ -8,6 +8,30 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (staple/mill/landfall batches) — each wants one
+  small primitive:**
+  - **Everflowing Chalice / Hangarback Walker** — multikicker / "{X}{X},
+    enters with X counters" need a kick-count (not just kicked-bool) and
+    cast-X threading into the ETB-counters replacement.
+  - **Archive Trap** — alt-cost gate "if an opponent searched their
+    library this turn" wants a `Player.searched_library_this_turn` flag +
+    predicate.
+  - **Dauthi Voidwalker** — the opponents'-cards-exile static exists
+    (`ExileCardsBoundForGraveyard { opponents_only }`), but the void-counter
+    stamp + "cast one void-countered exile card free" activation don't.
+  - **Chandra, Torch of Defiance +1** — impulse-with-fallback ("if you
+    don't cast it, 2 damage to each opponent") needs a cast-or-else shape
+    on `ExileTopAndGrantMayPlay`.
+  - **Scrap Trawler** — "return target artifact with **lesser** mana value
+    than the dying one" wants an MV-relative-to-trigger-source filter.
+  - **Torbran, Thane of Red Fell** — flat +N damage bonus for [filter]
+    sources (the doubling statics exist; an additive one doesn't).
+  - **Conflagrate** — divided X damage works; the Flashback—discard-X-cards
+    variable additional cost doesn't.
+  - **Urza's Saga** — chapter abilities exist; III's tutor is fine, but
+    II's granted construct-mint ability on the Saga land needs
+    saga-granted activated abilities.
+
 - ✅ **Noticed-items sweep (meld batch) — all shipped:**
   - **Prized Amalgam** ✅ — `GameState.entered_from_graveyard_this_turn`
     (stamped at the gy→bf move funnel and every cast-from-graveyard site) +

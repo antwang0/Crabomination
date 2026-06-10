@@ -3005,7 +3005,7 @@ impl GameState {
             .map(|p| p.graveyard.iter().filter(|c| c.definition.is_land()).count() as i32)
             .sum();
         for card in &self.battlefield {
-            let Some(formula) = card.definition.dynamic_pt.clone() else { continue };
+            let Some(formula) = card.definition.dynamic_pt else { continue };
             let (power, toughness) = match formula {
                 crate::card::DynamicPt::DistinctTypesInAllGraveyards => {
                     (goyf_n, goyf_n + 1)
@@ -7294,17 +7294,6 @@ fn event_amount(event: &GameEvent) -> u32 {
         _ => 0,
     }
 }
-
-/// Characteristic-defining dynamic P/T table (CR 604.x). Maps a card
-/// name to the formula the layer system should use to set its printed
-/// P/T every recompute. Adding a new dynamic-P/T card is one row here;
-/// formula variants live in `card::DynamicPt`.
-///
-/// Current entries:
-/// - Tarmogoyf (MOR): P=N, T=N+1 where N = distinct card types in all
-///   graveyards.
-/// - Cosmogoyf (modern reprint of the same mechanic): same formula.
-/// - Cruel Somnophage (MOM): P=T = controller's graveyard size.
 
 /// True if a card definition is colorless from its printed characteristics:
 /// it has Devoid (CR 702.114) or its mana cost carries no colored pips.

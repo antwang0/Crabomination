@@ -48131,12 +48131,11 @@ fn archon_of_emeria_taps_opponent_nonbasics() {
 
 #[test]
 fn prized_amalgam_returns_tapped_at_next_end_step_after_gy_reanimation() {
-    use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    use crate::effect::{PlayerRef, ZoneDest};
     let mut g = two_player_game();
     let amalgam = g.add_card_to_graveyard(0, catalog::prized_amalgam());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     // Reanimate the bear (gy → battlefield) and dispatch its ETB events.
-    let _ = Effect::Noop;
     let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
     let mut events = Vec::new();
     g.move_card_to(
@@ -48145,7 +48144,6 @@ fn prized_amalgam_returns_tapped_at_next_end_step_after_gy_reanimation() {
         &ctx,
         &mut events,
     );
-    let _ = Selector::This;
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert!(g.delayed_triggers.iter().any(|t|
@@ -48172,7 +48170,7 @@ fn prized_amalgam_ignores_creatures_entering_from_hand() {
 
 #[test]
 fn chord_of_calling_fetches_creature_with_mana_value_at_most_x() {
-    use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    use crate::effect::{Effect, PlayerRef, ZoneDest};
     use crate::card::SelectionRequirement;
     let mut g = two_player_game();
     let bear = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
@@ -48305,7 +48303,6 @@ fn chord_of_calling_rejects_pick_above_x() {
 
 #[test]
 fn relentless_assault_untaps_attackers_and_adds_post_main_combat() {
-    use crate::effect::Effect;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().attacked_this_turn = true;
@@ -48315,7 +48312,6 @@ fn relentless_assault_untaps_attackers_and_adds_post_main_combat() {
     let _ = g.resolve_effect(&effect, &ctx).unwrap();
     assert!(!g.battlefield_find(bear).unwrap().tapped, "attacker untapped");
     assert_eq!(g.additional_post_main_combats, 1);
-    let _ = Effect::Noop;
 
     // Leaving the postcombat main loops back to Begin Combat once.
     g.active_player_idx = 0;
