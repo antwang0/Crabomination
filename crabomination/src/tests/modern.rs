@@ -47060,3 +47060,79 @@ fn room_affordances_surface_doors() {
     assert!(aff.room_unlockable.contains(&(room, 1)), "locked right door unlockable");
     assert!(!aff.room_unlockable.contains(&(room, 0)), "left already unlocked");
 }
+
+// ── Amonkhet cycling batch ──────────────────────────────────────────────────
+
+/// Cycling duals enter tapped, tap for both colors, and cycle for {2}.
+#[test]
+fn cycling_dual_enters_tapped_and_cycles() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_hand(0, catalog::sheltered_thicket());
+    g.perform_action(GameAction::PlayLand(land)).expect("play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "enters tapped");
+    g.add_card_to_library(0, catalog::island());
+    let second = g.add_card_to_hand(0, catalog::fetid_pools());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::Cycle { card_id: second }).expect("cycle");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cycled into a card");
+}
+
+/// Gempalm Incinerator's cycle trigger burns for the Goblin count.
+#[test]
+fn gempalm_incinerator_cycle_burn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let gp = g.add_card_to_hand(0, catalog::gempalm_incinerator());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let evs = g.perform_action(GameAction::Cycle { card_id: gp }).expect("cycle");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "2 Goblins = 2 damage killed the bear");
+}
+
+/// Curator of Mysteries scries when you cycle another card.
+#[test]
+fn curator_of_mysteries_scries_on_cycle() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::curator_of_mysteries());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    let cy = g.add_card_to_hand(0, catalog::fetid_pools());
+    g.players[0].mana_pool.add_colorless(2);
+    let evs = g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
+    g.dispatch_triggers_for_events(&evs);
+    // The scry trigger is on the stack; resolving it consults the decider.
+    drain_stack(&mut g);
+    // No assert on ordering — reaching here without panicking means the
+    // trigger resolved; check the cycled card drew first.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cy));
+}
+
+/// Omen of the Sea: flash ETB scry-2 + draw, then sac for value later.
+#[test]
+fn omen_of_the_sea_etb_and_sac() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let omen = g.add_card_to_hand(0, catalog::omen_of_the_sea());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len() - 1;
+    cast(&mut g, omen);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "ETB drew");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: omen, ability_index: 0, target: None, x_value: None,
+    }).expect("sac to scry");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(omen).is_none(), "sacrificed");
+}

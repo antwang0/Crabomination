@@ -1821,3 +1821,35 @@ pub fn glimmervoid() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Amonkhet cycling duals (CR 702.29) ───────────────────────────────────────
+
+/// Build an Amonkhet cycling dual: typed tapland with Cycling {2}.
+fn cycling_dual(
+    name: &'static str,
+    type_a: LandType,
+    type_b: LandType,
+    color_a: Color,
+    color_b: Color,
+) -> CardDefinition {
+    use super::super::dual_land_with;
+    let mut d = dual_land_with(name, type_a, type_b, color_a, color_b, vec![etb_tap()]);
+    d.keywords.push(crate::card::Keyword::Cycling(cost(&[generic(2)])));
+    d
+}
+
+pub fn irrigated_farmland() -> CardDefinition {
+    cycling_dual("Irrigated Farmland", LandType::Plains, LandType::Island, Color::White, Color::Blue)
+}
+pub fn fetid_pools() -> CardDefinition {
+    cycling_dual("Fetid Pools", LandType::Island, LandType::Swamp, Color::Blue, Color::Black)
+}
+pub fn canyon_slough() -> CardDefinition {
+    cycling_dual("Canyon Slough", LandType::Swamp, LandType::Mountain, Color::Black, Color::Red)
+}
+pub fn sheltered_thicket() -> CardDefinition {
+    cycling_dual("Sheltered Thicket", LandType::Mountain, LandType::Forest, Color::Red, Color::Green)
+}
+pub fn scattered_groves() -> CardDefinition {
+    cycling_dual("Scattered Groves", LandType::Forest, LandType::Plains, Color::Green, Color::White)
+}

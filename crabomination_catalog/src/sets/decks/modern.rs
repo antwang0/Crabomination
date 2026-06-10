@@ -41426,3 +41426,83 @@ pub fn meat_locker_drowned_diner() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gempalm Incinerator — {2}{R} 2/1 Goblin. Cycling {1}{R}; cycling it may
+/// deal damage to target creature equal to the Goblin count.
+pub fn gempalm_incinerator() -> CardDefinition {
+    CardDefinition {
+        name: "Gempalm Incinerator",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), r()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Deal damage equal to the Goblin count to target creature?".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                        )),
+                        filter: SelectionRequirement::Any,
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Curator of Mysteries — {2}{U}{U} 4/4 Sphinx, flying. Cycling {U};
+/// scry 1 whenever you cycle or discard another card.
+pub fn curator_of_mysteries() -> CardDefinition {
+    CardDefinition {
+        name: "Curator of Mysteries",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Cycling(cost(&[u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Omen of the Sea — {1}{U} Enchantment, flash. ETB scry 2 then draw;
+/// {2}{U}, sacrifice: scry 2.
+pub fn omen_of_the_sea() -> CardDefinition {
+    CardDefinition {
+        name: "Omen of the Sea",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            sac_cost: true,
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

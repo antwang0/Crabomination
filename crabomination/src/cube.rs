@@ -1067,6 +1067,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(stand_deliver);
         v.push(razortide_bridge);
         v.push(floodfarm_verge);
+        v.push(irrigated_farmland);
         v.push(hengegate_pathway);
         v.push(azorius_signet);
         // ── modern_decks-16 ──
@@ -1138,6 +1139,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         merfolk_thaumaturgist,
         bottomless_pool_locker_room,
         meat_locker_drowned_diner,
+        curator_of_mysteries,
+        omen_of_the_sea,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1446,6 +1449,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(spite_malice);
         v.push(profit_loss);
         v.push(gloomlake_verge);
+        v.push(fetid_pools);
         v.push(dimir_signet);
         v.push(clearwater_pathway);
         v.push(crabomination);
@@ -2323,6 +2327,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Black) {
         v.push(terminate);
         v.push(munitions_expert);
+        v.push(gempalm_incinerator);
         v.push(voldaren_epicure);
         v.push(bloodtithe_harvester);
         v.push(drossforge_bridge);
@@ -2334,6 +2339,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-16 ──
         v.push(kolaghans_command);
         v.push(blazemire_verge);
+        v.push(canyon_slough);
         v.push(talisman_of_indulgence);
         v.push(rakdos_signet);
     }
@@ -2342,6 +2348,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(slagwoods_bridge);
         v.push(elegant_parlor);
         v.push(assault_battery);
+        v.push(sheltered_thicket);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(stormchaser_mage);
@@ -2757,6 +2764,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(ready_willing);
         v.push(horizon_canopy);
         v.push(hushwood_verge);
+        v.push(scattered_groves);
         v.push(talisman_of_unity);
         v.push(selesnya_signet);
         v.push(branchloft_pathway);
