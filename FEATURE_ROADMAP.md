@@ -171,9 +171,10 @@ not how Magic works" moments.
   and true "choose targets as it resolves".
 - 🟡 **Targeting refinements:** resolution-time legality re-check (CR 608.2b)
   ships for single-target spells aimed at battlefield permanents (zone-gone /
-  filter-mismatch / granted Hexproof-Shroud → fizzle to graveyard). Remaining:
-  "up to N targets", "target each", "another target", multi-target partial
-  fizzle, protection-from-color re-check.
+  filter-mismatch / granted Hexproof-Shroud → fizzle to graveyard) **and for
+  multi-target spells (all-illegal → fizzle; any legal target → resolve)**.
+  Remaining: "up to N targets", "target each", "another target",
+  protection-from-color re-check.
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (CR 612 —
   `ReplaceColorWord`/`ReplaceBasicLandType`; Trait Doctoring, Mind Bend);
   land-type statics ✅ (`StaticEffect::LandTypeChanger` — Blood Moon, Magus

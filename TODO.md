@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (multikicker / mill batch):**
+  - **Reveal-until-land mill** — Consuming Aberration's cast trigger and Mind
+    Grind want a "reveal from top until N land cards, mill them" primitive
+    (Aberration approximates as mill 3).
+  - **Sphinx's Tutelage** — mill-2-with-repeat-while-colors-match needs a
+    loop-until predicate over the milled pair.
+  - **MayDo wants_ui suspend** — `Effect::MayDo` still answers via the
+    synchronous decider; a networked human gets the AutoDecider decline
+    (bit Phyrexian Scriptures I / Luminarch Ascension in tests).
+  - **Level up (CR 702.87)** — Student of Warfare-style level counters with
+    banded P/T/keywords are unmodeled.
+  - **Squad/Replicate/Multikicker stepper cap** — the bot probes kick counts
+    1–4; an exact max-affordable computation would kick higher with big pools.
+
 - ✅ **Staple/mill/landfall follow-up batch — all eight shipped:**
   - **Everflowing Chalice** ✅ — `Keyword::Multikicker` (CR 702.33c) +
     `GameAction::CastSpellMultikicked { times }` + `CardInstance.kick_count`
@@ -435,11 +449,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - ✅ **Evoke keyword** — fully wired (`AlternativeCost.evoke_sacrifice` +
     ETB-then-sacrifice on the stack; Solitude/Fury/Mulldrifter tested). Now has
     `shortcut::evoke(mana_cost)` for terse card defs.
-  - **Multikicker + kick-count `Value`** — Wolfbriar Elemental ("a 2/2 Wolf for
-    each time it was kicked") needs a multikicker count surfaced as a `Value`.
-  - **"Draw your second card each turn" trigger** — Faerie Vandal, Mad Ratter,
-    Wavebreak Hippocamp ("first spell during each opponent's turn") want
-    per-turn draw/cast-ordinal trigger events.
+  - ✅ **Multikicker + `Value::TimesKicked`** — Wolfbriar Elemental, Joraga
+    Warcaller, Apex Hawks, Gnarlid Pack, Skitter of Lizards, Lightkeeper of
+    Emeria, Bloodhusk Ritualist all ship on `CastSpellMultikicked`.
+  - ✅ **"Draw your second card each turn" triggers** — Faerie Vandal, Mad
+    Ratter, Wavebreak Hippocamp already shipped in `decks/modern.rs` (the
+    entry was stale; verified by grep).
   - ✅ **Search-by-name / search-an-Aura filters** — Squadron Hawk fetches
     up to three via `HasName`-filtered searches; Heliod's Pilgrim already
     rode `HasEnchantmentSubtype(Aura)`.
@@ -451,12 +466,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **DFC / read-ahead Sagas** — `saga_chapters` covers single-faced Sagas only;
     transforming saga-lands (The Everflowing Well) and read-ahead chapter choice
     are still ⏳.
-  - **`AddCardType` one-shot effect** — needed for "becomes an artifact in
-    addition to its other types" riders (Phyrexian Scriptures chapter I), which
-    blocks faithfully shipping that Saga.
-  - **Variable attack tax** — Sphere of Safety / Collective Restraint scale the
-    tax by a board count (enchantments / basic land types); needs a `Value`-typed
-    amount on `AttackTaxToController`.
+  - ✅ **`AddCardType` one-shot effect** — `Effect::AddCardTypeIndefinitely`
+    (layer-4 grant anchored to the permanent); Phyrexian Scriptures ships.
+  - ✅ **Variable attack tax** — `AttackTaxToController.amount` was already
+    `Value`-typed; Sphere of Safety existed, Collective Restraint now ships
+    on `Value::DomainCount`.
 
 - ✅ **`AdditionalCastCost::ReturnToHand { filter, count }`** — mandatory
   "return N permanents you control to hand" additional cast cost (auto-picks
