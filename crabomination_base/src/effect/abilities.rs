@@ -322,6 +322,15 @@ pub enum StaticEffect {
     /// Oracle of Mul Daya lands, Mystic Forge artifact+colorless spells).
     /// Checked in `play_land_with_face` and `cast_spell`.
     PlayFromLibraryTop { filter: crate::card::SelectionRequirement },
+    /// "Creatures you control with +1/+1 counters on them have all
+    /// activated abilities of all creature cards exiled with [the
+    /// source]." Agatha's Soul Cauldron — the exile-zone sibling of
+    /// `HasActivatedAbilitiesOfGraveyardCreatures`.
+    CounteredCreaturesHaveAbilitiesOfExiledWithSource,
+    /// "During each of your turns, you may cast a permanent spell of each
+    /// permanent type from your graveyard." Muldrotha, the Gravetide
+    /// (checked in `cast_spell`; per-type-per-turn tally on the player).
+    MayCastPermanentsFromGraveyard,
     /// CR 401.5: the controller plays with the top card of their library
     /// revealed (surfaced to every seat via `PlayerView.library_top`).
     TopOfLibraryRevealed,

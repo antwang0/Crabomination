@@ -118,6 +118,8 @@ impl Effect {
             Effect::RevealTopToHandOpponentsLoseMv => false,
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,
+            Effect::TemptingOffer { body } => body.requires_target(),
+            Effect::ExileWithSource { what } => sel_has_target(what),
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::ExileHand { who } => player_has_target(who),
             Effect::Demonstrate => false,

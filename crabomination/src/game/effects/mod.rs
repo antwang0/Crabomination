@@ -4925,6 +4925,46 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileWithSource { what } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Card(id) | EntityRef::Permanent(id) => Some(id),
+                        _ => None,
+                    })
+                    .collect();
+                for id in ids {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+                        c.exiled_with = ctx.source;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::TemptingOffer { body } => {
+                // Run for the controller, offer each opponent a copy, then
+                // re-run for the controller once per acceptor.
+                self.run_effect(body, ctx, events)?;
+                let mut accepted = 0;
+                for opp in self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx) {
+                    let answer = self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        description: "Accept the tempting offer?".to_string(),
+                    });
+                    if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
+                        accepted += 1;
+                        let opp_ctx = EffectContext { controller: opp, ..ctx.clone() };
+                        self.run_effect(body, &opp_ctx, events)?;
+                    }
+                }
+                for _ in 0..accepted {
+                    self.run_effect(body, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::StealCreatureEtbThisTurn => {
                 let p = ctx.controller;
                 if !self.creature_etb_steal_this_turn.contains(&p) {

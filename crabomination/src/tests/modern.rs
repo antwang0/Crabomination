@@ -44419,3 +44419,120 @@ fn gather_specimens_steals_an_opponent_creature_etb() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear2).unwrap().controller, 1, "no replacement next turn");
 }
+
+#[test]
+fn tempt_with_bunnies_offer_accepted_doubles_up() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..2 { g.add_card_to_library(1, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::tempt_with_bunnies());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // Opponent accepts the offer.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let h0 = g.players[0].hand.len() - 1; // minus the spell itself
+    let h1 = g.players[1].hand.len();
+    cast(&mut g, spell);
+
+    let rabbits = |g: &GameState, seat| g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Rabbit" && c.controller == seat)
+        .count();
+    assert_eq!(rabbits(&g, 0), 2, "controller: base + one per acceptor");
+    assert_eq!(rabbits(&g, 1), 1, "acceptor copies the offer once");
+    assert_eq!(g.players[0].hand.len(), h0 + 2, "controller drew twice");
+    assert_eq!(g.players[1].hand.len(), h1 + 1, "acceptor drew once");
+}
+
+#[test]
+fn tempt_with_bunnies_offer_declined_is_single() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::tempt_with_bunnies());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // AutoDecider declines OptionalTrigger.
+    cast(&mut g, spell);
+    let rabbits = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Rabbit")
+        .count();
+    assert_eq!(rabbits, 1, "no acceptors → just the base resolution");
+}
+
+#[test]
+fn muldrotha_casts_one_permanent_of_each_type_from_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::muldrotha_the_gravetide());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let stone = g.add_card_to_graveyard(0, catalog::mind_stone());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(6);
+
+    // Creature from the graveyard: allowed once.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("creature castable from graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+
+    // A second creature this turn: rejected.
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bear2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "one creature per turn");
+
+    // An artifact still works (a different permanent type).
+    g.perform_action(GameAction::CastSpell {
+        card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("artifact castable from graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stone).is_some());
+
+    // Next turn the tally resets.
+    g.players[0].graveyard_cast_types_this_turn.clear();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("creature castable again after reset");
+}
+
+#[test]
+fn muldrotha_does_not_allow_casts_on_opponent_turns() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::muldrotha_the_gravetide());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Muldrotha only works during your turns");
+}
+
+#[test]
+fn agathas_cauldron_exiles_and_grants_abilities() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let cauldron = g.add_card_to_battlefield(0, catalog::agathas_soul_cauldron());
+    // A creature with an activated ability in the graveyard (Grinning Ignus:
+    // mana + return-self — use Llanowar Elves: {T}: Add {G}).
+    let elves = g.add_card_to_graveyard(1, catalog::llanowar_elves());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cauldron, ability_index: 0, target: Some(Target::Permanent(elves)), x_value: None,
+    }).expect("{T}: exile target card from a graveyard");
+    drain_stack(&mut g);
+
+    let exiled = g.exile.iter().find(|c| c.id == elves).expect("Elves exiled");
+    assert_eq!(exiled.exiled_with, Some(cauldron), "linked to the Cauldron");
+    let bear_inst = g.battlefield_find(bear).unwrap();
+    assert_eq!(
+        bear_inst.counter_count(crate::card::CounterType::PlusOnePlusOne),
+        1, "creature-card exile adds a +1/+1 counter",
+    );
+    // The countered Bear now has the exiled Elves' mana ability.
+    let granted = g.granted_abilities_for(bear);
+    assert!(!granted.is_empty(), "Bear borrows the exiled creature's activated ability");
+}

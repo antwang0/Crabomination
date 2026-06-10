@@ -250,6 +250,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         oracle_of_mul_daya,
         mystic_forge,
         gather_specimens,
+        tempt_with_bunnies,
+        muldrotha_the_gravetide,
+        agathas_soul_cauldron,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,

@@ -137,6 +137,10 @@ pub struct Player {
     /// for snapshot back-compat.
     #[serde(default)]
     pub lost_life_this_turn: bool,
+    /// Permanent types already cast from the graveyard this turn under a
+    /// Muldrotha-style permission (one of each per turn). Reset at untap.
+    #[serde(default)]
+    pub graveyard_cast_types_this_turn: Vec<crate::card::CardType>,
     /// Total life lost this turn (CR 119.3). Bumped alongside
     /// `lost_life_this_turn`, reset with it. Powers `Value::LifeLostThisTurn`
     /// (Spinerock Knoll's "an opponent lost 7 or more life" gate).
@@ -349,6 +353,7 @@ impl Player {
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             lost_life_this_turn: false,
+            graveyard_cast_types_this_turn: Vec::new(),
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
             attacked_this_turn: false,

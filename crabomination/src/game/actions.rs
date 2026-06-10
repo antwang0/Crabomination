@@ -1125,10 +1125,36 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // Muldrotha — cast a permanent spell of each permanent type from
+        // your graveyard during each of your turns. Hop the card into hand
+        // for the normal cast pipeline; restore on failure, record the
+        // consumed permanent type on success.
+        let p = self.priority.player_with_priority;
+        if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
+        {
+            let pos = self.players[p].graveyard.iter().position(|c| c.id == card_id).unwrap();
+            let card = self.players[p].graveyard.remove(pos);
+            self.players[p].hand.push(card);
+            let r = self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false,
+            );
+            match &r {
+                Err(_) => {
+                    if let Some(pos) =
+                        self.players[p].hand.iter().position(|c| c.id == card_id)
+                    {
+                        let card = self.players[p].hand.remove(pos);
+                        self.players[p].graveyard.push(card);
+                    }
+                }
+                Ok(_) => self.players[p].graveyard_cast_types_this_turn.push(used_type),
+            }
+            return r;
+        }
         // CR 401.6 — cast off the library top when a PlayFromLibraryTop
         // static covers the card (Mystic Forge). Hop the card into hand for
         // the normal cast pipeline; restore it to the top on failure.
-        let p = self.priority.player_with_priority;
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
             && self.library_top_playable(p, card_id)
         {
@@ -1146,6 +1172,47 @@ impl GameState {
             return r;
         }
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false)
+    }
+
+    /// Muldrotha — when `card_id` sits in `p`'s graveyard, it's `p`'s turn,
+    /// a `MayCastPermanentsFromGraveyard` permission is active, and the card
+    /// has a nonland permanent type not yet cast from the graveyard this
+    /// turn, return that type.
+    pub(crate) fn graveyard_cast_type_available(
+        &self,
+        p: usize,
+        card_id: CardId,
+    ) -> Option<crate::card::CardType> {
+        use crate::card::CardType;
+        use crate::effect::StaticEffect;
+        if self.active_player_idx != p {
+            return None;
+        }
+        let card = self.players[p].graveyard.iter().find(|c| c.id == card_id)?;
+        let permission = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::MayCastPermanentsFromGraveyard)
+                })
+        });
+        if !permission {
+            return None;
+        }
+        const PERMANENT_TYPES: [CardType; 5] = [
+            CardType::Artifact,
+            CardType::Creature,
+            CardType::Enchantment,
+            CardType::Planeswalker,
+            CardType::Battle,
+        ];
+        card.definition
+            .card_types
+            .iter()
+            .find(|t| {
+                PERMANENT_TYPES.contains(t)
+                    && !self.players[p].graveyard_cast_types_this_turn.contains(t)
+            })
+            .cloned()
     }
 
     /// CR 401.6 — true when `card_id` is the top card of `p`'s library and a
@@ -5577,6 +5644,40 @@ impl GameState {
                         continue;
                     }
                     for ab in &card.definition.activated_abilities {
+                        if ab.from_graveyard || ab.exile_self_cost {
+                            continue;
+                        }
+                        out.push(ab.clone());
+                    }
+                }
+            }
+        }
+        // Agatha's Soul Cauldron — a creature you control with a +1/+1
+        // counter has all activated abilities of creature cards exiled
+        // with any Cauldron its controller controls.
+        if let Some(target) = self.battlefield_find(card_id)
+            && target.definition.is_creature()
+            && target.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0
+        {
+            let cauldrons: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == target.controller
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
+                            )
+                        })
+                })
+                .map(|c| c.id)
+                .collect();
+            for exiled in &self.exile {
+                if exiled.definition.is_creature()
+                    && exiled.exiled_with.is_some_and(|s| cauldrons.contains(&s))
+                {
+                    for ab in &exiled.definition.activated_abilities {
                         if ab.from_graveyard || ab.exile_self_cost {
                             continue;
                         }

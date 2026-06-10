@@ -1752,6 +1752,15 @@ pub enum Effect {
         #[serde(default)]
         take: Option<Value>,
     },
+    /// Exile the selected card(s), stamping `exiled_with = source` (an
+    /// imprint-style permanent link with no return rider). Agatha's Soul
+    /// Cauldron's {T} ability.
+    ExileWithSource { what: Selector },
+    /// Tempting offer (ability word, CR 207.2c): run `body` for the
+    /// controller; each opponent may copy it for themselves, and the
+    /// controller re-runs it once per opponent who accepted. Tempt with
+    /// Bunnies.
+    TemptingOffer { body: Box<Effect> },
     /// "If a creature would enter the battlefield under an opponent's
     /// control this turn, it enters under your control instead." Gather
     /// Specimens (CR 614 control-ETB replacement; expires at cleanup).

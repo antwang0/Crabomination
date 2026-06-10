@@ -38878,3 +38878,107 @@ pub fn gather_specimens() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tempt with Bunnies — {2}{W} Sorcery. Tempting offer — Draw a card and
+/// create a 1/1 white Rabbit; each opponent may copy, and you repeat it
+/// for each who does.
+pub fn tempt_with_bunnies() -> CardDefinition {
+    fn bunny_draw() -> Effect {
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Rabbit".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Rabbit],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        ])
+    }
+    CardDefinition {
+        name: "Tempt with Bunnies",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::TemptingOffer { body: Box::new(bunny_draw()) },
+        ..Default::default()
+    }
+}
+
+/// Muldrotha, the Gravetide — {3}{B}{G}{U} Legendary 6/6 Elemental Avatar.
+/// During each of your turns, you may play a land and cast a permanent
+/// spell of each permanent type from your graveyard.
+pub fn muldrotha_the_gravetide() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Muldrotha, the Gravetide",
+        cost: cost(&[generic(3), b(), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        static_abilities: vec![
+            StaticAbility {
+                description: "During each of your turns, you may play a land from your graveyard.",
+                effect: StaticEffect::MayPlayLandsFromGraveyard,
+            },
+            StaticAbility {
+                description: "During each of your turns, you may cast a permanent spell of each permanent type from your graveyard.",
+                effect: StaticEffect::MayCastPermanentsFromGraveyard,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Agatha's Soul Cauldron — {2} Legendary Artifact. Creatures you control
+/// with +1/+1 counters have all activated abilities of creature cards
+/// exiled with this. {T}: Exile target card from a graveyard; if it was a
+/// creature card, put a +1/+1 counter on a creature you control. (The
+/// any-color-for-creature-abilities clause is dropped.)
+pub fn agathas_soul_cauldron() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Predicate, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Agatha's Soul Cauldron",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with +1/+1 counters on them have all activated abilities of all creature cards exiled with this.",
+            effect: StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::ExileWithSource { what: Selector::Target(0) },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::Creature,
+                    },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::LeastToughnessYouControl,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

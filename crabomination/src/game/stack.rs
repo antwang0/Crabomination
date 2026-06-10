@@ -1205,6 +1205,7 @@ impl GameState {
             card.attacked_this_turn = false;
         }
         self.players[p].lands_played_this_turn = 0;
+        self.players[p].graveyard_cast_types_this_turn.clear();
         self.players[p].extra_land_plays = 0;
         // Raid (CR 702.108): the active player hasn't attacked yet this turn.
         self.players[p].attacked_this_turn = false;
