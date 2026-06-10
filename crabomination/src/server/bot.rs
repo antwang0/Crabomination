@@ -1094,6 +1094,39 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Multikicker (CR 702.33c): offer the *biggest affordable* kick count
+    // (probed 4 → 1 via `would_accept`, which validates base + N×kick).
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.has_multikicker().is_some())
+    {
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        for times in (1..=4u32).rev() {
+            let action = GameAction::CastSpellMultikicked {
+                card_id: c.id,
+                times,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+                break;
+            }
+        }
+    }
+
     // Bestow (CR 702.103): for any hand card with a bestow cost, offer a
     // `CastBestow` candidate that enchants the bot's sturdiest creature (the
     // host most likely to stick, so the Aura keeps its value). `would_accept`

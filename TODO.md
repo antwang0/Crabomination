@@ -1259,7 +1259,7 @@ picking an item up.
 - ✅ **CR 603.3b — Same-controller trigger ordering** (incl. the server suspend path — `ResumeContext::TriggerOrder`).
 - ✅ **CR 702.124 — Addendum** (`shortcut::addendum` / `cast_during_your_main`: a resolution-time `IsTurnOf(You) ∧ main-phase` gate — exact since a main-phase cast resolves in the same step. Sphinx's Insight, Precognitive Perception).
 - ✅ **CR 601.2f — generic cost reduction (graveyard-Affinity)** (`CardDefinition.affinity_graveyard_filter`: {1} less per matching graveyard card, generalizing the old per-name Dawning Archaic hook; clamped generic-only. The bot's `can_afford_in_state` folds in cost reductions too. Tolarian Terror, The Dawning Archaic).
-- ✅ **CR 702.32 — Kicker** (client opt-in affordance + a kick-when-profitable bot heuristic still ⏳).
+- ✅ **CR 702.32 — Kicker** (client opt-in affordance; the bot offers kicked casts when affordable). **CR 702.33c — Multikicker ✅** (`CastSpellMultikicked`, kick_count → `Value::TimesKicked`, client pay-times stepper, bot probes the biggest affordable kick count).
 - ✅ **CR 702.164 — Backup** (`shortcut::backup` / `backup_with`).
 - ✅ **CR 702.95 — Soulbond** (auto-pairs lowest-CardId partner; a controller "may"/decline prompt still ⏳).
 - ✅ **CR 702.134 — Mentor** (`shortcut::mentor`).
