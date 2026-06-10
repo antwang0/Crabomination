@@ -46991,3 +46991,49 @@ fn room_designations_reset_on_leave_and_roundtrip_serde() {
     assert_eq!(back.unlocked_doors, 0, "locked again");
     assert!(back.definition.triggered_abilities.is_empty(), "no live abilities off-battlefield");
 }
+
+/// Bottomless Pool's unlock bounces a creature; Drowned Diner's unlock
+/// loots three-for-one; Meat Locker stuns.
+#[test]
+fn rooms_pool_and_diner_unlock_triggers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pool = g.add_card_to_hand(0, catalog::bottomless_pool_locker_room());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastRoomDoor { card_id: pool, right: false })
+        .expect("cast Bottomless Pool");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear));
+
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let diner = g.add_card_to_hand(0, catalog::meat_locker_drowned_diner());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastRoomDoor { card_id: diner, right: true })
+        .expect("cast Drowned Diner");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew 3, discarded 1");
+}
+
+/// Meat Locker's unlock taps and double-stuns a creature.
+#[test]
+fn meat_locker_taps_and_stuns() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let room = g.add_card_to_hand(0, catalog::meat_locker_drowned_diner());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Meat Locker");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.tapped, "tapped");
+    assert_eq!(c.counter_count(CounterType::Stun), 2, "two stun counters");
+}

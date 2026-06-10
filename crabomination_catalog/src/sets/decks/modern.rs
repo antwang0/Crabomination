@@ -41324,3 +41324,105 @@ pub fn unholy_annex_ritual_chamber() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Bottomless Pool // Locker Room — {U} // {4}{U} Room. Pool's unlock
+/// bounces up to one creature; Locker Room draws when your creatures
+/// connect (once per damage batch).
+pub fn bottomless_pool_locker_room() -> CardDefinition {
+    use crate::card::{RoomDoor, RoomDoors};
+    CardDefinition {
+        name: "Bottomless Pool // Locker Room",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Room],
+            ..Default::default()
+        },
+        room: Some(Box::new(RoomDoors {
+            left: RoomDoor {
+                name: "Bottomless Pool".to_string(),
+                cost: cost(&[u()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::DoorUnlocked, EventScope::SelfSource),
+                    effect: Effect::MayDo {
+                        description: "Return up to one target creature to its owner's hand?".into(),
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(SelectionRequirement::Creature),
+                            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                        }),
+                    },
+                }],
+                ..Default::default()
+            },
+            right: RoomDoor {
+                name: "Locker Room".to_string(),
+                cost: cost(&[generic(4), u()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: {
+                        let mut e = EventSpec::new(
+                            EventKind::DealsCombatDamageToPlayer,
+                            EventScope::YourControl,
+                        );
+                        // "one or more creatures" — collapse same-batch fan-out.
+                        e.once_per_turn = true;
+                        e
+                    },
+                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                }],
+                ..Default::default()
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Meat Locker // Drowned Diner — {2}{U} // {3}{U}{U} Room. Locker's unlock
+/// taps + double-stuns up to one creature; Diner's unlock draws 3, discards 1.
+pub fn meat_locker_drowned_diner() -> CardDefinition {
+    use crate::card::{RoomDoor, RoomDoors};
+    CardDefinition {
+        name: "Meat Locker // Drowned Diner",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Room],
+            ..Default::default()
+        },
+        room: Some(Box::new(RoomDoors {
+            left: RoomDoor {
+                name: "Meat Locker".to_string(),
+                cost: cost(&[generic(2), u()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::DoorUnlocked, EventScope::SelfSource),
+                    effect: Effect::MayDo {
+                        description: "Tap up to one target creature and stun it twice?".into(),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::Tap {
+                                what: target_filtered(SelectionRequirement::Creature),
+                            },
+                            Effect::AddCounter {
+                                what: Selector::Target(0),
+                                kind: CounterType::Stun,
+                                amount: Value::Const(2),
+                            },
+                        ])),
+                    },
+                }],
+                ..Default::default()
+            },
+            right: RoomDoor {
+                name: "Drowned Diner".to_string(),
+                cost: cost(&[generic(3), u(), u()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::DoorUnlocked, EventScope::SelfSource),
+                    effect: Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    ]),
+                }],
+                ..Default::default()
+            },
+        })),
+        ..Default::default()
+    }
+}

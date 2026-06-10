@@ -1136,6 +1136,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         chronatog,
         inside_out,
         merfolk_thaumaturgist,
+        bottomless_pool_locker_room,
+        meat_locker_drowned_diner,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
