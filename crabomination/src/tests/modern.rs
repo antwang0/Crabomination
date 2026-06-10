@@ -45872,3 +45872,222 @@ fn reflection_of_kiki_jiki_copies_then_sacs_at_end_step() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(copy_id).is_none(), "copy gone at end step");
 }
+
+// ── modern_decks-18: Amulet Titan / Valakut package ──────────────────────────
+
+/// Amulet of Vigor untaps a permanent that enters tapped under your control.
+#[test]
+fn amulet_of_vigor_untaps_tapped_entrant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::amulet_of_vigor());
+    let land = g.add_card_to_hand(0, catalog::valakut_the_molten_pinnacle());
+    g.perform_action(GameAction::PlayLand(land)).expect("play Valakut");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "Amulet untapped it");
+    // An opponent's tapped entrant is unaffected.
+    let opp = g.add_card_to_hand(1, catalog::valakut_the_molten_pinnacle());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::PlayLand(opp)).expect("play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp).unwrap().tapped, "opponent's stays tapped");
+}
+
+/// Valakut deals 3 when a sixth Mountain arrives, and stays quiet below the
+/// threshold.
+#[test]
+fn valakut_triggers_on_sixth_mountain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::valakut_the_molten_pinnacle());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    // Fifth Mountain: only four others — no trigger.
+    let m5 = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(m5)).expect("play");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "below threshold — no bolt");
+    // Sixth Mountain: five others — Valakut fires at the opponent.
+    g.players[0].lands_played_this_turn = 0;
+    let m6 = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(m6)).expect("play");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "Valakut bolted the opponent");
+}
+
+/// Dryad of the Ilysian Grove makes lands every basic type (a Forest taps
+/// for any color) and grants an extra land drop.
+#[test]
+fn dryad_makes_lands_all_basic_types() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dryad_of_the_ilysian_grove());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let cp = g.computed_permanent(forest).unwrap();
+    assert!(cp.subtypes.land_types.contains(&crate::card::LandType::Island), "Island type added");
+    let cost = crate::mana::cost(&[crate::mana::u()]);
+    g.auto_tap_for_cost(0, &cost);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "Forest taps for blue under Dryad");
+    // Two land drops in one turn.
+    let l1 = g.add_card_to_hand(0, catalog::island());
+    let l2 = g.add_card_to_hand(0, catalog::island());
+    g.perform_action(GameAction::PlayLand(l1)).expect("first drop");
+    g.perform_action(GameAction::PlayLand(l2)).expect("second drop via Dryad");
+}
+
+/// Scapeshift sacrifices N lands and fetches that many to the battlefield
+/// tapped.
+#[test]
+fn scapeshift_swaps_lands_from_library() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(0, catalog::mountain());
+    let l2 = g.add_card_to_battlefield(0, catalog::mountain());
+    let v1 = g.add_card_to_library(0, catalog::valakut_the_molten_pinnacle());
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::scapeshift());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(2),
+        DecisionAnswer::Search(Some(v1)),
+        DecisionAnswer::Search(Some(f1)),
+    ]));
+    cast(&mut g, id);
+    assert!(g.battlefield_find(l1).is_none() && g.battlefield_find(l2).is_none(), "lands sacked");
+    let v = g.battlefield_find(v1).expect("Valakut fetched");
+    assert!(v.tapped, "fetched tapped");
+    assert!(g.battlefield_find(f1).is_some(), "Forest fetched");
+}
+
+/// Titania returns a land on ETB and mints a 5/3 when your land dies.
+#[test]
+fn titania_recurs_land_and_rewards_land_death() {
+    let mut g = two_player_game();
+    let gy_land = g.add_card_to_graveyard(0, catalog::valakut_the_molten_pinnacle());
+    let id = g.add_card_to_hand(0, catalog::titania_protector_of_argoth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    assert!(g.battlefield_find(gy_land).is_some(), "land returned on ETB");
+    // Destroy the land through the effect path so dies-triggers dispatch.
+    let mage = g.add_card_to_battlefield(1, catalog::fulminator_mage());
+    g.clear_sickness(mage);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(gy_land)), x_value: None,
+    }).expect("destroy the land");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Elemental"),
+        "land death minted a 5/3 Elemental"
+    );
+}
+
+/// Crashing Footfalls suspends for {G} and resolves into two 4/4 Rhinos.
+#[test]
+fn crashing_footfalls_suspends_into_rhinos() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::crashing_footfalls());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Rhino").count(),
+        2,
+        "two Rhinos"
+    );
+}
+
+/// Oliphaunt mountaincycles for {1}.
+#[test]
+fn oliphaunt_mountaincycles() {
+    let mut g = two_player_game();
+    let mtn = g.add_card_to_library(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::oliphaunt());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Landcycle { card_id: id }).expect("mountaincycle");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mtn), "Mountain to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Oliphaunt pitched");
+}
+
+/// White Orchid Phantom blows up a nonbasic land; its controller fetches a
+/// basic tapped.
+#[test]
+fn white_orchid_phantom_destroys_nonbasic_with_compensation() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let valakut = g.add_card_to_battlefield(1, catalog::valakut_the_molten_pinnacle());
+    let basic = g.add_card_to_library(1, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::white_orchid_phantom());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(basic)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(valakut)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(valakut).is_none(), "nonbasic destroyed");
+    let b = g.battlefield_find(basic).expect("basic fetched");
+    assert_eq!(b.controller, 1, "under its owner's control");
+    assert!(b.tapped, "fetched tapped");
+}
+
+/// Boseiju's channel hits only opponents' permanents and compensates with a
+/// basic-land fetch.
+#[test]
+fn boseiju_channel_destroys_opponent_nonbasic() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let valakut = g.add_card_to_battlefield(1, catalog::valakut_the_molten_pinnacle());
+    let basic = g.add_card_to_library(1, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::boseiju_who_endures());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(basic))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: Some(Target::Permanent(valakut)), x_value: None,
+    }).expect("channel");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(valakut).is_none(), "destroyed");
+    assert!(g.battlefield_find(basic).is_some(), "controller fetched a basic");
+}
+
+/// Path to Exile's exiled creature's controller fetches a basic tapped.
+#[test]
+fn path_to_exile_controller_fetches_basic() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let basic = g.add_card_to_library(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::path_to_exile());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(basic))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Path");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled");
+    let b = g.battlefield_find(basic).expect("basic fetched");
+    assert_eq!((b.controller, b.tapped), (1, true), "their basic, tapped");
+}
+
+/// Generous Ent forestcycles for {1}.
+#[test]
+fn generous_ent_forestcycles() {
+    let mut g = two_player_game();
+    let f = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::generous_ent());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Landcycle { card_id: id }).expect("forestcycle");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == f), "Forest to hand");
+}

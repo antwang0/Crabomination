@@ -11,23 +11,25 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 /// Path to Exile — {W} Instant. Exile target creature; its controller may
 /// search their library for a basic land card, put it onto the battlefield
 /// tapped, then shuffle.
-///
-/// Approximation: the basic-land tutor half is omitted (the engine has no
-/// "search and put onto battlefield tapped" effect that's also player-
-/// directed at the *target's controller*). Single-step exile is wired.
 pub fn path_to_exile() -> CardDefinition {
+    use crate::effect::PlayerRef;
     CardDefinition {
         name: "Path to Exile",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Exile {
-            what: target_filtered(SelectionRequirement::Creature),
-        },
-        triggered_abilities: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::Search {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                filter: SelectionRequirement::IsBasicLand,
+                to: crate::effect::ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        ]),
         ..Default::default()
     }
 }

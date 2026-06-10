@@ -8343,8 +8343,9 @@ pub fn elves_of_deep_shadow() -> CardDefinition {
 }
 
 /// Generous Ent — {5}{G} 5/7 Treefolk with Reach. ETB: create a Food token.
-/// (Forestcycling is dropped — no typecycling primitive yet.)
+/// Forestcycling {1}.
 pub fn generous_ent() -> CardDefinition {
+    use crate::card::LandType;
     use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Generous Ent",
@@ -8353,7 +8354,10 @@ pub fn generous_ent() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
         power: 5,
         toughness: 7,
-        keywords: vec![Keyword::Reach],
+        keywords: vec![
+            Keyword::Reach,
+            Keyword::Landcycling(cost(&[generic(1)]), LandType::Forest),
+        ],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),

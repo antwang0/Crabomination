@@ -40218,3 +40218,276 @@ pub fn fable_of_the_mirror_breaker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks-18: Amulet Titan / cascade package ─────────────────────────
+
+/// Oliphaunt — {5}{R} 6/4 Elephant, trample. Attack trigger pumps another
+/// attacker +2/+0 with trample. Mountaincycling {1}.
+pub fn oliphaunt() -> CardDefinition {
+    CardDefinition {
+        name: "Oliphaunt",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Landcycling(cost(&[generic(1)]), LandType::Mountain),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crashing Footfalls — Sorcery, no mana cost. Suspend 4—{G}. Create two
+/// 4/4 green Rhinos with trample.
+pub fn crashing_footfalls() -> CardDefinition {
+    CardDefinition {
+        name: "Crashing Footfalls",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Suspend(4, cost(&[g()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Rhino".into(),
+                power: 4,
+                toughness: 4,
+                keywords: vec![Keyword::Trample],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Rhino],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Amulet of Vigor — {1} Artifact. Whenever a permanent you control enters
+/// tapped, untap it.
+pub fn amulet_of_vigor() -> CardDefinition {
+    CardDefinition {
+        name: "Amulet of Vigor",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Tapped,
+                }),
+            effect: Effect::Untap { what: Selector::TriggerSource, up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dryad of the Ilysian Grove — {2}{G} 2/4 Nymph Dryad. Extra land each
+/// turn; lands you control are every basic land type.
+pub fn dryad_of_the_ilysian_grove() -> CardDefinition {
+    let changer = |lt: LandType| StaticAbility {
+        description: "Lands you control are every basic land type in addition \
+                      to their other types.",
+        effect: StaticEffect::LandTypeChanger {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ),
+            land_type: lt,
+            replace: false,
+        },
+    };
+    CardDefinition {
+        name: "Dryad of the Ilysian Grove",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nymph, CreatureType::Dryad],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may play an additional land on each of your turns.",
+                effect: StaticEffect::ExtraLandPerTurn,
+            },
+            changer(LandType::Plains),
+            changer(LandType::Island),
+            changer(LandType::Swamp),
+            changer(LandType::Mountain),
+            changer(LandType::Forest),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Valakut, the Molten Pinnacle — Land, enters tapped. Whenever a Mountain
+/// enters under your control while you control six or more Mountains, deal
+/// 3 damage to any target (the printed "may" is dropped).
+pub fn valakut_the_molten_pinnacle() -> CardDefinition {
+    CardDefinition {
+        name: "Valakut, the Molten Pinnacle",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasLandType(LandType::Mountain),
+                    },
+                    // The entrant plus five other Mountains.
+                    Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::HasLandType(LandType::Mountain)
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        n: Value::Const(6),
+                    },
+                ])),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Player),
+                ),
+                amount: Value::Const(3),
+            },
+        }],
+        activated_abilities: vec![crate::catalog::sets::tap_add(Color::Red)],
+        ..Default::default()
+    }
+}
+
+/// Scapeshift — {2}{G}{G} Sorcery. Sacrifice any number of lands; search
+/// for that many lands, put them onto the battlefield tapped, then shuffle.
+pub fn scapeshift() -> CardDefinition {
+    CardDefinition {
+        name: "Scapeshift",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SacrificeAnyNumber {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land,
+            per_each: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Titania, Protector of Argoth — {3}{G}{G} 5/3 Legendary Elemental. ETB:
+/// return target land from your graveyard to the battlefield. Your lands
+/// dying mint 5/3 Elementals.
+pub fn titania_protector_of_argoth() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Titania, Protector of Argoth",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Land.and(SelectionRequirement::InGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Elemental".into(),
+                        power: 5,
+                        toughness: 3,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Elemental],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// White Orchid Phantom — {W}{W} 2/2 Spirit Knight, flying, first strike.
+/// ETB: destroy up to one target nonbasic land; its controller may fetch a
+/// basic tapped.
+pub fn white_orchid_phantom() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "White Orchid Phantom",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Destroy up to one target nonbasic land?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::IsBasicLand.negate()),
+                    ),
+                },
+                Effect::Search {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}

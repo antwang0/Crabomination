@@ -1142,8 +1142,8 @@ fn channel_land(
 }
 
 /// Boseiju, Who Endures — `{T}: Add {G}`. Channel — {1}{G}: destroy target
-/// artifact, enchantment, or nonbasic land. (Opponent-only + basic-search
-/// riders dropped.)
+/// artifact, enchantment, or nonbasic land an opponent controls; they may
+/// fetch a basic tapped.
 pub fn boseiju_who_endures() -> CardDefinition {
     use crate::card::SelectionRequirement as R;
     use crate::effect::shortcut::target_filtered;
@@ -1151,9 +1151,24 @@ pub fn boseiju_who_endures() -> CardDefinition {
         "Boseiju, Who Endures",
         Color::Green,
         cost(&[generic(1), crate::mana::g()]),
-        Effect::Destroy {
-            what: target_filtered(R::Artifact.or(R::Enchantment).or(R::IsNonbasicLand)),
-        },
+        Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    R::Artifact
+                        .or(R::Enchantment)
+                        .or(R::IsNonbasicLand)
+                        .and(R::ControlledByOpponent),
+                ),
+            },
+            Effect::Search {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                filter: R::IsBasicLand,
+                to: crate::effect::ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
+            },
+        ]),
     )
 }
 
