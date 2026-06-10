@@ -2737,7 +2737,7 @@ impl GameState {
         // CR 702.41b — fold the optional entwine cost into the total cost.
         if entwine && let Some(ec) = card.definition.has_entwine() {
             for s in &ec.symbols {
-                cost.symbols.push(s.clone());
+                cost.symbols.push(*s);
             }
         }
         let tax = extra_cost_for_spell(self, p, &card);

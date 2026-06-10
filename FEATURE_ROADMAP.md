@@ -476,7 +476,9 @@ feature; sweep card-batch by card-batch.
   dies → `MayDo(return target Spirit MV≤n from your graveyard)`), ⏳ Offering, ⏳ Epic, ⏳ Absorb,
   ✅ Affinity for artifacts (`CardDefinition.affinity_filter` generic reduction;
   Frogmite, Myr Enforcer, Thoughtcast, Somber Hoverguard, Qumulox, Sojourner's
-  Companion, Carapace Forger), ⏳ Entwine,
+  Companion, Carapace Forger), ✅ Entwine (CR 702.41 —
+  `Keyword::Entwine(cost)` + `CastSpellEntwine`; entwined `ChooseMode` runs
+  every mode; Tooth and Nail + the Mirrodin entwine batch),
   ✅ Buyback (`Keyword::Buyback(cost)` + `GameAction::CastSpellBuyback` —
   CR 702.27, optional additional cost; bought-back spell returns to its
   owner's hand instead of the graveyard on resolution; surfaced in

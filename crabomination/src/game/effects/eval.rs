@@ -1017,12 +1017,6 @@ impl GameState {
                         .iter()
                         .any(|s| matches!(s, ManaSymbol::Colored(cc) if cc == c)),
                     R::HasKeyword(kw) => card.has_keyword(kw),
-            R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
-                k,
-                crate::card::Keyword::Cycling(_)
-                    | crate::card::Keyword::CyclingLife(_)
-                    | crate::card::Keyword::Landcycling(_, _)
-            )),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
                         crate::card::Keyword::Cycling(_)

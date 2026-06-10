@@ -223,6 +223,8 @@ mod tests {
             plottable_hand: vec![],
             adventurable_hand: vec![],
             splittable_right_hand: vec![],
+            room_castable_hand: vec![],
+            room_unlockable: vec![],
             activatable_permanents: vec![],
             hand_activatable: vec![],
             morphable_hand: vec![],

@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (claude/modern_decks):**
+  - **Per-blocker combat-damage assignment modal** — ordering now has a real
+    client modal (`spawn_damage_order_modal`); `AssignCombatDamage` still
+    auto-answers the engine default split.
+  - **Controller-scoped damage doubling/halving** — `DoubleDamageDealt` /
+    `HalveDamageDealt` are global; Gisela, Blade of Goldnight wants
+    "to opponents ×2 / to you ÷2 rounded-up-prevention" scoping.
+  - **Room rules corners** — lock-a-door effects (709.5g), "fully unlock"
+    triggers (709.5i), and combined MV in non-stack zones (709.4b) are not
+    modeled; door casts also skip the convoke/delve/alt-cost riders.
+  - **`add_room_field.py`** patched ~2.5k fully-specified `CardDefinition`
+    literals; converting the old STX factories to `..Default::default()`
+    style would stop this recurring per-new-field churn.
+
 - ⏳ **Meld** (The Mightstone and Weakstone) — its own object-model
   feature. (Rooms ✅ — CR 709.5, Unholy Annex // Ritual Chamber.)
 - ✅ **This batch shipped** (was the "deferred, each wants one primitive"
@@ -844,10 +858,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (AutoDecider picks 0). A `wants_ui` player should suspend on a number-picker
   modal instead of degrading to 0. Add a `ChooseAmountPending` suspend path +
   client widget (like the Learn modal).
-- **Entwine as a first-class cost** — Plunge into Darkness models entwine {B}
-  via `Keyword::Kicker` + a `SpellWasKicked` branch. A dedicated
-  `Keyword::Entwine(cost)` (cost-line naming + "choose both") would be
-  cleaner, but is functionally identical today. (CR 702.41.)
+- ✅ **Entwine as a first-class cost** — `Keyword::Entwine(cost)` +
+  `GameAction::CastSpellEntwine` ship (CR 702.41); an entwined `ChooseMode`
+  runs every mode in order. Tooth and Nail, Barbed Lightning, Rude
+  Awakening, Grab the Reins, Promise of Power. (Plunge into Darkness still
+  rides its Kicker modelling — migrating it is optional.)
 - **`SacrificeAnyNumber` reuse** — Devour and Fling-with-count can now ride
   `Effect::SacrificeAnyNumber` + `Value`-scaled payoffs.
 - **Opponent-controlled pay-to-copy** — Chain Lightning's "the damaged player
