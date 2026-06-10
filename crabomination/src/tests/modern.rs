@@ -49820,3 +49820,54 @@ fn cryptbreaker_mints_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
     assert_eq!(g.players[0].life, life - 1);
 }
+
+/// Mistcutter Hydra enters with X counters and can't be countered.
+#[test]
+fn mistcutter_hydra_x_counters_and_uncounterable() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mistcutter_hydra());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("X=3");
+    // Counterspell bounces off.
+    let cs = g.add_card_to_hand(1, catalog::counterspell());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cs, target: Some(Target::Permanent(id)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).ok();
+    drain_stack(&mut g);
+    let hydra = g.battlefield.iter().find(|c| c.id == id).expect("resolved despite Counterspell");
+    assert_eq!(hydra.counter_count(CounterType::PlusOnePlusOne), 3);
+    assert!(hydra.has_keyword(&Keyword::Haste));
+}
+
+/// Underworld Connections grants the enchanted land a pay-1-draw tap ability.
+#[test]
+fn underworld_connections_grants_land_draw() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::swamp());
+    let aura = g.add_card_to_hand(0, catalog::underworld_connections());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(land)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("enchant land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(land));
+    g.add_card_to_library(0, catalog::forest());
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    // The granted ability surfaces after the land's printed mana ability.
+    let printed = g.battlefield_find(land).unwrap().definition.activated_abilities.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: printed, target: None, x_value: None,
+    }).expect("granted draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].life, life - 1);
+}

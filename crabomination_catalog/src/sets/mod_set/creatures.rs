@@ -9425,3 +9425,22 @@ pub fn cryptbreaker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mistcutter Hydra — {X}{G} Creature — Hydra 0/0. Can't be countered;
+/// Haste, protection from blue; enters with X +1/+1 counters.
+pub fn mistcutter_hydra() -> CardDefinition {
+    use crate::mana::{x, Color};
+    CardDefinition {
+        name: "Mistcutter Hydra",
+        cost: cost(&[x(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Haste,
+            Keyword::Protection(Color::Blue),
+        ],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        ..Default::default()
+    }
+}

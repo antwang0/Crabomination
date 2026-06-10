@@ -555,3 +555,39 @@ pub fn drowned_secrets() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Underworld Connections — {1}{B}{B} Enchantment — Aura. Enchant land;
+/// enchanted land has "{T}, Pay 1 life: Draw a card."
+pub fn underworld_connections() -> CardDefinition {
+    use crate::card::{ActivatedAbility, EnchantmentSubtype};
+    use crate::mana::b;
+    CardDefinition {
+        name: "Underworld Connections",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Land,
+            },
+        },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land has \"{T}, Pay 1 life: Draw a card.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    life_cost: 1,
+                    effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
