@@ -420,6 +420,10 @@ impl GameState {
                 self.players[p].cards_left_graveyard_this_turn =
                     self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
                 events.push(GameEvent::CardLeftGraveyard { player: p, card_id: cid });
+                // Prized Amalgam's gate — record gy→battlefield entries.
+                if matches!(resolved_dest, ZoneDest::Battlefield { .. }) {
+                    self.entered_from_graveyard_this_turn.insert(cid);
+                }
                 self.place_card_in_dest(card, p, &resolved_dest, events);
                 return;
             }

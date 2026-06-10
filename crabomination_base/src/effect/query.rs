@@ -321,6 +321,8 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
+            Effect::LoseKeywordThisTurn { what, .. } => sel_has_target(what),
+            Effect::SacrificeAllMatching { who, .. } => sel_has_target(who),
             Effect::BecomeChosenColor { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::ReplaceColorWord { what, .. }

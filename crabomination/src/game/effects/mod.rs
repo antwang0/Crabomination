@@ -3280,6 +3280,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LoseKeywordThisTurn { what, keyword } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                        && !c.removed_keywords_eot.contains(keyword)
+                    {
+                        c.removed_keywords_eot.push(keyword.clone());
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnSelfAsEnchantment => {
                 use crate::card::CardType;
                 let Some(src) = ctx.source else { return Ok(()); };
@@ -4641,6 +4653,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeAllMatching { who, filter } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let ids: Vec<crate::card::CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(c.id),
+                                    p,
+                                    ctx.source,
+                                )
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    for id in ids {
+                        if self.battlefield_find(id).is_some() {
+                            self.sacrifice_one(id, p, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Sacrifice { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
@@ -5058,11 +5096,13 @@ impl GameState {
 
                 // Collect candidates from the library using definition-level evaluation
                 // (cards are not on the battlefield so battlefield_find would fail).
+                // X-dependent filters concretize against the paid X (Chord of Calling).
+                let filter = filter.resolve_x(ctx.x_value);
                 let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()
                     .take(limit)
-                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
 

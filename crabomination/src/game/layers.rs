@@ -432,6 +432,10 @@ fn compute_permanent(
         }
     }
 
+    // Until-EOT keyword removals (Shadowspear) apply last — the removal's
+    // timestamp is by construction later than any static grant this turn.
+    keywords.retain(|k| !card.removed_keywords_eot.contains(k));
+
     // Compute final P/T.
     let (mut power, mut toughness) = if let Some((p, t)) = set_pt {
         (p, t)

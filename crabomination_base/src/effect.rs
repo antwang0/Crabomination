@@ -1175,6 +1175,11 @@ pub enum EventKind {
     /// of simultaneous land-to-graveyard events. Use `EventScope::YourControl`
     /// (the graveyard owner is the event player).
     LandPutIntoGraveyard,
+    /// A card was put into a graveyard from anywhere. With
+    /// `EventScope::SelfSource` the trigger fires off the card now sitting
+    /// in the graveyard (Emrakul's "when this is put into a graveyard from
+    /// anywhere, its owner shuffles their graveyard into their library").
+    PutIntoGraveyard,
 }
 
 /// Whose events does this trigger listen for?
@@ -2061,6 +2066,11 @@ pub enum Effect {
         duration: Duration,
     },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// Each permanent picked by `what` loses `keyword` until end of turn
+    /// (CR 613.7 layer 6 — the removal outranks any earlier grant this
+    /// turn). Shadowspear's "creatures your opponents control lose
+    /// hexproof and indestructible until end of turn".
+    LoseKeywordThisTurn { what: Selector, keyword: Keyword },
     /// Each permanent picked by `what` becomes a single color of the
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").
@@ -2541,6 +2551,10 @@ pub enum Effect {
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
+    /// Each player picked by `who` sacrifices **all** permanents they control
+    /// matching `filter` — no choice involved (CR 701.16). All Is Dust's
+    /// "each player sacrifices all colored permanents they control".
+    SacrificeAllMatching { who: Selector, filter: SelectionRequirement },
     /// "`who` exiles `count` permanents they control of their choice" — the
     /// exile analogue of Annihilator's forced sacrifice (Bane of Bala Ged).
     /// The affected player chooses which permanents; a `wants_ui` player with

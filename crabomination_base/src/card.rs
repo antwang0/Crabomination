@@ -276,6 +276,9 @@ pub enum CounterType {
     /// Ice counter — Thing in the Ice ticks one off per instant/sorcery you
     /// cast; when the last is removed it transforms (CR 712).
     Ice,
+    /// Fate counter — Oblivion Stone's bookkeeping marker; permanents with
+    /// one survive its destroy-everything activation.
+    Fate,
 }
 
 /// Every zone a card can occupy.
@@ -398,6 +401,10 @@ pub enum Keyword {
     /// sacrifice it at end of combat." Common on Zombie tokens (MID/VOW).
     Decayed,
     Protection(Color),
+    /// CR 702.16h — "protection from colored spells" (Emrakul, the Aeons
+    /// Torn). Enforced as a cast-time targeting gate: a spell with one or
+    /// more colors can't target this permanent.
+    ProtectionFromColoredSpells,
     Hexproof,
     Shroud,
     CantBeCountered,
@@ -810,6 +817,10 @@ pub enum SelectionRequirement {
     /// entered the battlefield under your control this turn" (Shaile, Dean of
     /// Radiance). Combine with `ControlledByYou` for the controller clause.
     EnteredThisTurn,
+    /// True when the candidate entered the battlefield from a graveyard —
+    /// or was cast from one — this turn (Prized Amalgam's intervening-if).
+    /// Reads `GameState.entered_from_graveyard_this_turn`.
+    EnteredFromGraveyardThisTurn,
     /// True when the candidate permanent has an Aura attached to it (CR 303
     /// "enchanted permanent"). Battlefield-only: scans for any enchantment
     /// whose `attached_to` points at the candidate. Powers Kestia's
@@ -838,6 +849,10 @@ pub enum SelectionRequirement {
     IsBlockingAlone,
     IsSpellOnStack,
     ManaValueAtMost(u32),
+    /// Mana value ≤ the X paid into the resolving spell's cost. Resolved to
+    /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
+    /// time (Chord of Calling); unresolved instances evaluate false.
+    ManaValueAtMostXFromCost,
     ManaValueAtLeast(u32),
     /// True when the card's mana value (CMC) is exactly `n`. Useful for
     /// effects that want a precise CMC gate (Fix What's Broken returns
@@ -963,6 +978,20 @@ impl SelectionRequirement {
     }
     pub fn negate(self) -> Self {
         Self::Not(Box::new(self))
+    }
+
+    /// Replace X-dependent atoms with concrete values
+    /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing
+    /// through And/Or/Not. Called by `Effect::Search` with the resolving
+    /// spell's paid X (Chord of Calling, CR 601.2b).
+    pub fn resolve_x(&self, x: u32) -> Self {
+        match self {
+            Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
+            Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
+            Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),
+            other => other.clone(),
+        }
     }
 
     /// A short noun for a *target* matching this filter — "creature",
@@ -2128,6 +2157,11 @@ pub struct CardInstance {
     /// keywords aren't permanently mutated by an EOT pump (engine fix —
     /// push modern_decks batch 24). `has_keyword` checks both vectors.
     pub granted_keywords_eot: Vec<Keyword>,
+    /// Keywords removed until end of turn via `Effect::LoseKeywordThisTurn`
+    /// (Shadowspear's "creatures your opponents control lose hexproof and
+    /// indestructible until end of turn"). Removal beats printed/granted/
+    /// counter sources for the turn; cleared at Cleanup.
+    pub removed_keywords_eot: Vec<Keyword>,
     /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
     /// count; the host gets the keyword while one or more such counters
     /// are on it. Applied as a layer-6 keyword addition during
@@ -2317,6 +2351,7 @@ impl CardInstance {
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
             granted_keywords_eot: Vec::new(),
+            removed_keywords_eot: Vec::new(),
             keyword_counters: std::collections::HashMap::new(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
@@ -2389,6 +2424,9 @@ impl CardInstance {
         // Printed keyword, EOT-granted, or keyword counter (CR 122.1b)
         // all qualify. The keyword-counter check requires at least one
         // counter of the matching type to be present.
+        if self.removed_keywords_eot.contains(kw) {
+            return false;
+        }
         self.definition.keywords.contains(kw)
             || self.granted_keywords_eot.contains(kw)
             || self.keyword_counters.get(kw).copied().unwrap_or(0) > 0
@@ -2515,6 +2553,7 @@ impl CardInstance {
         self.loyalty_uses_this_turn = 0;
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
+        self.removed_keywords_eot.clear();
         self.granted_flashback_eot = None;
         self.granted_alt_cast_cost_eot = None;
         self.dealt_deathtouch_damage = false;
@@ -2632,6 +2671,10 @@ struct CardInstanceWire {
     /// consistent restore. `#[serde(default)]` for back-compat.
     #[serde(default)]
     granted_keywords_eot: Vec<Keyword>,
+    /// Until-end-of-turn keyword removals (Shadowspear). Shares
+    /// `granted_keywords_eot`'s lifetime. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    removed_keywords_eot: Vec<Keyword>,
     /// Until-end-of-turn flashback grant (SOS "Flashback"). Shares the
     /// transient lifetime of `granted_keywords_eot`; serialized so a
     /// mid-turn snapshot restores it. `#[serde(default)]` for back-compat.
@@ -2751,6 +2794,7 @@ impl serde::Serialize for CardInstance {
                 .map(|(k, v)| (k.clone(), *v))
                 .collect(),
             granted_keywords_eot: self.granted_keywords_eot.clone(),
+            removed_keywords_eot: self.removed_keywords_eot.clone(),
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             named_card: self.named_card.clone(),
@@ -2831,6 +2875,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.may_play_until = wire.may_play_until;
         c.keyword_counters = wire.keyword_counters.into_iter().collect();
         c.granted_keywords_eot = wire.granted_keywords_eot;
+        c.removed_keywords_eot = wire.removed_keywords_eot;
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.named_card = wire.named_card;

@@ -46,6 +46,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,
+        (EventKind::PutIntoGraveyard, GameEvent::CardPutIntoGraveyard { .. }) => true,
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
@@ -137,6 +138,11 @@ pub(crate) fn event_matches_spec(
             // the milled card itself (Narcomoeba, Creeping Chill).
             event,
             GameEvent::CardMilled { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // "When this is put into a graveyard from anywhere" — fires
+            // from the graveyard off the card itself (Emrakul).
+            event,
+            GameEvent::CardPutIntoGraveyard { card_id, .. } if *card_id == source.id
         ) || matches!(
             // CR 702.108 Inspired — "Whenever this becomes untapped."
             event,

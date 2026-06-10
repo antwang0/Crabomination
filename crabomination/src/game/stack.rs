@@ -1467,6 +1467,7 @@ impl GameState {
         // CR 702.143b — foretold-this-turn cards become castable next turn.
         self.foretold_this_turn.clear();
         self.plotted_this_turn.clear();
+        self.entered_from_graveyard_this_turn.clear();
         // CR 603.3d — "triggers only once each turn" abilities reset.
         self.triggered_once_per_turn_used.clear();
         // CR 505.1b — discard any unconsumed additional combat phases so they

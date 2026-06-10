@@ -151,6 +151,10 @@ pub struct CardSnapshot {
     /// `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub granted_keywords_eot: Vec<Keyword>,
+    /// Until-end-of-turn keyword removals (Shadowspear). Same lifetime as
+    /// the grants above. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub removed_keywords_eot: Vec<Keyword>,
     /// CR 603.6e linked-exile link — preserved so a save/restore of a game
     /// with a Banisher Priest / Brain Maggot in play still returns the
     /// exiled card when the source leaves. `#[serde(default)]` for
@@ -310,6 +314,7 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
             .map(|(k, v)| (k.clone(), *v))
             .collect(),
         granted_keywords_eot: c.granted_keywords_eot.clone(),
+        removed_keywords_eot: c.removed_keywords_eot.clone(),
         exiled_by: c.exiled_by,
         exiled_with: c.exiled_with,
         encoded_on: c.encoded_on,
@@ -493,6 +498,7 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.may_play_until = cs.may_play_until;
     c.keyword_counters = cs.keyword_counters.into_iter().collect();
     c.granted_keywords_eot = cs.granted_keywords_eot;
+    c.removed_keywords_eot = cs.removed_keywords_eot;
     c.exiled_by = cs.exiled_by;
     c.exiled_with = cs.exiled_with;
     c.encoded_on = cs.encoded_on;
@@ -882,6 +888,7 @@ mod tests {
             may_play_until: None,
             keyword_counters: vec![],
             granted_keywords_eot: vec![],
+            removed_keywords_eot: vec![],
             exiled_by: None,
             exiled_with: None,
             encoded_on: None,

@@ -1072,6 +1072,9 @@ impl GameState {
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     // CR 603.4 — entered this turn (stamped on every ETB).
                     R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
+                    R::EnteredFromGraveyardThisTurn => {
+                        self.entered_from_graveyard_this_turn.contains(cid)
+                    }
                     // CR 303 — "enchanted" = an Aura is attached. Equipment also
                     // sets `attached_to`, so require the attachment be an
                     // enchantment to exclude it.
@@ -1091,6 +1094,8 @@ impl GameState {
                     }
                     R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+                    // Unresolved X-relative filter (no X in scope here).
+                    R::ManaValueAtMostXFromCost => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
                     R::ManaValueEqualsSacrificedPlus(off) => {
@@ -1261,9 +1266,14 @@ impl GameState {
             // CR 603.4 — entered this turn (hidden-zone cards are never
             // stamped, so this is false off the battlefield).
             R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
+            R::EnteredFromGraveyardThisTurn => {
+                self.entered_from_graveyard_this_turn.contains(&card.id)
+            }
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            // Unresolved X-relative filter (callers concretize via `resolve_x`).
+            R::ManaValueAtMostXFromCost => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             R::ManaValueEqualsSacrificedPlus(off) => {

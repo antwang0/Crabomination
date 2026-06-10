@@ -48126,3 +48126,179 @@ fn archon_of_emeria_taps_opponent_nonbasics() {
     g.perform_action(GameAction::PlayLand(basic)).expect("play basic");
     assert!(!g.battlefield_find(basic).unwrap().tapped, "basics unaffected");
 }
+
+// ── Eldrazi / graveyard-matters batch ────────────────────────────────────────
+
+#[test]
+fn prized_amalgam_returns_tapped_at_next_end_step_after_gy_reanimation() {
+    use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    let mut g = two_player_game();
+    let amalgam = g.add_card_to_graveyard(0, catalog::prized_amalgam());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Reanimate the bear (gy → battlefield) and dispatch its ETB events.
+    let _ = Effect::Noop;
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let mut events = Vec::new();
+    g.move_card_to(
+        bear,
+        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        &ctx,
+        &mut events,
+    );
+    let _ = Selector::This;
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.delayed_triggers.iter().any(|t|
+        t.kind == crate::game::types::DelayedKind::NextEndStep),
+        "Amalgam registers an end-step return");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let a = g.battlefield_find(amalgam).expect("Amalgam returned");
+    assert!(a.tapped, "returns tapped");
+}
+
+#[test]
+fn prized_amalgam_ignores_creatures_entering_from_hand() {
+    let mut g = two_player_game();
+    let _amalgam = g.add_card_to_graveyard(0, catalog::prized_amalgam());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert!(!g.delayed_triggers.iter().any(|t|
+        t.kind == crate::game::types::DelayedKind::NextEndStep),
+        "a non-graveyard entry must not queue the return");
+}
+
+#[test]
+fn chord_of_calling_fetches_creature_with_mana_value_at_most_x() {
+    use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
+    use crate::card::SelectionRequirement;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    let wurm = g.add_card_to_library(0, catalog::pelakka_wurm()); // MV 7
+    let effect = Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::ManaValueAtMostXFromCost),
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    // The wurm is not in the eligible set, so a scripted pick of it is
+    // rejected; pick the bear (the only X≤2 candidate).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 2);
+    let _ = g.resolve_effect(&effect, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_some(), "MV-2 creature fetched with X=2");
+    assert!(g.battlefield_find(wurm).is_none(), "MV-7 creature is not eligible");
+}
+
+#[test]
+fn shadowspear_activation_strips_hexproof_and_indestructible_until_eot() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let spear = g.add_card_to_battlefield(0, catalog::shadowspear());
+    let troll = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(troll).unwrap().granted_keywords_eot.push(Keyword::Hexproof);
+    g.battlefield_find_mut(troll).unwrap().granted_keywords_eot.push(Keyword::Indestructible);
+    let ability = catalog::shadowspear().activated_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(spear, 0, None);
+    let _ = g.resolve_effect(&ability, &ctx).unwrap();
+    let c = g.battlefield_find(troll).unwrap();
+    assert!(!c.has_keyword(&Keyword::Hexproof), "hexproof stripped");
+    assert!(!c.has_keyword(&Keyword::Indestructible), "indestructible stripped");
+    assert!(!c.is_indestructible(), "destroyable for the turn");
+}
+
+#[test]
+fn all_is_dust_sweeps_colored_permanents_only() {
+    use crate::effect::Effect;
+    let mut g = two_player_game();
+    let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let stone = g.add_card_to_battlefield(0, catalog::oblivion_stone()); // colorless
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let effect = match catalog::all_is_dust().effect {
+        e @ Effect::SacrificeAllMatching { .. } => e,
+        other => panic!("unexpected effect shape: {other:?}"),
+    };
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let _ = g.resolve_effect(&effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(my_bear).is_none(), "your colored permanent is sacrificed");
+    assert!(g.battlefield_find(opp_bear).is_none(), "opp colored permanent is sacrificed");
+    assert!(g.battlefield_find(stone).is_some(), "colorless artifact survives");
+    assert!(g.battlefield_find(land).is_some(), "lands survive");
+}
+
+#[test]
+fn oblivion_stone_spares_fate_countered_permanents_then_clears_fate() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(0, catalog::oblivion_stone());
+    let saved = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let doomed = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(saved).unwrap().add_counters(CounterType::Fate, 1);
+    let nuke = catalog::oblivion_stone().activated_abilities[1].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(stone, 0, None);
+    let _ = g.resolve_effect(&nuke, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(saved).is_some(), "fate-countered creature survives");
+    assert!(g.battlefield_find(doomed).is_none(), "unprotected creature destroyed");
+    assert_eq!(
+        g.battlefield_find(saved).unwrap().counter_count(CounterType::Fate),
+        0,
+        "fate counters removed afterwards"
+    );
+}
+
+#[test]
+fn emrakul_cannot_be_targeted_by_colored_spells() {
+    use crate::mana::Color;
+    let mut g = two_player_game();
+    let emrakul = g.add_card_to_battlefield(0, catalog::emrakul_the_aeons_torn());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(emrakul)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(err.is_err(), "a colored spell can't target Emrakul");
+}
+
+#[test]
+fn emrakul_in_graveyard_shuffles_it_back_into_library() {
+    let mut g = two_player_game();
+    let emrakul = g.add_card_to_battlefield(0, catalog::emrakul_the_aeons_torn());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let lib_before = g.players[0].library.len();
+    let mut events = Vec::new();
+    g.sacrifice_one(emrakul, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
+    assert_eq!(g.players[0].library.len(), lib_before + 2, "Emrakul + bear shuffled in");
+}
+
+#[test]
+fn chord_of_calling_rejects_pick_above_x() {
+    use crate::effect::{Effect, PlayerRef, ZoneDest};
+    use crate::card::SelectionRequirement;
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_library(0, catalog::pelakka_wurm()); // MV 7
+    let effect = Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::ManaValueAtMostXFromCost),
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(wurm))]));
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 2);
+    let _ = g.resolve_effect(&effect, &ctx).unwrap();
+    assert!(g.battlefield_find(wurm).is_none(), "an over-X pick must be rejected");
+}

@@ -42629,3 +42629,209 @@ pub fn archon_of_emeria() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Eldrazi / graveyard-matters batch ────────────────────────────────────────
+
+/// Prized Amalgam — {1}{U}{B} 3/3 Zombie. Whenever another creature enters
+/// from a graveyard (or was cast from one), return this from your graveyard
+/// to the battlefield tapped at the beginning of the next end step.
+pub fn prized_amalgam() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Prized Amalgam",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::EnteredFromGraveyardThisTurn),
+                }),
+            effect: Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::If {
+                    // Still in the graveyard at end step (a second delayed
+                    // return this turn must not re-flicker it).
+                    cond: Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::InGraveyard,
+                    },
+                    then: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chord of Calling — {X}{G}{G}{G} Instant. Convoke. Search your library for
+/// a creature card with mana value X or less and put it onto the battlefield.
+pub fn chord_of_calling() -> CardDefinition {
+    CardDefinition {
+        name: "Chord of Calling",
+        cost: cost(&[x(), g(), g(), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ManaValueAtMostXFromCost),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Shadowspear — {1} Legendary Equipment. +1/+1, trample, lifelink; {1}:
+/// creatures your opponents control lose hexproof and indestructible until
+/// end of turn. Equip {3}.
+pub fn shadowspear() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let opp_creatures = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+    );
+    CardDefinition {
+        name: "Shadowspear",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Trample, Keyword::Lifelink],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::LoseKeywordThisTurn { what: opp_creatures(), keyword: Keyword::Hexproof },
+                Effect::LoseKeywordThisTurn {
+                    what: opp_creatures(),
+                    keyword: Keyword::Indestructible,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// All Is Dust — {7} Sorcery (Tribal — Eldrazi). Each player sacrifices all
+/// colored permanents they control.
+pub fn all_is_dust() -> CardDefinition {
+    CardDefinition {
+        name: "All Is Dust",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SacrificeAllMatching {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            filter: SelectionRequirement::Permanent
+                .and(SelectionRequirement::Colorless.negate()),
+        },
+        ..Default::default()
+    }
+}
+
+/// Oblivion Stone — {3} Artifact. {4},{T}: fate counter on target permanent.
+/// {10},{T}, Sacrifice: destroy each nonland permanent without a fate
+/// counter, then remove all fate counters from all permanents.
+pub fn oblivion_stone() -> CardDefinition {
+    CardDefinition {
+        name: "Oblivion Stone",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                    kind: CounterType::Fate,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(10)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Destroy {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::Nonland.and(
+                                SelectionRequirement::WithCounter(CounterType::Fate).negate(),
+                            ),
+                        ),
+                    },
+                    Effect::ForEach {
+                        selector: Selector::EachPermanent(
+                            SelectionRequirement::WithCounter(CounterType::Fate),
+                        ),
+                        body: Box::new(Effect::RemoveCounter {
+                            what: Selector::TriggerSource,
+                            kind: CounterType::Fate,
+                            amount: Value::CountersOn {
+                                what: Box::new(Selector::TriggerSource),
+                                kind: CounterType::Fate,
+                            },
+                        }),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Emrakul, the Aeons Torn — {15} Legendary 15/15 Eldrazi. Can't be
+/// countered; cast trigger grants an extra turn; flying, protection from
+/// colored spells, annihilator 6; put-into-graveyard-from-anywhere trigger
+/// shuffles its owner's graveyard into their library.
+pub fn emrakul_the_aeons_torn() -> CardDefinition {
+    CardDefinition {
+        name: "Emrakul, the Aeons Torn",
+        cost: cost(&[generic(15)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 15,
+        toughness: 15,
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Flying,
+            Keyword::ProtectionFromColoredSpells,
+            Keyword::Annihilator(6),
+        ],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+                effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+            },
+        ],
+        ..Default::default()
+    }
+}

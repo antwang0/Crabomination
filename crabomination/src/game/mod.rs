@@ -321,6 +321,13 @@ pub struct GameState {
     /// copy counts; reset at each turn's untap step.
     #[serde(default)]
     pub permanents_to_graveyard_this_turn: u32,
+    /// Cards that entered the battlefield from a graveyard — or were cast
+    /// from one — this turn. Stamped at the gy→battlefield move funnel and
+    /// at every cast-from-graveyard site; read by
+    /// `SelectionRequirement::EnteredFromGraveyardThisTurn` (Prized
+    /// Amalgam's gate). Cleared at each turn's untap step.
+    #[serde(default)]
+    pub(crate) entered_from_graveyard_this_turn: std::collections::HashSet<CardId>,
     /// Delayed triggered abilities registered by resolved spells/abilities
     /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
     /// dispatcher when the matching event occurs.
@@ -841,6 +848,7 @@ impl Clone for GameState {
             expend_prev_total: self.expend_prev_total,
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
+            entered_from_graveyard_this_turn: self.entered_from_graveyard_this_turn.clone(),
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
@@ -956,6 +964,7 @@ impl GameState {
             expend_prev_total: 0,
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
+            entered_from_graveyard_this_turn: std::collections::HashSet::new(),
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
@@ -5117,7 +5126,13 @@ impl GameState {
                         ta.event.kind,
                         crate::effect::EventKind::CardMilled
                     ) && self_scope;
-                    if !from_gy_scope && !cycle_self && !milled_self {
+                    // "When this is put into a graveyard from anywhere"
+                    // (Emrakul) — also fires off the card in the graveyard.
+                    let putgy_self = matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::PutIntoGraveyard
+                    ) && self_scope;
+                    if !from_gy_scope && !cycle_self && !milled_self && !putgy_self {
                         continue;
                     }
                     for ev in events {

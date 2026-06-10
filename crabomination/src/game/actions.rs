@@ -926,6 +926,7 @@ impl GameState {
             return Err(GameError::NotALand(card_id));
         };
         let card = self.players[p].graveyard.remove(idx);
+        self.entered_from_graveyard_this_turn.insert(card_id);
         self.place_land_card(p, card)
     }
 
@@ -1211,7 +1212,10 @@ impl GameState {
                         self.players[p].graveyard.push(card);
                     }
                 }
-                Ok(_) => self.players[p].graveyard_cast_types_this_turn.push(used_type),
+                Ok(_) => {
+                    self.players[p].graveyard_cast_types_this_turn.push(used_type);
+                    self.entered_from_graveyard_this_turn.insert(card_id);
+                }
             }
             return r;
         }
@@ -2676,6 +2680,13 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16h — protection from colored spells (Emrakul).
+                if matches!(kw, Keyword::ProtectionFromColoredSpells)
+                    && !spell_colors.is_empty()
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
             }
         }
 
@@ -3673,6 +3684,7 @@ impl GameState {
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        self.entered_from_graveyard_this_turn.insert(card_id);
         // Flip to the back face — the transformed spell goes on the stack
         // (CR 702.146a) and resolves as the back-face permanent.
         let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
@@ -3875,6 +3887,7 @@ impl GameState {
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        self.entered_from_graveyard_this_turn.insert(card_id);
         card.cast_via_flashback = true;
         let events = vec![
             GameEvent::CardLeftGraveyard { player: p, card_id },
@@ -4082,6 +4095,7 @@ impl GameState {
         // Stamp the escape-cast flag so the "sacrifice unless it escaped"
         // ETB rider on Kroxa/Uro sees this entered via Escape.
         card.cast_from_escape = true;
+        self.entered_from_graveyard_this_turn.insert(card_id);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         events.push(GameEvent::CardLeftGraveyard { player: p, card_id });

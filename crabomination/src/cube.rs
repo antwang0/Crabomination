@@ -215,6 +215,11 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // ── Eldrazi / sweeper batch ──
+        shadowspear,
+        all_is_dust,
+        oblivion_stone,
+        emrakul_the_aeons_torn,
         // allied-color batch (modern_decks)
         bontus_monument,
         // ── modern_decks: cube staples ──
@@ -1532,6 +1537,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         living_end,
         orcish_bowmasters,
         gravecrawler,
+        prized_amalgam,
         knight_of_the_ebon_legion,
         tourach_dread_cantor,
         yawgmoth_thran_physician,
@@ -2455,6 +2461,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        chord_of_calling,
         tooth_and_nail,
         rude_awakening,
         shefet_monitor,

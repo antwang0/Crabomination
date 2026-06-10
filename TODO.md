@@ -8,20 +8,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Noticed this run (claude/modern_decks, meld batch):**
-  - **Prized Amalgam** wants an "entered from your graveyard" gate on
-    creature-ETB triggers (zone-origin isn't carried on `PermanentEntered`).
-  - ✅ **One-spell-per-turn lock** ships (`StaticEffect::OneSpellPerTurn`
-    gated at the central `perform_action` cast gate — Rule of Law, Eidolon
-    of Rhetoric, Archon of Emeria).
-  - **Chord of Calling / X tutors** want a `ManaValueAtMostXFromCost`
-    selection requirement plumbed into `Effect::Search`.
-  - **Shadowspear**'s active "lose hexproof/indestructible" half wants an
-    instant-speed `LoseKeyword` *effect* (the static exists).
-  - **All Is Dust / Oblivion Stone** want a "each player sacrifices all
-    [filter] permanents" sweep and fate counters respectively.
-  - **Emrakul, the Aeons Torn** wants protection-from-colored-*spells*
-    (targeting gate distinct from `Keyword::Protection(Color)`).
+- ✅ **Noticed-items sweep (meld batch) — all shipped:**
+  - **Prized Amalgam** ✅ — `GameState.entered_from_graveyard_this_turn`
+    (stamped at the gy→bf move funnel and every cast-from-graveyard site) +
+    `SelectionRequirement::EnteredFromGraveyardThisTurn`; the return rides
+    `DelayUntil(NextEndStep)` with an in-graveyard re-check.
+  - ✅ **One-spell-per-turn lock** (`StaticEffect::OneSpellPerTurn` — Rule
+    of Law, Eidolon of Rhetoric, Archon of Emeria).
+  - **Chord of Calling** ✅ — `SelectionRequirement::ManaValueAtMostXFromCost`
+    concretized via `resolve_x(ctx.x_value)` in `Effect::Search`.
+  - **Shadowspear** ✅ — `Effect::LoseKeywordThisTurn` +
+    `CardInstance.removed_keywords_eot` (strips printed/granted/counter
+    keywords for the turn; cleared at cleanup).
+  - **All Is Dust** ✅ (`Effect::SacrificeAllMatching`) / **Oblivion
+    Stone** ✅ (`CounterType::Fate`).
+  - **Emrakul, the Aeons Torn** ✅ — `Keyword::ProtectionFromColoredSpells`
+    cast-time targeting gate + `EventKind::PutIntoGraveyard` self-source
+    graveyard trigger (shuffle gy into library) + cast-trigger extra turn.
 
 - ⏳ **Noticed this run (claude/modern_decks):**
   - ✅ **Per-blocker combat-damage assignment modal** ships
