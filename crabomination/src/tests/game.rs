@@ -120,7 +120,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
     // defending player sacrifices N permanents." Wire as Attacks trigger
     // → Effect::Sacrifice { who: defender, count: N, filter: Permanent }.
     use crate::card::{CardType, CardDefinition, CreatureType, Keyword, Subtypes};
-    use crate::effect::Effect;
+    
     use crate::game::{Attack, AttackTarget};
     use crate::mana::{cost, generic};
 
@@ -5725,7 +5725,7 @@ fn cr_704_5j_legend_rule_different_controllers_coexist() {
 
 #[test]
 fn cr_121_2b_draw_cap_truncates_draws() {
-    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::card::{CardDefinition, CardType};
     use crate::effect::PlayerStaticTarget;
     let mut g = two_player_game();
     // Synthetic enchantment: each player can't draw more than one card/turn.
@@ -5958,7 +5958,7 @@ fn cr_704_5i_planeswalker_with_zero_loyalty_dies() {
 
 /// Inline vanilla creature with arbitrary P/T + keywords for combat tests.
 fn vanilla_body(name: &'static str, p: i32, t: i32, kws: Vec<crate::card::Keyword>) -> crate::card::CardDefinition {
-    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::card::{CardDefinition, CardType};
     CardDefinition {
         name,
         card_types: vec![CardType::Creature],
@@ -6459,8 +6459,7 @@ fn rampage_pumps_attacker_per_extra_blocker() {
 /// third +1/+1 counter lands.
 #[test]
 fn cr_122_7_nth_counter_threshold_trigger() {
-    use crate::card::{CardType, CounterType, EventKind, EventScope, EventSpec,
-        Subtypes, TriggeredAbility};
+    use crate::card::{CardType, CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::Predicate;
     let watcher = crate::card::CardDefinition {
         name: "Counter Watcher",

@@ -2168,7 +2168,7 @@ mod tests {
     }
 
     fn body_card(name: &'static str, body: Effect) -> CardDefinition {
-        use crate::card::{CardType, Subtypes, TriggeredAbility};
+        use crate::card::{CardType, TriggeredAbility};
         use crate::effect::{EventKind, EventScope, EventSpec};
         CardDefinition {
             name,
@@ -2215,7 +2215,7 @@ mod tests {
     /// out of every ability and planeswalker).
     #[test]
     fn bot_skips_untargetable_loyalty_ability_for_a_usable_one() {
-        use crate::card::{CardType, LoyaltyAbility, Subtypes};
+        use crate::card::{CardType, LoyaltyAbility};
         use crate::effect::shortcut::target_filtered;
         use crate::card::SelectionRequirement;
         use crate::effect::{Selector, Value};
@@ -2292,7 +2292,7 @@ mod tests {
     /// 3 life" body is declined even though it's reachable only via MayPay.
     #[test]
     fn bot_declines_self_costly_maypay() {
-        use crate::card::{CardType, Subtypes, TriggeredAbility};
+        use crate::card::{CardType, TriggeredAbility};
         use crate::effect::{EventKind, EventScope, EventSpec, Selector, Value};
         let mut g = two_player_game();
         let def = CardDefinition {
@@ -2316,7 +2316,7 @@ mod tests {
     }
 
     fn generic_spell(name: &'static str, cmc: u32) -> CardDefinition {
-        use crate::card::{CardType, Subtypes};
+        use crate::card::CardType;
         CardDefinition {
             name,
             card_types: vec![CardType::Creature],
@@ -2718,7 +2718,7 @@ mod tests {
     /// (CR 702.19e). Push (claude/modern_decks).
     #[test]
     fn bot_chumps_non_trampler_over_trampler_when_threatened() {
-        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::card::{CardDefinition, CardType, Keyword};
         use crate::game::types::{Attack, AttackTarget};
         fn beater(name: &'static str, kws: Vec<Keyword>) -> CardDefinition {
             CardDefinition {
@@ -2757,7 +2757,7 @@ mod tests {
     /// would get the whole DeclareBlockers batch rejected).
     #[test]
     fn bot_never_blocks_with_a_decayed_creature() {
-        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::card::{CardDefinition, CardType, Keyword};
         use crate::game::types::{Attack, AttackTarget};
         let mut g = two_player_game();
         let atk = g.add_card_to_battlefield(0, CardDefinition {
@@ -2786,7 +2786,7 @@ mod tests {
     /// suicidal trade, so it blocks even at full life.
     #[test]
     fn bot_blocks_freely_with_protected_creature() {
-        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::card::{CardDefinition, CardType, Keyword};
         use crate::game::types::{Attack, AttackTarget};
         use crate::mana::{cost, r, Color};
         let mut g = two_player_game();
@@ -2819,7 +2819,7 @@ mod tests {
     /// hit). A 5/5 should not block a 5/1 at healthy life.
     #[test]
     fn bot_keeps_big_body_over_bad_even_trade() {
-        use crate::card::{CardDefinition, CardType, Subtypes};
+        use crate::card::{CardDefinition, CardType};
         use crate::game::types::{Attack, AttackTarget};
         let mut g = two_player_game();
         let glass = CardDefinition {
@@ -2866,7 +2866,7 @@ mod tests {
     /// lethal clock).
     #[test]
     fn bot_chumps_infect_attacker_to_avoid_poison_out() {
-        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::card::{CardDefinition, CardType, Keyword};
         use crate::game::types::{Attack, AttackTarget};
         let mut g = two_player_game();
         let infect = CardDefinition {

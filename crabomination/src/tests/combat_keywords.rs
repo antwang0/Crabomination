@@ -380,7 +380,7 @@ fn cr_702_135_afterlife_mints_spirits_on_death() {
 fn cr_702_19_deathtouch_trample_assigns_one_then_tramples_rest() {
     // CR 702.19e + 702.2c: a deathtouch+trample attacker need only assign 1
     // (lethal) to each blocker, tramping the remainder to the player.
-    use crate::card::{CardType, Keyword, Subtypes};
+    use crate::card::{CardType, Keyword};
     let mut g = two_player_game();
     let atk = g.add_card_to_battlefield(0, CardDefinition {
         name: "Wurm",

@@ -125,8 +125,8 @@ fn interjection_pumps_and_grants_first_strike() {
 
 #[test]
 fn stand_up_for_yourself_only_targets_power_three_or_more() {
-    use crate::card::{CardDefinition, Subtypes};
-    use crate::effect::Effect;
+    use crate::card::CardDefinition;
+    
     // Build a 3/3 manually so the destroy-power-3+ filter accepts it.
     let big = CardDefinition {
         name: "Test Three Three",
@@ -1930,8 +1930,8 @@ fn quandrix_charm_mode_2_makes_creature_5_5() {
 
 #[test]
 fn quandrix_charm_mode_1_destroys_enchantment() {
-    use crate::card::{CardDefinition, Subtypes};
-    use crate::effect::Effect;
+    use crate::card::CardDefinition;
+    
     // Build a vanilla enchantment.
     let ench_def = CardDefinition {
         name: "Test Enchant",
@@ -2402,7 +2402,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
 
     // Place a 1/1 creature you control (mana value goes through bears →
     // we simulate a 1/1 by using a token-style creature definition).
-    use crate::card::{CardDefinition, Subtypes};
+    use crate::card::CardDefinition;
     let weak = CardDefinition {
         name: "Weak Creature",
         cost: crate::mana::ManaCost::default(),

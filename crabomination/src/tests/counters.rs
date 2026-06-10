@@ -5,7 +5,6 @@
 use crate::card::{CardType, CounterType, Keyword};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
-use crate::effect::Effect;
 use crate::game::types::{AttackTarget, Target};
 use crate::game::*;
 use crate::game::{cast, drain_stack, two_player_game};
@@ -122,7 +121,7 @@ fn cytoplast_root_kin_pumps_creatures_with_counters() {
 
 #[test]
 fn melee_pumps_the_attacker() {
-    use crate::card::{CardDefinition, Subtypes};
+    use crate::card::CardDefinition;
     let mut g = two_player_game();
     // Inline 2/2 with Melee — exercises the shortcut directly.
     let def = CardDefinition {

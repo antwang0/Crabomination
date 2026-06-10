@@ -2404,7 +2404,7 @@ fn divine_gambit_opp_may_put_permanent_from_hand_via_scripted_decider() {
 #[test]
 fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
     use crate::card::{
-        CardDefinition, CardType, Effect, Subtypes, Value,
+        CardDefinition, CardType, Effect, Value,
     };
     use crate::effect::shortcut::target_filtered;
     use crate::game::GameEvent;
@@ -2475,7 +2475,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
 /// be emitted, and the library order is unchanged.
 #[test]
 fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
-    use crate::card::{CardDefinition, CardType, Effect, Subtypes, Value};
+    use crate::card::{CardDefinition, CardType, Effect, Value};
     use crate::effect::PlayerRef;
     use crate::game::GameEvent;
     use crate::mana::cost;

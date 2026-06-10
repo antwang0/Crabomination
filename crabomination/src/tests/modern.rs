@@ -18939,7 +18939,7 @@ fn loot_the_pathfinder_etb_creates_map_token() {
 #[test]
 fn one_shot_is_discount_applies_to_next_spell_then_lapses() {
     use crate::card::{CardDefinition, CardType};
-    use crate::effect::Effect;
+    
     use crate::game::actions::cost_reduction_for_spell;
     let mut g = two_player_game();
     // A {3} generic instant.

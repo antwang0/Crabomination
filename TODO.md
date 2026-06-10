@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (claude/modern_decks, meld batch):**
+  - **Prized Amalgam** wants an "entered from your graveyard" gate on
+    creature-ETB triggers (zone-origin isn't carried on `PermanentEntered`).
+  - **Archon of Emeria / Rule of Law** want a one-spell-per-turn cast lock
+    static.
+  - **Chord of Calling / X tutors** want a `ManaValueAtMostXFromCost`
+    selection requirement plumbed into `Effect::Search`.
+  - **Shadowspear**'s active "lose hexproof/indestructible" half wants an
+    instant-speed `LoseKeyword` *effect* (the static exists).
+  - **All Is Dust / Oblivion Stone** want a "each player sacrifices all
+    [filter] permanents" sweep and fate counters respectively.
+  - **Emrakul, the Aeons Torn** wants protection-from-colored-*spells*
+    (targeting gate distinct from `Keyword::Protection(Color)`).
+
 - ⏳ **Noticed this run (claude/modern_decks):**
   - ✅ **Per-blocker combat-damage assignment modal** ships
     (`spawn_damage_assign_modal` — +/- steppers per blocker, total capped at
@@ -1120,6 +1134,20 @@ picking an item up.
   `CardDefinition.loyalty_twice_each_turn` + the new
   `CardInstance.loyalty_uses_this_turn` counter. Tests `meld_*`,
   `urza_planeswalker_twice_per_turn_and_discount`.
+- ✅ **CR 702.146 — Disturb** — `Keyword::Disturb(cost)` +
+  `GameAction::CastDisturb` (sorcery-speed graveyard cast that flips to the
+  back face on the stack); CR 702.146e graveyard→exile rider via
+  `disturb_back_exiles()` at both graveyard funnels. Baithook Angler,
+  Beloved Beggar, Mourning Patrol, Lunarch Veteran. Surfaced as
+  `GraveyardCardView.disturb_cost` + a client browser badge; the bot offers
+  disturb recasts.
+- ✅ **CR 104.3c (with the 104.2 win override)** — `lose_to_empty_draw`
+  funnels every failed-draw site; `StaticEffect::WinInsteadOfDrawFromEmpty`
+  flips it to a win (Laboratory Maniac, Jace, Wielder of Mysteries; Thassa's
+  Oracle gates on `DevotionTo` vs `LibrarySizeOf`).
+- ✅ **"When this card is milled" triggers** — `EventKind::CardMilled`
+  dispatched from the graveyard with SelfSource scope (Narcomoeba, Creeping
+  Chill).
 - ✅ **CR 702.104 — Tribute** — `Effect::Tribute { n, otherwise }` +
   `shortcut::tribute`; the opponent answers via the synchronous decider
   (AutoDecider declines → trigger half fires). Fanatic of Xenagos, Oracle

@@ -640,7 +640,7 @@ fn two_v_two_attacking_team_cannot_block_for_defender() {
 /// permanent (4p FFA, 2HG, Commander; invisible in 1v1).
 #[test]
 fn apnap_orders_simultaneous_triggers_active_pushed_first() {
-    use crate::card::{CardDefinition, CardId, CardType, Subtypes, TriggeredAbility};
+    use crate::card::{CardDefinition, CardId, CardType, TriggeredAbility};
     use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
 
     // A "lifegain pinger" — minimal triggered ability that fires on
@@ -702,7 +702,7 @@ fn apnap_orders_simultaneous_triggers_active_pushed_first() {
 /// re-order the live ones).
 #[test]
 fn apnap_skips_eliminated_seat_in_cycle() {
-    use crate::card::{CardDefinition, CardId, CardType, Subtypes, TriggeredAbility};
+    use crate::card::{CardDefinition, CardId, CardType, TriggeredAbility};
     use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
 
     let pinger = |name: &'static str| CardDefinition {
@@ -1195,7 +1195,7 @@ fn replacement_unregister_drops_effect() {
 /// Avoids depending on a real catalog commander with a 5-color cost
 /// while still being a Legal commander (Legendary + Creature).
 fn test_commander() -> crate::card::CardDefinition {
-    use crate::card::{CardDefinition, CardType, Subtypes, Supertype};
+    use crate::card::{CardDefinition, CardType, Supertype};
     CardDefinition {
         name: "Test Commander",
         cost: crate::mana::ManaCost::default(),
@@ -1518,7 +1518,7 @@ fn commander_deck_validator_requires_a_commander() {
 /// and confirm both pinger triggers stacked.
 #[test]
 fn two_headed_giant_lifegain_fires_partner_yourcontrol_trigger() {
-    use crate::card::{CardDefinition, CardId, CardType, Subtypes, TriggeredAbility};
+    use crate::card::{CardDefinition, CardId, CardType, TriggeredAbility};
     use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
 
     let pinger = |name: &'static str| CardDefinition {

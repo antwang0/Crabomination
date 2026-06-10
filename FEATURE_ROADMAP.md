@@ -281,7 +281,9 @@ feature; sweep card-batch by card-batch.
   (`CardDefinition.foretell_cost` + `GameAction::Foretell` /
   `CastForetold` — CR 702.143: pay {2} to exile face-down, cast from exile
   for the foretell cost on a later turn; Saw It Coming, Doomskar, Behold the
-  Multiverse), ⏳ Disturb,
+  Multiverse), ✅ Disturb (CR 702.146 — `Keyword::Disturb` +
+  `GameAction::CastDisturb`, cast transformed from the graveyard; 702.146e
+  exile rider at the graveyard funnels),
   ⏳ Daybound/Nightbound, ✅ Decayed (`Keyword::Decayed` — CR 702.147: can't
   block + sacrifice at end of combat via the attacking-token cleanup queue),
   ✅ Blitz (`shortcut::blitz` /

@@ -18,7 +18,7 @@ fn _keepalive(_: CounterType) {}
 /// Test-only fixture: a Sorcery with a d6 results table. 1-2 → gain 1
 /// life; 3-6 → opp loses 3 life. Drives the AutoDecider midpoint test.
 fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
-    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::card::{CardDefinition, CardType};
     use crate::effect::{Effect, Selector, Value};
     use crate::mana::{cost, generic};
     CardDefinition {
@@ -46,7 +46,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
 /// Test-only fixture: d6 sorcery whose 1-2 arm gains 5 life and 3-6
 /// arm deals 3 damage to opp. Drives the ScriptedDecider branch test.
 fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
-    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::card::{CardDefinition, CardType};
     use crate::effect::{Effect, Selector, Value};
     use crate::mana::{cost, generic};
     CardDefinition {
@@ -74,7 +74,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
 /// Test-only fixture: d6 with only a 1-3 arm. Rolls of 4-6 run no
 /// effect (CR 706.3a — "If the result was in this range").
 fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
-    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::card::{CardDefinition, CardType};
     use crate::effect::{Effect, Selector, Value};
     use crate::mana::{cost, generic};
     CardDefinition {
@@ -100,7 +100,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
 /// 1-6: lose 1 life." Exercises CR 706.2 result modifiers — only a
 /// boosted roll can reach the 7+ arm on a six-sided die.
 fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
-    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::card::{CardDefinition, CardType};
     use crate::effect::{Effect, Selector, Value};
     use crate::mana::{cost, generic};
     CardDefinition {

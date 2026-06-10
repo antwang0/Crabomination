@@ -58,8 +58,8 @@ fn color_identity_unions_mdfc_back_face_per_cr_903_4d() {
     // CR 903.4d — the back face of a DFC is included when determining
     // a card's color identity. Construct a synthetic blue front /
     // red back MDFC and assert color_identity returns {U, R}.
-    use crate::card::{CardDefinition, CardType, Subtypes};
-    use crate::effect::Effect;
+    use crate::card::{CardDefinition, CardType};
+    
     use crate::mana::{cost, r, u, Color};
     let back = CardDefinition {
         name: "Synthetic Back",

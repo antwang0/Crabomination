@@ -1459,7 +1459,7 @@ fn lorehold_battlemage_etb_drains_one() {
 /// (matches CR 119.9 / 119.10).
 #[test]
 fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
-    use crate::card::{CardDefinition, CardType, Effect, Subtypes, Value};
+    use crate::card::{CardDefinition, CardType, Effect, Value};
     use crate::game::GameEvent;
     use crate::mana::cost;
 
@@ -1494,7 +1494,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
 
 #[test]
 fn set_life_total_higher_emits_life_gained() {
-    use crate::card::{CardDefinition, CardType, Effect, Subtypes, Value};
+    use crate::card::{CardDefinition, CardType, Effect, Value};
     use crate::game::GameEvent;
     use crate::mana::cost;
 
@@ -1535,7 +1535,7 @@ fn set_life_total_higher_emits_life_gained() {
 /// life stays the same.
 #[test]
 fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
-    use crate::card::{CardDefinition, CardType, Effect, Subtypes, Value};
+    use crate::card::{CardDefinition, CardType, Effect, Value};
     use crate::game::GameEvent;
     use crate::mana::cost;
 

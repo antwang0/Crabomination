@@ -2446,7 +2446,7 @@ fn witherbloom_mascot_dies_drains_two() {
 /// path as CR 701.22b (Scry 0) in `game/effects/mod.rs::resolve_effect`.
 #[test]
 fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
-    use crate::card::{CardDefinition, CardType, Effect, Subtypes, Value};
+    use crate::card::{CardDefinition, CardType, Effect, Value};
     use crate::effect::PlayerRef;
     use crate::mana::cost;
 
