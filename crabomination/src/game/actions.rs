@@ -2407,19 +2407,22 @@ impl GameState {
             return Err(GameError::CantCastPermanentSpells);
         }
 
-        // Validate convoke creatures up-front (before any state mutation).
-        if !convoke_creatures.is_empty()
-            && !card.definition.keywords.contains(&crate::card::Keyword::Convoke)
-        {
+        // Validate convoke/improvise helpers up-front (before any state
+        // mutation). Convoke taps untapped creatures (CR 702.52); Improvise
+        // taps untapped artifacts (CR 702.126); each pays {1}.
+        let has_convoke = card.definition.keywords.contains(&crate::card::Keyword::Convoke);
+        let has_improvise = card.definition.keywords.contains(&crate::card::Keyword::Improvise);
+        if !convoke_creatures.is_empty() && !has_convoke && !has_improvise {
             self.players[p].hand.push(card);
-            return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have convoke
+            return Err(GameError::SorcerySpeedOnly); // reuse: spell can't tap helpers
         }
         for cid in convoke_creatures {
             let bad = !self.battlefield.iter().any(|c| {
                 c.id == *cid
                     && c.controller == p
-                    && c.definition.is_creature()
                     && !c.tapped
+                    && ((has_convoke && c.definition.is_creature())
+                        || (has_improvise && c.definition.is_artifact()))
             });
             if bad {
                 self.players[p].hand.push(card);

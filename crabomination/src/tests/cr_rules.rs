@@ -577,3 +577,47 @@ fn cr_615_7_forge_tender_prevents_a_creatures_combat_damage() {
     g.resolve_combat().expect("combat");
     assert_eq!(g.players[1].life, 20, "prevented source deals no combat damage");
 }
+
+// ── CR 702.126 — Improvise ────────────────────────────────────────────────────
+
+/// Kappa Cannoneer casts for {1}{U} by tapping four artifacts via Improvise,
+/// and its own artifact entry grows it.
+#[test]
+fn cr_702_126_improvise_taps_artifacts_for_generic() {
+    let mut g = two_player_game();
+    let arts: Vec<_> = (0..4)
+        .map(|_| g.add_card_to_battlefield(0, catalog::welding_jar()))
+        .collect();
+    let id = g.add_card_to_hand(0, catalog::kappa_cannoneer());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellConvoke {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        convoke_creatures: arts.clone(),
+    }).expect("improvise cast for {1}{U} + four artifact taps");
+    drain_stack(&mut g);
+    for a in &arts {
+        assert!(g.battlefield_find(*a).unwrap().tapped, "helper artifact tapped");
+    }
+    let k = g.battlefield_find(id).expect("resolved");
+    assert_eq!(
+        k.counter_count(crate::card::CounterType::PlusOnePlusOne),
+        1,
+        "its own entry triggered the counter"
+    );
+}
+
+/// Improvise rejects tapping a creature that isn't an artifact.
+#[test]
+fn cr_702_126_improvise_rejects_nonartifact_helpers() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::kappa_cannoneer());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(g.perform_action(GameAction::CastSpellConvoke {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        convoke_creatures: vec![bear],
+    }).is_err(), "a creature can't improvise");
+}

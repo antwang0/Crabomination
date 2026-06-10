@@ -447,6 +447,11 @@ pub enum Keyword {
     /// remove a time counter from it whenever an opponent casts a spell.
     SuspendAccelerant,
     Convoke,
+    /// CR 702.126 — Improvise: artifacts you control can help cast this
+    /// spell (each tapped artifact pays {1}). Rides the Convoke cast path
+    /// (`CastSpellConvoke`), accepting untapped artifacts instead of
+    /// creatures.
+    Improvise,
     Delve,
     Cascade,
     Cycling(crate::mana::ManaCost),

@@ -62,6 +62,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Undying => "Undying",
         Keyword::Cascade => "Cascade",
         Keyword::Convoke => "Convoke",
+        Keyword::Improvise => "Improvise",
         Keyword::Delve => "Delve",
         Keyword::Storm => "Storm",
         Keyword::Gravestorm => "Gravestorm",

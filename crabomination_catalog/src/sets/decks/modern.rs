@@ -40866,3 +40866,40 @@ pub fn guide_of_souls() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kappa Cannoneer — {5}{U} 4/4 Turtle Warrior. Improvise, Ward {4};
+/// artifact entries grow it and make it unblockable for the turn.
+pub fn kappa_cannoneer() -> CardDefinition {
+    CardDefinition {
+        name: "Kappa Cannoneer",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Turtle, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Improvise, Keyword::Ward(WardCost::Mana(cost(&[generic(4)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

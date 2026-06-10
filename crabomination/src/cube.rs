@@ -1130,6 +1130,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         harbinger_of_the_seas,
         flare_of_denial,
         nulldrifter,
+        kappa_cannoneer,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
