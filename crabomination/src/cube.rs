@@ -1455,6 +1455,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         surgical_extraction,
         smallpox,
         zealous_persecution,
+        // ── modern_decks-19 ──
+        living_end,
         orcish_bowmasters,
         gravecrawler,
         knight_of_the_ebon_legion,

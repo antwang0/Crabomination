@@ -40644,3 +40644,17 @@ pub fn sigardas_aid() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Living End — Sorcery, no mana cost. Suspend 3—{2}{B}{B}. Each player
+/// exiles creature cards from their graveyard, sacrifices all creatures,
+/// then returns the exiled cards to the battlefield.
+pub fn living_end() -> CardDefinition {
+    CardDefinition {
+        name: "Living End",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Suspend(3, cost(&[generic(2), b(), b()]))],
+        effect: Effect::LivingEnd,
+        ..Default::default()
+    }
+}

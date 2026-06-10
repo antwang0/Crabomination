@@ -1947,6 +1947,11 @@ pub enum Effect {
         #[serde(default)]
         filter: Option<crate::card::SelectionRequirement>,
     },
+    /// Living End / Living Death: each player exiles all creature cards
+    /// from their graveyard, sacrifices all creatures they control, then
+    /// puts the exiled cards onto the battlefield under their owner's
+    /// control.
+    LivingEnd,
     /// "Exile that player's graveyard" — graveyard hate scoped to a single
     /// player (Go Blank). `who` resolves to the affected player.
     ExilePlayerGraveyard { who: PlayerRef },

@@ -2760,6 +2760,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LivingEnd => {
+                // Each player exiles all creature cards from their graveyard…
+                let mut returning: Vec<CardId> = Vec::new();
+                for p in 0..self.players.len() {
+                    let gy = std::mem::take(&mut self.players[p].graveyard);
+                    for card in gy {
+                        if card.definition.is_creature() {
+                            returning.push(card.id);
+                            let cid = card.id;
+                            self.exile.push(card);
+                            events.push(GameEvent::PermanentExiled { card_id: cid });
+                        } else {
+                            self.players[p].graveyard.push(card);
+                        }
+                    }
+                }
+                // …then sacrifices all creatures they control…
+                let dying: Vec<(CardId, usize)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (c.id, c.controller))
+                    .collect();
+                for (id, who) in dying {
+                    events.push(GameEvent::PermanentSacrificed { card_id: id, who });
+                    self.remove_from_battlefield_to_graveyard(id);
+                }
+                // …then puts the exiled cards onto the battlefield.
+                for id in returning {
+                    if let Some(pos) = self.exile.iter().position(|c| c.id == id) {
+                        let card = self.exile.remove(pos);
+                        let owner = card.owner;
+                        self.place_card_in_dest(
+                            card,
+                            owner,
+                            &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            events,
+                        );
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::ExilePlayerGraveyard { who } => {
                 // Go Blank / Ashiok −10 — move graveyards to exile.
                 for p in self.resolve_players(who, ctx) {

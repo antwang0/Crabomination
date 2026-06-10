@@ -1596,3 +1596,207 @@ pub fn clifftop_retreat() -> CardDefinition {
 pub fn hinterland_harbor() -> CardDefinition {
     checkland("Hinterland Harbor", LandType::Forest, LandType::Island, Color::Green, Color::Blue)
 }
+
+// ── Worldwake / BFZ manlands (modern_decks-19) ───────────────────────────────
+
+/// Raging Ravine — RG manland: 3/3 that grows a +1/+1 counter whenever it
+/// attacks.
+pub fn raging_ravine() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    let mut d = manland(
+        "Raging Ravine",
+        LandType::Mountain,
+        LandType::Forest,
+        Color::Red,
+        Color::Green,
+        cost(&[generic(2), crate::mana::r(), crate::mana::g()]),
+        3,
+        3,
+        vec![],
+    );
+    d.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        },
+    });
+    d
+}
+
+/// Stirring Wildwood — GW manland: 3/4 reach.
+pub fn stirring_wildwood() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Stirring Wildwood",
+        LandType::Forest,
+        LandType::Plains,
+        Color::Green,
+        Color::White,
+        cost(&[generic(1), crate::mana::g(), crate::mana::w()]),
+        3,
+        4,
+        vec![Keyword::Reach],
+    )
+}
+
+/// Shambling Vent — WB manland: 2/3 lifelink.
+pub fn shambling_vent() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Shambling Vent",
+        LandType::Plains,
+        LandType::Swamp,
+        Color::White,
+        Color::Black,
+        cost(&[generic(1), crate::mana::w(), crate::mana::b()]),
+        2,
+        3,
+        vec![Keyword::Lifelink],
+    )
+}
+
+/// Lavaclaw Reaches — BR manland: 2/2 (the firebreathing {X} rider is
+/// dropped).
+pub fn lavaclaw_reaches() -> CardDefinition {
+    manland(
+        "Lavaclaw Reaches",
+        LandType::Swamp,
+        LandType::Mountain,
+        Color::Black,
+        Color::Red,
+        cost(&[generic(1), crate::mana::b(), crate::mana::r()]),
+        2,
+        2,
+        vec![],
+    )
+}
+
+/// Lumbering Falls — GU manland: 3/3 hexproof.
+pub fn lumbering_falls() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Lumbering Falls",
+        LandType::Forest,
+        LandType::Island,
+        Color::Green,
+        Color::Blue,
+        cost(&[generic(2), crate::mana::g(), u()]),
+        3,
+        3,
+        vec![Keyword::Hexproof],
+    )
+}
+
+/// Wandering Fumarole — UR manland: 1/4 (the {0} power/toughness switch is
+/// dropped).
+pub fn wandering_fumarole() -> CardDefinition {
+    manland(
+        "Wandering Fumarole",
+        LandType::Island,
+        LandType::Mountain,
+        Color::Blue,
+        Color::Red,
+        cost(&[generic(2), u(), crate::mana::r()]),
+        1,
+        4,
+        vec![],
+    )
+}
+
+/// Slayers' Stronghold — Land. {T}: Add {C}; {R}{W}, {T}: target creature
+/// gets +2/+0, vigilance, and haste until end of turn.
+pub fn slayers_stronghold() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Keyword};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Slayers' Stronghold",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[crate::mana::r(), crate::mana::w()]),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        power: Value::Const(2),
+                        toughness: Value::Const(0),
+                        duration: crate::effect::Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Vigilance,
+                        duration: crate::effect::Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Haste,
+                        duration: crate::effect::Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Grove of the Burnwillows — Land. {T}: Add {C}; {T}: Add {R} or {G} and
+/// each opponent gains 1 life.
+pub fn grove_of_the_burnwillows() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    let colored = |c: Color| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::Seq(vec![
+            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c]) },
+            Effect::GainLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+        ]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Grove of the Burnwillows",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add_colorless(),
+            colored(Color::Red),
+            colored(Color::Green),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Glimmervoid — Land. {T}: Add any color. Sacrificed at the end step if
+/// you control no artifacts.
+pub fn glimmervoid() -> CardDefinition {
+    use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::effect::ManaPayload;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Glimmervoid",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::ONE),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(
+                Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                ),
+            )))),
+            effect: Effect::SacrificeSource,
+        }],
+        ..Default::default()
+    }
+}

@@ -46216,3 +46216,126 @@ fn sigardas_aid_flashes_in_equipment_and_attaches() {
         "attached on entry"
     );
 }
+
+// ── modern_decks-19: manlands + utility lands ────────────────────────────────
+
+/// Raging Ravine animates into a 3/3 that grows when it attacks.
+#[test]
+fn raging_ravine_grows_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::raging_ravine());
+    g.perform_action(GameAction::PlayLand(id)).expect("play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "enters tapped");
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "3/3 Elemental");
+    g.clear_sickness(id);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "attack added a +1/+1 counter"
+    );
+}
+
+/// Lumbering Falls animates into a 3/3 with hexproof.
+#[test]
+fn lumbering_falls_animates_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lumbering_falls());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature) && cp.keywords.contains(&Keyword::Hexproof));
+}
+
+/// Slayers' Stronghold pumps and grants vigilance + haste.
+#[test]
+fn slayers_stronghold_pumps_attacker() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::slayers_stronghold());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0");
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Haste));
+}
+
+/// Grove of the Burnwillows' colored taps feed each opponent 1 life.
+#[test]
+fn grove_of_the_burnwillows_gives_opponent_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::grove_of_the_burnwillows());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("tap for red");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+    assert_eq!(g.players[1].life, 21, "opponent gained 1");
+}
+
+/// Glimmervoid sacrifices itself at the end step without an artifact.
+#[test]
+fn glimmervoid_sacs_without_artifacts() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::glimmervoid());
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "no artifact → sacrificed");
+
+    // With an artifact it survives.
+    let id2 = g.add_card_to_battlefield(0, catalog::glimmervoid());
+    g.add_card_to_battlefield(0, catalog::welding_jar());
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id2).is_some(), "artifact → stays");
+}
+
+/// Living End wheels graveyard creatures into play and sweeps the board.
+#[test]
+fn living_end_swaps_graveyards_for_battlefields() {
+    let mut g = two_player_game();
+    let my_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let their_gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let spell_gy = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let my_board = g.add_card_to_battlefield(0, catalog::arbor_colossus());
+    let their_board = g.add_card_to_battlefield(1, catalog::arbor_colossus());
+    let id = g.add_card_to_hand(0, catalog::living_end());
+    // Cast it for free via the test shortcut: zero-cost path isn't legal
+    // from hand (no mana cost), so resolve the effect directly.
+    g.players[0].hand.retain(|c| c.id != id);
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g.resolve_effect(&crate::card::Effect::LivingEnd, &ctx).expect("resolve");
+    let _ = evs;
+    assert!(g.battlefield_find(my_gy).is_some(), "my dead bear returns");
+    assert!(g.battlefield_find(their_gy).is_some(), "their dead bear returns");
+    assert_eq!(g.battlefield_find(their_gy).unwrap().controller, 1, "under its owner");
+    assert!(g.battlefield_find(my_board).is_none(), "boards swept");
+    assert!(g.battlefield_find(their_board).is_none(), "boards swept");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell_gy), "noncreature stays");
+}
