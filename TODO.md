@@ -10,18 +10,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 - ⏳ **Rooms subsystem** (Unholy Annex // Ritual Chamber) and **meld**
   (The Mightstone and Weakstone) — each is its own object-model feature.
-- ⏳ **Noticed this run (deferred, each wants one primitive):**
-  - **DFC sagas** (Fable of the Mirror-Breaker — transform instead of the
-    final-chapter sacrifice SBA).
-  - **Search-replacement statics** (Aven Mindcensor "searches top four
-    instead"; Leonin Arbiter's search tax).
-  - **End the turn** (CR 728 — Day's Undoing, Sundial of the Infinite).
-  - **Color-filtered graveyard-bound exile replacement** (Sanctifier
-    en-Vec — extend `ExileCardsBoundForGraveyard` with a filter).
-  - **Activation tax statics** (Suppression Field "{2} more unless mana
-    ability").
-  - **Vehicles with state-flip riders** (Reckoner Bankbuster's empty-
-    charges Treasure + crew change).
+- ✅ **This batch shipped** (was the "deferred, each wants one primitive"
+  list): DFC sagas (`Effect::ExileSelfReturnTransformed` — Fable of the
+  Mirror-Breaker), search statics (`OpponentsSearchTopN` / `SearchTax` —
+  Aven Mindcensor, Leonin Arbiter), end the turn (CR 728 —
+  `Effect::EndTheTurn`; Sundial, Day's Undoing), color-filtered gy-hate
+  (`ExileCardsBoundForGraveyard.colors` — Sanctifier en-Vec), activation
+  tax (`StaticEffect::ActivationTax` — Suppression Field), Reckoner
+  Bankbuster (charge-empty payout via `remove_counter_cost` + If).
+- ⏳ **Still deferred:**
   - **Hofri's token-leaves rider** ("when this token leaves, return the
     exiled card to its owner's graveyard").
   - **Exalted Angel's printed trigger** is modeled as Lifelink (gains on
@@ -29,10 +26,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Eon Hub vs. suspend/pacts**: skipped upkeeps also skip suspend ticks
     and pact payments — correct per CR 614.10b, but worth a regression test
     when pact decks meet Eon Hub.
-- ⏳ **Tempting offer / MayDo wants_ui suspend** — `Effect::TemptingOffer`
-  asks each opponent via the synchronous decider; a networked human seat
-  gets the AutoDecider default (decline). Same family as the existing
-  inline-picker gaps.
+  - **Noticed this run:** Wandering Fumarole's `{0}` P/T-switch wants a
+    layer-7d `Effect::SwitchPT`; Lavaclaw Reaches' firebreathing wants
+    activated abilities scoped to the animated state; Street Wraith wants
+    a life-payment Cycling cost; Kappa Cannoneer wants Improvise (artifact
+    convoke); The One Ring's "protection from everything until your next
+    turn" wants a player-level protection grant.
+- ⏳ **Tempting offer / opponent-may wants_ui suspend** —
+  `Effect::TemptingOffer` and the new `Effect::PlayersMayAccept` (Vexing
+  Devil, Browbeat, Risk Factor) ask via the synchronous decider; a
+  networked human seat gets the AutoDecider default (decline). Same family
+  as the existing inline-picker gaps.
 - ✅ **Any-color spend for exile-casts** — `GrantMayPlay.any_color` /
   `ExileTopAndGrantMayPlay.pay_any_color` stamp the cost as MV-generic
   (CR 609.4b). Gonti, Hostage Taker, Nassari.
@@ -47,8 +51,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - ✅ **Saheeli Rai -7 distinct names** — `SelectionRequirement::
   NameDiffersFromLastMoved` + search picks validated against the
   candidate set (`SearchPending.eligible`).
-- ⏳ **Search-pick UI for "with different names"** — the client search
-  modal doesn't grey ineligible candidates (engine rejects them).
+- ✅ **Search-pick UI eligibility** — `Decision/DecisionWire::SearchLibrary`
+  carry an `eligible` set; Impulse reveals show every revealed card with
+  non-pickable ones greyed in the client modal; the bot restricts picks.
 
 - ✅ **Combat-damage-to-a-creature trigger dispatch (CR 510.2).**
   `resolve_combat_damage_with_filter` records every creature-vs-creature damage
@@ -985,14 +990,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (`auto_targets_for_effect_all_slots`) is wired and the bot uses it. Sweep
   and update the remaining notes (Channeled Force done this run).
 
-- **OrderTriggers server suspend** — CR 603.3b same-controller trigger
-  ordering is wired engine-side (`order_same_controller_triggers` consults
-  the decider synchronously) and the client modal exists
-  (`spawn_order_triggers_modal` + `handle_trigger_reorder`). Remaining: a
-  *suspend* path (park the candidate→queue dispatch in a `ResumeContext`,
-  set `pending_decision = OrderTriggers`, resume on the client's answer) so
-  a networked `wants_ui` human is actually prompted instead of degrading to
-  the default order.
+- ✅ **OrderTriggers server suspend** — `continue_trigger_ordering` parks
+  the dispatch in `ResumeContext::TriggerOrder` and sets `pending_decision`
+  so a networked `wants_ui` seat is actually prompted; `submit_decision`
+  applies the order and finishes via `push_ordered_trigger_candidates`.
 
 - **Tracker staleness** — CUBE_FEATURES.md / DECK_FEATURES.md carry many 🟡/⏳
   rows that are already fully implemented + tested in code (verified + promoted
@@ -1092,6 +1093,18 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 728 — Ending the Turn** — `Effect::EndTheTurn` exiles the stack
+  (the resolving spell included, 728.1a), clears combat (728.1b), and jumps
+  to cleanup (728.1d) via `do_end_the_turn`. Sundial of the Infinite,
+  Day's Undoing. Tests `cr_728_*`.
+- ✅ **CR 701.19 — Searching** — search-replacement statics:
+  `OpponentsSearchTopN` (Aven Mindcensor) limits an opponent's candidates
+  to the top N; `SearchTax` (Leonin Arbiter) auto-pays {2} from floating
+  mana once per turn, else the search finds nothing (701.19d).
+- ✅ **CR 714.4 — DFC sagas** — `Effect::ExileSelfReturnTransformed`
+  (chapter III exile-and-return-transformed; the returned object is new —
+  lore counters clear). Fable of the Mirror-Breaker // Reflection of
+  Kiki-Jiki, whose token rider rides `DelayedTrigger.bound_token`.
 - ✅ **CR 702.103 — Jump-start** — rides the flashback cast path (own cost +
   `AdditionalCastCost::Discard{1}`, exile-after); Chemister's Insight,
   Radical Idea; surfaced as `flashback_cost` in the graveyard view.
@@ -1154,7 +1167,7 @@ picking an item up.
   other creature is controlled. Changeling Hero).
 - ✅ **CR 702.56 — Forecast** (`ActivatedAbility.from_hand` + upkeep-only
   `condition` + `once_per_turn`; card stays in hand. Steeling Stance).
-- ✅ **CR 603.3b — Same-controller trigger ordering** (server *suspend* path for a networked human still ⏳).
+- ✅ **CR 603.3b — Same-controller trigger ordering** (incl. the server suspend path — `ResumeContext::TriggerOrder`).
 - ✅ **CR 702.124 — Addendum** (`shortcut::addendum` / `cast_during_your_main`: a resolution-time `IsTurnOf(You) ∧ main-phase` gate — exact since a main-phase cast resolves in the same step. Sphinx's Insight, Precognitive Perception).
 - ✅ **CR 601.2f — generic cost reduction (graveyard-Affinity)** (`CardDefinition.affinity_graveyard_filter`: {1} less per matching graveyard card, generalizing the old per-name Dawning Archaic hook; clamped generic-only. The bot's `can_afford_in_state` folds in cost reductions too. Tolarian Terror, The Dawning Archaic).
 - ✅ **CR 702.32 — Kicker** (client opt-in affordance + a kick-when-profitable bot heuristic still ⏳).
@@ -1249,7 +1262,13 @@ picking an item up.
 - ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework; damage *halving*. Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* still ⏳. Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
-- 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Remaining: source-of-your-choice restriction (the shield soaks any source's next hit).
+- 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Source-of-your-choice prevention (615.7) ✅ via
+  `Effect::PreventAllDamageFromChosenSourceThisTurn` +
+  `GameState.damage_prevented_sources`, consulted at both damage funnels
+  (Burrenton Forge-Tender; the source is chosen as the ability resolves,
+  among stack spells and battlefield permanents). Remaining: per-shield
+  source restriction (a `PreventNextDamage` shield still soaks any
+  source's next hit).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Phasing / extra-step insertion still ⏳.
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail.
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).

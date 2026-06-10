@@ -157,15 +157,12 @@ not how Magic works" moments.
 
 ## Tier 2 — Engine rules fidelity (beyond Tier 1)
 
-- 🟡 **APNAP trigger ordering** — inter-player APNAP (`game/mod.rs`
-  apnap_rank sort, CR 603.3b) plus same-controller ordering: a `wants_ui`
-  controller orders their own simultaneous triggers via
-  `Decision::OrderTriggers` (`order_same_controller_triggers`, consulted
-  synchronously); AutoDecider keeps the default order. The client modal is
-  wired (`spawn_order_triggers_modal` + `handle_trigger_reorder`).
-  Remaining: a server-side *suspend* path so a networked human is actually
-  prompted (today the dispatch consults the decider inline, so a remote
-  seat degrades to the default order). Tracked in TODO.md.
+- ✅ **APNAP trigger ordering** — inter-player APNAP (`apnap_rank` sort,
+  CR 603.3b) plus same-controller ordering with a real server suspend:
+  `continue_trigger_ordering` parks the dispatch in
+  `ResumeContext::TriggerOrder` and sets `pending_decision =
+  OrderTriggers`, so a networked `wants_ui` seat is prompted; the client
+  modal applies the order on resume.
 - 🟡 **Divided damage** across N targets — `Effect::DealDamageDivided` +
   `Decision::DivideDamage` ship Forked Bolt, Pyrokinesis, Crackle with Power,
   Magma Opus (AutoDecider spreads evenly; UI/scripted deciders choose the
@@ -724,8 +721,8 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 3. **Best-of-3 + sideboard + deck legality** (Tier 10) — makes draft/cube
    and constructed competitive.
 4. **Static-ability framework + mana provenance** — broad correctness wins
-   that unblock many cards at once. (Inter-player APNAP ordering is already
-   wired; only same-controller trigger ordering remains.)
+   that unblock many cards at once. (APNAP + same-controller trigger
+   ordering are fully wired, including the server suspend.)
 5. **Smarter AI blocking** (Tier 13) — biggest single-player upgrade.
 6. Then the **Tier-4 mechanic sweep** and **Tier-3 object-model** features,
    card batch by card batch, promoting entries in the per-card trackers.
