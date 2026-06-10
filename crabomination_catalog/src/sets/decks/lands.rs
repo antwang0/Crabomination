@@ -1419,3 +1419,74 @@ pub fn blossoming_sands() -> CardDefinition {
     dual_land_with("Blossoming Sands", LandType::Forest, LandType::Plains,
         Color::Green, Color::White, vec![etb_tap_then_gain_one()])
 }
+
+/// Restless Anchorage — W/U. `{1}{W}{U}`: 2/3 flying Bird. Whenever it
+/// attacks, create a Map token.
+pub fn restless_anchorage() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword};
+    restless_land(
+        "Restless Anchorage",
+        Color::White,
+        Color::Blue,
+        cost(&[generic(1), w(), u()]),
+        2,
+        3,
+        vec![CreatureType::Bird],
+        vec![Keyword::Flying],
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::game::effects::map_token(),
+        },
+    )
+}
+
+/// Restless Prairie — G/W. `{2}{G}{W}`: 3/3 Llama. Whenever it attacks,
+/// other creatures you control get +1/+1 until end of turn.
+pub fn restless_prairie() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::effect::Duration;
+    restless_land(
+        "Restless Prairie",
+        Color::Green,
+        Color::White,
+        cost(&[generic(2), g(), w()]),
+        3,
+        3,
+        vec![CreatureType::Llama],
+        vec![],
+        Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Restless Vents — B/R. `{1}{B}{R}`: 2/3 menace Insect. Whenever it
+/// attacks, you may discard a card; if you do, draw a card.
+pub fn restless_vents() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword};
+    restless_land(
+        "Restless Vents",
+        Color::Black,
+        Color::Red,
+        cost(&[generic(1), crate::mana::b(), crate::mana::r()]),
+        2,
+        3,
+        vec![CreatureType::Insect],
+        vec![Keyword::Menace],
+        Effect::MayDo {
+            description: "Discard a card. If you do, draw a card.".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+        },
+    )
+}

@@ -19,21 +19,17 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 
 ### Blue
 
 | Card | Status | Notes |
 |---|---|---|
-| Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
-| Mirrorform | ✅ | Each of your nonland permanents becomes a copy of the target (`BecomeCopyOfFor`, Permanent duration). |
 
 ### Black
 
 | Card | Status | Notes |
 |---|---|---|
-| Mutated Cultist | ⏳ | Mutate primitive needed. |
-| Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
+| Unholy Annex // Ritual Chamber | ⏳ | Room enchantment (door halves + unlock) — needs the Rooms subsystem. |
 
 ### Red
 
@@ -44,35 +40,23 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Shifting Woodland | ✅ | Delirium-gated EOT copy of a graveyard permanent card (`BecomeCopyOfFor` + any-zone source). |
 
 ### Artifacts & Planeswalkers (mono / colorless)
 
 | Card | Status | Notes |
 |---|---|---|
-| Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of *exiled* creatures (gated on a +1/+1 counter). The graveyard-borrow sibling now ships (`StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures`, Necrotic Ooze ✅); Cauldron needs the exile-zone + counter variant. |
-| The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
+| The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted (meld is its own subsystem). |
 
 ### Multicolor
 
 | Card | Status | Notes |
 |---|---|---|
-| Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
-| Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
-| Saheeli Rai | 🟡 | {1}{U}{R} 3-loyalty Planeswalker. **+1**: Scry 1 + ping each opponent **and each planeswalker they control** for 1 (now faithful — the PW half rides `EachPermanent(Planeswalker & ControlledByOpponent)`, CR 120.3c). **-2**: Create a token copy of target friendly creature/artifact, grant haste, delay-trigger Exile at next end step. **-7**: Same body fired twice (the emblem-recurring "each end step" auto-recur is approximated). Tests: `saheeli_rai_plus_one_pings_each_opponent`, `saheeli_rai_minus_two_creates_haste_copy`. |
-| Zirda, the Dawnwaker | ⏳ | Companion + activated-cost reduction. Needs Companion primitive. |
-| Lonis, Genetics Expert | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {1}{G}{U} Legendary 2/2 Otter Detective. ETB trigger on other creatures you control creates a Clue token (the printed "investigate" rider via `clue_token()`). The "Sacrifice X Clues: target opp reveals top X cards" activated ability is engine-wide ⏳ (no per-activation X-cost prompt yet). Test: `lonis_genetics_expert_creates_clue_when_other_creature_enters`. |
-| Tamiyo, Collector of Tales | 🟡 | Push (claude/modern_decks batch 102): {2}{G}{U} 4-loyalty Planeswalker. **-2**: Return target card from gy → hand. **-3**: Search library → hand (the "same name as a card in target opponent's graveyard" filter is engine-wide ⏳ — falls back to `Any`). **-7**: Draw 4 (the "distinct nonland types in gy" scaling drops). The static's **sacrifice** half now ships (`StaticEffect::OpponentsCantMakeYouSacrifice`, shared with Sigarda); the "can't make you discard" half is still engine-wide ⏳. Test: `tamiyo_collector_minus_two_returns_card_from_graveyard`. |
-| Dakkon, Shadow Slayer | 🟡 | WUB Legendary Planeswalker. +1: Surveil 2. -3: Exile target creature. -6: emblem (`Effect::CreateEmblem`, approximated as "draw a card at your upkeep"). Body fully wired; only the emblem's exact text is an approximation. |
-| Rediscover the Way | ⏳ | TBD. |
-| Shiko and Narset, Unified | ⏳ | TBD. |
-| Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
+| Shiko and Narset, Unified | ⏳ | Flurry — copy your second spell each turn if it targets (wants a Demonstrate-style on-second-cast copy trigger). |
 
 ### Lands
 
 | Card | Status | Notes |
 |---|---|---|
-| Power Depot | 🟡 | Artifact Land, enters tapped, `{T}: Add {C}` + `{T}: Add one mana of any color`. The "spend only on artifact spells/abilities" mana restriction and Modular 1 are dropped. Test: `power_depot_enters_tapped_and_fixes_mana`. |
 
 ## Engine features needed
 
@@ -85,26 +69,26 @@ are listed in `DECK_FEATURES.md`.
 |---|---|---|
 | Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus ships via `EquipBonus.scale` — Nettlecyst ✅. Equipment-granted triggered abilities ship via `EquipBonus.triggered_abilities` (CR 702.6e; `DealsCombatDamageToPlayer` SelfSource fires off the equipped creature, damaged player bound to `Target(0)`) — Sword of Body and Mind ✅. Lion Sash ✅ (counter-on-self scaled bonus + Reconfigure CR 702.151 — `Keyword::Reconfigure` reuses the equip path and strips Creature-ness while attached). Living weapon ✅ (Nettlecyst, Batterskull — ETB mint-a-Germ-and-attach). Reconfigure *unattach* ✅ (`Reconfigure { target: None }` clears `attached_to`, restoring creature-ness; test `reconfigure_unattach_restores_creatureness`). Equip-trigger that charges the *Equipment* ✅ via `EquipBonus.triggers_on_equipment` (Umezawa's Jitte; charges on combat damage to a player **and to a creature** — CR 510.2 `DealsCombatDamageToCreature` dispatch now ships, so Jitte charges when blocked). |
 | Adventure (cost-mode duality) | ✅ | CR 715 — `CardDefinition.adventure` + `GameAction::CastAdventure`/`CastAdventureCreature`. Virtue of Loyalty (enchantment // instant) ships on it alongside the creature adventures. |
-| Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
-| Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (`Effect::ExileTopMayPayEnergyToCast`) ships Amped Raptor ✅. |
+| Mutate | ⏳ | Mutable Explorer (Mutated Cultist turned out not to be a mutate card — ✅). |
+| Storm count + cast-from-top | 🟡 | Cast-from-library-top statics ✅ (CR 401.6 `PlayFromLibraryTop` — Mystic Forge, Courser, Oracle of Mul Daya). Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (`Effect::ExileTopMayPayEnergyToCast`) ships Amped Raptor ✅. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
 | Soulbond | ✅ | `Keyword::Soulbond` + `CardInstance.soulbond_partner` + `CardDefinition.soulbond_bonus` (`SoulbondBonus`: P/T, keywords, granted activated **and** triggered abilities). Pairs auto-resolve on ETB (`apply_soulbond_pairing`); the bonus rides both members as continuous effects and breaks on leave. Wolfir Silverheart, Wingcrafter, Nightshade Peddler, Trusted Forcemage, Hanweir Lancer, Silverblade Paladin, Nearheath Pilgrim, Deadeye Navigator (self-flicker), Tandem Lookout (combat-damage draw). |
-| Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
+| Companion (CR 702.139) | 🟡 | `Keyword::Companion` + `GameAction::CompanionToHand` ({3} sorcery-speed sideboard → hand) — Zirda ✅. Deck-construction validation still ⏳ (Tier 10 deck-legality work). |
 | Saga lore counters | ✅ | `saga_chapters` (History of Benalia, The Eldest Reborn). DFC sagas (transform-on-final-chapter) still ⏳. |
 | Transforming DFCs | ✅ | CR 712 — `Effect::Transform` + `CardInstance.{transformed,front_face}` + `EventKind::Transformed`. Swaps the active face in place (counters/tapped/attachments persist), round-trips through snapshots. Ships Concealing Curtains // Revealing Eye, Delver of Secrets // Insectile Aberration, The Everflowing Well // The Myriad Pools (descend-8 upkeep flip). Remaining ⏳: Daybound/Nightbound auto-flip, DFC sagas, manifest/disguise face-down. |
 | Hideaway lands | ✅ | CR 702.76 — `Effect::Hideaway { count }` looks at the top N, exiles the best face down stamped `exiled_with = source`, bottoms the rest; `Selector::CardExiledWithSource` + `CastWithoutPayingImmediate` play it later. Shelldock Isle, Mosswort Bridge, Spinerock Knoll, Windbrisk Heights ✅ (printed gates). |
 | Impending (CR 702.183) | ✅ | `Keyword::Impending(n)` + `AlternativeCost.impending`: cast for the impending cost → enters with N time counters, isn't a creature (layer-4) until they tick off one per end step. All five Duskmourn Overlords ship with their enters-or-attacks triggers. |
 | Verge / surveil land family expansion | ✅ | All five enemy/allied `*verge` lands ship via `verge_land`. Horizon-canopy cycle complete (`horizon_land`; all six). All ten MKM surveil lands ship via `dual_land_with` + `etb_tap_then_surveil_one`. |
-| ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Creature-ETB / death **trigger** suppression ships via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` (Torpor Orb, Tocatli Honor Guard, Hushbringer ✅). Remaining: Gather Specimens (steal-instead). |
+| ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Creature-ETB / death **trigger** suppression ships via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` (Torpor Orb, Tocatli Honor Guard, Hushbringer ✅). Steal-instead ✅ (`Effect::StealCreatureEtbThisTurn` + `apply_etb_control_replacement` — Gather Specimens; token mints don't consult it yet). |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | ✅ | Damping Sphere (`AdditionalCostAfterFirstSpell`), flat `AdditionalCost`, and the Trinisphere "minimum cost" floor (`SpellCostFloor`, untapped-gated) all ship. Elite Spellbinder reuses the existing tax static. |
 | "Cast spells without paying mana" static | 🟡 | Omniscience ✅ (`StaticEffect::CastHandSpellsFree`); Aluren ✅ (`StaticEffect::AnyoneCastsCheapCreaturesFree { max_mv }` — any player free-casts MV≤3 creatures at flash). Remaining: Maelstrom Archangel (combat-damage variant). |
-| Name-a-card primitive | 🟡 | `Effect::NameCard` + `Decision::NameCard` + `CardInstance.named_card` ship Pithing Needle / Phyrexian Revoker (ETB stamps a name; `activate_ability` suppresses non-mana abilities of matching sources). Same-name exile (Crumble to Dust) is wired via `Effect::ExileSameNameAsTarget`. Remaining consumers: reveal-until-find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy). |
+| Name-a-card primitive | 🟡 | `Effect::NameCard` + `Decision::NameCard` + `CardInstance.named_card` ship Pithing Needle / Phyrexian Revoker (ETB stamps a name; `activate_ability` suppresses non-mana abilities of matching sources). Same-name exile (Crumble to Dust) is wired via `Effect::ExileSameNameAsTarget`. Reveal-until-find ✅ (Spoils of the Vault via `RevealUntilFind`), hand-discard-by-name ✅ (Cabal Therapy via `Effect::NameCardTargetDiscardsMatching`), name-then-sort ✅ (Tamiyo +1 via `NameCardRevealTop`). |
 | Face-down permanents (morph / manifest) | 🟡 | CR 708 — `CardInstance.face_up_def` stashes the real card while `definition` is the vanilla 2/2 (`facedown_creature_definition`); turns face up on leaving the battlefield (CR 708.10). `Effect::Manifest` / `Effect::ManifestDread` (CR 701.34 / 702.166) put library cards onto the battlefield face down; `GameAction::CastFaceDown` casts a Morph card face down for {3} (CR 702.36); `GameAction::TurnFaceUp` pays the Morph/Megamorph/Disguise/manifest cost (+1/+1 on megamorph) and fires `EventKind::TurnedFaceUp` (CR 708.5/708.8). Disguise (CR 702.166) ✅ via `Keyword::Disguise` — casts face down for {3} as a 2/2 with ward {2} (`facedown_disguise_definition`), turns up for the disguise cost (Defenestrated Phantom, Nervous Gardener, Bubble Smuggler). Cloak (CR 702.182) ✅ via `Effect::Cloak` + a serialized `CardInstance.cloaked` bit (warded face-down body; turn up for mana cost — Hide in Plain Sight). Hauntwoods Shrieker, Ainok Survivalist ✅. |
 | Token-copy of permanent | 🟡 | Populate ✅ (`Effect::Populate`, CR 701.32 — Growing Ranks). `CreateTokenCopyOf` ✅, with a `non_legendary` rider (CR 707.2e — strips the copy's supertypes; Helm of the Host ✅). Mockingbird/Phantasmal Image clone-enter ✅ via `BecomeCopyOf`. Remaining: a true *continuous* "becomes a copy" layer-1 loop (Mirrorform aura). |
 | Multi-pick decisions over revealed library cards | 🟡 | Atraxa Draw-4 stand-in is wired. Reveal-and-sort by card type, Dig Through Time, Mind's Desire all need a richer multi-pick decision. |
-| Investigate + Clue token | 🟡 | Clue tokens ship (`clue_token()`; Tireless Tracker, Lonis create them). **Map tokens** now ship too (`map_token()` — CR 111.10s explore-token: {1},{T},Sac → target creature you control explores; Loot, the Pathfinder mints one). The "sacrifice a Clue" payoff ✅ rides `sac_other_filter: HasArtifactSubtype(Clue)` (Tireless Tracker's `{2}, Sac a Clue: Draw` + its sacrifice-a-Clue trigger). Remaining ⏳: a variable-X "sacrifice X Clues" prompt (Lonis's second ability). |
+| Investigate + Clue token | 🟡 | Clue tokens ship (`clue_token()`; Tireless Tracker, Lonis create them). **Map tokens** now ship too (`map_token()` — CR 111.10s explore-token: {1},{T},Sac → target creature you control explores; Loot, the Pathfinder mints one). The "sacrifice a Clue" payoff ✅ rides `sac_other_filter: HasArtifactSubtype(Clue)` (Tireless Tracker's `{2}, Sac a Clue: Draw` + its sacrifice-a-Clue trigger). Variable-X "Sacrifice X Clues" ✅ (`ActivatedAbility.sac_other_x` — Lonis's second ability). |
 | Landfall trigger | 🟡 | Bloodghast wired via the new `EventScope::FromYourGraveyard` (graveyard-source `LandPlayed` trigger). Standard battlefield-side landfall (Omnath) still uses the existing `LandPlayed` + `YourControl` path; both are functional. |
-| Loyalty abilities w/ static | 🟡 | Teferi works fully; loyalty-set effects ship via `Effect::SetLoyalty` (CR 606 — Geyadrone Dihada's +1 reset-when-behind ✅). Variable `-X` loyalty ✅ via `LoyaltyAbility.x_cost` (player picks X≤loyalty, body reads `Value::XFromCost`; Kasmina's -X Fractal). Needs further variants (Ashiok exile-and-cast, Karn -2 fetch, Saheeli token-copy, Sorin drain, Tezzeret etheric, Tamiyo). |
+| Loyalty abilities w/ static | 🟡 | Teferi works fully; loyalty-set effects ship via `Effect::SetLoyalty` (CR 606 — Geyadrone Dihada's +1 reset-when-behind ✅). Variable `-X` loyalty ✅ via `LoyaltyAbility.x_cost` (player picks X≤loyalty, body reads `Value::XFromCost`; Kasmina's -X Fractal). Ashiok exile-and-cast ✅, Sorin reveal/drain ✅, Tamiyo name-reveal ✅, Dakkon put-from-hand/gy ✅, Saheeli -7 triple-search ✅, Kasmina ability-sharing ✅. Remaining: Karn -2 fetch, Tezzeret etheric. |
 | Split cards (CR 709) + Fuse + Aftermath | ✅ | `CardDefinition.split` + `CastSplitRight`/`CastSplitFused`/`CastAftermath`. Ships Wear // Tear, Fire // Ice, Far // Away, Assault // Battery, Stand // Deliver, Wax // Wane, Alive // Well, Rough // Tumble, Profit // Loss, Supply // Demand, Toil // Trouble, Dead // Gone, Give // Take, Ready // Willing, plus Aftermath splits (Spring // Mind, Onward // Victory, Cut // Ribbons, Consign // Oblivion, Mouth // Feed). Client half-picker UI still ⏳ (TODO.md). |
 | Living-weapon-on-ETB token | ⏳ | Nettlecyst, Sword-of-Body-and-Mind-adjacent. |
 | Protection-from-color (more colors) | 🟡 | Engine has `Keyword::Protection(Color)`. Cards like Stillmoon Cavalier need toggle abilities + multi-color protection. |

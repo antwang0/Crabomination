@@ -97,6 +97,9 @@ not how Magic works" moments.
    shared `remove_from_battlefield_to_graveyard` funnel, with an optional
    reflexive "when you do" — Valentin, Dean of the Vein),
    damage *redirection* (Maze of Ith) and draw/skip replacement.
+   **Creature-ETB control replacement** ships via
+   `Effect::StealCreatureEtbThisTurn` + `apply_etb_control_replacement`
+   (Gather Specimens; token mints don't consult it yet).
    **Graveyard→exile hate** ships via
    `StaticEffect::ExileCardsBoundForGraveyard { opponents_only }` +
    `GameState::route_to_graveyard` (CR 614.6 — Rest in Peace, Leyline of
@@ -262,7 +265,7 @@ feature; sweep card-batch by card-batch.
   702.35), ✅ Escape (`Keyword::Escape(cost, n)` + `GameAction::CastEscape`,
   CR 702.139 — cast from graveyard for escape cost + exile N other gy cards;
   instants/sorceries re-escape), ✅ Adventure (CR 715, see Tier 3),
-  ⏳ Soulbond, ⏳ Mutate, ⏳ Companion, ✅ Foretell
+  ⏳ Soulbond, ⏳ Mutate, 🟡 Companion (CR 702.139 — `Keyword::Companion` + `GameAction::CompanionToHand`, {3} sideboard→hand; deck validation ⏳), ✅ Foretell
   (`CardDefinition.foretell_cost` + `GameAction::Foretell` /
   `CastForetold` — CR 702.143: pay {2} to exile face-down, cast from exile
   for the foretell cost on a later turn; Saw It Coming, Doomskar, Behold the
@@ -331,8 +334,10 @@ feature; sweep card-batch by card-batch.
   over other creatures, each sacrifice dropping N +1/+1 counters on the
   devourer via `Selector::This`), ✅ Amass (`shortcut::amass(n)` /
   `Effect::Amass` — CR 701.43; see Combat-flavor list).
-- **Cast-from-elsewhere:** ⏳ cast-from-top (Mind's Desire / Amped Raptor /
-  Robber of the Rich), ✅ Suspend (`Keyword::Suspend(n, cost)` +
+- **Cast-from-elsewhere:** ✅ cast/play-from-library-top statics (CR
+  401.5/401.6 — `StaticEffect::PlayFromLibraryTop` + `TopOfLibraryRevealed`,
+  `LibraryView.known_top`; Courser of Kruphix, Oracle of Mul Daya, Mystic
+  Forge; impulse-style exile-top already shipped), ✅ Suspend (`Keyword::Suspend(n, cost)` +
   `GameAction::Suspend` + `process_suspend` — CR 702.62: pay the suspend cost
   to exile from hand with N time counters, tick one off per owner's upkeep,
   free-cast when the last is removed; Rift Bolt, Ancestral Vision, Lotus
@@ -491,9 +496,15 @@ feature; sweep card-batch by card-batch.
 
 ## Tier 5 — Mana & cost system
 
-- ⏳ **Mana provenance tag** — fixes Fellwar Stone, Locus scaling
-  (Cloudpost/Glimmerpost), Cavern type-gated uncounterability in one shot.
-- ⏳ **Per-source mana restrictions** ("spend only on X", filter lands).
+- ✅ **Typed spend restrictions / provenance riders** — `SpellKind` is a
+  spend-context struct (instant/sorcery, artifact, creature types) and
+  `SpendRestriction` gained `ArtifactOnly` + `CreatureOfTypeUncounterable`;
+  `pay_for_spell` reports which restricted buckets paid, so Cavern of Souls'
+  uncounterable rider rides actual mana provenance and Power Depot's
+  artifact-only mana works for artifact spells *and* abilities
+  (`CardDefinition::ability_spend_kind`). Fellwar Stone / Locus scaling were
+  already separately wired. Remaining ⏳: per-source restrictions beyond
+  these (filter lands' "spend only on activated abilities" etc.).
 - ⏳ **Minimum-cost floor** (Trinisphere) and **cost-increase statics**
   beyond the existing first-spell tax (Thalia, Sphere of Resistance).
 - ⏳ **Conditional / additional costs** as a general modal layer (sacrifice,

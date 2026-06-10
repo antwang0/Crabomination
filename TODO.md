@@ -8,6 +8,34 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Any-color spend for exile-casts** (Gonti / Hostage Taker): their
+  may-play casts pay the printed cost with normally-colored mana; the
+  printed "mana of any type" clause wants a per-card any-color payment
+  permission threaded into `pay_for_spell`.
+- ⏳ **Gather Specimens vs token mints** — `apply_etb_control_replacement`
+  runs at the two battlefield-entry funnels (spell resolve + move), but
+  token-creation sites push directly; a stolen token ETB needs the hook
+  there too.
+- ⏳ **Grafdigger's Cage vs search-to-battlefield** — `SearchPending` /
+  `PutFromZonesPending` place cards from library/graveyard without the
+  lockdown check (reanimation via `Move` and all cast paths are covered).
+- ⏳ **Rooms subsystem** (Unholy Annex // Ritual Chamber) and **meld**
+  (The Mightstone and Weakstone) — each is its own object-model feature.
+- ⏳ **Tempting offer / MayDo wants_ui suspend** — `Effect::TemptingOffer`
+  asks each opponent via the synchronous decider; a networked human seat
+  gets the AutoDecider default (decline). Same family as the existing
+  inline-picker gaps.
+- ⏳ **NameCard auto-decider names nothing** — bots get zero value from
+  Tamiyo +1 / Cabal Therapy / Spoils (empty name → no matches). A
+  heuristic namer (most-common name in the targeted hand/library) would
+  make these bot-playable.
+- ⏳ **Restless Reef fidelity** — printed is a 4/4 deathtouch Shark whose
+  attack trigger mills four; the shipped row is an older 4/3 "surveil 2"
+  approximation. Same sweep should re-verify Bivouac/Fortress/Ridgeline/
+  Cottage/Vinestalk riders against oracle.
+- ⏳ **Saheeli Rai -7 distinct-names clause** — the triple Search doesn't
+  forbid duplicate picks.
+
 - ✅ **Combat-damage-to-a-creature trigger dispatch (CR 510.2).**
   `resolve_combat_damage_with_filter` records every creature-vs-creature damage
   pair and, after all damage in the step is dealt, fires
@@ -71,8 +99,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     Tribal Flames reuses the Value for its X-damage. (Leyline Binding, Tribal Flames.)
   - ✅ **Orcish Bowmasters** — `Player.cards_drawn_this_step` +
     `Value::CardsDrawnThisStep` power the draw-step first-draw exemption.
-  - **Restless lands cycle** — manlands with per-card attack riders + typeless
-    land + dual color (only Restless Spire shipped so far).
+  - ✅ **Restless lands cycle** — all ten ship (`restless_land` helper;
+    Anchorage / Prairie / Vents landed last).
   - ✅ **Witch's Oven** — `Effect::WithSacrificedPt` re-stamps the
     cost-sacrificed creature's P/T at the ability's resolution.
 - ⏳ **Client Squad/Replicate stepper.** `PlayerView.{squadable_hand,
@@ -112,11 +140,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   permanent's *owner* for the follow-up (differs from "controller" only under
   control-stealing).
 
-- ⏳ **Cube bombs still needing primitives.** Skyclave Apparition ✅
-  (`ExileReturnZone::IllusionToken`). Remaining: Duplicant (imprint +
-  P/T-from-exiled), Grafdigger's Cage (a "can't enter from gy/library +
-  can't cast from gy/library" static), Hostage Taker (paid cast from linked
-  exile + any-color spend), Gonti (cast an opponent's exiled card).
+- ⏳ **Cube bombs still needing primitives.** Skyclave Apparition ✅,
+  Grafdigger's Cage ✅ (`StaticEffect::GraveyardLibraryLockdown` — gates
+  flashback/escape/Muldrotha/library-top/free-casts and gy/library →
+  battlefield creature entries; search-to-battlefield pending states don't
+  consult it yet), Hostage Taker ✅ + Gonti ✅ (paid casts from exile via
+  `GrantMayPlay { pay_own_cost }` / `LookTopExileOneMayPlay` + the
+  `WhileExiled` may-play duration — the any-color spend clause is still
+  dropped). Remaining: Duplicant (imprint + P/T-from-exiled CDA).
 - ⏳ **`EachOpponentPlaneswalker` was unneeded** — Saheeli's "each planeswalker
   they control" rides `EachPermanent(Planeswalker & ControlledByOpponent)` with
   damage-to-PW (CR 120.3c). Karn Liberated's -14 and Ugin's -X exile-by-MV
@@ -335,9 +366,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **"Draw your second card each turn" trigger** — Faerie Vandal, Mad Ratter,
     Wavebreak Hippocamp ("first spell during each opponent's turn") want
     per-turn draw/cast-ordinal trigger events.
-  - **Search-by-name / search-an-Aura filters** — Squadron Hawk (up to 3 by
-    name), Heliod's Pilgrim (an Aura card). `Effect::Search` has no name-match
-    or Aura-subtype filter yet.
+  - ✅ **Search-by-name / search-an-Aura filters** — Squadron Hawk fetches
+    up to three via `HasName`-filtered searches; Heliod's Pilgrim already
+    rode `HasEnchantmentSubtype(Aura)`.
 
 - ⏳ **Discovered this run (sagas / attack-tax / pillowfort batch):**
   - **Attack-tax interactive pay** — `AttackTaxToController` auto-pays from the
@@ -1175,11 +1206,18 @@ picking an item up.
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.
-- 🟡 **CR 116 — Special Actions** — Companion from outside the game (116.2g). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
+- 🟡 **CR 116 — Special Actions** — Companion ✅ (116.2g / 702.139 —
+  `GameAction::CompanionToHand`, {3} sorcery-speed sideboard→hand; deck
+  validation ⏳). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
 - ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur).
 - 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
-- 🟡 **CR 401 — Library** — cast-with-top-of-library-revealed recompute (401.5/401.6); multi-card same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
+- 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
+  (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
+  surfaced via `LibraryView.known_top` + a HUD chip; Courser, Oracle of Mul
+  Daya, Mystic Forge). Remaining: the mid-cast "new top stays hidden until
+  the spell finishes" timing nuance (401.5 second sentence); multi-card
+  same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
 - 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact.)
 - 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). `PlayerRef::DefendingPlayer` now resolves off the *triggering attacker* for `YourControl`-scoped Attacks triggers (not just the ability source), so "whenever a creature you control attacks, defending player loses N" fires correctly (Leeching Sliver, CR 509.2). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)

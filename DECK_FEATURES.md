@@ -38,7 +38,7 @@ Full per-card history is in git.
 
 | Feature | Status | Cards depending on it |
 |---|---|---|
-| Uncounterable spell flag | 🟡 | `StackItem::Spell.uncounterable: bool` + `CounterSpell` respects it. Cavern of Souls flags any creature spell its controller casts as uncounterable. Turn-scoped grants ride `Player.spells_uncounterable_this_turn` (`Effect::GrantSpellsUncounterableThisTurn`) — Veil of Summer ✅. (Mana-provenance / name-a-type gates still collapse.) |
+| Uncounterable spell flag | ✅ | `StackItem::Spell.uncounterable` + `CounterSpell` respects it. Cavern of Souls is now provenance-faithful: its any-color mana is `SpendRestriction::CreatureOfTypeUncounterable(chosen type)`, and actually spending it stamps the cast uncounterable (`pay_for_spell` → `note_cast_payment_riders`). Turn-scoped grants — Veil of Summer ✅. |
 | X-cost creature side-effects | 🟡 | Thud / Burn at the Stake ride `SacrificeAndRemember` + `Value::SacrificedPower`. Casualty (CR 702.153) ✅ via `Keyword::Casualty(n)` + `GameAction::CastSpellCasualty` (sacrifice-to-copy); Adventure (CR 715) ✅. |
 | Sacrifice-as-cost effects | 🟡 | Thud ✅ via `SacrificeAndRemember` + `Value::SacrificedPower`. Variable-count sacrifice ✅ via `Effect::SacrificeAnyNumber` + `Decision::ChooseAmount` (Plunge into Darkness). Flashback-with-additional-cost (Lava Dart sac-a-Mountain, Dread Return sac-three) ✅ via `flashback_additional_cost_for_name` + `cast_flashback`. |
 

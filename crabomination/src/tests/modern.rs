@@ -44754,3 +44754,85 @@ fn grafdiggers_cage_locks_reanimation_and_graveyard_casts() {
     let _ = dart;
     assert!(g.battlefield_find(bear).is_none());
 }
+
+#[test]
+fn restless_anchorage_animates_and_maps_on_attack() {
+    use crate::card::ArtifactSubtype;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_anchorage());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let computed = g.computed_permanent(land).unwrap();
+    assert!(computed.card_types.contains(&crate::card::CardType::Creature));
+    assert!(computed.keywords.contains(&crate::card::Keyword::Flying));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.is_token
+            && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Map)),
+        "attack trigger mints a Map"
+    );
+}
+
+#[test]
+fn restless_prairie_pumps_the_team_on_attack() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_prairie());
+    g.clear_sickness(land);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    g.clear_sickness(land);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "other creatures +1/+1");
+    assert_eq!(g.computed_permanent(land).unwrap().power, 3, "the Llama itself untouched");
+}
+
+#[test]
+fn restless_vents_loots_on_attack() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_vents());
+    g.clear_sickness(land);
+    let spare = g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    g.clear_sickness(land);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Discard(vec![spare]),
+    ]));
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spare), "discarded");
+    assert_eq!(g.players[0].hand.len(), hand, "discard then draw nets zero");
+}

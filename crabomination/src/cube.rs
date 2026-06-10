@@ -262,6 +262,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         hostage_taker,
         gonti_lord_of_luxury,
         grafdiggers_cage,
+        restless_anchorage,
+        restless_prairie,
+        restless_vents,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,

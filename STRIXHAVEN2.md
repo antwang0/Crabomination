@@ -15,11 +15,10 @@ For full per-card history see
 - 🟡 partial — body wired with simplified or stub effect; key behavior missing
 - ⏳ todo — not yet implemented
 
-A couple of 🟡 partials remain (riders dropped, core wired):
-- 🟡 **Kasmina, Enigma Sage** — +2 Scry; -X Fractal now ✅ via variable-X
-  loyalty (`LoyaltyAbility.x_cost` + `Value::XFromCost`); -8 stays tutor-to-hand
-  (the IS-sharing-color / cast-free chain is dropped) and the "other PWs gain
-  Kasmina's abilities" static is dropped.
+No 🟡 partials remain. Kasmina, Enigma Sage is now fully faithful:
+loyalty 2, the "each other planeswalker you control has Kasmina's loyalty
+abilities" static (`StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities`),
+and the real -8 (search a color-sharing instant/sorcery, exile, cast free).
 
 ✅ recent: Shaile // Embrose, Plargg // Augusta (Dean MDFC — loot + reveal-cast /
 tapped+untapped anthems + untap-on-attack; tapped/untapped anthem filters now

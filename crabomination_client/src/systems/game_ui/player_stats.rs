@@ -59,6 +59,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Night => (Color::srgba(0.14, 0.16, 0.30, 1.0), theme::TEXT_PRIMARY),
         // No-lifegain lock (CR 119.7) — a muted blood red.
         StatChipKind::NoLifegain => (Color::srgba(0.34, 0.12, 0.12, 1.0), theme::TEXT_PRIMARY),
+        // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
+        // parchment green so the public information reads at a glance.
+        StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -80,6 +83,7 @@ pub(super) enum StatChipKind {
     Day,
     Night,
     NoLifegain,
+    TopCard,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -479,6 +483,11 @@ pub fn update_player_stats_chips(
         }
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
         spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
+        // CR 401.5 — a revealed (or owner-peekable) library top is public
+        // info; show it right next to the deck count.
+        if let Some(top) = p.library.known_top.first() {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::TopCard, format!("▲ {}", top.name));
+        }
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
         // Poison is a hidden lose condition (lethal at 10) — only surface
         // the chip once the player has actually been poisoned to avoid
@@ -762,6 +771,10 @@ pub fn update_opponent_stats_rows(
                 }
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
                 spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
+                // CR 401.5 — an opponent's revealed library top is public.
+                if let Some(top) = p.library.known_top.first() {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::TopCard, format!("▲ {}", top.name));
+                }
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
                 if p.poison_counters > 0 {
                     spawn_stat_chip(
