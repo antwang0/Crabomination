@@ -41644,3 +41644,138 @@ pub fn oracle_of_bones() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Disturb (CR 702.146) ─────────────────────────────────────────────────────
+
+/// Shared shape for a Disturb DFC: front creature + Spirit back face that
+/// exiles itself instead of hitting a graveyard (keyed off the front's
+/// `Keyword::Disturb` at the graveyard funnels).
+fn disturb_back(
+    name: &'static str,
+    power: i32,
+    toughness: i32,
+    types: Vec<CreatureType>,
+    keywords: Vec<Keyword>,
+) -> Box<CardDefinition> {
+    Box::new(CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power,
+        toughness,
+        keywords,
+        ..Default::default()
+    })
+}
+
+/// Baithook Angler // Hook-Haunt Drifter — {1}{U} Human Peasant 2/1;
+/// Disturb {1}{U} into a 1/2 flying Spirit.
+pub fn baithook_angler() -> CardDefinition {
+    CardDefinition {
+        name: "Baithook Angler",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Disturb(cost(&[generic(1), u()]))],
+        back_face: Some(disturb_back(
+            "Hook-Haunt Drifter", 1, 2,
+            vec![CreatureType::Spirit],
+            vec![Keyword::Flying],
+        )),
+        ..Default::default()
+    }
+}
+
+/// Beloved Beggar // Generous Soul — {1}{W} Human Peasant 0/4;
+/// Disturb {4}{W}{W} into a 4/4 flying vigilance Spirit.
+pub fn beloved_beggar() -> CardDefinition {
+    CardDefinition {
+        name: "Beloved Beggar",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Peasant],
+            ..Default::default()
+        },
+        toughness: 4,
+        keywords: vec![Keyword::Disturb(cost(&[generic(4), w(), w()]))],
+        back_face: Some(disturb_back(
+            "Generous Soul", 4, 4,
+            vec![CreatureType::Spirit],
+            vec![Keyword::Flying, Keyword::Vigilance],
+        )),
+        ..Default::default()
+    }
+}
+
+/// Mourning Patrol // Morning Apparition — {2}{W} Human Soldier 2/3
+/// Vigilance; Disturb {3}{W} into a 2/1 flying vigilance Spirit Soldier.
+pub fn mourning_patrol() -> CardDefinition {
+    CardDefinition {
+        name: "Mourning Patrol",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Disturb(cost(&[generic(3), w()]))],
+        back_face: Some(disturb_back(
+            "Morning Apparition", 2, 1,
+            vec![CreatureType::Spirit, CreatureType::Soldier],
+            vec![Keyword::Flying, Keyword::Vigilance],
+        )),
+        ..Default::default()
+    }
+}
+
+/// Lunarch Veteran // Luminous Phantom — {W} Human Cleric 1/1, other
+/// creature ETB → gain 1; Disturb {1}{W} into a 1/1 flying Spirit whose
+/// leave-trigger gains 1 (fires off the death-keyed leave event).
+pub fn lunarch_veteran() -> CardDefinition {
+    let mut back = disturb_back(
+        "Luminous Phantom", 1, 1,
+        vec![CreatureType::Spirit, CreatureType::Cleric],
+        vec![Keyword::Flying],
+    );
+    back.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::PermanentLeavesBattlefield,
+            EventScope::AnotherOfYours,
+        )
+        .with_filter(Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::Creature,
+        }),
+        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+    }];
+    CardDefinition {
+        name: "Lunarch Veteran",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Disturb(cost(&[generic(1), w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        back_face: Some(back),
+        ..Default::default()
+    }
+}

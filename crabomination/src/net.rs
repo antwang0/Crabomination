@@ -771,6 +771,10 @@ pub struct GraveyardCardView {
     /// `GameAction::CastSpellBuyback`. `None` otherwise.
     #[serde(default)]
     pub buyback_cost: Option<crate::mana::ManaCost>,
+    /// Disturb cost (CR 702.146) if this card can be cast transformed from
+    /// the graveyard via `GameAction::CastDisturb`. `None` otherwise.
+    #[serde(default)]
+    pub disturb_cost: Option<crate::mana::ManaCost>,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so

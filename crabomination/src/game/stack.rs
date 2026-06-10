@@ -2354,8 +2354,11 @@ impl GameState {
         self.revert_copy_on_leave(&mut card);
         match zone {
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
-            // graveyard arrival to exile.
-            Zone::Graveyard if self.graveyard_exiled_for(&card) => self.exile.push(card),
+            // graveyard arrival to exile; CR 702.146e — so does a Disturb
+            // back face.
+            Zone::Graveyard if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() => {
+                self.exile.push(card)
+            }
             Zone::Graveyard => self.players[owner].send_to_graveyard(card),
             Zone::Exile => self.exile.push(card),
             Zone::Hand => self.players[owner].hand.push(card),

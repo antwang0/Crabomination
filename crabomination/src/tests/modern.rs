@@ -47598,3 +47598,62 @@ fn oracle_of_bones_free_casts_instant_only() {
     cast(&mut g, oracle);
     assert_eq!(g.players[1].life, 17, "free Bolt resolved at the opponent");
 }
+
+// ── Disturb (CR 702.146) ─────────────────────────────────────────────────────
+
+/// Disturb-casting Baithook Angler from the graveyard resolves the back
+/// face: a 1/2 flying Hook-Haunt Drifter.
+#[test]
+fn disturb_casts_back_face_from_graveyard() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::baithook_angler());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastDisturb { card_id: id }).expect("disturb");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!(c.definition.name, "Hook-Haunt Drifter");
+    assert!(c.transformed);
+    assert_eq!((c.power(), c.toughness()), (1, 2));
+    assert!(c.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// CR 702.146e — a dying Disturb back face is exiled instead of going to
+/// the graveyard.
+#[test]
+fn disturb_back_face_exiles_instead_of_dying() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::baithook_angler());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastDisturb { card_id: id }).expect("disturb");
+    drain_stack(&mut g);
+    g.remove_from_battlefield_to_graveyard(id);
+    assert!(g.exile.iter().any(|c| c.id == id), "exiled instead");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id));
+}
+
+/// Disturb is graveyard-only and demands the disturb cost.
+#[test]
+fn disturb_requires_graveyard_and_cost() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::beloved_beggar());
+    assert!(g.perform_action(GameAction::CastDisturb { card_id: id }).is_err(),
+        "hand card can't be disturb-cast");
+    let gy = g.add_card_to_graveyard(0, catalog::beloved_beggar());
+    // no mana
+    assert!(g.perform_action(GameAction::CastDisturb { card_id: gy }).is_err());
+}
+
+/// Lunarch Veteran's front face gains 1 on each other creature ETB.
+#[test]
+fn lunarch_veteran_front_gains_on_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lunarch_veteran());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear);
+    assert_eq!(g.players[0].life, 21);
+}

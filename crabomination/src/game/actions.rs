@@ -3610,6 +3610,75 @@ impl GameState {
     }
 
     /// Cast a spell from the graveyard using its Flashback cost.
+    /// CR 702.146 — Disturb: cast a graveyard card transformed (its back
+    /// face goes on the stack) for its disturb cost, sorcery speed. The
+    /// back face's graveyard→exile rider is enforced at the graveyard
+    /// funnels off the front face's `Keyword::Disturb`.
+    pub(crate) fn cast_disturb(
+        &mut self,
+        card_id: CardId,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if self.graveyard_library_locked() {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard[graveyard_pos].clone();
+        let disturb_cost = card
+            .definition
+            .keywords
+            .iter()
+            .find_map(|k| match k {
+                Keyword::Disturb(c) => Some(c.clone()),
+                _ => None,
+            })
+            .ok_or(GameError::SorcerySpeedOnly)?;
+        if card.definition.back_face.is_none() {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let mut cost = disturb_cost;
+        let reduction = cost_reduction_for_spell(self, p, &card, None);
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
+        apply_spell_cost_floor(self, &mut cost);
+        let snapshot = self.snapshot_payment_state(p);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_after_snapshot_mode(
+            p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
+        )?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        self.note_cast_payment_riders(&receipt);
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self.players[p].graveyard.remove(graveyard_pos);
+        self.players[p].cards_left_graveyard_this_turn =
+            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        // Flip to the back face — the transformed spell goes on the stack
+        // (CR 702.146a) and resolves as the back-face permanent.
+        let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
+        card.front_face = Some(card.definition.clone());
+        card.definition = std::sync::Arc::new(back);
+        card.transformed = true;
+        let events = vec![
+            GameEvent::CardLeftGraveyard { player: p, card_id },
+            GameEvent::SpellCast { player: p, card_id, face: CastFace::Front },
+        ];
+        self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent);
+        Ok(events)
+    }
+
     pub(crate) fn cast_flashback(
         &mut self,
         card_id: CardId,

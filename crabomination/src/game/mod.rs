@@ -2324,7 +2324,7 @@ impl GameState {
             return any_exiled;
         }
         let owner = card.owner;
-        if self.graveyard_exiled_for(&card) {
+        if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() {
             let cid = card.id;
             self.exile.push(card);
             events.push(crate::game::GameEvent::PermanentExiled { card_id: cid });
@@ -3892,6 +3892,7 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastDisturb { card_id } => self.cast_disturb(card_id),
             GameAction::CastRetrace {
                 card_id,
                 target,

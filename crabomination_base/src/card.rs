@@ -513,6 +513,11 @@ pub enum Keyword {
     /// CR 702.166 — Disguise. Like Morph, but the face-down permanent is a 2/2
     /// with ward {2}; turn it face up for this cost. Casts face down for {3}.
     Disguise(crate::mana::ManaCost),
+    /// CR 702.146 — Disturb. Cast this card from your graveyard transformed
+    /// (its back face) for this cost, sorcery speed. The back face's "would
+    /// be put into a graveyard → exile instead" rider is keyed off this
+    /// keyword at the graveyard funnels. `GameAction::CastDisturb`.
+    Disturb(crate::mana::ManaCost),
     Prowess,
     Ward(WardCost),
     Changeling,
@@ -2491,6 +2496,17 @@ impl CardInstance {
                 None
             }
         })
+    }
+
+    /// CR 702.146e — true for a transformed Disturb card (a back face whose
+    /// front prints Disturb): "if it would be put into a graveyard from
+    /// anywhere, exile it instead." Consulted at the graveyard funnels.
+    pub fn disturb_back_exiles(&self) -> bool {
+        self.transformed
+            && self
+                .front_face
+                .as_ref()
+                .is_some_and(|f| f.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_))))
     }
 
     pub fn clear_end_of_turn_effects(&mut self) {

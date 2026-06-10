@@ -523,6 +523,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sanctifier_en_vec,
         suppression_field,
         burrenton_forge_tender,
+        // Disturb (CR 702.146)
+        beloved_beggar,
+        mourning_patrol,
+        lunarch_veteran,
         // CR 615.7 chosen-source one-event shields
         circle_of_protection_white,
         circle_of_protection_blue,
@@ -1092,6 +1096,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // Disturb (CR 702.146)
+        baithook_angler,
         // Cipher (Gatecrash/Dragon's Maze) — CR 702.46
         last_thoughts,
         hidden_strings,

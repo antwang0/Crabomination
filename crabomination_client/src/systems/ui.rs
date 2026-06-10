@@ -818,6 +818,10 @@ pub fn graveyard_browser(
             .map(|cv| cv.players[owner].graveyard.iter().map(|c| {
                 let badge = if let Some(fb) = &c.flashback_cost {
                     Some(format!("Flashback {{{}}}", fb.cmc()))
+                } else if let Some(db) = &c.disturb_cost {
+                    Some(format!("Disturb {{{}}}", db.cmc()))
+                } else if let Some((esc, n)) = &c.escape {
+                    Some(format!("Escape {{{}}} +{n} exile", esc.cmc()))
                 } else if c.retrace {
                     Some("Retrace".to_string())
                 } else {
