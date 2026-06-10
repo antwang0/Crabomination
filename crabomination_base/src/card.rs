@@ -737,6 +737,10 @@ pub enum SelectionRequirement {
     /// True when the candidate has no counters of any kind on it (CR 122).
     /// Powers "target creature with no counters on it" (Heartless Act mode 0).
     HasNoCounters,
+    /// True when the candidate's name differs from every card moved so far
+    /// in the current resolution — "with different names" multi-search
+    /// clauses (Saheeli Rai's -7).
+    NameDiffersFromLastMoved,
     ControlledByYou,
     ControlledByOpponent,
     HasSupertype(Supertype),

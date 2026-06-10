@@ -53,6 +53,22 @@ pub(crate) fn map_effect_duration(
     }
 }
 
+/// Rank card names by frequency (descending, ties by first appearance),
+/// deduped — the heuristic feed for `Decision::NameCard` suggestions.
+pub(crate) fn rank_names_by_frequency<'a>(
+    names: impl IntoIterator<Item = &'a str>,
+) -> Vec<String> {
+    let mut order: Vec<(&str, u32)> = Vec::new();
+    for n in names {
+        match order.iter_mut().find(|(name, _)| *name == n) {
+            Some((_, c)) => *c += 1,
+            None => order.push((n, 1)),
+        }
+    }
+    order.sort_by(|a, b| b.1.cmp(&a.1));
+    order.into_iter().map(|(n, _)| n.to_string()).collect()
+}
+
 /// Runtime context threaded through effect resolution.
 #[derive(Debug, Clone)]
 pub struct EffectContext {
@@ -3715,29 +3731,8 @@ impl GameState {
                     n = n.saturating_mul(2);
                 }
                 for _ in 0..n {
-                    let id = self.next_id();
                     let def = token_to_card_definition(definition);
-                    let mut inst = CardInstance::new_token(id, def, p);
-                    inst.controller = p;
-                    self.battlefield.push(inst);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                    // Stash the freshly-minted id so a follow-up
-                    // `Selector::LastCreatedToken` in the same resolution
-                    // (e.g. a Seq's next element) can reference it. Cleared
-                    // when the next resolution root starts.
-                    self.last_created_token = Some(id);
-                    // Plural variant: track every token minted this
-                    // resolution. Read by `Selector::LastCreatedTokens`
-                    // (Fractal Spawning, multi-mint cards). Cleared at
-                    // resolution root start alongside the singular slot.
-                    self.last_created_tokens.push(id);
-                    // Tokens entering the battlefield are still permanents
-                    // entering the battlefield — fire any self-source ETB
-                    // triggers on the token's definition (a TokenDefinition
-                    // currently doesn't carry triggered_abilities, but if
-                    // one is added later it will fire correctly).
-                    self.fire_self_etb_triggers(id, p);
+                    self.mint_token_onto_battlefield(def, p, false, events);
                 }
                 Ok(())
             }
@@ -3756,7 +3751,6 @@ impl GameState {
                 let army = match army {
                     Some(id) => id,
                     None => {
-                        let id = self.next_id();
                         let mut types = vec![CreatureType::Army];
                         if let Some(t) = extra_type { types.push(*t); }
                         let def = token_to_card_definition(&crate::card::TokenDefinition {
@@ -3771,15 +3765,7 @@ impl GameState {
                             },
                             ..Default::default()
                         });
-                        let mut inst = CardInstance::new_token(id, def, p);
-                        inst.controller = p;
-                        self.battlefield.push(inst);
-                        events.push(GameEvent::TokenCreated { card_id: id });
-                        events.push(GameEvent::PermanentEntered { card_id: id });
-                        self.last_created_token = Some(id);
-                        self.last_created_tokens.push(id);
-                        self.fire_self_etb_triggers(id, p);
-                        id
+                        self.mint_token_onto_battlefield(def, p, false, events)
                     }
                 };
                 // CR 614.16 — counter doubling applies to the amassed counters.
@@ -3822,17 +3808,8 @@ impl GameState {
                 let Some(target) = target else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
                 for _ in 0..n {
-                    let id = self.next_id();
                     let def = token_to_card_definition(definition);
-                    let mut inst = CardInstance::new_token(id, def, p);
-                    inst.controller = p;
-                    inst.tapped = true;
-                    self.battlefield.push(inst);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                    self.last_created_token = Some(id);
-                    self.last_created_tokens.push(id);
-                    self.fire_self_etb_triggers(id, p);
+                    let id = self.mint_token_onto_battlefield(def, p, true, events);
                     // Join combat tapped + attacking (CR 508.3a) — bypasses the
                     // declare-attackers timing/sickness gates, like Ninjutsu.
                     if self.battlefield.iter().any(|c| c.id == id) {
@@ -3873,17 +3850,7 @@ impl GameState {
                     .filter(|&q| !self.same_team(q, ctrl) && q != defending)
                     .collect();
                 for opp in opps {
-                    let id = self.next_id();
-                    let mut inst = CardInstance::new(id, def.clone(), ctrl);
-                    inst.controller = ctrl;
-                    inst.is_token = true;
-                    inst.tapped = true;
-                    self.battlefield.push(inst);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                    self.last_created_token = Some(id);
-                    self.last_created_tokens.push(id);
-                    self.fire_self_etb_triggers(id, ctrl);
+                    let id = self.mint_token_onto_battlefield(def.clone(), ctrl, true, events);
                     if self.battlefield.iter().any(|c| c.id == id) {
                         self.attacking.push(Attack { attacker: id, target: AttackTarget::Player(opp) });
                         if let Some(c) = self.battlefield_find_mut(id) {
@@ -3995,16 +3962,7 @@ impl GameState {
                     def.supertypes.clear();
                 }
                 for _ in 0..n {
-                    let id = self.next_id();
-                    let mut inst = CardInstance::new(id, def.clone(), p);
-                    inst.controller = p;
-                    inst.is_token = true;
-                    self.battlefield.push(inst);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                    self.last_created_token = Some(id);
-                    self.last_created_tokens.push(id);
-                    self.fire_self_etb_triggers(id, p);
+                    self.mint_token_onto_battlefield(def.clone(), p, false, events);
                 }
                 Ok(())
             }
@@ -4035,16 +3993,7 @@ impl GameState {
                     n = n.saturating_mul(2);
                 }
                 for _ in 0..n {
-                    let id = self.next_id();
-                    let mut inst = CardInstance::new(id, def.clone(), p);
-                    inst.controller = p;
-                    inst.is_token = true;
-                    self.battlefield.push(inst);
-                    events.push(GameEvent::TokenCreated { card_id: id });
-                    events.push(GameEvent::PermanentEntered { card_id: id });
-                    self.last_created_token = Some(id);
-                    self.last_created_tokens.push(id);
-                    self.fire_self_etb_triggers(id, p);
+                    self.mint_token_onto_battlefield(def.clone(), p, false, events);
                 }
                 Ok(())
             }
@@ -4815,8 +4764,10 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
 
+                let eligible = Some(candidates.iter().map(|(id, _)| *id).collect());
                 let decision = Decision::SearchLibrary { player: p, candidates };
-                let pending = PendingEffectState::SearchPending { player: p, to: to.clone() };
+                let pending =
+                    PendingEffectState::SearchPending { player: p, to: to.clone(), eligible };
 
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -5113,9 +5064,19 @@ impl GameState {
                         (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
                     });
                 let Some(who) = who else { return Ok(()) };
+                // Heuristic feed: the target's nonland hand names, most
+                // common first, so bots strip the densest stack.
+                let suggestions = rank_names_by_frequency(
+                    self.players[who]
+                        .hand
+                        .iter()
+                        .filter(|c| !c.definition.is_land())
+                        .map(|c| c.definition.name),
+                );
                 let decision = Decision::NameCard {
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
                     source_name: ctx.source_name.unwrap_or_default().to_string(),
+                    suggestions,
                 };
                 let pending = PendingEffectState::NameDiscardMatchingPending { who };
                 if self.players[ctx.controller].wants_ui {
@@ -5139,9 +5100,20 @@ impl GameState {
                     .and_then(|cid| self.find_card_anywhere(cid))
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
+                // Heuristic feed: nonland names among the top N that will be
+                // revealed, most common first.
+                let suggestions = rank_names_by_frequency(
+                    self.players[p]
+                        .library
+                        .iter()
+                        .take(n)
+                        .filter(|c| !c.definition.is_land())
+                        .map(|c| c.definition.name),
+                );
                 let decision = Decision::NameCard {
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
                     source_name,
+                    suggestions,
                 };
                 let pending = PendingEffectState::NameRevealTopPending { player: p, count: n };
                 if self.players[p].wants_ui {
@@ -6758,7 +6730,26 @@ impl GameState {
                     .find_card_anywhere(target_id)
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
-                let decision = Decision::NameCard { source: target_id, source_name };
+                // Heuristic feed: a battlefield namer (Pithing Needle) wants
+                // an opponent's activated-ability permanent; a resolving
+                // spell (Spoils of the Vault) wants its controller's most
+                // common library name.
+                let suggestions = if self.battlefield.iter().any(|c| c.id == target_id) {
+                    rank_names_by_frequency(
+                        self.battlefield
+                            .iter()
+                            .filter(|c| {
+                                !self.same_team(c.controller, ctx.controller)
+                                    && !c.definition.activated_abilities.is_empty()
+                            })
+                            .map(|c| c.definition.name),
+                    )
+                } else {
+                    rank_names_by_frequency(
+                        self.players[ctx.controller].library.iter().map(|c| c.definition.name),
+                    )
+                };
+                let decision = Decision::NameCard { source: target_id, source_name, suggestions };
                 let pending = PendingEffectState::NameCardPending { target_id };
                 let chooser = ctx.controller;
                 if self.players[chooser].wants_ui {

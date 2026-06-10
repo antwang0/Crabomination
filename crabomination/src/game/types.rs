@@ -801,7 +801,15 @@ pub enum PendingEffectState {
     /// peeked card returns to the top in the chosen order.
     RearrangePeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
-    SearchPending { player: usize, to: crate::effect::ZoneDest },
+    SearchPending {
+        player: usize,
+        to: crate::effect::ZoneDest,
+        /// Filter-matching candidate ids computed at raise time; a pick
+        /// outside the set is rejected (enforces e.g. "with different
+        /// names" across sequential searches).
+        #[serde(default)]
+        eligible: Option<Vec<crate::card::CardId>>,
+    },
     /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
     PutFromZonesPending { player: usize },
     /// Cabal Therapy: the named-card answer makes `who` discard every

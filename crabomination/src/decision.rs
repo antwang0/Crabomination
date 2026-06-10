@@ -123,13 +123,17 @@ pub enum Decision {
     /// CR 201.3 — "As this enters, choose a card name." Pithing Needle,
     /// Phyrexian Revoker. Answered with `DecisionAnswer::NamedCard(name)`
     /// (free text over the catalog; an empty string names nothing).
-    /// `AutoDecider` names nothing (a real client would surface a card
-    /// picker); `ScriptedDecider` supplies the chosen name.
+    /// `AutoDecider` picks the first suggestion (the engine ranks the
+    /// relevant zone's names by frequency); `ScriptedDecider` overrides.
     NameCard {
         /// Source permanent that's asking for the name.
         source: CardId,
         #[serde(default)]
         source_name: String,
+        /// Heuristic candidates, best first (e.g. the most common name in
+        /// the targeted hand / library). Empty when nothing is known.
+        #[serde(default)]
+        suggestions: Vec<String>,
     },
 
     /// CR 705 — flip a coin. The decider answers with `Bool(true)` for
@@ -460,9 +464,12 @@ impl Decider for AutoDecider {
             Decision::ChooseCreatureType { .. } => {
                 DecisionAnswer::CreatureType(crate::card::CreatureType::Demon)
             }
-            // CR 201.3 — AutoDecider names nothing (no card-pool context to
-            // pick a meaningful target); ScriptedDecider supplies a name.
-            Decision::NameCard { .. } => DecisionAnswer::NamedCard(String::new()),
+            // CR 201.3 — AutoDecider takes the engine's best suggestion
+            // (most-common name in the relevant zone); names nothing when
+            // there's no context. ScriptedDecider supplies a name.
+            Decision::NameCard { suggestions, .. } => {
+                DecisionAnswer::NamedCard(suggestions.first().cloned().unwrap_or_default())
+            }
             // CR 705 — AutoDecider always picks heads. For deterministic
             // tests; a real client would use an rng. ScriptedDecider can
             // override with `DecisionAnswer::Bool(false)` for tails.

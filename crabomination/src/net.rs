@@ -1353,7 +1353,7 @@ impl From<&Decision> for DecisionWire {
             Decision::ChooseCreatureType { source } => {
                 DecisionWire::ChooseCreatureType { source: *source }
             }
-            Decision::NameCard { source, source_name } => DecisionWire::NameCard {
+            Decision::NameCard { source, source_name, .. } => DecisionWire::NameCard {
                 source: *source,
                 source_name: source_name.clone(),
             },

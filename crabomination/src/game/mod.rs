@@ -2126,6 +2126,34 @@ impl GameState {
             .unwrap_or(intended)
     }
 
+    /// Mint a token onto the battlefield: applies the Gather Specimens ETB
+    /// control replacement (CR 614), pushes the entry events, records
+    /// `last_created_token(s)`, and fires self-source ETB triggers. The
+    /// shared funnel for every token-creation site.
+    pub(crate) fn mint_token_onto_battlefield(
+        &mut self,
+        def: CardDefinition,
+        controller: usize,
+        tapped: bool,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) -> CardId {
+        let id = self.next_id();
+        let mut inst = crate::card::CardInstance::new_token(id, def, controller);
+        // CR 111.2 — a token's owner is the player under whose control it
+        // actually entered, so a stolen mint belongs to the thief.
+        let ctrl = self.apply_etb_control_replacement(&inst, controller);
+        inst.owner = ctrl;
+        inst.controller = ctrl;
+        inst.tapped = tapped;
+        self.battlefield.push(inst);
+        events.push(crate::game::GameEvent::TokenCreated { card_id: id });
+        events.push(crate::game::GameEvent::PermanentEntered { card_id: id });
+        self.last_created_token = Some(id);
+        self.last_created_tokens.push(id);
+        self.fire_self_etb_triggers(id, ctrl);
+        id
+    }
+
     /// Place `card` into its owner's graveyard, or exile it instead when a
     /// graveyard-hate static (Rest in Peace / Leyline of the Void) is active
     /// for that owner. Pushes a `PermanentExiled` event and returns `true`
@@ -5967,18 +5995,26 @@ impl GameState {
                 self.apply_learn_choice(player, choice.clone(), &mut events);
                 Ok(events)
             }
-            PendingEffectState::SearchPending { player, to } => {
+            PendingEffectState::SearchPending { player, to, eligible } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = vec![];
                 if let Some(card_id) = chosen_id
+                    && eligible.as_ref().is_none_or(|e| e.contains(card_id))
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == *card_id) {
-                    let card = self.players[player].library.remove(pos);
-                    self.place_card_in_dest(card, player, &to, &mut events);
-                    // Surface the found card so a downstream `Selector::LastMoved`
-                    // can inspect its type (Oriq Loremage's "if instant/sorcery").
-                    self.last_moved_cards.push(*card_id);
+                    // Grafdigger's Cage — a creature card can't leave the
+                    // library for the battlefield while the lockdown is up.
+                    let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
+                        && self.graveyard_library_locked()
+                        && self.players[player].library[pos].definition.is_creature();
+                    if !blocked {
+                        let card = self.players[player].library.remove(pos);
+                        self.place_card_in_dest(card, player, &to, &mut events);
+                        // Surface the found card so a downstream `Selector::LastMoved`
+                        // can inspect its type (Oriq Loremage's "if instant/sorcery").
+                        self.last_moved_cards.push(*card_id);
+                    }
                 }
                 Ok(events)
             }
@@ -6241,9 +6277,17 @@ impl GameState {
                         self.players[player].hand.iter().position(|c| c.id == *cid);
                     let from_gy =
                         self.players[player].graveyard.iter().position(|c| c.id == *cid);
+                    // Grafdigger's Cage — creature cards in graveyards can't
+                    // enter the battlefield (hand picks are unaffected).
+                    let gy_blocked = |g: &Self, pos: usize| {
+                        g.graveyard_library_locked()
+                            && g.players[player].graveyard[pos].definition.is_creature()
+                    };
                     let card = match (from_hand, from_gy) {
                         (Some(pos), _) => Some(self.players[player].hand.remove(pos)),
-                        (None, Some(pos)) => Some(self.players[player].graveyard.remove(pos)),
+                        (None, Some(pos)) if !gy_blocked(self, pos) => {
+                            Some(self.players[player].graveyard.remove(pos))
+                        }
                         _ => None,
                     };
                     if let Some(card) = card {

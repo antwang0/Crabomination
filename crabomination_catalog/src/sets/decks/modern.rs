@@ -12193,19 +12193,8 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
 /// **-2**: Create a token that's a copy of target artifact or creature
 /// you control, except it has haste. Exile it at the beginning of the
 /// next end step.
-/// **-7**: You get an emblem with "At the beginning of your end step,
-/// create two tokens that are copies of target artifact or creature you
-/// control, except they have haste. Exile them at the beginning of the
-/// next end step."
-///
-/// Cube-style approximation. The +1's "scry 1 + damage each opponent +
-/// each PW they control" wires through `Scry + Drain` (the PW-also half
-/// collapses; engine has no `EachOpponentsPlaneswalker` selector). The -2
-/// uses `CreateTokenCopyOf` with the target friendly creature or
-/// artifact; haste is granted via the granted-keyword pipeline; the
-/// "exile at next end step" rider uses `DelayUntil(NextEndStep)`. The
-/// -7 grants a real emblem (`Effect::CreateEmblem`) whose end-step
-/// trigger fires the copy body twice each turn.
+/// **-7**: Search your library for up to three artifact cards with
+/// different names, put them onto the battlefield, then shuffle.
 pub fn saheeli_rai() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     use crate::effect::{DelayedTriggerKind, Duration};
@@ -12273,10 +12262,10 @@ pub fn saheeli_rai() -> CardDefinition {
                 loyalty_cost: -2,
                 effect: copy_friendly(),
             },
-            // -7: search up to three artifact cards with different names,
-            // put them onto the battlefield, then shuffle. Modeled as three
-            // sequential searches to the battlefield (the distinct-names
-            // clause isn't enforced by the search decision).
+            // -7: search up to three artifact cards with different names and
+            // put them onto the battlefield. Three sequential searches; the
+            // second and third exclude already-fetched names
+            // (`NameDiffersFromLastMoved`).
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -7,
@@ -12291,7 +12280,8 @@ pub fn saheeli_rai() -> CardDefinition {
                     },
                     Effect::Search {
                         who: PlayerRef::You,
-                        filter: SelectionRequirement::Artifact,
+                        filter: SelectionRequirement::Artifact
+                            .and(SelectionRequirement::NameDiffersFromLastMoved),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,
                             tapped: false,
@@ -12299,7 +12289,8 @@ pub fn saheeli_rai() -> CardDefinition {
                     },
                     Effect::Search {
                         who: PlayerRef::You,
-                        filter: SelectionRequirement::Artifact,
+                        filter: SelectionRequirement::Artifact
+                            .and(SelectionRequirement::NameDiffersFromLastMoved),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,
                             tapped: false,

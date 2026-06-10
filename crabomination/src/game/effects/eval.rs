@@ -1169,6 +1169,10 @@ impl GameState {
                         card.definition.cost.cmc() <= count
                     }
                     R::HasBackFace => card.definition.back_face.is_some(),
+                    R::NameDiffersFromLastMoved => !self.last_moved_cards.iter().any(|id| {
+                        self.find_card_anywhere(*id)
+                            .is_some_and(|c| c.definition.name == card.definition.name)
+                    }),
                     _ => unreachable!("handled above"),
                 }
             }
@@ -1313,6 +1317,12 @@ impl GameState {
                 card.counters.values().all(|&n| n == 0)
                     && card.keyword_counters.values().all(|&n| n == 0)
             }
+            // "With different names" — excludes anything sharing a name with
+            // a card already moved this resolution (Saheeli Rai -7).
+            R::NameDiffersFromLastMoved => !self.last_moved_cards.iter().any(|id| {
+                self.find_card_anywhere(*id)
+                    .is_some_and(|c| c.definition.name == card.definition.name)
+            }),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone

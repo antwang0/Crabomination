@@ -8342,6 +8342,27 @@ fn cabal_therapy_discards_all_copies_of_the_named_card() {
     assert_eq!(g.players[1].hand.len(), 1, "Forest still in hand");
 }
 
+/// AutoDecider names the most common nonland name in the targeted hand.
+#[test]
+fn cabal_therapy_auto_decider_names_the_densest_card() {
+    let mut g = two_player_game();
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::forest());
+    let ct = g.add_card_to_hand(0, catalog::cabal_therapy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    // No scripted name — the AutoDecider suggestion heuristic kicks in.
+    g.perform_action(GameAction::CastSpell {
+        card_id: ct, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cabal Therapy castable for {B}");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt1));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt2),
+        "bot names the two-copy Bolt over the singleton Bear");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear));
+}
+
 /// Wear Down: destroys a target artifact or enchantment.
 #[test]
 fn wear_down_destroys_target_artifact() {
@@ -13768,8 +13789,10 @@ fn tezzeret_minus_three_tutors_a_cheap_artifact() {
     let mut g = two_player_game();
     let tez = g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
     g.battlefield_find_mut(tez).unwrap().add_counters(CounterType::Loyalty, 3); // 4+3 = 7 ≥ 3
+    // MV ≤ 1 filter: Mind Stone ({2}) is not an eligible pick; Needle ({1}) is.
     let stone = g.add_card_to_library(0, catalog::mind_stone());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(stone))]));
+    let needle = g.add_card_to_library(0, catalog::pithing_needle());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(needle))]));
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
             x_value: None,
@@ -13777,7 +13800,8 @@ fn tezzeret_minus_three_tutors_a_cheap_artifact() {
     }).expect("Tezzeret -3");
     drain_stack(&mut g);
 
-    assert!(g.players[0].hand.iter().any(|c| c.id == stone), "cheap artifact tutored to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == needle), "cheap artifact tutored to hand");
+    assert!(g.players[0].library.iter().any(|c| c.id == stone), "MV-2 rock not searchable");
 }
 
 #[test]
@@ -24836,6 +24860,32 @@ fn saheeli_rai_minus_seven_fetches_three_artifacts() {
     for id in [a, b, c] {
         assert!(g.battlefield_find(id).is_some(), "searched artifact on battlefield");
     }
+}
+
+/// Saheeli -7 "with different names": a second copy of an already-fetched
+/// name isn't a legal pick.
+#[test]
+fn saheeli_rai_minus_seven_rejects_duplicate_names() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());
+    g.battlefield_find_mut(saheeli).unwrap().add_counters(crate::card::CounterType::Loyalty, 7);
+    let a = g.add_card_to_library(0, catalog::mind_stone());
+    let dup = g.add_card_to_library(0, catalog::mind_stone());
+    let c = g.add_card_to_library(0, catalog::shuko());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(dup)),
+        DecisionAnswer::Search(Some(c)),
+    ]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: None,
+        card_id: saheeli, ability_index: 2, target: None,
+    }).expect("Saheeli -7 activatable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_some());
+    assert!(g.battlefield_find(dup).is_none(), "duplicate name stays in the library");
+    assert!(g.battlefield_find(c).is_some());
 }
 
 #[test]
@@ -44427,6 +44477,36 @@ fn gather_specimens_steals_an_opponent_creature_etb() {
 }
 
 #[test]
+fn gather_specimens_steals_token_mints() {
+    let mut g = two_player_game();
+    g.creature_etb_steal_this_turn.push(0);
+    // P1 mints a creature token — it enters under P0's control (and P0
+    // owns it, CR 111.2). A noncreature token is unaffected.
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(
+        &Effect::CreateToken {
+            who: crate::effect::PlayerRef::You,
+            count: crate::effect::Value::Const(1),
+            definition: crabomination_base::tokens::spirit_token(),
+        },
+        &ctx,
+    ).unwrap();
+    let spirit = g.battlefield.iter().find(|c| c.definition.name == "Spirit").unwrap();
+    assert_eq!(spirit.controller, 0, "creature token stolen on entry");
+    assert_eq!(spirit.owner, 0, "stolen token is owned by its actual controller");
+    g.resolve_effect(
+        &Effect::CreateToken {
+            who: crate::effect::PlayerRef::You,
+            count: crate::effect::Value::Const(1),
+            definition: crabomination_base::tokens::treasure_token(),
+        },
+        &ctx,
+    ).unwrap();
+    let treasure = g.battlefield.iter().find(|c| c.definition.name == "Treasure").unwrap();
+    assert_eq!(treasure.controller, 1, "noncreature token unaffected");
+}
+
+#[test]
 fn tempt_with_bunnies_offer_accepted_doubles_up() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
@@ -44759,6 +44839,40 @@ fn grafdiggers_cage_locks_reanimation_and_graveyard_casts() {
     let dart = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let _ = dart;
     assert!(g.battlefield_find(bear).is_none());
+}
+
+#[test]
+fn grafdiggers_cage_blocks_search_to_battlefield() {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{PlayerRef, ZoneDest};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grafdiggers_cage());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(bear)),
+        DecisionAnswer::Search(Some(bear)),
+    ]));
+    g.resolve_effect(
+        &Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        &ctx,
+    ).unwrap();
+    assert!(g.battlefield_find(bear).is_none(), "creature stays in the library");
+    assert!(g.players[0].library.iter().any(|c| c.id == bear));
+    // Searching to hand is unaffected.
+    g.resolve_effect(
+        &Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        &ctx,
+    ).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "to-hand search still works");
 }
 
 #[test]

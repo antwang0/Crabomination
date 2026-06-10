@@ -742,12 +742,7 @@ impl GameState {
                     toughness: mv,
                     ..Default::default()
                 };
-                let id = self.next_id();
-                let mut inst = crate::card::CardInstance::new_token(id, def, owner);
-                inst.controller = owner;
-                self.battlefield.push(inst);
-                events.push(GameEvent::TokenCreated { card_id: id });
-                events.push(GameEvent::PermanentEntered { card_id: id });
+                self.mint_token_onto_battlefield(def, owner, false, events);
                 continue;
             }
             let mut card = self.exile.remove(pos);
