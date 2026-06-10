@@ -1134,6 +1134,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         kappa_cannoneer,
         twisted_image,
         chronatog,
+        inside_out,
+        merfolk_thaumaturgist,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1467,6 +1469,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         smallpox,
         zealous_persecution,
         street_wraith,
+        promise_of_power,
         // ── modern_decks-19 ──
         living_end,
         orcish_bowmasters,
@@ -1890,6 +1893,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        barbed_lightning,
+        grab_the_reins,
         blood_moon,
         magus_of_the_moon,
         fulminator_mage,
@@ -2373,6 +2378,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         tooth_and_nail,
+        rude_awakening,
         // ── modern_decks-18 ──
         crashing_footfalls,
         dryad_of_the_ilysian_grove,

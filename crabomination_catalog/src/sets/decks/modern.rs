@@ -40970,3 +40970,175 @@ pub fn chronatog() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Barbed Lightning — {2}{R} Instant. 3 damage to target creature; or 3 to
+/// target player or planeswalker. Entwine {2}.
+pub fn barbed_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Barbed Lightning",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Entwine(cost(&[generic(2)]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rude Awakening — {4}{G} Sorcery. Untap all your lands; or your lands
+/// become 2/2 creatures (still lands) until end of turn. Entwine {2}{G}.
+pub fn rude_awakening() -> CardDefinition {
+    let your_lands = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Rude Awakening",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Entwine(cost(&[generic(2), g()]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::Untap { what: your_lands(), up_to: None },
+            Effect::BecomeCreature {
+                what: your_lands(),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Grab the Reins — {3}{R} Instant. Steal a creature (haste) until end of
+/// turn; or sacrifice a creature, dealing its power to any target.
+/// Entwine {2}{R}.
+pub fn grab_the_reins() -> CardDefinition {
+    CardDefinition {
+        name: "Grab the Reins",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Entwine(cost(&[generic(2), r()]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::GainControl {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: None,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature,
+                },
+                Effect::DealDamage {
+                    to: crate::effect::shortcut::target_any(),
+                    amount: Value::SacrificedPower,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Promise of Power — {2}{B}{B}{B} Sorcery. Draw five and lose 5 life; or
+/// create an X/X flying Demon, X = cards in hand. Entwine {4}.
+pub fn promise_of_power() -> CardDefinition {
+    CardDefinition {
+        name: "Promise of Power",
+        cost: cost(&[generic(2), b(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Entwine(cost(&[generic(4)]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(5) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(5) },
+            ]),
+            Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Demon".to_string(),
+                        keywords: vec![Keyword::Flying],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Demon],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Inside Out — {1}{U/R} Instant. Switch target creature's power and
+/// toughness until end of turn; draw a card.
+pub fn inside_out() -> CardDefinition {
+    CardDefinition {
+        name: "Inside Out",
+        cost: cost(&[generic(1), ManaSymbol::Hybrid(Color::Blue, Color::Red)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SwitchPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Merfolk Thaumaturgist — {2}{U} 1/2 Merfolk Wizard. {T}: Switch target
+/// creature's power and toughness until end of turn.
+pub fn merfolk_thaumaturgist() -> CardDefinition {
+    CardDefinition {
+        name: "Merfolk Thaumaturgist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::SwitchPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

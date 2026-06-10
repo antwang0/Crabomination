@@ -46714,3 +46714,129 @@ fn chronatog_pumps_and_skips_your_next_turn() {
     assert_eq!(g.active_player_idx, 1, "P0's turn was skipped");
     assert_eq!(g.players[0].skip_turns, 0);
 }
+
+// ── Entwine batch (CR 702.41) + SwitchPT cards ──────────────────────────────
+
+/// Barbed Lightning entwined burns both a creature and a player.
+#[test]
+fn barbed_lightning_entwined_hits_both() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bl = g.add_card_to_hand(0, catalog::barbed_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellEntwine {
+        card_id: bl, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Player(1)], mode: Some(0), x_value: None,
+    }).expect("entwined Barbed Lightning");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature took 3");
+    assert_eq!(g.players[1].life, 17, "player took 3");
+}
+
+/// Rude Awakening mode 1 animates lands; entwined it untaps them too.
+#[test]
+fn rude_awakening_entwined_untaps_and_animates() {
+    let mut g = two_player_game();
+    let mut lands = Vec::new();
+    for _ in 0..3 {
+        let l = g.add_card_to_battlefield(0, catalog::forest());
+        g.battlefield_find_mut(l).unwrap().tapped = true;
+        lands.push(l);
+    }
+    let ra = g.add_card_to_hand(0, catalog::rude_awakening());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpellEntwine {
+        card_id: ra, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("entwined Rude Awakening");
+    drain_stack(&mut g);
+    for l in &lands {
+        let c = g.battlefield_find(*l).unwrap();
+        assert!(!c.tapped, "land untapped");
+        let cp = g.computed_permanent(*l).unwrap();
+        assert!(cp.card_types.contains(&CardType::Creature), "land animated");
+        assert_eq!((cp.power, cp.toughness), (2, 2));
+    }
+}
+
+/// Grab the Reins mode 1 sacrifices a creature and flings its power.
+#[test]
+fn grab_the_reins_fling_mode() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm());
+    let gr = g.add_card_to_hand(0, catalog::grab_the_reins());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gr, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast mode 1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(), "Wurm sacrificed");
+    assert_eq!(g.players[1].life, 14, "6 damage flung");
+}
+
+/// Promise of Power mode 1 mints an X/X flying Demon, X = hand size.
+#[test]
+fn promise_of_power_demon_scales_with_hand() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    let pp = g.add_card_to_hand(0, catalog::promise_of_power());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pp, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast mode 1");
+    drain_stack(&mut g);
+    let demon = g.battlefield.iter().find(|c| c.definition.name == "Demon").expect("Demon token");
+    let id = demon.id;
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "X = 4 cards in hand");
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// Inside Out switches with the hybrid {U/R} pip payable in red.
+#[test]
+fn inside_out_switches_with_red_mana() {
+    let mut g = two_player_game();
+    let wraith = g.add_card_to_battlefield(1, catalog::street_wraith());
+    g.add_card_to_library(0, catalog::island());
+    let io = g.add_card_to_hand(0, catalog::inside_out());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: io, target: Some(Target::Permanent(wraith)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Inside Out");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(wraith).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3));
+}
+
+/// Merfolk Thaumaturgist taps to switch; two switches cancel out.
+#[test]
+fn merfolk_thaumaturgist_double_switch_cancels() {
+    let mut g = two_player_game();
+    let merfolk = g.add_card_to_battlefield(0, catalog::merfolk_thaumaturgist());
+    g.clear_sickness(merfolk);
+    let wraith = g.add_card_to_battlefield(0, catalog::street_wraith());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: merfolk, ability_index: 0,
+        target: Some(Target::Permanent(wraith)), x_value: None,
+    }).expect("tap to switch");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(wraith).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "switched once");
+    g.battlefield_find_mut(merfolk).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: merfolk, ability_index: 0,
+        target: Some(Target::Permanent(wraith)), x_value: None,
+    }).expect("switch again");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(wraith).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "two switches cancel (CR 613.7d)");
+}
