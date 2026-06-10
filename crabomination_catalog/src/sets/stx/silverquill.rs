@@ -329,6 +329,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: true,
+                    pay_own_cost: false,
                 },
             ]),
             once_per_turn: true,

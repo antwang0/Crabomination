@@ -804,6 +804,9 @@ pub enum PendingEffectState {
     SearchPending { player: usize, to: crate::effect::ZoneDest },
     /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
     PutFromZonesPending { player: usize },
+    /// Cabal Therapy: the named-card answer makes `who` discard every
+    /// matching hand card.
+    NameDiscardMatchingPending { who: usize },
     /// Tamiyo +1: the named-card answer drives the reveal-top sort
     /// (matching name → hand, rest → graveyard).
     NameRevealTopPending { player: usize, count: usize },

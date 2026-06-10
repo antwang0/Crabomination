@@ -2821,6 +2821,9 @@ impl GameState {
                             return_to: *return_to,
                         });
                     }
+                    // Chainable: a follow-up `GrantMayPlay(LastMoved)` lets
+                    // the controller cast the exiled card (Hostage Taker).
+                    self.last_moved_cards.push(cid);
                 }
                 Ok(())
             }
@@ -5049,6 +5052,82 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LookTopExileOneMayPlay { count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let opp = self
+                    .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
+                    .or_else(|| {
+                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                    });
+                let Some(opp) = opp else { return Ok(()) };
+                let top: Vec<crate::card::CardId> =
+                    self.players[opp].library.iter().take(n).map(|c| c.id).collect();
+                if top.is_empty() {
+                    return Ok(());
+                }
+                let pick = top
+                    .iter()
+                    .copied()
+                    .max_by_key(|id| {
+                        self.players[opp]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| c.definition.cost.cmc())
+                            .unwrap_or(0)
+                    })
+                    .unwrap();
+                let pos = self.players[opp].library.iter().position(|c| c.id == pick).unwrap();
+                let mut card = self.players[opp].library.remove(pos);
+                card.exiled_with = ctx.source;
+                card.face_down = true;
+                card.may_play_until = Some(crate::card::MayPlayPermission {
+                    player: ctx.controller,
+                    granted_turn: self.turn_number,
+                    duration: crate::card::MayPlayDuration::WhileExiled,
+                    exile_after: false,
+                });
+                card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                let cid = card.id;
+                self.exile.push(card);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+                // Bottom the rest in a random order.
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    top.into_iter().filter(|id| *id != pick).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(pos) = self.players[opp].library.iter().position(|c| c.id == id) {
+                        let card = self.players[opp].library.remove(pos);
+                        self.players[opp].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::NameCardTargetDiscardsMatching => {
+                use crate::decision::Decision;
+                let who = self
+                    .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
+                    .or_else(|| {
+                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                    });
+                let Some(who) = who else { return Ok(()) };
+                let decision = Decision::NameCard {
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    source_name: ctx.source_name.unwrap_or_default().to_string(),
+                };
+                let pending = PendingEffectState::NameDiscardMatchingPending { who };
+                if self.players[ctx.controller].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::NameCardRevealTop { count } => {
                 // Tamiyo +1: choose a nonland card name, reveal the top N —
                 // matching names to hand, the rest to the graveyard.
@@ -6855,6 +6934,7 @@ impl GameState {
                 duration,
                 to_owner,
                 exile_after,
+                pay_own_cost,
             } => {
                 // Resolve `what` to a set of cards and stamp each with a
                 // `MayPlayPermission`. The selector can match cards in
@@ -6867,7 +6947,7 @@ impl GameState {
                 let granted_turn = self.turn_number;
                 for ent in entities {
                     let cid = match ent {
-                        EntityRef::Card(id) => id,
+                        EntityRef::Card(id) | EntityRef::Permanent(id) => id,
                         _ => continue,
                     };
                     // Determine recipient before we take a mut borrow.
@@ -6883,6 +6963,9 @@ impl GameState {
                             duration: *duration,
                             exile_after: *exile_after,
                         });
+                        if *pay_own_cost {
+                            card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                        }
                     }
                 }
                 Ok(())

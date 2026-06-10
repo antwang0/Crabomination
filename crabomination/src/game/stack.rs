@@ -533,6 +533,10 @@ impl GameState {
                     // 0/0 body (Pterafractyl, Symmathematics) survives ETB.
                     let enters_spec = card.definition.enters_with_counters.clone();
                     let mut card = card;
+                    // CR 608.3a — a permanent spell enters under the control
+                    // of its caster (matters for casts of opponent-owned
+                    // cards: Gonti, Hostage Taker).
+                    card.controller = caster;
                     card.controller = self.apply_etb_control_replacement(&card, card.controller);
                     self.battlefield.push(card);
                     // Collect the printed `enters_with_counters` spec and
@@ -1479,6 +1483,7 @@ impl GameState {
                     crate::card::MayPlayDuration::EndOfControllersNextTurn => {
                         elapsed >= player_count.max(1)
                     }
+                    crate::card::MayPlayDuration::WhileExiled => false,
                 };
                 if expired {
                     c.may_play_until = None;

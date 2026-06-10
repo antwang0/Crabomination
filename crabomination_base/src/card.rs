@@ -323,6 +323,9 @@ pub enum MayPlayDuration {
     /// "...until the end of your next turn" — clears at the end of the
     /// controller's next turn (i.e. one full untap-to-cleanup cycle later).
     EndOfControllersNextTurn,
+    /// "...for as long as it remains exiled" — never sweeps; the
+    /// permission dies with the card's zone change (Hostage Taker, Gonti).
+    WhileExiled,
 }
 
 /// Per-instance permission for "you may cast that card without paying its

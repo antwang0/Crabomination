@@ -570,31 +570,16 @@ pub fn mind_sculpt() -> CardDefinition {
     }
 }
 
-/// Cabal Therapy — {B} Sorcery. Choose a card name, then target player
-/// reveals their hand and discards all copies of that card. Flashback —
-/// sacrifice a creature.
-///
-/// Approximation: the auto-decider picks the highest-CMC nonland card in
-/// the opponent's hand (via `DiscardChosen`), so the "name a card" half
-/// collapses into "pick the most threatening card in their hand".
-/// Flashback's "sacrifice a creature" cost is the engine's stock
-/// flashback {0} cost — we don't yet model alt-costs that aren't mana.
+/// Cabal Therapy — {B} Sorcery. Choose a nonland card name; target player
+/// discards every copy from their hand. Flashback — sacrifice a creature
+/// (`flashback_additional_cost_for_name`).
 pub fn cabal_therapy() -> CardDefinition {
-    let flashback_cost = ManaCost { symbols: vec![] };
     CardDefinition {
         name: "Cabal Therapy",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![Keyword::Flashback(flashback_cost)],
-        effect: Effect::DiscardChosen {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            count: Value::Const(1),
-            filter: SelectionRequirement::Nonland,
-        },
-        triggered_abilities: vec![],
+        keywords: vec![Keyword::Flashback(ManaCost::default())],
+        effect: Effect::NameCardTargetDiscardsMatching,
         ..Default::default()
     }
 }

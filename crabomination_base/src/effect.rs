@@ -1777,6 +1777,14 @@ pub enum Effect {
     /// "Reveal the top card of your library and put it into your hand. Each
     /// opponent loses life equal to its mana value." Sorin, Grim Nemesis +1.
     RevealTopToHandOpponentsLoseMv,
+    /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of target
+    /// opponent's library, exile one face down (auto-pick: highest MV) with
+    /// a while-exiled cast permission for you, and bottom the rest randomly.
+    /// (The any-color spend clause is dropped.)
+    LookTopExileOneMayPlay { count: Value },
+    /// Cabal Therapy: choose a nonland card name; target player discards
+    /// every card with that name from their hand.
+    NameCardTargetDiscardsMatching,
     /// "Choose a nonland card name, then reveal the top `count` cards of
     /// your library. Put all cards with the chosen name from among them into
     /// your hand and the rest into your graveyard." Tamiyo, Collector of
@@ -2359,6 +2367,11 @@ pub enum Effect {
         to_owner: bool,
         #[serde(default)]
         exile_after: bool,
+        /// "You may cast that card" *paying its cost* (Hostage Taker) —
+        /// stamps the card's own mana cost as the granted alt-cast cost so
+        /// the may-play cast isn't free.
+        #[serde(default)]
+        pay_own_cost: bool,
     },
     /// Resolve-now equivalent of `GrantMayPlay`: at effect resolution
     /// time, ask the controller "cast `what` without paying its mana

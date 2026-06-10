@@ -44634,3 +44634,123 @@ fn zirda_discounts_nonmana_activations_with_a_floor() {
     let computed = g.computed_permanent(bear).unwrap();
     assert!(computed.keywords.contains(&crate::card::Keyword::CantBlock));
 }
+
+// ── draw-ordinal / first-spell-on-opp-turn triggers + exile-cast batch ──────
+
+#[test]
+fn faerie_vandal_grows_on_the_second_draw_each_turn() {
+    let mut g = two_player_game();
+    let vandal = g.add_card_to_battlefield(0, catalog::faerie_vandal());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut draw = |g: &mut GameState| {
+        let mut events = vec![];
+        g.draw_one(0, &mut events);
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(g);
+    };
+    draw(&mut g);
+    assert_eq!(g.battlefield_find(vandal).unwrap()
+        .counter_count(crate::card::CounterType::PlusOnePlusOne), 0, "first draw: no counter");
+    draw(&mut g);
+    assert_eq!(g.battlefield_find(vandal).unwrap()
+        .counter_count(crate::card::CounterType::PlusOnePlusOne), 1, "second draw: +1/+1");
+    draw(&mut g);
+    assert_eq!(g.battlefield_find(vandal).unwrap()
+        .counter_count(crate::card::CounterType::PlusOnePlusOne), 1, "third draw: nothing");
+}
+
+#[test]
+fn mad_ratter_mints_two_rats_on_the_second_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mad_ratter());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    for _ in 0..2 {
+        let mut events = vec![];
+        g.draw_one(0, &mut events);
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(&mut g);
+    }
+    let rats = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Rat" && c.controller == 0)
+        .count();
+    assert_eq!(rats, 2, "two Rats on the second draw");
+}
+
+#[test]
+fn wavebreak_hippocamp_draws_on_first_spell_in_opponent_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wavebreak_hippocamp());
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 1; // opponent's turn
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt at instant speed");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "first spell on opp turn drew");
+}
+
+#[test]
+fn hostage_taker_exiles_and_lets_you_cast_the_hostage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let taker = g.add_card_to_hand(0, catalog::hostage_taker());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, taker);
+
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("Bear exiled");
+    assert_eq!(exiled.may_play_until.map(|p| p.player), Some(0), "you may cast it");
+
+    // Cast the hostage from exile — it enters under your control.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("hostage castable from exile (paying its cost)");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen for good");
+}
+
+#[test]
+fn gonti_exiles_one_of_the_top_four_with_a_cast_permission() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    let fat = g.next_id();
+    g.players[1].add_to_library_top(fat, catalog::mind_stone()); // highest MV of top 4
+    let gonti = g.add_card_to_hand(0, catalog::gonti_lord_of_luxury());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, gonti);
+
+    let stolen = g.exile.iter().find(|c| c.id == fat).expect("top-4 pick exiled");
+    assert!(stolen.face_down, "exiled face down");
+    assert_eq!(stolen.may_play_until.map(|p| p.player), Some(0), "Gonti's controller may cast it");
+}
+
+#[test]
+fn grafdiggers_cage_locks_reanimation_and_graveyard_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grafdiggers_cage());
+    // Reanimation fizzles: a Move from graveyard → battlefield does nothing.
+    g.add_card_to_battlefield(0, catalog::muldrotha_the_gravetide());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "no casting from graveyards under the Cage"
+    );
+    // Flashback is locked too.
+    let dart = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let _ = dart;
+    assert!(g.battlefield_find(bear).is_none());
+}

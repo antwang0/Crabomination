@@ -1844,6 +1844,7 @@ pub fn expressive_iteration() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
                 exile_after: false,
+                pay_own_cost: false,
             },
         ]),
         activated_abilities: no_abilities(),

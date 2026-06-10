@@ -118,6 +118,8 @@ impl Effect {
             Effect::RevealTopToHandOpponentsLoseMv => false,
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,
+            Effect::LookTopExileOneMayPlay { .. } => false,
+            Effect::NameCardTargetDiscardsMatching => true,
             Effect::TemptingOffer { body } => body.requires_target(),
             Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,

@@ -11346,6 +11346,7 @@ pub fn snapcaster_mage() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
                 exile_after: true,
+                pay_own_cost: false,
             },
         }],
         ..Default::default()
@@ -31946,9 +31947,9 @@ pub fn recruiter_of_the_guard() -> CardDefinition {
     }
 }
 
-/// Squadron Hawk — {1}{W} 1/1 Bird with Flying. ETB: you may search your library
-/// for a card named Squadron Hawk and put it into your hand. (Printed text
-/// fetches up to three; the single-card Search primitive fetches one.)
+/// Squadron Hawk — {1}{W} 1/1 Bird with Flying. ETB: search your library
+/// for up to three cards named Squadron Hawk to hand (three optional
+/// name-filtered searches).
 pub fn squadron_hawk() -> CardDefinition {
     CardDefinition {
         name: "Squadron Hawk",
@@ -31958,11 +31959,15 @@ pub fn squadron_hawk() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::HasName("Squadron Hawk".into()),
-            to: ZoneDest::Hand(PlayerRef::You),
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(
+            std::iter::repeat_with(|| Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasName("Squadron Hawk".into()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            })
+            .take(3)
+            .collect(),
+        ))],
         ..Default::default()
     }
 }
@@ -38775,6 +38780,7 @@ pub fn containment_construct() -> CardDefinition {
                         duration: MayPlayDuration::EndOfThisTurn,
                         to_owner: false,
                         exile_after: false,
+                        pay_own_cost: false,
                     },
                 ])),
             },
@@ -39095,6 +39101,183 @@ pub fn zirda_the_dawnwaker() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Faerie Vandal — {1}{U} 1/2 Faerie Rogue, flash, flying. Second draw
+/// each turn: +1/+1 counter.
+pub fn faerie_vandal() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Faerie Vandal",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
+                Predicate::ValueEquals(
+                    Value::CardsDrawnThisTurn(PlayerRef::You),
+                    Value::Const(2),
+                ),
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mad Ratter — {3}{R} 1/2 Goblin. Second draw each turn: two 1/1 black
+/// Rat tokens.
+pub fn mad_ratter() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Mad Ratter",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
+                Predicate::ValueEquals(
+                    Value::CardsDrawnThisTurn(PlayerRef::You),
+                    Value::Const(2),
+                ),
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Rat".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Black],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Rat],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wavebreak Hippocamp — {2}{U} 2/2 Enchantment Creature — Horse Fish.
+/// First spell during each opponent's turn: draw a card.
+pub fn wavebreak_hippocamp() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Wavebreak Hippocamp",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horse, CreatureType::Fish],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+                    Predicate::SpellsCastThisTurnEquals {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                    },
+                ]),
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hostage Taker — {2}{U}{B} 2/3 Human Pirate. ETB: exile another target
+/// creature or artifact until this leaves; you may cast it while exiled
+/// (the any-color spend clause is dropped).
+pub fn hostage_taker() -> CardDefinition {
+    CardDefinition {
+        name: "Hostage Taker",
+        cost: cost(&[generic(2), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
+            Effect::ExileUntilSourceLeaves {
+                what: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                ),
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            },
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Gonti, Lord of Luxury — {2}{B}{B} Legendary 2/3 Aetherborn Rogue,
+/// deathtouch. ETB: look at target opponent's top four, exile one face
+/// down — you may cast it while exiled (any-color clause dropped).
+pub fn gonti_lord_of_luxury() -> CardDefinition {
+    CardDefinition {
+        name: "Gonti, Lord of Luxury",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Aetherborn, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![crate::effect::shortcut::etb(
+            Effect::LookTopExileOneMayPlay { count: Value::Const(4) },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Grafdigger's Cage — {1} Artifact. Creature cards in graveyards and
+/// libraries can't enter the battlefield; players can't cast spells from
+/// graveyards or libraries.
+pub fn grafdiggers_cage() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Grafdigger's Cage",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Creature cards in graveyards and libraries can't enter the battlefield; players can't cast spells from graveyards or libraries.",
+            effect: StaticEffect::GraveyardLibraryLockdown,
         }],
         ..Default::default()
     }

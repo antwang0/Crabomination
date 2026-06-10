@@ -2095,6 +2095,19 @@ impl GameState {
         })
     }
 
+    /// Grafdigger's Cage — true while any battlefield permanent locks
+    /// graveyards/libraries (no creature entries from them, no casts from
+    /// them).
+    pub(crate) fn graveyard_library_locked(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::GraveyardLibraryLockdown))
+        })
+    }
+
     /// CR 614 (Gather Specimens): if a creature would enter the battlefield
     /// under `intended`'s control while an opponent of theirs registered the
     /// steal-replacement this turn, it enters under that opponent instead.
@@ -6243,6 +6256,22 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::NameDiscardMatchingPending { who } => {
+                let DecisionAnswer::NamedCard(name) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                let matching: Vec<CardId> = self.players[who]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.name == name)
+                    .map(|c| c.id)
+                    .collect();
+                for cid in matching {
+                    self.discard_card(who, cid, &mut events);
+                }
+                Ok(events)
+            }
             PendingEffectState::NameRevealTopPending { player, count } => {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -7222,6 +7251,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::ActivationCostReduction { .. }
+            | StaticEffect::GraveyardLibraryLockdown
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }

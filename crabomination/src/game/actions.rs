@@ -109,6 +109,10 @@ pub(crate) fn flashback_additional_cost_for_name(
             filter: S::Creature.and(S::ControlledByYou),
             count: 3,
         }],
+        "Cabal Therapy" => vec![A::SacrificePermanent {
+            filter: S::Creature.and(S::ControlledByYou),
+            count: 1,
+        }],
         _ => vec![],
     }
 }
@@ -1174,6 +1178,7 @@ impl GameState {
         // consumed permanent type on success.
         let p = self.priority.player_with_priority;
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && !self.graveyard_library_locked()
             && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
         {
             let pos = self.players[p].graveyard.iter().position(|c| c.id == card_id).unwrap();
@@ -1199,6 +1204,7 @@ impl GameState {
         // static covers the card (Mystic Forge). Hop the card into hand for
         // the normal cast pipeline; restore it to the top on failure.
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
+            && !self.graveyard_library_locked()
             && self.library_top_playable(p, card_id)
         {
             let card = self.players[p].library.remove(0);
@@ -3442,6 +3448,10 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // Grafdigger's Cage — no casting from graveyards.
+        if self.graveyard_library_locked() {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         // CR 601.2g float-spend choice (None until answered).
         let spend_float = self.pending_cast_spend_float.take();
 
@@ -3632,6 +3642,10 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // Grafdigger's Cage — no casting from graveyards.
+        if self.graveyard_library_locked() {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         let graveyard_pos = self.players[p]
             .graveyard
             .iter()
@@ -3891,6 +3905,13 @@ impl GameState {
         exile_after: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Zone;
+        // Grafdigger's Cage — no casting from graveyards or libraries
+        // (free-cast paths included).
+        if matches!(source_zone, Zone::Graveyard | Zone::Library)
+            && self.graveyard_library_locked()
+        {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         // Lift the card out of the named zone. Owner-based zones
         // (graveyard, hand, library) walk all players to locate it.
         let mut card = match source_zone {

@@ -1507,6 +1507,7 @@ pub fn suspend_aggression() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                 to_owner: true,
                 exile_after: false,
+                pay_own_cost: false,
             },
         ]),
         triggered_abilities: vec![],

@@ -256,6 +256,12 @@ fn colorless_pool() -> Vec<CardFactory> {
         mutated_cultist,
         rediscover_the_way,
         zirda_the_dawnwaker,
+        faerie_vandal,
+        mad_ratter,
+        wavebreak_hippocamp,
+        hostage_taker,
+        gonti_lord_of_luxury,
+        grafdiggers_cage,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,

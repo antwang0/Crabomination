@@ -327,6 +327,10 @@ pub enum StaticEffect {
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of
     /// `HasActivatedAbilitiesOfGraveyardCreatures`.
     CounteredCreaturesHaveAbilitiesOfExiledWithSource,
+    /// Grafdigger's Cage: creature cards in graveyards and libraries can't
+    /// enter the battlefield, and players can't cast spells from graveyards
+    /// or libraries.
+    GraveyardLibraryLockdown,
     /// "Abilities you activate that aren't mana abilities cost {N} less to
     /// activate. This effect can't reduce the mana in that cost to less
     /// than one mana." Zirda, the Dawnwaker (generic-only reduction).
