@@ -21648,7 +21648,7 @@ pub fn rest_in_peace() -> CardDefinition {
         name: "Rest in Peace",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::ExileAllGraveyards { filter: None })],
+        triggered_abilities: vec![etb(Effect::ExileAllGraveyards { filter: None, opponents_only: false })],
         static_abilities: vec![StaticAbility {
             description: "If a card would be put into a graveyard from anywhere, exile it instead.",
             effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false, colors: None, void_counter: false },
@@ -39604,6 +39604,7 @@ pub fn sanctifier_en_vec() -> CardDefinition {
         keywords: vec![Keyword::Protection(Color::Black), Keyword::Protection(Color::Red)],
         triggered_abilities: vec![etb(Effect::ExileAllGraveyards {
             filter: Some(black_or_red.clone()),
+            opponents_only: false,
         })],
         static_abilities: vec![StaticAbility {
             description: "If a black or red card would be put into a graveyard \

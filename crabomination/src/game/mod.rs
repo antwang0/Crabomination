@@ -590,6 +590,11 @@ pub struct GameState {
     /// colors of a card that's in no visible zone mid-resolution. Transient.
     #[serde(skip)]
     pub(crate) resolving_source: Option<(CardId, usize, Vec<crate::mana::Color>)>,
+    /// Reentrancy guard: true while `gather_continuous_effects` runs, so
+    /// layer-aware type filters (`evaluate_requirement_static`) fall back to
+    /// printed types instead of recursing through `computed_permanent`.
+    #[serde(skip)]
+    pub(crate) in_layer_gather: std::sync::atomic::AtomicBool,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -910,6 +915,7 @@ impl Clone for GameState {
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             mana_production_doublers: self.mana_production_doublers,
             resolving_source: self.resolving_source.clone(),
+            in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             additional_combat_phases: self.additional_combat_phases,
             additional_post_main_combats: self.additional_post_main_combats,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
@@ -1029,6 +1035,7 @@ impl GameState {
             prevent_combat_damage_this_turn: false,
             mana_production_doublers: 0,
             resolving_source: None,
+            in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             additional_combat_phases: 0,
             additional_post_main_combats: 0,
             combat_damage_prevented_creatures: Vec::new(),
@@ -2699,6 +2706,17 @@ impl GameState {
     /// anthems. Shared by [`compute_battlefield`] (applies to every
     /// permanent) and [`computed_permanent`] (applies to just one).
     fn gather_continuous_effects(&self) -> Vec<ContinuousEffect> {
+        // Reentrancy guard — see `in_layer_gather`. Passes below that
+        // evaluate selection requirements must not recurse back into
+        // `computed_permanent`.
+        use std::sync::atomic::Ordering;
+        self.in_layer_gather.store(true, Ordering::Relaxed);
+        let out = self.gather_continuous_effects_inner();
+        self.in_layer_gather.store(false, Ordering::Relaxed);
+        out
+    }
+
+    fn gather_continuous_effects_inner(&self) -> Vec<ContinuousEffect> {
         // Include static-ability effects from permanents currently on the battlefield.
         let mut all_effects: Vec<ContinuousEffect> = self.continuous_effects.clone();
         for card in &self.battlefield {

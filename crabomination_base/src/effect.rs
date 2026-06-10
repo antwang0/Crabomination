@@ -1986,6 +1986,10 @@ pub enum Effect {
     ExileAllGraveyards {
         #[serde(default)]
         filter: Option<crate::card::SelectionRequirement>,
+        /// Skip the controller's own graveyard (Phyrexian Scriptures III —
+        /// "exile all cards from all opponents' graveyards").
+        #[serde(default)]
+        opponents_only: bool,
     },
     /// Living End / Living Death: each player exiles all creature cards
     /// from their graveyard, sacrifices all creatures they control, then
@@ -2794,6 +2798,11 @@ pub enum Effect {
         count: Value,
         filter: SelectionRequirement,
     },
+
+    /// `what` becomes the given card type *in addition* to its other types,
+    /// indefinitely (anchored to the permanent — expires when it leaves).
+    /// Phyrexian Scriptures chapter I's "becomes an artifact".
+    AddCardTypeIndefinitely { what: Selector, card_type: crate::card::CardType },
 
     /// Grant `what` an activated ability for as long as it stays on the
     /// battlefield (pushed onto `CardInstance.granted_activated_abilities`,

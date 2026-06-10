@@ -49342,3 +49342,127 @@ fn cr_608_2b_multi_target_spell_resolves_with_one_legal_target() {
     let angel = g.battlefield.iter().find(|c| c.id == b2).expect("Angel survives 1 damage");
     assert_eq!(angel.damage, 1, "slot-1 damage still resolved");
 }
+
+// ── Wolfbriar Elemental + Collective Restraint ───────────────────────────────
+
+/// Multikicked three times → three Wolves alongside the 4/4.
+#[test]
+fn wolfbriar_elemental_mints_wolves_per_kick() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wolfbriar_elemental());
+    g.players[0].mana_pool.add(Color::Green, 7); // {2}{G}{G} + 3×{G}
+    g.perform_action(GameAction::CastSpellMultikicked {
+        card_id: id, times: 3, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked thrice");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Wolf").count(), 3);
+}
+
+/// Collective Restraint taxes attackers by the defender's domain count.
+#[test]
+fn collective_restraint_taxes_by_domain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::collective_restraint());
+    g.add_card_to_battlefield(1, catalog::forest());
+    g.add_card_to_battlefield(1, catalog::island());
+    let goblin = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    g.clear_sickness(goblin);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // Two basic types → tax {2}; no mana → attack rejected.
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: goblin, target: AttackTarget::Player(1) },
+    ])).is_err(), "unpaid domain tax blocks the attack");
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: goblin, target: AttackTarget::Player(1) },
+    ])).expect("paid tax → attack legal");
+}
+
+// ── Kicker / multikicker batch ───────────────────────────────────────────────
+
+/// Gnarlid Pack kicked twice enters as a 4/4.
+#[test]
+fn gnarlid_pack_enters_with_kick_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gnarlid_pack());
+    g.players[0].mana_pool.add(Color::Green, 6);
+    g.perform_action(GameAction::CastSpellMultikicked {
+        card_id: id, times: 2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked twice");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((4, 4)));
+}
+
+/// Rite of Replication unkicked makes one copy; kicked makes five.
+#[test]
+fn rite_of_replication_kicked_makes_five_copies() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let rite = g.add_card_to_hand(0, catalog::rite_of_replication());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: rite, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Serra Angel" && c.controller == 0).count();
+    assert_eq!(copies, 5, "five token copies under the caster");
+}
+
+/// Marsh Casualties unkicked gives the targeted player's creatures -1/-1.
+#[test]
+fn marsh_casualties_shrinks_target_players_creatures() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::marsh_casualties());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == theirs).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    assert_eq!(cp.iter().find(|c| c.id == mine).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "caster's own creatures untouched");
+}
+
+// ── Phyrexian Scriptures ─────────────────────────────────────────────────────
+
+/// Chapter I counters + artifact-izes a creature so chapter II spares it.
+#[test]
+fn phyrexian_scriptures_chapters() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let saga = g.add_card_to_hand(0, catalog::phyrexian_scriptures());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    // Accept chapter I's "may" (AutoDecider declines optional triggers).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, saga);
+    drain_stack(&mut g);
+    // Chapter I — counter + artifact type on my bear.
+    let cp = g.compute_battlefield();
+    let bear = cp.iter().find(|c| c.id == mine).unwrap();
+    assert_eq!((bear.power, bear.toughness), (3, 3), "+1/+1 counter applied");
+    assert!(bear.card_types.contains(&CardType::Artifact), "became an artifact");
+    // Chapter II — destroy all nonartifact creatures (Angel dies, bear lives).
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == mine), "artifact creature survives");
+    assert!(g.battlefield.iter().all(|c| c.id != theirs), "nonartifact creature destroyed");
+    // Chapter III — opponents' graveyards exiled; mine untouched.
+    let opp_gy = g.players[1].graveyard.len();
+    assert!(opp_gy > 0);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 0, "opponent graveyard exiled");
+}

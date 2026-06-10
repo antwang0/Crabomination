@@ -1008,15 +1008,33 @@ impl GameState {
                     // (token-ceases-to-exist).
                     .or_else(|| self.died_card_snapshots.get(cid));
                 let Some(card) = card else { return false; };
+                // Layer-4-aware card types for battlefield permanents
+                // (CR 613.2): an artifact-ized creature (Phyrexian
+                // Scriptures I), an animated land, or a devotion-gated god
+                // must filter by its *computed* types, not the printed ones.
+                // Off-battlefield cards keep the printed definition.
+                let computed_types: Option<Vec<crate::card::CardType>> =
+                    if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+                        None // mid-recompute: printed types (reentrancy guard)
+                    } else {
+                        self.battlefield_find(*cid)
+                            .and_then(|_| self.computed_permanent(*cid))
+                            .map(|cp| cp.card_types.clone())
+                    };
+                let has_type = |t: crate::card::CardType| match &computed_types {
+                    Some(ts) => ts.contains(&t),
+                    None => card.definition.card_types.contains(&t),
+                };
+                use crate::card::CardType as CT;
                 match req {
-                    R::Creature => card.definition.is_creature(),
-                    R::Artifact => card.definition.is_artifact(),
-                    R::Enchantment => card.definition.is_enchantment(),
-                    R::Planeswalker => card.definition.is_planeswalker(),
+                    R::Creature => has_type(CT::Creature),
+                    R::Artifact => has_type(CT::Artifact),
+                    R::Enchantment => has_type(CT::Enchantment),
+                    R::Planeswalker => has_type(CT::Planeswalker),
                     R::Permanent => card.definition.is_permanent(),
-                    R::Land => card.definition.is_land(),
-                    R::Nonland => !card.definition.is_land(),
-                    R::Noncreature => !card.definition.is_creature(),
+                    R::Land => has_type(CT::Land),
+                    R::Nonland => !has_type(CT::Land),
+                    R::Noncreature => !has_type(CT::Creature),
                     R::Tapped => card.tapped,
                     R::Untapped => !card.tapped,
                     R::HasColor(c) => card

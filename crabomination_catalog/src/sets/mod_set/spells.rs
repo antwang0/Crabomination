@@ -433,3 +433,22 @@ pub fn deflecting_swat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Collective Restraint — {3}{U} Enchantment. Domain — creatures can't
+/// attack you unless their controller pays {X} per attacker, X = the number
+/// of basic land types among lands you control.
+pub fn collective_restraint() -> CardDefinition {
+    CardDefinition {
+        name: "Collective Restraint",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Domain — Creatures can't attack you unless their controller pays {X} for each creature they control that's attacking you, where X is the number of basic land types among lands you control.",
+            effect: StaticEffect::AttackTaxToController {
+                amount: Value::DomainCount(PlayerRef::You),
+                protect_planeswalkers: false,
+            },
+        }],
+        ..Default::default()
+    }
+}

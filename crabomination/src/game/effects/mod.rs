@@ -2777,10 +2777,14 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileAllGraveyards { filter } => {
+            Effect::ExileAllGraveyards { filter, opponents_only } => {
                 // Rest in Peace ETB — move every (matching) graveyard card
-                // to exile (Sanctifier en-Vec passes a color filter).
+                // to exile (Sanctifier en-Vec passes a color filter;
+                // Phyrexian Scriptures III skips the controller's own).
                 for p in 0..self.players.len() {
+                    if *opponents_only && self.same_team(p, ctx.controller) {
+                        continue;
+                    }
                     let cards: Vec<CardInstance> =
                         std::mem::take(&mut self.players[p].graveyard);
                     for card in cards {
@@ -7457,6 +7461,28 @@ impl GameState {
                             });
                         }
                     }
+                }
+                Ok(())
+            }
+
+            Effect::AddCardTypeIndefinitely { what, card_type } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    // Anchored to the affected permanent itself so the type
+                    // grant dies with it (remove_effects_from_source).
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source: id,
+                        affected: AffectedPermanents::Specific(vec![id]),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::Indefinite,
+                        modification: Modification::AddCardType(card_type.clone()),
+                    });
                 }
                 Ok(())
             }

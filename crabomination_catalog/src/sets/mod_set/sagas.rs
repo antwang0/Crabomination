@@ -230,3 +230,49 @@ pub fn welcome_to_sweettooth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Phyrexian Scriptures — {2}{B}{B} Saga. I — +1/+1 counter on up to one
+/// target creature; it becomes an artifact in addition. II — destroy all
+/// nonartifact creatures. III — exile all cards from opponents' graveyards.
+pub fn phyrexian_scriptures() -> CardDefinition {
+    use crate::card::CardType as CT;
+    CardDefinition {
+        name: "Phyrexian Scriptures",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga_subtypes(),
+        saga_chapters: vec![
+            (
+                1,
+                Effect::MayDo {
+                    description: "Put a +1/+1 counter on up to one target creature; it becomes an artifact".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::AddCounter {
+                            what: target_filtered(SelectionRequirement::Creature),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        },
+                        Effect::AddCardTypeIndefinitely {
+                            what: Selector::Target(0),
+                            card_type: CT::Artifact,
+                        },
+                    ])),
+                },
+            ),
+            (
+                2,
+                Effect::Destroy {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::Artifact.negate()),
+                    ),
+                },
+            ),
+            (
+                3,
+                Effect::ExileAllGraveyards { filter: None, opponents_only: true },
+            ),
+        ],
+        ..Default::default()
+    }
+}

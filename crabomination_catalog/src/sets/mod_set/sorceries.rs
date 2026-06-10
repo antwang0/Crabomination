@@ -1284,3 +1284,56 @@ pub fn conflagrate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rite of Replication — {2}{U}{U} Sorcery, Kicker {5}. Create a token copy
+/// of target creature — five copies if kicked.
+pub fn rite_of_replication() -> CardDefinition {
+    use crate::card::Predicate;
+    let copy = |n: i32| Effect::CreateTokenCopyOf {
+        who: PlayerRef::You,
+        count: Value::Const(n),
+        source: target_filtered(SelectionRequirement::Creature),
+        extra_creature_types: vec![],
+        override_pt: None,
+        non_legendary: false,
+    };
+    CardDefinition {
+        name: "Rite of Replication",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Kicker(cost(&[generic(5)]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(copy(5)),
+            else_: Box::new(copy(1)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Marsh Casualties — {B}{B} Sorcery, Kicker {3}. Creatures target player
+/// controls get -1/-1 (-2/-2 if kicked) until end of turn.
+pub fn marsh_casualties() -> CardDefinition {
+    use crate::card::Predicate;
+    let pump = |n: i32| Effect::PumpPT {
+        what: Selector::ControlledBy {
+            who: PlayerRef::Target(0),
+            filter: SelectionRequirement::Creature,
+        },
+        power: Value::Const(n),
+        toughness: Value::Const(n),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Marsh Casualties",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(pump(-2)),
+            else_: Box::new(pump(-1)),
+        },
+        ..Default::default()
+    }
+}

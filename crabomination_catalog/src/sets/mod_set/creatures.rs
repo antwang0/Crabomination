@@ -8928,3 +8928,91 @@ pub fn kodama_of_the_west_tree() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wolfbriar Elemental — {2}{G}{G} Creature — Elemental 4/4, Multikicker
+/// {G}. When this enters, create a 2/2 green Wolf for each time it was
+/// kicked.
+pub fn wolfbriar_elemental() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Wolfbriar Elemental",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Multikicker(cost(&[g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::TimesKicked,
+                definition: TokenDefinition {
+                    name: "Wolf".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Wolf],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Apex Hawks — {2}{W} Creature — Bird 2/2, Flying, Multikicker {1}{W}.
+/// Enters with a +1/+1 counter for each time it was kicked.
+pub fn apex_hawks() -> CardDefinition {
+    CardDefinition {
+        name: "Apex Hawks",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Multikicker(cost(&[generic(1), w()]))],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::TimesKicked)),
+        ..Default::default()
+    }
+}
+
+/// Gnarlid Pack — {1}{G} Creature — Beast 2/2, Multikicker {1}{G}. Enters
+/// with a +1/+1 counter for each time it was kicked.
+pub fn gnarlid_pack() -> CardDefinition {
+    CardDefinition {
+        name: "Gnarlid Pack",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Multikicker(cost(&[generic(1), g()]))],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::TimesKicked)),
+        ..Default::default()
+    }
+}
+
+/// Skitter of Lizards — {R} Creature — Lizard 1/1, Haste, Multikicker
+/// {1}{R}. Enters with a +1/+1 counter for each time it was kicked.
+pub fn skitter_of_lizards() -> CardDefinition {
+    CardDefinition {
+        name: "Skitter of Lizards",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste, Keyword::Multikicker(cost(&[generic(1), r()]))],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::TimesKicked)),
+        ..Default::default()
+    }
+}

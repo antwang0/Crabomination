@@ -820,8 +820,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_matron,
         loxodon_hierarch,
         fleecemane_lion,
+        apex_hawks,
         ignoble_hierarch,
         kodama_of_the_west_tree,
+        wolfbriar_elemental,
+        gnarlid_pack,
         elves_of_deep_shadow,
         generous_ent,
         patchwork_automaton,
@@ -854,12 +857,14 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cone_of_flame,
         // Sagas (CR 714) — lore-counter chapter abilities.
         history_of_benalia,
+        phyrexian_scriptures,
         the_eldest_reborn,
         triumph_of_gerrard,
         the_birth_of_meletis,
         // Attack-tax statics (CR 508.1g).
         ghostly_prison,
         propaganda,
+        collective_restraint,
         windborn_muse,
         baird_steward_of_argive,
         // Life-total alt win-cons (CR 104.2a).
@@ -1362,6 +1367,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         consider,
         thought_scour,
         archive_trap,
+        rite_of_replication,
         // ── Miracle (CR 702.94) ──
         temporal_mastery,
         // ── Cube expansion ──
@@ -1748,6 +1754,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         griselbrand,
         dark_confidant,
         dauthi_voidwalker,
+        marsh_casualties,
         bloodghast,
         ichorid,
         silversmote_ghoul,
@@ -2072,6 +2079,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         birgi_god_of_storytelling,
         torbran_thane_of_red_fell,
         chandra_torch_of_defiance,
+        skitter_of_lizards,
         // modal ritual / impulse
         jeskas_will,
         // free-with-commander counter (simplified)

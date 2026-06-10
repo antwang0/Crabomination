@@ -367,6 +367,7 @@ impl Effect {
             }
             Effect::GrantMayPlay { what, .. } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
+            Effect::AddCardTypeIndefinitely { what, .. } => sel_has_target(what),
             Effect::CastWithoutPayingImmediate { what, .. } => sel_has_target(what),
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Cascade { .. } => false,
