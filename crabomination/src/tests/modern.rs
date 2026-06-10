@@ -4969,6 +4969,41 @@ fn spirebluff_canal_enters_tapped_with_many_lands() {
     assert!(on_bf.tapped, "fastland enters tapped with ≥4 lands");
 }
 
+/// Check-land: enters untapped with a matching basic-typed land, tapped
+/// without one.
+#[test]
+fn checkland_taps_only_without_a_matching_type() {
+    let mut g = two_player_game();
+    // No Plains/Island → Glacial Fortress enters tapped.
+    let tapped = g.add_card_to_hand(0, catalog::glacial_fortress());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(tapped)).expect("plays");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tapped).unwrap().tapped, "no check → tapped");
+    // With an Island on board the next one enters untapped.
+    g.add_card_to_battlefield(0, catalog::island());
+    g.players[0].lands_played_this_turn = 0;
+    let untapped = g.add_card_to_hand(0, catalog::glacial_fortress());
+    g.perform_action(GameAction::PlayLand(untapped)).expect("plays");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(untapped).unwrap().tapped, "check satisfied → untapped");
+}
+
+/// The full ten-card check-land cycle exists with two mana abilities each.
+#[test]
+fn checkland_cycle_definitions() {
+    for def in [
+        catalog::glacial_fortress(), catalog::drowned_catacomb(),
+        catalog::dragonskull_summit(), catalog::rootbound_crag(),
+        catalog::sunpetal_grove(), catalog::isolated_chapel(),
+        catalog::sulfur_falls(), catalog::woodland_cemetery(),
+        catalog::clifftop_retreat(), catalog::hinterland_harbor(),
+    ] {
+        assert!(def.is_land(), "{} is a land", def.name);
+        assert_eq!(def.activated_abilities.len(), 2, "{} taps for two colors", def.name);
+    }
+}
+
 #[test]
 fn ancient_den_taps_for_white_and_is_an_artifact() {
     let mut g = two_player_game();

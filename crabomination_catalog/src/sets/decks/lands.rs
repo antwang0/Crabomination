@@ -1509,3 +1509,75 @@ pub fn restless_vents() -> CardDefinition {
         },
     )
 }
+
+// ── Check-lands (M10/Innistrad duals) ────────────────────────────────────────
+
+/// Check-land ETB trigger: "enters tapped unless you control a [type_a] or
+/// [type_b]." Check-lands are typeless, so the post-ETB count is safe.
+fn checkland_etb_conditional_tap(type_a: LandType, type_b: LandType) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(type_a)
+                        .or(SelectionRequirement::HasLandType(type_b))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::Noop),
+            else_: Box::new(Effect::Tap { what: Selector::This }),
+        },
+    }
+}
+
+/// A check-land: `{T}: Add {a} or {b}`; enters tapped unless you control a
+/// land of either corresponding basic type.
+fn checkland(
+    name: &'static str,
+    type_a: LandType,
+    type_b: LandType,
+    a: Color,
+    b: Color,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(a), tap_add(b)],
+        triggered_abilities: vec![checkland_etb_conditional_tap(type_a, type_b)],
+        ..Default::default()
+    }
+}
+
+pub fn glacial_fortress() -> CardDefinition {
+    checkland("Glacial Fortress", LandType::Plains, LandType::Island, Color::White, Color::Blue)
+}
+pub fn drowned_catacomb() -> CardDefinition {
+    checkland("Drowned Catacomb", LandType::Island, LandType::Swamp, Color::Blue, Color::Black)
+}
+pub fn dragonskull_summit() -> CardDefinition {
+    checkland("Dragonskull Summit", LandType::Swamp, LandType::Mountain, Color::Black, Color::Red)
+}
+pub fn rootbound_crag() -> CardDefinition {
+    checkland("Rootbound Crag", LandType::Mountain, LandType::Forest, Color::Red, Color::Green)
+}
+pub fn sunpetal_grove() -> CardDefinition {
+    checkland("Sunpetal Grove", LandType::Forest, LandType::Plains, Color::Green, Color::White)
+}
+pub fn isolated_chapel() -> CardDefinition {
+    checkland("Isolated Chapel", LandType::Plains, LandType::Swamp, Color::White, Color::Black)
+}
+pub fn sulfur_falls() -> CardDefinition {
+    checkland("Sulfur Falls", LandType::Island, LandType::Mountain, Color::Blue, Color::Red)
+}
+pub fn woodland_cemetery() -> CardDefinition {
+    checkland("Woodland Cemetery", LandType::Swamp, LandType::Forest, Color::Black, Color::Green)
+}
+pub fn clifftop_retreat() -> CardDefinition {
+    checkland("Clifftop Retreat", LandType::Mountain, LandType::Plains, Color::Red, Color::White)
+}
+pub fn hinterland_harbor() -> CardDefinition {
+    checkland("Hinterland Harbor", LandType::Forest, LandType::Island, Color::Green, Color::Blue)
+}
