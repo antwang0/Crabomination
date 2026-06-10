@@ -2795,6 +2795,11 @@ pub enum Effect {
         filter: SelectionRequirement,
     },
 
+    /// Grant `what` an activated ability for as long as it stays on the
+    /// battlefield (pushed onto `CardInstance.granted_activated_abilities`,
+    /// cleared when the permanent leaves). Urza's Saga chapters I/II.
+    GainActivatedAbility { what: Selector, ability: Box<ActivatedAbility> },
+
     // ── Delayed triggers and pact costs ──────────────────────────────────────
     /// Register a delayed triggered ability that fires later. `kind` selects
     /// the future event (your next upkeep, next end step, …); `body` is the

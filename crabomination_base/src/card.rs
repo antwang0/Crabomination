@@ -279,6 +279,9 @@ pub enum CounterType {
     /// Fate counter — Oblivion Stone's bookkeeping marker; permanents with
     /// one survive its destroy-everything activation.
     Fate,
+    /// Void counter — Dauthi Voidwalker's stamp on opponents' cards its
+    /// replacement exiles; its sacrifice ability frees one for a free play.
+    Void,
 }
 
 /// Every zone a card can occupy.
@@ -2086,6 +2089,12 @@ pub struct CardInstance {
     /// creature leaves the battlefield (SBA in `stack.rs`).
     pub soulbond_partner: Option<CardId>,
     pub kicked: bool,
+    /// Activated abilities granted to this specific permanent by resolved
+    /// effects (`Effect::GainActivatedAbility` — Urza's Saga chapters I/II).
+    /// Cleared when the permanent leaves the battlefield (a new object,
+    /// CR 400.7). Surfaced after the printed abilities in both
+    /// `activate_ability` index space and the client view.
+    pub granted_activated_abilities: Vec<ActivatedAbility>,
     /// CR 702.33c — how many times this spell's Multikicker cost was paid.
     /// Persists onto the permanent so `Value::TimesKicked` can read it
     /// (Everflowing Chalice's enters-with-counters). Defaults to 0.
@@ -2369,6 +2378,7 @@ impl CardInstance {
             attached_to: None,
             soulbond_partner: None,
             kicked: false,
+            granted_activated_abilities: Vec::new(),
             kick_count: 0,
             squad_count: 0,
             bargained: false,

@@ -21651,7 +21651,7 @@ pub fn rest_in_peace() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileAllGraveyards { filter: None })],
         static_abilities: vec![StaticAbility {
             description: "If a card would be put into a graveyard from anywhere, exile it instead.",
-            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false, colors: None },
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false, colors: None, void_counter: false },
         }],
         ..Default::default()
     }
@@ -21669,7 +21669,7 @@ pub fn leyline_of_the_void() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "If a card would be put into an opponent's graveyard from anywhere, exile it instead.",
-            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: true, colors: None },
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: true, colors: None, void_counter: false },
         }],
         ..Default::default()
     }
@@ -39611,6 +39611,7 @@ pub fn sanctifier_en_vec() -> CardDefinition {
             effect: StaticEffect::ExileCardsBoundForGraveyard {
                 opponents_only: false,
                 colors: Some(vec![Color::Black, Color::Red]),
+                void_counter: false,
             },
         }],
         ..Default::default()

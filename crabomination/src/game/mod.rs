@@ -2236,22 +2236,41 @@ impl GameState {
     /// an opponent's cards; Sanctifier en-Vec only black/red cards).
     /// Consulted by `route_to_graveyard` at every graveyard-placement site.
     pub fn graveyard_exiled_for(&self, card: &crate::card::CardInstance) -> bool {
+        self.graveyard_exile_redirects(card).0
+    }
+
+    /// `(redirects, void_counter)` for `card`: whether some
+    /// `ExileCardsBoundForGraveyard` static redirects it to exile, and
+    /// whether any applicable redirect stamps a void counter on it
+    /// (Dauthi Voidwalker).
+    pub(crate) fn graveyard_exile_redirects(
+        &self,
+        card: &crate::card::CardInstance,
+    ) -> (bool, bool) {
         use crate::effect::StaticEffect;
         let owner = card.owner;
-        self.battlefield.iter().any(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                if let StaticEffect::ExileCardsBoundForGraveyard { opponents_only, colors } =
-                    &sa.effect
+        let mut redirects = false;
+        let mut void = false;
+        for c in &self.battlefield {
+            for sa in &c.definition.static_abilities {
+                if let StaticEffect::ExileCardsBoundForGraveyard {
+                    opponents_only,
+                    colors,
+                    void_counter,
+                } = &sa.effect
                 {
-                    (!opponents_only || c.controller != owner)
+                    let applies = (!opponents_only || c.controller != owner)
                         && colors.as_ref().is_none_or(|cs| {
                             card.definition.printed_colors().iter().any(|c| cs.contains(c))
-                        })
-                } else {
-                    false
+                        });
+                    if applies {
+                        redirects = true;
+                        void |= void_counter;
+                    }
                 }
-            })
-        })
+            }
+        }
+        (redirects, void)
     }
 
     /// CR 701.19c (Aven Mindcensor) — the number of cards from the top of
@@ -2405,6 +2424,10 @@ impl GameState {
         }
         if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() {
             let cid = card.id;
+            let mut card = card;
+            if self.graveyard_exile_redirects(&card).1 {
+                card.add_counters(crate::card::CounterType::Void, 1);
+            }
             self.exile.push(card);
             events.push(crate::game::GameEvent::PermanentExiled { card_id: cid });
             true

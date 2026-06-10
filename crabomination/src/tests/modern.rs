@@ -49127,3 +49127,93 @@ fn chandra_torch_plus_one_no_burn_when_cast() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life, "cast → no fallback damage");
 }
+
+// ── Dauthi Voidwalker (void-counter exile + free play) ───────────────────────
+
+/// With the Voidwalker out, an opponent's dying creature is exiled with a
+/// void counter instead of hitting their graveyard.
+#[test]
+fn dauthi_voidwalker_exiles_opponent_cards_with_void_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dauthi_voidwalker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != bear), "not in graveyard");
+    let exiled = g.exile.iter().find(|c| c.id == bear).expect("exiled instead");
+    assert_eq!(exiled.counter_count(CounterType::Void), 1, "void counter stamped");
+    // The caster's own Bolt still hits their graveyard (opponents_only).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// The sac ability grants a free play of a void-countered exile card.
+#[test]
+fn dauthi_voidwalker_sac_frees_void_card() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let walker = g.add_card_to_battlefield(0, catalog::dauthi_voidwalker());
+    g.clear_sickness(walker);
+    // Opponent-owned card already in exile with a void counter.
+    let stolen = g.add_card_to_exile(1, catalog::serra_angel());
+    g.find_card_anywhere_mut(stolen).unwrap().add_counters(CounterType::Void, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: walker, ability_index: 0, target: Some(Target::Permanent(stolen)), x_value: None,
+    }).expect("sac activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != walker), "walker sacrificed");
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: stolen, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free cast of the void card");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == stolen), "Angel enters under the activator");
+}
+
+// ── Urza's Saga (saga-granted activated abilities) ───────────────────────────
+
+/// Chapter I grants "{T}: Add {C}"; chapter II grants the Construct mint;
+/// chapter III tutors a cheap artifact and the Saga sacrifices itself.
+#[test]
+fn urzas_saga_chapters_grant_abilities_then_tutor() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let saga = g.add_card_to_hand(0, catalog::urzas_saga());
+    let orni = g.add_card_to_library(0, catalog::ornithopter()); // chapter III target
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(orni))]));
+    g.perform_action(GameAction::PlayLand(saga)).expect("land drop");
+    drain_stack(&mut g);
+    // Chapter I — mana ability granted.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: saga, ability_index: 0, target: None, x_value: None,
+    }).expect("granted {T}: Add {C}");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    g.battlefield_find_mut(saga).unwrap().tapped = false;
+    // Chapter II — construct mint granted.
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: saga, ability_index: 1, target: None, x_value: None,
+    }).expect("granted construct mint");
+    drain_stack(&mut g);
+    let construct = g.battlefield.iter().find(|c| c.definition.name == "Construct")
+        .expect("token minted");
+    let cid = construct.id;
+    // Construct scales with artifacts you control (itself + the Saga is not
+    // an artifact — just the token = 1/1).
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == cid).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    // Chapter III — tutor onto the battlefield; Saga sacrifices via SBA.
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Ornithopter"),
+        "chapter III fetched the 0-cost artifact");
+    assert!(g.battlefield.iter().all(|c| c.id != saga), "Saga sacrificed");
+}

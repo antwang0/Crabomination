@@ -604,6 +604,10 @@ pub enum StaticEffect {
         opponents_only: bool,
         #[serde(default)]
         colors: Option<Vec<crate::mana::Color>>,
+        /// Stamp a void counter on each card this redirect exiles
+        /// (Dauthi Voidwalker — its sac ability frees one for a free play).
+        #[serde(default)]
+        void_counter: bool,
     },
     /// CR 701.19c — "If an opponent would search a library, that player
     /// searches the top `count` cards of that library instead." Consulted by

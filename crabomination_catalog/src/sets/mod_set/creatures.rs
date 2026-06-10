@@ -8829,3 +8829,48 @@ pub fn chandra_torch_of_defiance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dauthi Voidwalker — {B}{B} Creature — Dauthi Rogue 3/2, Shadow. If a card
+/// would be put into an opponent's graveyard from anywhere, exile it with a
+/// void counter instead. {T}, Sacrifice: play a void-countered exile card
+/// this turn without paying its mana cost.
+pub fn dauthi_voidwalker() -> CardDefinition {
+    use crate::card::{CounterType, MayPlayDuration};
+    CardDefinition {
+        name: "Dauthi Voidwalker",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dauthi, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Shadow],
+        static_abilities: vec![StaticAbility {
+            description: "If a card would be put into an opponent's graveyard from anywhere, exile it with a void counter on it instead.",
+            effect: StaticEffect::ExileCardsBoundForGraveyard {
+                opponents_only: true,
+                colors: None,
+                void_counter: true,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::GrantMayPlay {
+                what: target_filtered(SelectionRequirement::And(
+                    Box::new(SelectionRequirement::InExile),
+                    Box::new(SelectionRequirement::WithCounter(CounterType::Void)),
+                )),
+                duration: MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: false,
+                any_color: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

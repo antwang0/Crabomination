@@ -8,29 +8,31 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Noticed this run (staple/mill/landfall batches) — each wants one
-  small primitive:**
-  - **Everflowing Chalice / Hangarback Walker** — multikicker / "{X}{X},
-    enters with X counters" need a kick-count (not just kicked-bool) and
-    cast-X threading into the ETB-counters replacement.
-  - **Archive Trap** — alt-cost gate "if an opponent searched their
-    library this turn" wants a `Player.searched_library_this_turn` flag +
-    predicate.
-  - **Dauthi Voidwalker** — the opponents'-cards-exile static exists
-    (`ExileCardsBoundForGraveyard { opponents_only }`), but the void-counter
-    stamp + "cast one void-countered exile card free" activation don't.
-  - **Chandra, Torch of Defiance +1** — impulse-with-fallback ("if you
-    don't cast it, 2 damage to each opponent") needs a cast-or-else shape
-    on `ExileTopAndGrantMayPlay`.
-  - **Scrap Trawler** — "return target artifact with **lesser** mana value
-    than the dying one" wants an MV-relative-to-trigger-source filter.
-  - **Torbran, Thane of Red Fell** — flat +N damage bonus for [filter]
-    sources (the doubling statics exist; an additive one doesn't).
-  - **Conflagrate** — divided X damage works; the Flashback—discard-X-cards
-    variable additional cost doesn't.
-  - **Urza's Saga** — chapter abilities exist; III's tutor is fine, but
-    II's granted construct-mint ability on the Saga land needs
-    saga-granted activated abilities.
+- ✅ **Staple/mill/landfall follow-up batch — all eight shipped:**
+  - **Everflowing Chalice** ✅ — `Keyword::Multikicker` (CR 702.33c) +
+    `GameAction::CastSpellMultikicked { times }` + `CardInstance.kick_count`
+    read by `Value::TimesKicked`; client pay-times stepper generalized to
+    Squad/Replicate/Multikicker (`PayTimesMechanic`). Hangarback's cast-X →
+    ETB counters already worked (x_value threads into the ETB ctx).
+  - **Archive Trap** ✅ — `Player.searched_library_this_turn` (stamped at the
+    Search funnels, reset each turn) + `Predicate::SearchedLibraryThisTurn`
+    gating the `AlternativeCost.condition` free cast.
+  - **Dauthi Voidwalker** ✅ — `ExileCardsBoundForGraveyard.void_counter`
+    stamps `CounterType::Void`; the sac ability rides `GrantMayPlay` over
+    `InExile + WithCounter(Void)`.
+  - **Chandra, Torch of Defiance** ✅ — `ExileTopAndGrantMayPlay.uncast_penalty`
+    registers a next-end-step still-`InExile` check that runs the fallback.
+  - **Scrap Trawler** ✅ — `SelectionRequirement::ManaValueLessThanEventAmount`;
+    died events now carry the dying card's MV (`event_amount_for`) into
+    `trigger_event_amount_scratch`.
+  - **Torbran, Thane of Red Fell** ✅ — `StaticEffect::AddDamageToOpponents`;
+    `scale_damage_to` is source-aware (`resolving_source` carries in-flight
+    spell color/controller).
+  - **Conflagrate** ✅ — `flashback_additional_cost_for_name` takes the cast's
+    X (Flashback—discard X cards).
+  - **Urza's Saga** ✅ — `Effect::GainActivatedAbility` →
+    `CardInstance.granted_activated_abilities` (cleared on leave, CR 400.7);
+    saga lands advance on the land drop (`place_land_card`).
 
 - ✅ **Noticed-items sweep (meld batch) — all shipped:**
   - **Prized Amalgam** ✅ — `GameState.entered_from_graveyard_this_turn`

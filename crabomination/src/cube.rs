@@ -363,6 +363,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         talon_gates_of_madara,
         // ── modern_decks: mana-fixing artifact land ──
         power_depot,
+        urzas_saga,
         // ── Modern utility artifacts ──
         coalition_relic,
         everflowing_chalice,
@@ -1747,6 +1748,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         blasphemous_edict,
         griselbrand,
         dark_confidant,
+        dauthi_voidwalker,
         bloodghast,
         ichorid,
         silversmote_ghoul,

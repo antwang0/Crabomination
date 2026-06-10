@@ -750,6 +750,11 @@ impl GameState {
     /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
     pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         self.return_linked_exiles(id, events);
+        // CR 400.7 — the card is a new object in its next zone: effects
+        // that granted abilities to the permanent don't follow it.
+        if let Some(c) = self.find_card_anywhere_mut(id) {
+            c.granted_activated_abilities.clear();
+        }
         use crate::game::types::DelayedKind;
         let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
         self.delayed_triggers.retain(|dt| {

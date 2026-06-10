@@ -405,3 +405,83 @@ pub fn hushwood_verge() -> CardDefinition {
         "Hushwood Verge", Color::Green, Color::White, LandType::Forest, LandType::Plains,
     )
 }
+
+/// Urza's Saga — Enchantment Land — Urza's Saga. I: gains "{T}: Add {C}."
+/// II: gains "{2}, {T}: Create a 0/0 Construct with '+1/+1 for each
+/// artifact you control.'" III: search for an artifact with mana value 0
+/// or 1 (non-X), put it onto the battlefield; the Saga then sacrifices.
+pub fn urzas_saga() -> CardDefinition {
+    use crate::card::{
+        CreatureType, EnchantmentSubtype, SelectionRequirement, StaticAbility, TokenDefinition,
+    };
+    use crate::effect::{Selector, StaticEffect, ZoneDest};
+    use crate::mana::{cost, generic};
+    let construct = TokenDefinition {
+        name: "Construct".into(),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 for each artifact you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: SelectionRequirement::Artifact,
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Urza's Saga",
+        card_types: vec![CardType::Enchantment, CardType::Land],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::GainActivatedAbility {
+                    what: Selector::This,
+                    ability: Box::new(ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::Colorless(Value::Const(1)),
+                        },
+                        ..Default::default()
+                    }),
+                },
+            ),
+            (
+                2,
+                Effect::GainActivatedAbility {
+                    what: Selector::This,
+                    ability: Box::new(ActivatedAbility {
+                        tap_cost: true,
+                        mana_cost: cost(&[generic(2)]),
+                        effect: Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::Const(1),
+                            definition: construct,
+                        },
+                        ..Default::default()
+                    }),
+                },
+            ),
+            (
+                3,
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ManaValueAtMost(1))
+                        .and(SelectionRequirement::HasXInCost.negate()),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

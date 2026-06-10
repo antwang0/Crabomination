@@ -4539,7 +4539,12 @@ impl GameState {
                                 let card = self.players[affected_controller].hand.remove(0);
                                 let card_id = card.id;
                                 // CR 614.6 — graveyard-hate exiles the discard.
-                                if self.graveyard_exiled_for(&card) {
+                                let (redirects, void) = self.graveyard_exile_redirects(&card);
+                                if redirects {
+                                    let mut card = card;
+                                    if void {
+                                        card.add_counters(crate::card::CounterType::Void, 1);
+                                    }
                                     self.exile.push(card);
                                 } else {
                                     self.players[affected_controller].graveyard.push(card);
@@ -7451,6 +7456,16 @@ impl GameState {
                                 fires_once: true,
                             });
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainActivatedAbility { what, ability } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.granted_activated_abilities.push((**ability).clone());
                     }
                 }
                 Ok(())

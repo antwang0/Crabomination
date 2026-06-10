@@ -1008,6 +1008,15 @@ impl GameState {
         // logic in `resolve_top_of_stack`; play_land needs an analogous push
         // so triggered abilities on lands actually fire.
         self.fire_self_etb_triggers(card_id, p);
+        // CR 714.2b — a Saga land (Urza's Saga) enters with its first lore
+        // counter; chapter I fires off the land drop too.
+        if self
+            .battlefield
+            .iter()
+            .any(|c| c.id == card_id && !c.definition.saga_chapters.is_empty())
+        {
+            self.saga_advance(card_id);
+        }
         Ok(vec![
             GameEvent::LandPlayed { player: p, card_id },
             GameEvent::PermanentEntered { card_id },
@@ -6064,6 +6073,12 @@ impl GameState {
         }
         let tgt = Target::Permanent(card_id);
         let mut out = Vec::new();
+        // Instance-granted abilities first (Urza's Saga chapters) — the
+        // client view lists printed + instance-granted in this order, so
+        // their indices must come before the battlefield-static grants.
+        if let Some(c) = self.battlefield_find(card_id) {
+            out.extend(c.granted_activated_abilities.iter().cloned());
+        }
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {
                 let StaticEffect::GrantActivatedAbility { applies_to, ability } = &sa.effect

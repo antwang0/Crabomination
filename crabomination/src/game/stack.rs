@@ -2398,6 +2398,10 @@ impl GameState {
             // graveyard arrival to exile; CR 702.146e — so does a Disturb
             // back face.
             Zone::Graveyard if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() => {
+                let mut card = card;
+                if self.graveyard_exile_redirects(&card).1 {
+                    card.add_counters(crate::card::CounterType::Void, 1);
+                }
                 self.exile.push(card)
             }
             Zone::Graveyard => self.players[owner].send_to_graveyard(card),
