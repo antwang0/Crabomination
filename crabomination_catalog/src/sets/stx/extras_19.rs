@@ -268,8 +268,8 @@ pub fn kianne_dean_of_substance() -> CardDefinition {
 
 /// Nassari, Dean of Expression — {3}{R}{R} 4/4 Efreet Shaman (back of Uvilda).
 /// At your upkeep, exile the top card of each opponent's library; you may cast
-/// those until end of turn. Whenever you cast a spell from exile, put a +1/+1
-/// counter on Nassari. (The "spend mana as any color" clause is dropped.)
+/// those until end of turn, spending mana as though it were mana of any type.
+/// Whenever you cast a spell from exile, put a +1/+1 counter on Nassari.
 fn nassari_dean_of_expression() -> CardDefinition {
     CardDefinition {
         name: "Nassari, Dean of Expression",
@@ -292,6 +292,7 @@ fn nassari_dean_of_expression() -> CardDefinition {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: true,
                 },
             },
             TriggeredAbility {

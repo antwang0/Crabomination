@@ -1540,7 +1540,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
     let exile_top_may_play_effect = Effect::ExileTopAndGrantMayPlay {
         who: PlayerRef::You,
         count: Value::Const(1),
-        duration: MayPlayDuration::EndOfControllersNextTurn,
+        duration: MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
     };
     CardDefinition {
         name: "Conspiracy Theorist",

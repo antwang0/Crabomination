@@ -415,7 +415,7 @@ impl Effect {
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::NameCard { what } => sel_has_target(what),
-            Effect::WinGame { who } => player_has_target(who),
+            Effect::WinGame { who } | Effect::LoseGame { who } => player_has_target(who),
             Effect::SkipTurns { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

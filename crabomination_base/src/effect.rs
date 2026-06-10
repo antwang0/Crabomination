@@ -2460,6 +2460,11 @@ pub enum Effect {
         who: PlayerRef,
         count: Value,
         duration: crate::card::MayPlayDuration,
+        /// "You may cast" *paying* the card's cost as generic — the
+        /// any-type-mana pay-to-cast rider (Nassari, Dean of Expression).
+        /// `false` keeps the free-cast grant (Robber of the Rich).
+        #[serde(default)]
+        pay_any_color: bool,
     },
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
@@ -2866,6 +2871,11 @@ pub enum Effect {
     /// winner on the next SBA pass. No CR violation: the state-based
     /// action approach matches CR 104.2a's "you win the game" wording.
     WinGame { who: PlayerRef },
+
+    /// "[Player] loses the game" (CR 104.3a). Eliminates the named player;
+    /// the SBA pass promotes the last player standing to the winner.
+    /// Strixhaven Stadium's ten-point payoff.
+    LoseGame { who: PlayerRef },
 
     /// "Prevent all combat damage that would be dealt this turn." Sets
     /// `GameState.prevent_combat_damage_this_turn = true`; combat

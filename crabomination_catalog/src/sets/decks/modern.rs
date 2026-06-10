@@ -718,7 +718,7 @@ pub fn light_up_the_stage() -> CardDefinition {
         effect: Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
         },
         alternative_cost: Some(crate::effect::shortcut::spectacle(cost(&[r()]))),
         ..Default::default()
@@ -798,7 +798,7 @@ pub fn abbot_of_keral_keep() -> CardDefinition {
                 effect: Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn, pay_any_color: false,
                 },
             },
             prowess_trigger(),
@@ -869,7 +869,7 @@ pub fn reckless_impulse() -> CardDefinition {
         effect: Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
         },
         ..Default::default()
     }
@@ -885,7 +885,7 @@ pub fn wrenns_resolve() -> CardDefinition {
         effect: Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::Const(2),
-            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
         },
         ..Default::default()
     }
@@ -19602,7 +19602,7 @@ pub fn fallen_shinobi() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::DefendingPlayer,
                 count: Value::Const(2),
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn, pay_any_color: false,
             },
         }],
         ..Default::default()
@@ -20867,7 +20867,7 @@ pub fn robber_of_the_rich() -> CardDefinition {
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: MayPlayDuration::EndOfThisTurn,
+                    duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -24272,7 +24272,7 @@ pub fn minds_desire() -> CardDefinition {
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                duration: MayPlayDuration::EndOfThisTurn,
+                duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
             },
         ]),
         ..Default::default()

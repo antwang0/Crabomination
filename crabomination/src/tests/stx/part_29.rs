@@ -571,9 +571,12 @@ fn nassari_exiles_each_opponent_top_and_counts_exile_casts() {
     let e = g.exile.iter().find(|c| c.id == bolt).expect("opp top exiled");
     assert_eq!(e.may_play_until.unwrap().player, 0, "Nassari's controller may cast it");
 
+    // Pay-to-cast with any-type mana: the {R} Bolt's cost is stamped as
+    // generic, payable here with green.
+    assert_eq!(e.granted_alt_cast_cost_eot.as_ref().unwrap().cmc(), 1);
     // Casting it from exile pumps Nassari (+1/+1).
     let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastFromZoneWithoutPaying {
         card_id: bolt,

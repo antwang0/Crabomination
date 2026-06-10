@@ -3727,115 +3727,81 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
 
 // ── Strixhaven Stadium (STX 2021 rare artifact) ─────────────────────────────
 
-/// Strixhaven Stadium — {3} Artifact (STX 2021 rare).
-/// "Whenever a creature you control attacks, it gets +1/+1 until end of turn.
-/// / Whenever a creature you control deals combat damage to a player, put a
-/// charge counter on this artifact. / {T}, Remove three charge counters
-/// from this artifact: Draw two cards."
-///
-/// Push (modern_decks, NEW, `stx::extras`): A four-mana value engine that
-/// rewards aggro builds. Wired with three triggers/abilities: an
-/// `Attacks/YouControl` self-pump rider, a
-/// `DealsCombatDamageToPlayer/YouControl` charge-counter accrual, and a
-/// `{T}: Draw 2` activation gated on `RemoveCounter(3 Charge) on This`. The
-/// activation drains 3 charge counters from the artifact (failing cleanly
-/// when fewer than 3 are present via the existing `RemoveCounter` "you must
-/// remove N or skip" semantics — the resolver is permissive, matching the
-/// printed cost requirement at a slightly relaxed implementation). Tests:
-/// `strixhaven_stadium_pumps_attacker`,
-/// `strixhaven_stadium_accrues_charge_counter_on_combat_damage`,
-/// `strixhaven_stadium_activation_costs_three_charge_counters_and_draws_two`.
+/// Strixhaven Stadium — {3} Artifact. {T}: Add {C}; put a point counter on
+/// this. Whenever a creature deals combat damage to you, remove a point
+/// counter. Whenever a creature you control deals combat damage to an
+/// opponent, put a point counter; then if it has ten or more, remove them
+/// all and that player loses the game. (Point counters ride `Charge`; the
+/// "damage to you" trigger is scoped to opponents' creatures.)
 pub fn strixhaven_stadium() -> CardDefinition {
     CardDefinition {
         name: "Strixhaven Stadium",
         cost: cost(&[generic(3)]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[]),
             effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::Const(1)),
+                },
+                Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::Charge,
-                    amount: Value::Const(3),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(2),
+                    amount: Value::Const(1),
                 },
             ]),
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: Some(Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Charge,
-                },
-                Value::Const(3),
-            )),
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![
-            // Attack-trigger: pump the attacker +1/+1 EOT.
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
-                effect: Effect::PumpPT {
-                    what: Selector::TriggerSource,
-                    power: Value::Const(1),
-                    toughness: Value::Const(1),
-                    duration: Duration::EndOfTurn,
-                },
-            },
-            // Combat-damage-to-player trigger: add a charge counter.
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::DealsCombatDamageToPlayer,
-                    EventScope::YourControl,
+                    EventScope::OpponentControl,
                 ),
-                effect: Effect::AddCounter {
+                effect: Effect::RemoveCounter {
                     what: Selector::This,
                     kind: CounterType::Charge,
                     amount: Value::Const(1),
                 },
             },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Charge,
+                        amount: Value::Const(1),
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::CountersOn {
+                                what: Box::new(Selector::This),
+                                kind: CounterType::Charge,
+                            },
+                            Value::Const(10),
+                        ),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::RemoveCounter {
+                                what: Selector::This,
+                                kind: CounterType::Charge,
+                                amount: Value::CountersOn {
+                                    what: Box::new(Selector::This),
+                                    kind: CounterType::Charge,
+                                },
+                            },
+                            Effect::LoseGame { who: PlayerRef::Target(0) },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
+        ..Default::default()
     }
 }
 

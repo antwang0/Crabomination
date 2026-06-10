@@ -8110,7 +8110,7 @@ pub fn ragavan_nimble_pilferer() -> CardDefinition {
                 Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::Target(0),
                     count: Value::Const(1),
-                    duration: MayPlayDuration::EndOfThisTurn,
+                    duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
                 },
             ]),
         }],

@@ -1344,7 +1344,7 @@ pub fn jeskas_will() -> CardDefinition {
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(3),
-                duration: MayPlayDuration::EndOfThisTurn,
+                duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
             },
         ]),
         ..Default::default()

@@ -6980,7 +6980,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopAndGrantMayPlay { who, count, duration } => {
+            Effect::ExileTopAndGrantMayPlay { who, count, duration, pay_any_color } => {
                 // Atomic helper: move the top `count` cards of `who`'s library
                 // to exile and stamp `may_play_until` on each in one step.
                 // The top of the library is index 0 (see `Player::draw_top`
@@ -7006,6 +7006,14 @@ impl GameState {
                                 duration: *duration,
                                 exile_after: false,
                             });
+                            // Pay-to-cast rider (CR 609.4b any-type spend):
+                            // the cast costs the card's MV as generic.
+                            if *pay_any_color {
+                                card.granted_alt_cast_cost_eot =
+                                    Some(crate::mana::ManaCost::new(vec![crate::mana::generic(
+                                        card.definition.cost.cmc(),
+                                    )]));
+                            }
                         }
                     }
                 }
@@ -7576,6 +7584,16 @@ impl GameState {
                             pl.eliminated = true;
                         }
                     }
+                }
+                Ok(())
+            }
+            Effect::LoseGame { who } => {
+                // CR 104.3a — eliminate the named player; the SBA loop
+                // promotes the last player standing.
+                if let Some(loser) = self.resolve_player(who, ctx) {
+                    self.players[loser].eliminated = true;
+                    let mut sba = self.check_state_based_actions();
+                    events.append(&mut sba);
                 }
                 Ok(())
             }

@@ -2701,75 +2701,63 @@ fn adrix_and_nev_doubles_own_tokens_but_not_opponents() {
         "Adrix doesn't double opp's token mint");
 }
 
-// ── Strixhaven Stadium (modern_decks push) ─────────────────────────────────
+// ── Strixhaven Stadium ──────────────────────────────────────────────────────
 
 #[test]
-fn strixhaven_stadium_pumps_attacker() {
+fn strixhaven_stadium_mana_ability_adds_point_counter() {
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
+    let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stadium, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added one colorless");
+    let s = g.battlefield_find(stadium).unwrap();
+    assert_eq!(s.counter_count(CounterType::Charge), 1, "point counter added");
+}
+
+#[test]
+fn strixhaven_stadium_combat_damage_swings_point_counters() {
+    let mut g = two_player_game();
+    let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
+    g.battlefield_find_mut(stadium).unwrap().add_counters(CounterType::Charge, 2);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
-
-    // Move to declare attackers step.
-    while g.step != crate::game::types::TurnStep::DeclareAttackers {
-        g.perform_action(GameAction::PassPriority).expect("pass priority");
-    }
+    g.active_player_idx = 0;
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: bear,
-        target: AttackTarget::Player(1),
+        attacker: bear, target: AttackTarget::Player(1),
     }])).expect("declare attackers");
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
     drain_stack(&mut g);
-
-    // Bear was 2/2, Stadium pumps it +1/+1 EOT.
-    let cp = g.compute_battlefield().iter()
-        .find(|c| c.id == bear).cloned()
-        .expect("bear on bf");
-    assert_eq!(cp.power, 3, "Bear pumped to 3 power on attack");
-    assert_eq!(cp.toughness, 3, "Bear pumped to 3 toughness on attack");
+    let s = g.battlefield_find(stadium).unwrap();
+    assert_eq!(s.counter_count(CounterType::Charge), 3, "hit an opponent → +1 point");
 }
 
 #[test]
-fn strixhaven_stadium_activation_costs_three_charge_counters_and_draws_two() {
+fn strixhaven_stadium_ten_points_makes_the_player_lose() {
     let mut g = two_player_game();
     let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
-    // Seed three charge counters.
-    {
-        let s = g.battlefield_find_mut(stadium).expect("stadium");
-        s.add_counters(CounterType::Charge, 3);
-    }
-    // Seed library for the two draws.
-    for _ in 0..3 {
-        g.add_card_to_library(0, catalog::island());
-    }
-    let hand_before = g.players[0].hand.len();
-
-    // Activate the ability (no mana cost — just tap + remove 3 charge).
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: stadium,
-        ability_index: 0,
-        target: None, x_value: None }).expect("activation succeeds with 3 charge counters");
+    g.battlefield_find_mut(stadium).unwrap().add_counters(CounterType::Charge, 9);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("declare attackers");
+    g.step = crate::game::types::TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
     drain_stack(&mut g);
-
-    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew 2 cards");
-    let s = g.battlefield_find(stadium).expect("stadium still on bf");
-    assert_eq!(s.counter_count(CounterType::Charge), 0, "3 charges removed");
-}
-
-#[test]
-fn strixhaven_stadium_activation_rejected_without_enough_charge_counters() {
-    let mut g = two_player_game();
-    let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
-    // Only 2 charge counters — below the 3 threshold.
-    {
-        let s = g.battlefield_find_mut(stadium).expect("stadium");
-        s.add_counters(CounterType::Charge, 2);
-    }
-    // Activation should be rejected.
-    let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: stadium,
-        ability_index: 0,
-        target: None, x_value: None });
-    assert!(res.is_err(), "activation requires 3 charge counters");
+    assert!(g.players[1].eliminated, "tenth point → that player loses");
+    assert_eq!(
+        g.battlefield_find(stadium).unwrap().counter_count(CounterType::Charge),
+        0,
+        "all point counters removed"
+    );
 }
 
 // ── Awesome Presentation (modern_decks push) ───────────────────────────────
