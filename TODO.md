@@ -10,6 +10,25 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 - ⏳ **Rooms subsystem** (Unholy Annex // Ritual Chamber) and **meld**
   (The Mightstone and Weakstone) — each is its own object-model feature.
+- ⏳ **Noticed this run (deferred, each wants one primitive):**
+  - **DFC sagas** (Fable of the Mirror-Breaker — transform instead of the
+    final-chapter sacrifice SBA).
+  - **Search-replacement statics** (Aven Mindcensor "searches top four
+    instead"; Leonin Arbiter's search tax).
+  - **End the turn** (CR 728 — Day's Undoing, Sundial of the Infinite).
+  - **Color-filtered graveyard-bound exile replacement** (Sanctifier
+    en-Vec — extend `ExileCardsBoundForGraveyard` with a filter).
+  - **Activation tax statics** (Suppression Field "{2} more unless mana
+    ability").
+  - **Vehicles with state-flip riders** (Reckoner Bankbuster's empty-
+    charges Treasure + crew change).
+  - **Hofri's token-leaves rider** ("when this token leaves, return the
+    exiled card to its owner's graveyard").
+  - **Exalted Angel's printed trigger** is modeled as Lifelink (gains on
+    any damage it deals — equivalent in practice).
+  - **Eon Hub vs. suspend/pacts**: skipped upkeeps also skip suspend ticks
+    and pact payments — correct per CR 614.10b, but worth a regression test
+    when pact decks meet Eon Hub.
 - ⏳ **Tempting offer / MayDo wants_ui suspend** — `Effect::TemptingOffer`
   asks each opponent via the synchronous decider; a networked human seat
   gets the AutoDecider default (decline). Same family as the existing
