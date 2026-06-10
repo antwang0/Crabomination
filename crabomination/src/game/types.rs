@@ -522,6 +522,10 @@ impl PendingDecision {
             }
             ResumeContext::Mulligan { player, .. } => *player,
             ResumeContext::TriggerTargetPick { pending, .. } => pending.controller,
+            // The ordering run is a single controller's triggers.
+            ResumeContext::TriggerOrder { run, .. } => {
+                run.first().map(|c| c.controller).unwrap_or(0)
+            }
             ResumeContext::CleanupDiscard { player } => *player,
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
@@ -558,7 +562,7 @@ impl PendingEffectState {
 /// ordering (CR 603.3) and `EventSpec::filter` gating. Lives at module
 /// scope so the same-controller ordering pass can take ownership of the
 /// collected vector.
-#[derive(Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct TriggerCandidate {
     pub source: CardId,
     pub effect: Effect,
@@ -615,6 +619,15 @@ pub enum AbilityCostChoice {
 /// suspended on its `Scry`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum ResumeContext {
+    /// CR 603.3b — a networked controller is ordering a same-controller
+    /// run of simultaneous triggers. `ordered` holds the runs already
+    /// sequenced, `run` the one being asked about, `rest` the candidates
+    /// after it (which may suspend again on a later run).
+    TriggerOrder {
+        ordered: Vec<TriggerCandidate>,
+        run: Vec<TriggerCandidate>,
+        rest: Vec<TriggerCandidate>,
+    },
     Spell {
         card: Box<CardInstance>,
         caster: usize,

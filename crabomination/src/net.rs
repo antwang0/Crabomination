@@ -1185,6 +1185,11 @@ pub enum DecisionWire {
     SearchLibrary {
         player: usize,
         candidates: Vec<(CardId, String)>,
+        /// Picks the engine will accept; `None` = every candidate. UIs grey
+        /// out candidates not in this set (Impulse reveals, "different
+        /// names" searches).
+        #[serde(default)]
+        eligible: Option<Vec<CardId>>,
     },
     OptionalTrigger {
         source: CardId,
@@ -1330,13 +1335,16 @@ impl From<&Decision> for DecisionWire {
                 count: *count,
                 hand: hand.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
             },
-            Decision::SearchLibrary { player, candidates } => DecisionWire::SearchLibrary {
-                player: *player,
-                candidates: candidates
-                    .iter()
-                    .map(|(id, n)| (*id, (*n).to_string()))
-                    .collect(),
-            },
+            Decision::SearchLibrary { player, candidates, eligible } => {
+                DecisionWire::SearchLibrary {
+                    player: *player,
+                    candidates: candidates
+                        .iter()
+                        .map(|(id, n)| (*id, (*n).to_string()))
+                        .collect(),
+                    eligible: eligible.clone(),
+                }
+            }
             Decision::OptionalTrigger { source, description } => DecisionWire::OptionalTrigger {
                 source: *source,
                 description: (*description).to_string(),

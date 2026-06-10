@@ -271,10 +271,10 @@ pub fn spawn_decision_ui(
                 .collect();
             spawn_scry_modal(&mut commands, &asset_server, &ui_fonts, &ordered, *mode);
         }
-        DecisionWire::SearchLibrary { candidates, .. } => {
+        DecisionWire::SearchLibrary { candidates, eligible, .. } => {
             state.search_selected = None;
             state.spawned_for = Some(key);
-            spawn_search_modal(&mut commands, &asset_server, &ui_fonts, candidates);
+            spawn_search_modal(&mut commands, &asset_server, &ui_fonts, candidates, eligible);
         }
         DecisionWire::PutOnLibrary { count, hand, .. } => {
             state.put_on_library.clear();
@@ -746,6 +746,7 @@ fn spawn_search_modal(
     asset_server: &AssetServer,
     ui_fonts: &UiFonts,
     candidates: &[(CardId, String)],
+    eligible: &Option<Vec<CardId>>,
 ) {
     // Search candidates are typically the entire library (60 cards). The
     // generic CARD_W of 180px would overflow the viewport vertically; use
@@ -821,10 +822,13 @@ fn spawn_search_modal(
             ))
             .with_children(|row| {
                 for (card_id, name) in candidates {
+                    // Revealed-but-not-pickable cards (Impulse non-matches,
+                    // duplicate names) render greyed and ignore clicks.
+                    let pickable =
+                        eligible.as_ref().is_none_or(|ok| ok.contains(card_id));
                     let path = scryfall::card_asset_path(name);
                     let texture: Handle<Image> = asset_server.load(&path);
-                    row.spawn((
-                        Button,
+                    let mut tile = row.spawn((
                         Node {
                             flex_direction: FlexDirection::Column,
                             width: Val::Px(SEARCH_CARD_W),
@@ -833,11 +837,23 @@ fn spawn_search_modal(
                             ..default()
                         },
                         BackgroundColor(MODAL_TILE_BG),
-                        SearchSelectButton { card_id: *card_id },
-                    ))
-                    .with_children(|cb| {
+                    ));
+                    if pickable {
+                        tile.insert((Button, SearchSelectButton { card_id: *card_id }));
+                    } else {
+                        tile.insert(Pickable::IGNORE);
+                    }
+                    tile.with_children(|cb| {
                         cb.spawn((
-                            ImageNode { image: texture, ..default() },
+                            ImageNode {
+                                image: texture,
+                                color: if pickable {
+                                    Color::WHITE
+                                } else {
+                                    Color::srgba(0.45, 0.45, 0.45, 0.8)
+                                },
+                                ..default()
+                            },
                             Node {
                                 width: Val::Px(SEARCH_CARD_W - 8.0),
                                 height: Val::Px(search_card_h - 8.0),
@@ -848,7 +864,11 @@ fn spawn_search_modal(
                         cb.spawn((
                             Text::new(name.clone()),
                             ui_fonts.tf(10.0),
-                            TextColor(theme::TEXT_PRIMARY),
+                            TextColor(if pickable {
+                                theme::TEXT_PRIMARY
+                            } else {
+                                theme::TEXT_MUTED
+                            }),
                             Pickable::IGNORE,
                         ));
                     });

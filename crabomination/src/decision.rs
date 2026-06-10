@@ -82,9 +82,14 @@ pub enum Decision {
     },
 
     /// Choose a card matching the tutor's selector, or decline (failed search).
+    /// `eligible: Some(..)` marks the picks the engine will accept when the
+    /// candidate list intentionally shows more (e.g. an Impulse reveal where
+    /// only lands may be taken) — UIs grey the rest out.
     SearchLibrary {
         player: usize,
         candidates: Vec<(CardId, String)>,
+        #[serde(default)]
+        eligible: Option<Vec<CardId>>,
     },
 
     /// Answer a "may" trigger or optional cost.

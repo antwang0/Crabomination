@@ -85,8 +85,17 @@ impl Bot for RandomBot {
                     // Unlike AutoDecider (which declines every tutor), the
                     // bot actually fetches — preferring a basic land toward
                     // its weakest color so singleplayer tutors fix mana.
-                    crate::decision::Decision::SearchLibrary { candidates, .. } => {
-                        decide_library_search(state, seat, candidates)
+                    crate::decision::Decision::SearchLibrary { candidates, eligible, .. } => {
+                        // Only consider picks the engine will accept.
+                        let pickable: Vec<(crate::card::CardId, String)> = match eligible {
+                            Some(ok) => candidates
+                                .iter()
+                                .filter(|(id, _)| ok.contains(id))
+                                .cloned()
+                                .collect(),
+                            None => candidates.clone(),
+                        };
+                        decide_library_search(state, seat, &pickable)
                     }
                     // Unlike AutoDecider (which declines *every* "you may"
                     // trigger), the bot takes an optional trigger whose body

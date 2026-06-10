@@ -5126,8 +5126,24 @@ impl GameState {
         // so AutoDecider/bot games (and the bulk of the test suite) are
         // untouched; AutoDecider would keep the default order anyway.
         candidates.sort_by_key(|c| apnap_rank(c.controller));
-        candidates = self.order_same_controller_triggers(candidates);
+        // May suspend on a networked controller's `OrderTriggers` pick
+        // (CR 603.3b) — the resume path re-enters
+        // `push_ordered_trigger_candidates` with the finished order.
+        let Some(candidates) = self.continue_trigger_ordering(Vec::new(), candidates) else {
+            return;
+        };
+        self.push_ordered_trigger_candidates(candidates);
+    }
 
+    /// Phase 2 of trigger dispatch: enforce each candidate's
+    /// `EventSpec::filter`, expand ETB multipliers/taxes, and drain the
+    /// resulting queue onto the stack. Split from
+    /// `dispatch_triggers_for_events` so the `OrderTriggers` resume path
+    /// can re-enter after a networked controller picks their order.
+    pub(crate) fn push_ordered_trigger_candidates(
+        &mut self,
+        candidates: Vec<TriggerCandidate>,
+    ) {
         // Phase 2: enforce the optional `EventSpec::filter` predicate now
         // that we're free to call `&self.evaluate_predicate`. The trigger's
         // source permanent is bound as `ctx.source`, and the event's
@@ -5230,21 +5246,33 @@ impl GameState {
     /// regardless). The decider's `TriggerOrder(ids)` lists the desired
     /// push order; ids it omits keep their original relative order at the
     /// end, so a partial or empty answer is always legal.
-    fn order_same_controller_triggers(
+    /// CR 603.3b — walk contiguous same-controller runs of simultaneous
+    /// triggers, letting each `wants_ui` controller pick a stack-push order.
+    /// Suspends on `Decision::OrderTriggers` (parking progress in
+    /// `ResumeContext::TriggerOrder`) and returns `None`; `submit_decision`
+    /// re-enters with the answered run applied. Returns the fully ordered
+    /// list otherwise. AutoDecider/bot seats keep the default order.
+    pub(crate) fn continue_trigger_ordering(
         &mut self,
-        candidates: Vec<TriggerCandidate>,
-    ) -> Vec<TriggerCandidate> {
-        let mut out: Vec<TriggerCandidate> = Vec::with_capacity(candidates.len());
+        mut ordered: Vec<TriggerCandidate>,
+        rest: Vec<TriggerCandidate>,
+    ) -> Option<Vec<TriggerCandidate>> {
         let mut i = 0;
-        while i < candidates.len() {
-            let ctrl = candidates[i].controller;
+        while i < rest.len() {
+            let ctrl = rest[i].controller;
             let mut j = i + 1;
-            while j < candidates.len() && candidates[j].controller == ctrl {
+            while j < rest.len() && rest[j].controller == ctrl {
                 j += 1;
             }
-            let run = &candidates[i..j];
-            if run.len() < 2 || !self.players.get(ctrl).is_some_and(|p| p.wants_ui) {
-                out.extend_from_slice(run);
+            let run = &rest[i..j];
+            // A decision already pending (e.g. a racing combat choice) has
+            // nowhere to park this batch — keep the default order, matching
+            // `drain_trigger_queue`'s behavior.
+            if run.len() < 2
+                || !self.players.get(ctrl).is_some_and(|p| p.wants_ui)
+                || self.pending_decision.is_some()
+            {
+                ordered.extend_from_slice(run);
             } else {
                 let labels: Vec<(CardId, String)> = run
                     .iter()
@@ -5256,36 +5284,44 @@ impl GameState {
                         (c.source, name)
                     })
                     .collect();
-                let answer = self.decider.decide(&crate::decision::Decision::OrderTriggers {
-                    player: ctrl,
-                    triggers: labels,
+                self.pending_decision = Some(PendingDecision {
+                    decision: crate::decision::Decision::OrderTriggers {
+                        player: ctrl,
+                        triggers: labels,
+                    },
+                    resume: ResumeContext::TriggerOrder {
+                        ordered,
+                        run: run.to_vec(),
+                        rest: rest[j..].to_vec(),
+                    },
                 });
-                let order = match answer {
-                    crate::decision::DecisionAnswer::TriggerOrder(ids) => ids,
-                    _ => vec![],
-                };
-                // Apply the requested order: take run entries in `order`,
-                // then append any not named (stable) so the answer can be
-                // partial or empty.
-                let mut remaining: Vec<Option<TriggerCandidate>> =
-                    run.iter().cloned().map(Some).collect();
-                for id in order {
-                    if let Some(pos) = remaining
-                        .iter()
-                        .position(|c| c.as_ref().is_some_and(|c| c.source == id))
-                    {
-                        out.push(remaining[pos].take().unwrap());
-                    }
-                }
-                for slot in remaining.into_iter().flatten() {
-                    out.push(slot);
-                }
+                return None;
             }
             i = j;
         }
-        out
+        Some(ordered)
     }
 
+    /// Apply a `TriggerOrder(ids)` answer to `run`: entries named in `ids`
+    /// first (in that order), unnamed ones after in original order — a
+    /// partial or empty answer is always legal.
+    pub(crate) fn apply_trigger_order(
+        ordered: &mut Vec<TriggerCandidate>,
+        run: Vec<TriggerCandidate>,
+        order: Vec<CardId>,
+    ) {
+        let mut remaining: Vec<Option<TriggerCandidate>> = run.into_iter().map(Some).collect();
+        for id in order {
+            if let Some(pos) =
+                remaining.iter().position(|c| c.as_ref().is_some_and(|c| c.source == id))
+            {
+                ordered.push(remaining[pos].take().unwrap());
+            }
+        }
+        for slot in remaining.into_iter().flatten() {
+            ordered.push(slot);
+        }
+    }
     /// Walk a queue of pending triggers, pushing each onto the stack.
     /// Suspends on the first trigger whose controller has `wants_ui`
     /// and whose effect needs a target — emits
@@ -5720,6 +5756,20 @@ impl GameState {
                     }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
+            }
+            ResumeContext::TriggerOrder { mut ordered, run, rest } => {
+                // CR 603.3b — apply the controller's chosen order, then
+                // continue the ordering walk (which may suspend again on a
+                // later same-controller run) and finish the dispatch.
+                let order = match answer {
+                    DecisionAnswer::TriggerOrder(ids) => ids,
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                };
+                Self::apply_trigger_order(&mut ordered, run, order);
+                if let Some(all) = self.continue_trigger_ordering(ordered, rest) {
+                    self.push_ordered_trigger_candidates(all);
+                }
+                vec![]
             }
             ResumeContext::TriggerTargetPick { pending, remaining } => {
                 // Apply the answered target to the trigger that was

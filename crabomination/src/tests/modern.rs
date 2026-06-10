@@ -25685,8 +25685,13 @@ fn wants_ui_controller_orders_own_simultaneous_triggers() {
     let w1 = g.add_card_to_battlefield(0, catalog::soul_warden());
     let w2 = g.add_card_to_battlefield(0, catalog::soul_warden());
     g.players[0].wants_ui = true;
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::TriggerOrder(vec![w2, w1])]));
     cast_bear_and_resolve_only_it(&mut g);
+    // The dispatch suspends on Decision::OrderTriggers for the networked seat.
+    assert!(matches!(
+        g.pending_decision.as_ref().map(|pd| &pd.decision),
+        Some(crate::decision::Decision::OrderTriggers { .. })
+    ), "suspends for the ordering pick");
+    g.submit_decision(DecisionAnswer::TriggerOrder(vec![w2, w1])).expect("order applied");
     assert_eq!(stack_trigger_sources(&g), vec![w2, w1],
         "controller's chosen push order is applied (w1 on top → resolves first)");
 }

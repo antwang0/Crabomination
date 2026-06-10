@@ -4883,8 +4883,13 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
 
-                let eligible = Some(candidates.iter().map(|(id, _)| *id).collect());
-                let decision = Decision::SearchLibrary { player: p, candidates };
+                let eligible: Option<Vec<crate::card::CardId>> =
+                    Some(candidates.iter().map(|(id, _)| *id).collect());
+                let decision = Decision::SearchLibrary {
+                    player: p,
+                    candidates,
+                    eligible: eligible.clone(),
+                };
                 let pending =
                     PendingEffectState::SearchPending { player: p, to: to.clone(), eligible };
 
@@ -4924,9 +4929,9 @@ impl GameState {
                         })
                         .collect()
                 });
-                let candidates: Vec<(crate::card::CardId, String)> = eligible
-                    .as_ref()
-                    .unwrap_or(&top_ids)
+                // Show every revealed card; the UI greys the non-eligible
+                // ones (only `eligible` picks are accepted).
+                let candidates: Vec<(crate::card::CardId, String)> = top_ids
                     .iter()
                     .filter_map(|id| {
                         self.players[p]
@@ -4936,7 +4941,11 @@ impl GameState {
                             .map(|c| (*id, c.definition.name.to_string()))
                     })
                     .collect();
-                let decision = Decision::SearchLibrary { player: p, candidates };
+                let decision = Decision::SearchLibrary {
+                    player: p,
+                    candidates,
+                    eligible: eligible.clone(),
+                };
                 let pending = PendingEffectState::ImpulsePending {
                     player: p,
                     revealed: top_ids,
@@ -5079,7 +5088,7 @@ impl GameState {
                 if candidates.is_empty() {
                     return Ok(());
                 }
-                let decision = Decision::SearchLibrary { player: p, candidates: candidates.clone() };
+                let decision = Decision::SearchLibrary { player: p, candidates: candidates.clone(), eligible: None };
                 let pending = PendingEffectState::PutFromZonesPending { player: p };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -6094,7 +6103,7 @@ impl GameState {
                     self.players[p].library.iter().find(|c| c.id == *id)
                         .map(|c| (*id, c.definition.name.to_string()))
                 }).collect();
-                let decision = Decision::SearchLibrary { player: p, candidates };
+                let decision = Decision::SearchLibrary { player: p, candidates, eligible: None };
                 let pending = PendingEffectState::PayLifeLookPending { player: p, revealed };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
