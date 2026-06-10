@@ -40073,34 +40073,6 @@ pub fn reckoner_bankbuster() -> CardDefinition {
     }
 }
 
-/// Mizzium Mortars — {1}{R} Sorcery. 4 damage to target creature you don't
-/// control; Overload {3}{R}{R}{R} hits each creature you don't control.
-pub fn mizzium_mortars() -> CardDefinition {
-    use crate::card::AlternativeCost;
-    let foes = SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent);
-    CardDefinition {
-        name: "Mizzium Mortars",
-        cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(foes.clone()),
-            amount: Value::Const(4),
-        },
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(3), r(), r(), r()]),
-            effect_override: Some(Effect::ForEach {
-                selector: Selector::EachPermanent(foes),
-                body: Box::new(Effect::DealDamage {
-                    to: Selector::TriggerSource,
-                    amount: Value::Const(4),
-                }),
-            }),
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
-
 // ── DFC saga (CR 714.4) ──────────────────────────────────────────────────────
 
 /// Reflection of Kiki-Jiki — back face of Fable of the Mirror-Breaker.
@@ -40750,31 +40722,6 @@ pub fn flare_of_denial() -> CardDefinition {
             )),
             ..Default::default()
         }),
-        ..Default::default()
-    }
-}
-
-/// Marauding Mako — {R} 1/1 Shark Pirate. Discarding cards grows it; Cycling {2}.
-pub fn marauding_mako() -> CardDefinition {
-    CardDefinition {
-        name: "Marauding Mako",
-        cost: cost(&[r()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Shark, CreatureType::Pirate],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            },
-        }],
         ..Default::default()
     }
 }

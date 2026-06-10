@@ -29,9 +29,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Noticed this run:** Wandering Fumarole's `{0}` P/T-switch wants a
     layer-7d `Effect::SwitchPT`; Lavaclaw Reaches' firebreathing wants
     activated abilities scoped to the animated state; Street Wraith wants
-    a life-payment Cycling cost; Kappa Cannoneer wants Improvise (artifact
-    convoke); The One Ring's "protection from everything until your next
-    turn" wants a player-level protection grant.
+    a life-payment Cycling cost; The One Ring's "protection from everything
+    until your next turn" wants a player-level protection grant. (Improvise
+    shipped — CR 702.126 rides the Convoke cast path; Kappa Cannoneer.)
 - ⏳ **Tempting offer / opponent-may wants_ui suspend** —
   `Effect::TemptingOffer` and the new `Effect::PlayersMayAccept` (Vexing
   Devil, Browbeat, Risk Factor) ask via the synchronous decider; a

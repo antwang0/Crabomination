@@ -261,12 +261,12 @@ pub fn witherbloom_drainage() -> CardDefinition {
 /// Mizzium Mortars — {1}{R} Sorcery (Strixhaven Mystical Archive reprint,
 /// originally Return to Ravnica).
 ///
-/// "Mizzium Mortars deals 4 damage to target creature. / Overload {4}{R}{R}
+/// "Mizzium Mortars deals 4 damage to target creature you don't control. / Overload {3}{R}{R}{R}
 /// (You may cast this spell for its overload cost. If you do, change its
 /// text by replacing all instances of 'target' with 'each.')"
 ///
-/// Both modes wired: single-target {1}{R} → 4 damage to target creature;
-/// Overload {4}{R}{R} → 4 damage to each creature you don't control.
+/// Both modes wired: single-target {1}{R} → 4 damage to a creature you
+/// don't control; Overload {3}{R}{R}{R} → 4 damage to each.
 pub fn mizzium_mortars() -> CardDefinition {
     use crate::card::AlternativeCost;
     CardDefinition {
@@ -279,7 +279,9 @@ pub fn mizzium_mortars() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
             amount: Value::Const(4),
         },
         activated_abilities: no_abilities(),
@@ -288,7 +290,7 @@ pub fn mizzium_mortars() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(4), r(), r()]),
+            mana_cost: cost(&[generic(3), r(), r(), r()]),
             life_cost: 0,
             exile_filter: None,
             evoke_sacrifice: false,
@@ -2678,7 +2680,9 @@ pub fn pigment_storm() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
             amount: Value::Const(4),
         },
         activated_abilities: no_abilities(),

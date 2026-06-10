@@ -3550,8 +3550,7 @@ pub fn marauding_mako() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // Engine has no Shark/Pirate creature type; classify as Fish.
-            creature_types: vec![CreatureType::Fish],
+            creature_types: vec![CreatureType::Shark, CreatureType::Pirate],
             ..Default::default()
         },
         power: 1,
