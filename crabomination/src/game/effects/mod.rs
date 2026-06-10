@@ -7162,50 +7162,28 @@ impl GameState {
             }
 
             Effect::PreventAllDamageFromChosenSourceThisTurn { filter } => {
-                use crate::decision::{Decision, DecisionAnswer};
-                // CR 615.7 / 609.7b — the source is chosen as this resolves,
-                // among matching stack spells and battlefield permanents.
-                let p = ctx.controller;
-                let mut candidates: Vec<(CardId, String)> = self
-                    .stack
-                    .iter()
-                    .filter_map(|item| match item {
-                        crate::game::types::StackItem::Spell { card, .. }
-                            if self.evaluate_requirement_on_card(filter, card, p) =>
-                        {
-                            Some((card.id, card.definition.name.to_string()))
-                        }
-                        _ => None,
-                    })
-                    .collect();
-                candidates.extend(
-                    self.battlefield
-                        .iter()
-                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                        .map(|c| (c.id, c.definition.name.to_string())),
-                );
-                if candidates.is_empty() {
+                let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
-                }
-                let chosen = if candidates.len() == 1 {
-                    candidates[0].0
-                } else {
-                    let source = ctx.source.unwrap_or(CardId(0));
-                    let answer = self.decider.decide(&Decision::ChooseCards {
-                        source,
-                        prompt: "Prevent all damage from which source this turn?".to_string(),
-                        candidates: candidates.clone(),
-                        min: 1,
-                        max: 1,
-                    });
-                    match answer {
-                        DecisionAnswer::Cards(v) if !v.is_empty() => v[0],
-                        _ => candidates[0].0,
-                    }
                 };
                 if !self.damage_prevented_sources.contains(&chosen) {
                     self.damage_prevented_sources.push(chosen);
                 }
+                Ok(())
+            }
+
+            Effect::PreventNextDamageFromChosenSource { filter } => {
+                // CR 615.7 — Circle of Protection: a one-event shield around
+                // the controller, restricted to the chosen source.
+                let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
+                    return Ok(());
+                };
+                self.prevention_shields.push(crate::game::types::PreventionShield {
+                    target: crate::game::types::PreventionTarget::Player(ctx.controller),
+                    remaining: None,
+                    gain_life: false,
+                    source: Some(chosen),
+                    one_event: true,
+                });
                 Ok(())
             }
 
@@ -7262,6 +7240,8 @@ impl GameState {
                             target: s,
                             remaining: Some(n),
                             gain_life: false,
+                            source: None,
+                            one_event: false,
                         });
                     }
                 }
@@ -7278,6 +7258,8 @@ impl GameState {
                             target: s,
                             remaining: Some(n),
                             gain_life: true,
+                            source: None,
+                            one_event: false,
                         });
                     }
                 }
@@ -7291,6 +7273,8 @@ impl GameState {
                         target: s,
                         remaining: None,
                         gain_life: false,
+                        source: None,
+                        one_event: false,
                     });
                 }
                 Ok(())
@@ -7791,6 +7775,83 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CastFromHandWithoutPaying { filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| !c.definition.is_land())
+                    .filter(|c| {
+                        filter
+                            .as_ref()
+                            .is_none_or(|f| self.evaluate_requirement_on_card(f, c, p))
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Cast which spell without paying its mana cost?".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: 1,
+                });
+                let DecisionAnswer::Cards(picked) = answer else { return Ok(()) };
+                let Some(card_id) = picked
+                    .into_iter()
+                    .find(|id| candidates.iter().any(|(c, _)| c == id))
+                else {
+                    return Ok(());
+                };
+                let card_def = self
+                    .find_card_anywhere(card_id)
+                    .map(|c| c.definition.clone());
+                let Some(card_def) = card_def else { return Ok(()) };
+                let auto_target =
+                    self.auto_target_for_effect_avoiding(&card_def.effect, p, Some(card_id));
+                let cast_events = self.cast_card_for_free(
+                    p,
+                    card_id,
+                    crate::card::Zone::Hand,
+                    auto_target,
+                    vec![],
+                    None,
+                    None,
+                    false,
+                )?;
+                events.extend(cast_events);
+                Ok(())
+            }
+
+            Effect::Tribute { n, otherwise } => {
+                // CR 702.104 — an opponent may put N +1/+1 counters on the
+                // source; if they decline, the "if tribute wasn't paid"
+                // trigger half runs.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source,
+                    description: format!("Pay tribute: put {n} +1/+1 counter(s) on it?"),
+                });
+                if matches!(answer, DecisionAnswer::Bool(true)) {
+                    self.run_effect(
+                        &Effect::AddCounter {
+                            what: Selector::This,
+                            kind: crate::card::CounterType::PlusOnePlusOne,
+                            amount: crate::effect::Value::Const(*n as i32),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                } else {
+                    self.run_effect(otherwise, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::RegisterParadigm => {
                 // Register a recurring `YourNextMainPhase` delayed
                 // trigger whose body is `Effect::CastFreeParadigmCopy`.
@@ -7999,6 +8060,57 @@ impl GameState {
     }
 
     // ── Selector / Value / Predicate resolution ─────────────────────────────
+
+    /// CR 615.7 / 609.7b — pick a damage source matching `filter` among
+    /// stack spells and battlefield permanents, asking the controller when
+    /// there's more than one (AutoDecider keeps the first candidate —
+    /// stack spells offered before permanents). Shared by the
+    /// chosen-source prevention effects (Burrenton Forge-Tender, Circle of
+    /// Protection).
+    fn choose_damage_prevention_source(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        ctx: &EffectContext,
+    ) -> Option<CardId> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let p = ctx.controller;
+        let mut candidates: Vec<(CardId, String)> = self
+            .stack
+            .iter()
+            .filter_map(|item| match item {
+                crate::game::types::StackItem::Spell { card, .. }
+                    if self.evaluate_requirement_on_card(filter, card, p) =>
+                {
+                    Some((card.id, card.definition.name.to_string()))
+                }
+                _ => None,
+            })
+            .collect();
+        candidates.extend(
+            self.battlefield
+                .iter()
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| (c.id, c.definition.name.to_string())),
+        );
+        if candidates.is_empty() {
+            return None;
+        }
+        if candidates.len() == 1 {
+            return Some(candidates[0].0);
+        }
+        let source = ctx.source.unwrap_or(CardId(0));
+        let answer = self.decider.decide(&Decision::ChooseCards {
+            source,
+            prompt: "Prevent damage from which source?".to_string(),
+            candidates: candidates.clone(),
+            min: 1,
+            max: 1,
+        });
+        match answer {
+            DecisionAnswer::Cards(v) if !v.is_empty() => Some(v[0]),
+            _ => Some(candidates[0].0),
+        }
+    }
 
     /// Map a selector to the `PreventionTarget`s it designates (players and
     /// permanents only). Used by the prevention-shield effects.

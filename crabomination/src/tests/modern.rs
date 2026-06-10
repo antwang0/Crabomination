@@ -20408,7 +20408,7 @@ fn maelstrom_archangel_free_casts_from_hand_on_combat_damage() {
     let angel = g.add_card_to_battlefield(0, catalog::maelstrom_archangel());
     g.clear_sickness(angel);
     let fatty = g.add_card_to_hand(0, catalog::serra_angel()); // no mana available
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![fatty])]));
     g.active_player_idx = 0;
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
@@ -46618,7 +46618,7 @@ fn the_one_ring_protection_until_your_next_turn() {
     }).is_err(), "protected player can't be targeted");
     // Non-targeted damage is prevented too (shared prevention funnel).
     let mut evs = Vec::new();
-    let left = g.apply_prevention_shields(crate::game::effects::EntityRef::Player(0), 5, &mut evs);
+    let left = g.apply_prevention_shields(crate::game::effects::EntityRef::Player(0), 5, None, &mut evs);
     assert_eq!(left, 0, "all damage to the protected player prevented");
     // Expires when the protected player's turn begins.
     g.active_player_idx = 0;
@@ -47498,4 +47498,103 @@ fn urza_planeswalker_twice_per_turn_and_discount() {
     let stone = g.add_card_to_hand(0, catalog::mind_stone());
     cast(&mut g, stone);
     assert!(g.battlefield.iter().any(|c| c.id == stone), "free artifact cast");
+}
+
+// ── CR 615.7: chosen-source one-event shields (Circle of Protection) ────────
+
+/// CoP: Red's shield soaks one whole damage event from the chosen red
+/// source, then expires — a second bolt from the same source connects.
+#[test]
+fn circle_of_protection_red_soaks_one_event() {
+    let mut g = two_player_game();
+    let cop = g.add_card_to_battlefield(0, catalog::circle_of_protection_red());
+    let goblin = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cop, ability_index: 0, target: None, x_value: None,
+    }).expect("activate CoP");
+    drain_stack(&mut g);
+    // chosen source = the only red candidate (the Goblin)
+    let mut events = Vec::new();
+    g.deal_damage_to_from(
+        crate::game::effects::EntityRef::Player(0), 3, Some(goblin), &mut events);
+    assert_eq!(g.players[0].life, 20, "first event fully prevented");
+    g.deal_damage_to_from(
+        crate::game::effects::EntityRef::Player(0), 3, Some(goblin), &mut events);
+    assert_eq!(g.players[0].life, 17, "shield was one-event only");
+}
+
+/// The CoP shield doesn't soak damage from a different source.
+#[test]
+fn circle_of_protection_shield_is_source_restricted() {
+    let mut g = two_player_game();
+    let cop = g.add_card_to_battlefield(0, catalog::circle_of_protection_red());
+    let goblin = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _ = goblin;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cop, ability_index: 0, target: None, x_value: None,
+    }).expect("activate CoP");
+    drain_stack(&mut g);
+    let mut events = Vec::new();
+    g.deal_damage_to_from(
+        crate::game::effects::EntityRef::Player(0), 2, Some(bears), &mut events);
+    assert_eq!(g.players[0].life, 18, "green source ignores the red shield");
+    assert_eq!(g.prevention_shields.len(), 1, "shield still up");
+}
+
+
+// ── Tribute (CR 702.104) ─────────────────────────────────────────────────────
+
+/// Tribute paid: the opponent puts the counter on; the trigger half is
+/// skipped (no haste / no extra pump).
+#[test]
+fn tribute_paid_adds_counters_and_skips_trigger() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_hand(0, catalog::fanatic_of_xenagos());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "tribute paid");
+    assert_eq!((c.power(), c.toughness()), (4, 4));
+    assert!(!c.granted_keywords_eot.contains(&crate::card::Keyword::Haste), "no haste half");
+}
+
+/// Tribute declined (AutoDecider): Fanatic gets +1/+1 and haste for the turn.
+#[test]
+fn tribute_declined_fires_the_trigger_half() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fanatic_of_xenagos());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!((c.power(), c.toughness()), (4, 4), "+1/+1 until EOT");
+    let computed = g.compute_battlefield();
+    assert!(computed.iter().find(|c| c.id == id).unwrap()
+        .keywords.contains(&crate::card::Keyword::Haste));
+}
+
+/// Oracle of Bones (tribute declined) free-casts an instant from hand; a
+/// creature card is not offered.
+#[test]
+fn oracle_of_bones_free_casts_instant_only() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),           // opponent declines tribute
+        DecisionAnswer::Cards(vec![bolt]),     // controller picks the bolt
+    ]));
+    let oracle = g.add_card_to_hand(0, catalog::oracle_of_bones());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, oracle);
+    assert_eq!(g.players[1].life, 17, "free Bolt resolved at the opponent");
 }

@@ -49,6 +49,7 @@ impl GameState {
         &mut self,
         ent: EntityRef,
         amount: u32,
+        source: Option<crate::card::CardId>,
         events: &mut Vec<GameEvent>,
     ) -> u32 {
         use crate::game::types::PreventionTarget;
@@ -77,12 +78,22 @@ impl GameState {
         let mut prevented = 0u32;
         // CR 615.1 — life gained by `gain_life` shields that soak damage.
         let mut life_gain = 0u32;
-        for shield in self.prevention_shields.iter_mut().filter(|s| s.target == key) {
+        // One-event (Circle of Protection) shields spent in this event.
+        let mut spent_one_event: Vec<usize> = Vec::new();
+        for (i, shield) in self
+            .prevention_shields
+            .iter_mut()
+            .enumerate()
+            .filter(|(_, s)| {
+                s.target == key && (s.source.is_none() || s.source == source)
+            })
+        {
             if remaining == 0 {
                 break;
             }
             let soak = match shield.remaining {
-                // Prevent-all: soak everything, shield stays for the turn.
+                // Prevent-all: soak everything; the shield stays for the
+                // turn unless it's a one-event shield.
                 None => std::mem::take(&mut remaining),
                 Some(ref mut n) => {
                     let soak = remaining.min(*n);
@@ -91,13 +102,21 @@ impl GameState {
                     soak
                 }
             };
+            if shield.one_event && soak > 0 {
+                spent_one_event.push(i);
+            }
             prevented += soak;
             if shield.gain_life {
                 life_gain += soak;
             }
         }
-        // Drop spent "next N" shields (those reduced to 0).
-        self.prevention_shields.retain(|s| s.remaining != Some(0));
+        // Drop spent "next N" shields and used one-event shields.
+        let mut idx = 0;
+        self.prevention_shields.retain(|s| {
+            let spent = s.remaining == Some(0) || spent_one_event.contains(&idx);
+            idx += 1;
+            !spent
+        });
         if prevented > 0 {
             events.push(GameEvent::DamagePrevented { amount: prevented, to_player, to_card });
         }
@@ -114,7 +133,7 @@ impl GameState {
     /// the `CardId` of the damaging permanent (typically `ctx.source`).
     /// Combat damage uses a separate path in `combat.rs` that already
     /// honors infect for combat damage.
-    pub(super) fn deal_damage_to_from(
+    pub(crate) fn deal_damage_to_from(
         &mut self,
         ent: EntityRef,
         amount: u32,
@@ -171,7 +190,7 @@ impl GameState {
         // any shield around the target soak it (unless a "damage can't be
         // prevented this turn" effect is active, CR 615.12). Returns the
         // unprevented remainder; 0 means the whole event is prevented.
-        let amount = self.apply_prevention_shields(ent, amount, events);
+        let amount = self.apply_prevention_shields(ent, amount, source, events);
         if amount == 0 {
             return;
         }

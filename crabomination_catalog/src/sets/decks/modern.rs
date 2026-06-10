@@ -41528,3 +41528,119 @@ pub fn aftermath_analyst() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── CR 615.7 chosen-source prevention batch ─────────────────────────────────
+
+/// Circle of Protection cycle — {1}{W} Enchantment. "{1}: The next time a
+/// [color] source of your choice would deal damage to you this turn,
+/// prevent that damage." (CR 615.7 one-event chosen-source shield.)
+fn circle_of_protection(name: &'static str, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: SelectionRequirement::HasColor(color),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+pub fn circle_of_protection_white() -> CardDefinition {
+    circle_of_protection("Circle of Protection: White", Color::White)
+}
+pub fn circle_of_protection_blue() -> CardDefinition {
+    circle_of_protection("Circle of Protection: Blue", Color::Blue)
+}
+pub fn circle_of_protection_black() -> CardDefinition {
+    circle_of_protection("Circle of Protection: Black", Color::Black)
+}
+pub fn circle_of_protection_red() -> CardDefinition {
+    circle_of_protection("Circle of Protection: Red", Color::Red)
+}
+pub fn circle_of_protection_green() -> CardDefinition {
+    circle_of_protection("Circle of Protection: Green", Color::Green)
+}
+
+/// Rune of Protection: Red — {1}{W} Enchantment. CoP: Red plus Cycling {2}.
+pub fn rune_of_protection_red() -> CardDefinition {
+    let mut def = circle_of_protection("Rune of Protection: Red", Color::Red);
+    def.keywords = vec![Keyword::Cycling(cost(&[generic(2)]))];
+    def
+}
+
+/// Rune of Protection: Black — {1}{W} Enchantment. CoP: Black plus Cycling {2}.
+pub fn rune_of_protection_black() -> CardDefinition {
+    let mut def = circle_of_protection("Rune of Protection: Black", Color::Black);
+    def.keywords = vec![Keyword::Cycling(cost(&[generic(2)]))];
+    def
+}
+
+// ── Tribute (CR 702.104) ─────────────────────────────────────────────────────
+
+/// Fanatic of Xenagos — {1}{R}{G} Centaur Warrior 3/3 Trample. Tribute 1;
+/// if tribute wasn't paid, +1/+1 and haste until end of turn.
+pub fn fanatic_of_xenagos() -> CardDefinition {
+    use crate::effect::shortcut::tribute;
+    CardDefinition {
+        name: "Fanatic of Xenagos",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![tribute(
+            1,
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        )],
+        ..Default::default()
+    }
+}
+
+/// Oracle of Bones — {2}{R}{R} Minotaur Shaman 3/1 Haste. Tribute 2; if
+/// tribute wasn't paid, you may cast an instant or sorcery from hand free.
+pub fn oracle_of_bones() -> CardDefinition {
+    use crate::effect::shortcut::tribute;
+    CardDefinition {
+        name: "Oracle of Bones",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![tribute(
+            2,
+            Effect::CastFromHandWithoutPaying {
+                filter: Some(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            },
+        )],
+        ..Default::default()
+    }
+}

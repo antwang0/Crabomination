@@ -2449,6 +2449,21 @@ pub enum Effect {
         #[serde(default)]
         exile_after: bool,
     },
+    /// "You may cast a [filter] spell from your hand without paying its
+    /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to
+    /// instants/sorceries). The controller picks one matching nonland hand
+    /// card via `Decision::ChooseCards` (min 0 — may decline; AutoDecider
+    /// declines) and it's free-cast with auto-targets.
+    CastFromHandWithoutPaying {
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
+    /// CR 702.104 — Tribute N. An opponent may put N +1/+1 counters on the
+    /// source as it enters; if they decline, `otherwise` runs. The opponent
+    /// answers via `Decision::OptionalTrigger` (synchronous decider, like
+    /// TemptingOffer; AutoDecider declines, so the trigger half fires).
+    /// Run as a SelfSource ETB trigger — `shortcut::tribute`.
+    Tribute { n: u32, otherwise: Box<Effect> },
     /// Paradigm (SOS supplemental keyword) — registers a non-one-shot
     /// `DelayedKind::YourNextMainPhase` trigger that on each of the
     /// controller's pre-combat main phases offers them "cast a copy of
@@ -2898,6 +2913,11 @@ pub enum Effect {
     /// picks a stack spell first, else the highest-power permanent).
     /// Burrenton Forge-Tender.
     PreventAllDamageFromChosenSourceThisTurn { filter: crate::card::SelectionRequirement },
+    /// CR 615.7 — "The next time a [filter] source of your choice would deal
+    /// damage to you this turn, prevent that damage." A one-event,
+    /// source-restricted shield around the controller. Circle of Protection
+    /// cycle.
+    PreventNextDamageFromChosenSource { filter: crate::card::SelectionRequirement },
     /// CR 714.4 (DFC sagas) — "Exile this Saga, then return it to the
     /// battlefield transformed under your control." The return is a new
     /// object: lore counters clear and the back face's ETB fires. Fable of

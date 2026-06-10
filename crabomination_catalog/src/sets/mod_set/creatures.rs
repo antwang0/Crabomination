@@ -4983,15 +4983,7 @@ pub fn maelstrom_archangel() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::CastWithoutPayingImmediate {
-                what: Selector::CardsInZone {
-                    zone: crate::card::Zone::Hand,
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Nonland,
-                },
-                source_zone: crate::card::Zone::Hand,
-                exile_after: false,
-            },
+            effect: Effect::CastFromHandWithoutPaying { filter: None },
         }],
         ..Default::default()
     }

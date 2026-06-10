@@ -1356,8 +1356,12 @@ impl GameState {
                 // CR 615 — per-target prevention shields on the defending
                 // player/planeswalker also reduce unblocked combat damage.
                 // Lifelink scales off the post-prevention amount (702.15a).
-                let amount =
-                    self.prevent_combat_to_target(atk.target, self.scale_combat_damage(atk.target, raw), &mut events);
+                let amount = self.prevent_combat_to_target(
+                    atk.target,
+                    self.scale_combat_damage(atk.target, raw),
+                    Some(atk.id),
+                    &mut events,
+                );
                 if amount > 0 {
                     self.deal_combat_damage_to_target(atk, amount, &mut events);
                     if atk.has_lifelink {
@@ -1420,6 +1424,7 @@ impl GameState {
                             crate::game::effects::EntityRef::Permanent(blocker_id),
                             assign,
                         ),
+                        Some(atk.id),
                         &mut events,
                     ) as i32;
                     lifelink_dealt += dealt;
@@ -1462,6 +1467,7 @@ impl GameState {
                     let amount = self.prevent_combat_to_target(
                         atk.target,
                         self.scale_combat_damage(atk.target, trample_leftover),
+                        Some(atk.id),
                         &mut events,
                     );
                     lifelink_dealt += amount as i32;
@@ -1530,6 +1536,7 @@ impl GameState {
                             crate::game::effects::EntityRef::Permanent(atk.id),
                             blocker_damage_to_attacker.max(0) as u32,
                         ),
+                        dealing_blocker_ids.first().copied(),
                         &mut events,
                     );
                     if dmg > 0 && let Some(attacker) = self.battlefield_find_mut(atk.id) {
@@ -1636,15 +1643,16 @@ impl GameState {
         &mut self,
         target: AttackTarget,
         amount: u32,
+        source: Option<crate::card::CardId>,
         events: &mut Vec<GameEvent>,
     ) -> u32 {
         use crate::game::effects::EntityRef;
         match target {
             AttackTarget::Player(p) => {
-                self.apply_prevention_shields(EntityRef::Player(p), amount, events)
+                self.apply_prevention_shields(EntityRef::Player(p), amount, source, events)
             }
             AttackTarget::Planeswalker(pw) => {
-                self.apply_prevention_shields(EntityRef::Permanent(pw), amount, events)
+                self.apply_prevention_shields(EntityRef::Permanent(pw), amount, source, events)
             }
         }
     }

@@ -523,6 +523,14 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sanctifier_en_vec,
         suppression_field,
         burrenton_forge_tender,
+        // CR 615.7 chosen-source one-event shields
+        circle_of_protection_white,
+        circle_of_protection_blue,
+        circle_of_protection_black,
+        circle_of_protection_red,
+        circle_of_protection_green,
+        rune_of_protection_red,
+        rune_of_protection_black,
         white_orchid_phantom,
         sigardas_aid,
         guide_of_souls,
@@ -1931,6 +1939,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         marauding_mako,
         hero_of_oxid_ridge,
         shrapnel_blast,
+        // Tribute (CR 702.104)
+        oracle_of_bones,
         // Hideaway land (CR 702.76)
         spinerock_knoll,
         embereth_shieldbreaker,
@@ -2361,6 +2371,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Green) {
         v.push(ghor_clan_rampager);
+        v.push(fanatic_of_xenagos);
         v.push(slagwoods_bridge);
         v.push(elegant_parlor);
         v.push(assault_battery);

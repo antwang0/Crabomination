@@ -1957,6 +1957,14 @@ pub fn extort() -> TriggeredAbility {
     }
 }
 
+/// Tribute N (CR 702.104): "As this creature enters, an opponent of your
+/// choice may put N +1/+1 counters on it. When it enters, if tribute
+/// wasn't paid, `otherwise`." The opponent answers via the synchronous
+/// decider; AutoDecider declines, so the trigger half fires.
+pub fn tribute(n: u32, otherwise: Effect) -> TriggeredAbility {
+    etb(Effect::Tribute { n, otherwise: Box::new(otherwise) })
+}
+
 /// Exploit (CR 702.105): "When this creature enters, you may sacrifice
 /// a creature. When you exploit a creature, `payoff`." Modeled as an ETB
 /// `MayDo([Sacrifice 1 creature (this can be itself), payoff])`. Declining

@@ -992,6 +992,14 @@ pub struct PreventionShield {
     /// life equal to the damage this shield prevents (Reverse Damage).
     #[serde(default)]
     pub gain_life: bool,
+    /// CR 615.7 — shield only soaks damage from this source (Circle of
+    /// Protection's chosen source). `None` = any source.
+    #[serde(default)]
+    pub source: Option<crate::card::CardId>,
+    /// "The next time [it] would deal damage" — the shield soaks one whole
+    /// damage event, then expires (Circle of Protection).
+    #[serde(default)]
+    pub one_event: bool,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither
