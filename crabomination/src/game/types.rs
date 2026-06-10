@@ -796,6 +796,12 @@ impl GameAction {
     /// True for actions a Revel-in-Silence lock forbids: casting any spell
     /// (every `Cast*` variant) or activating a loyalty ability.
     pub(crate) fn is_cast_or_loyalty(&self) -> bool {
+        self.is_cast() || matches!(self, GameAction::ActivateLoyaltyAbility { .. })
+    }
+
+    /// True for every `Cast*` action variant — the CR 601 "cast a spell"
+    /// surface, gated by one-spell-per-turn locks (Rule of Law).
+    pub(crate) fn is_cast(&self) -> bool {
         use GameAction as A;
         matches!(
             self,
@@ -829,7 +835,6 @@ impl GameAction {
                 | A::CastFlashbackTap { .. }
                 | A::CastFromZoneWithoutPaying { .. }
                 | A::CastFromCommandZone { .. }
-                | A::ActivateLoyaltyAbility { .. }
         )
     }
 }
@@ -1293,6 +1298,9 @@ pub enum GameError {
     CantCastPermanentSpells,
     #[error("You can't cast spells or activate loyalty abilities this turn")]
     SilencedThisTurn,
+    /// A one-spell-per-turn lock (Rule of Law, CR 601) bars this cast.
+    #[error("A one-spell-per-turn effect bars casting more spells this turn")]
+    SpellLimitReached,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),
     #[error("Card {0:?} not found in graveyard")]

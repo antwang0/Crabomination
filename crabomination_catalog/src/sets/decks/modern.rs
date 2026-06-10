@@ -42559,3 +42559,73 @@ pub fn creeping_chill() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── One-spell-per-turn locks (Rule of Law family) ────────────────────────────
+
+/// Rule of Law — {2}{W} Enchantment. Each player can't cast more than one
+/// spell each turn.
+pub fn rule_of_law() -> CardDefinition {
+    CardDefinition {
+        name: "Rule of Law",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Each player can't cast more than one spell each turn.",
+            effect: StaticEffect::OneSpellPerTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eidolon of Rhetoric — {2}{W} Spirit Cleric 1/4 with Rule of Law's lock.
+pub fn eidolon_of_rhetoric() -> CardDefinition {
+    CardDefinition {
+        name: "Eidolon of Rhetoric",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Each player can't cast more than one spell each turn.",
+            effect: StaticEffect::OneSpellPerTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Archon of Emeria — {2}{W} Archon 2/3 Flying; one-spell lock + opponents'
+/// nonbasic lands enter tapped.
+pub fn archon_of_emeria() -> CardDefinition {
+    CardDefinition {
+        name: "Archon of Emeria",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Archon],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each player can't cast more than one spell each turn.",
+                effect: StaticEffect::OneSpellPerTurn,
+            },
+            StaticAbility {
+                description: "Nonbasic lands your opponents control enter the battlefield tapped.",
+                effect: StaticEffect::EntersTapped {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::IsNonbasicLand
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

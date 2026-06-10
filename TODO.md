@@ -11,8 +11,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - ⏳ **Noticed this run (claude/modern_decks, meld batch):**
   - **Prized Amalgam** wants an "entered from your graveyard" gate on
     creature-ETB triggers (zone-origin isn't carried on `PermanentEntered`).
-  - **Archon of Emeria / Rule of Law** want a one-spell-per-turn cast lock
-    static.
+  - ✅ **One-spell-per-turn lock** ships (`StaticEffect::OneSpellPerTurn`
+    gated at the central `perform_action` cast gate — Rule of Law, Eidolon
+    of Rhetoric, Archon of Emeria).
   - **Chord of Calling / X tutors** want a `ManaValueAtMostXFromCost`
     selection requirement plumbed into `Effect::Search`.
   - **Shadowspear**'s active "lose hexproof/indestructible" half wants an

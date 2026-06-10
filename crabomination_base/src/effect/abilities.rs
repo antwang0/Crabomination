@@ -123,6 +123,10 @@ pub enum StaticEffect {
     /// this turn" (Hollow One). Card-intrinsic; read by
     /// `cost_reduction_for_spell` off `Player.cards_discarded_this_turn`.
     SelfCostReducedPerDiscardThisTurn { per: u32 },
+    /// "Each player can't cast more than one spell each turn" (Rule of Law,
+    /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
+    /// `perform_action` cast gate against `Player.spells_cast_this_turn`.
+    OneSpellPerTurn,
     /// CR 104.3c override — "If you would draw a card while your library has
     /// no cards in it, you win the game instead" (Laboratory Maniac, Jace,
     /// Wielder of Mysteries, Thassa's Oracle's gate). Consulted by

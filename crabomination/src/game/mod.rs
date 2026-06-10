@@ -3721,6 +3721,18 @@ impl GameState {
         {
             return Err(GameError::SilencedThisTurn);
         }
+        // Rule of Law-style one-spell-per-turn lock — gated here so every
+        // Cast* variant is covered at once.
+        if action.is_cast()
+            && self.players[self.priority.player_with_priority].spells_cast_this_turn >= 1
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::OneSpellPerTurn)
+                })
+            })
+        {
+            return Err(GameError::SpellLimitReached);
+        }
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
             GameAction::PlayLandBack(id) => self.play_land_with_face(id, true),
@@ -7734,7 +7746,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::RedirectDamageToSelf
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
-            | StaticEffect::WinInsteadOfDrawFromEmpty => vec![],
+            | StaticEffect::WinInsteadOfDrawFromEmpty
+            | StaticEffect::OneSpellPerTurn => vec![],
         })
         .collect()
 }

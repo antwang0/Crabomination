@@ -533,6 +533,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         suppression_field,
         burrenton_forge_tender,
         kor_firewalker,
+        // one-spell-per-turn locks
+        rule_of_law,
+        eidolon_of_rhetoric,
+        archon_of_emeria,
         // Disturb (CR 702.146)
         beloved_beggar,
         mourning_patrol,

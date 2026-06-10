@@ -48082,3 +48082,47 @@ fn creeping_chill_drains_when_milled() {
     assert_eq!(g.players[0].life, 23);
     assert!(g.exile.iter().any(|c| c.definition.name == "Creeping Chill"));
 }
+
+// ── One-spell-per-turn locks (Rule of Law family) ────────────────────────────
+
+/// Rule of Law rejects a second cast (any Cast* variant) by either player.
+#[test]
+fn rule_of_law_blocks_second_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rule_of_law());
+    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast_at(&mut g, b1, Target::Player(1));
+    let second = g.perform_action(GameAction::CastSpell {
+        card_id: b2, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    });
+    assert!(matches!(second, Err(GameError::SpellLimitReached)));
+    // graveyard recasts are spells too
+    let hellspark = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: hellspark, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).is_err());
+}
+
+/// Archon of Emeria makes an opponent's nonbasic land enter tapped; the
+/// controller's own lands are unaffected.
+#[test]
+fn archon_of_emeria_taps_opponent_nonbasics() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archon_of_emeria());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(1, catalog::sunbaked_canyon());
+    g.perform_action(GameAction::PlayLand(land)).expect("play nonbasic");
+    assert!(g.battlefield_find(land).unwrap().tapped, "entered tapped");
+    let basic = g.add_card_to_hand(1, catalog::mountain());
+    g.players[1].lands_played_this_turn = 0;
+    g.perform_action(GameAction::PlayLand(basic)).expect("play basic");
+    assert!(!g.battlefield_find(basic).unwrap().tapped, "basics unaffected");
+}
