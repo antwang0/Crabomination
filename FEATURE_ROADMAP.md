@@ -245,8 +245,12 @@ not how Magic works" moments.
   through both the serde and `GameSnapshot` paths (front name + flag rebuild
   the back face). Ships Concealing Curtains, Delver of Secrets, The Everflowing
   Well. Remaining: Daybound/Nightbound auto-flip, DFC sagas.
-- ⏳ **Flip cards** (Kamigawa), **Meld** (Mightstone/Weakstone et al.),
-  **Prototype**, **Omen**.
+- ✅ **Meld** (CR 701.37/712.16) — `Effect::Meld` exiles both own+controlled
+  components and mints the melded card with the parts stashed in
+  `CardInstance.meld_parts`; every leave-battlefield funnel unmelds back into
+  both cards. Urza, Lord Protector + The Mightstone and Weakstone → Urza,
+  Planeswalker (loyalty-twice-each-turn override, CR 606.3).
+- ⏳ **Flip cards** (Kamigawa), **Prototype**, **Omen**.
 - 🟡 **Face-down permanents** — the 2/2-face-down object ships (CR 708):
   `CardInstance.face_up_def` stashes the real card while `definition` is the
   vanilla 2/2 (`facedown_creature_definition`), restored on leaving the
@@ -273,7 +277,7 @@ feature; sweep card-batch by card-batch.
   702.35), ✅ Escape (`Keyword::Escape(cost, n)` + `GameAction::CastEscape`,
   CR 702.139 — cast from graveyard for escape cost + exile N other gy cards;
   instants/sorceries re-escape), ✅ Adventure (CR 715, see Tier 3),
-  ⏳ Soulbond, ⏳ Mutate, 🟡 Companion (CR 702.139 — `Keyword::Companion` + `GameAction::CompanionToHand`, {3} sideboard→hand; deck validation ⏳), ✅ Foretell
+  ✅ Soulbond (see CUBE_FEATURES — `SoulbondBonus`, pairs auto-resolve), ⏳ Mutate, 🟡 Companion (CR 702.139 — `Keyword::Companion` + `GameAction::CompanionToHand`, {3} sideboard→hand; deck validation ⏳), ✅ Foretell
   (`CardDefinition.foretell_cost` + `GameAction::Foretell` /
   `CastForetold` — CR 702.143: pay {2} to exile face-down, cast from exile
   for the foretell cost on a later turn; Saw It Coming, Doomskar, Behold the
@@ -427,7 +431,7 @@ feature; sweep card-batch by card-batch.
   `GameAction::CastSpellReplicate { times }`: pay the replicate cost any number
   of times, copy the spell that many times via `copy_stack_spell`; Pyromatics,
   Train of Thought, Shattering Spree), ⏳ Overload (note: already shipped as
-  an alt-cost `effect_override`; see Tier 1), ✅ Cipher (CR 702.46 — `Effect::Cipher` + `CardInstance.encoded_on`; Shadow Slice), ⏳ Surge, ✅ Spectacle
+  an alt-cost `effect_override`; see Tier 1), ✅ Cipher (CR 702.46 — `Effect::Cipher` + `CardInstance.encoded_on`; Shadow Slice), ✅ Surge (`shortcut::surge`, CR 702.108 — OGW batch), ✅ Spectacle
   (`shortcut::spectacle` / `AlternativeCost.condition` —
   `Predicate::PlayerLostLifeThisTurn` + `Player.lost_life_this_turn`, CR
   702.111: cast for the spectacle cost if an opponent lost life this turn;
@@ -502,7 +506,7 @@ feature; sweep card-batch by card-batch.
   Aura for its bestow cost, granting its `equipped_bonus`; not a creature
   while bestowed (`compute_permanent` strips the type); reverts to a
   creature when its host leaves (SBA); surfaced in `PlayerView.
-  bestowable_hand`; Baleful Eidolon), ⏳ Tribute.
+  bestowable_hand`; Baleful Eidolon), ✅ Tribute (CR 702.104 — `Effect::Tribute` + `shortcut::tribute`; opponent answers via the synchronous decider; Fanatic of Xenagos, Oracle of Bones).
 
 ## Tier 5 — Mana & cost system
 

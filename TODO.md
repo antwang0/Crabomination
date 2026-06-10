@@ -18,12 +18,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Room rules corners** — lock-a-door effects (709.5g), "fully unlock"
     triggers (709.5i), and combined MV in non-stack zones (709.4b) are not
     modeled; door casts also skip the convoke/delve/alt-cost riders.
-  - **`add_room_field.py`** patched ~2.5k fully-specified `CardDefinition`
-    literals; converting the old STX factories to `..Default::default()`
-    style would stop this recurring per-new-field churn.
+  - ✅ **Old-style factories converted** — `scripts/convert_to_default_style.py`
+    rewrote all ~2.6k fully-specified `CardDefinition` literals to
+    `..Default::default()` style (-74k lines); new `CardDefinition` fields no
+    longer require catalog-wide patch scripts.
 
-- ⏳ **Meld** (The Mightstone and Weakstone) — its own object-model
-  feature. (Rooms ✅ — CR 709.5, Unholy Annex // Ritual Chamber.)
+- ✅ **Meld** ships (CR 701.37 — see the rules-audit row); The Mightstone
+  and Weakstone is now fully faithful (Legendary, artifact-only {C}{C}).
+  (Rooms ✅ — CR 709.5, Unholy Annex // Ritual Chamber.)
 - ✅ **This batch shipped** (was the "deferred, each wants one primitive"
   list): DFC sagas (`Effect::ExileSelfReturnTransformed` — Fable of the
   Mirror-Breaker), search statics (`OpponentsSearchTopN` / `SearchTax` —
@@ -1110,6 +1112,18 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 701.37 / 712.16 — Meld** — `Effect::Meld` (exile both own+controlled
+  components → mint the melded card; `CardInstance.meld_parts` makes every
+  leave-battlefield funnel unmeld it back into both cards). Urza, Lord
+  Protector + The Mightstone and Weakstone → Urza, Planeswalker, whose
+  CR 606.3 "twice each turn" override rides
+  `CardDefinition.loyalty_twice_each_turn` + the new
+  `CardInstance.loyalty_uses_this_turn` counter. Tests `meld_*`,
+  `urza_planeswalker_twice_per_turn_and_discount`.
+- ✅ **CR 702.104 — Tribute** — `Effect::Tribute { n, otherwise }` +
+  `shortcut::tribute`; the opponent answers via the synchronous decider
+  (AutoDecider declines → trigger half fires). Fanatic of Xenagos, Oracle
+  of Bones (filtered `CastFromHandWithoutPaying`).
 - ✅ **CR 728 — Ending the Turn** — `Effect::EndTheTurn` exiles the stack
   (the resolving spell included, 728.1a), clears combat (728.1b), and jumps
   to cleanup (728.1d) via `do_end_the_turn`. Sundial of the Infinite,
@@ -1283,9 +1297,11 @@ picking an item up.
   `Effect::PreventAllDamageFromChosenSourceThisTurn` +
   `GameState.damage_prevented_sources`, consulted at both damage funnels
   (Burrenton Forge-Tender; the source is chosen as the ability resolves,
-  among stack spells and battlefield permanents). Remaining: per-shield
-  source restriction (a `PreventNextDamage` shield still soaks any
-  source's next hit).
+  among stack spells and battlefield permanents). Per-shield source
+  restriction ✅ — `PreventionShield.{source,one_event}` +
+  `Effect::PreventNextDamageFromChosenSource` (the damage source is now
+  threaded through `apply_prevention_shields` at both funnels; Circle of
+  Protection cycle, Rune of Protection: Red/Black).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Phasing / extra-step insertion still ⏳.
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail.
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
