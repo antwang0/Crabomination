@@ -123,6 +123,9 @@ pub struct EffectContext {
     /// the resolving `CardInstance.bargained` flag; read by
     /// `Predicate::SpellWasBargained`. Defaults to `false`.
     pub bargained: bool,
+    /// True if the resolving spell was entwined (CR 702.41): its
+    /// `ChooseMode` runs every mode in order. Defaults to `false`.
+    pub entwined: bool,
 }
 
 impl EffectContext {
@@ -141,6 +144,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            entwined: false,
         }
     }
     /// Spell-resolution context with the resolving spell's
@@ -218,6 +222,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            entwined: false,
         }
     }
     pub fn for_trigger(
@@ -240,6 +245,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            entwined: false,
         }
     }
     pub fn for_ability(
@@ -261,6 +267,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            entwined: false,
         }
     }
 }
@@ -699,17 +706,18 @@ impl GameState {
             Effect::Seq(steps) => {
                 for (idx, step) in steps.iter().enumerate() {
                     self.run_effect(step, ctx, events)?;
-                    // A child effect signalled suspension — prepend the rest of
-                    // this Seq onto whatever remaining effects it already saved.
+                    // A child effect signalled suspension — append the rest of
+                    // this Seq after whatever remaining effects it already
+                    // saved (the child's own continuation runs first).
                     if let Some((_, _, remaining)) = self.suspend_signal.as_mut() {
                         let tail: Vec<Effect> = steps[idx + 1..].to_vec();
                         if !tail.is_empty() {
                             let carried = std::mem::replace(remaining, Effect::Noop);
                             let mut combined = Vec::with_capacity(tail.len() + 1);
-                            combined.extend(tail);
                             if !matches!(carried, Effect::Noop) {
                                 combined.push(carried);
                             }
+                            combined.extend(tail);
                             *remaining = Effect::seq(combined);
                         }
                         return Ok(());
@@ -879,6 +887,38 @@ impl GameState {
             }
 
             Effect::ChooseMode(modes) => {
+                // CR 702.41c — an entwined spell runs every mode in order;
+                // each target-bearing mode owns the next target slot. A
+                // suspending mode carries the remaining modes as its
+                // continuation (same shape as Seq above).
+                if ctx.entwined {
+                    let mut slot = 0usize;
+                    for (idx, m) in modes.iter().enumerate() {
+                        if m.requires_target() {
+                            let mut sub_ctx = ctx.clone();
+                            sub_ctx.targets =
+                                ctx.targets.get(slot).cloned().into_iter().collect();
+                            slot += 1;
+                            self.run_effect(m, &sub_ctx, events)?;
+                        } else {
+                            self.run_effect(m, ctx, events)?;
+                        }
+                        if let Some((_, _, remaining)) = self.suspend_signal.as_mut() {
+                            let tail: Vec<Effect> = modes[idx + 1..].to_vec();
+                            if !tail.is_empty() {
+                                let carried = std::mem::replace(remaining, Effect::Noop);
+                                let mut combined = Vec::with_capacity(tail.len() + 1);
+                                if !matches!(carried, Effect::Noop) {
+                                    combined.push(carried);
+                                }
+                                combined.extend(tail);
+                                *remaining = Effect::seq(combined);
+                            }
+                            return Ok(());
+                        }
+                    }
+                    return Ok(());
+                }
                 let idx = ctx.mode;
                 if let Some(m) = modes.get(idx) {
                     self.run_effect(m, ctx, events)
@@ -7930,7 +7970,6 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
-            Selector::ChoiceResult(_) => vec![], // TODO when decision loop lands
             Selector::CardExiledWithSource => self
                 .exile
                 .iter()

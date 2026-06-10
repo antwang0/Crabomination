@@ -514,6 +514,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         exalted_angel,
         // ── modern_decks-18: search hate (CR 701.19) ──
         aven_mindcensor,
+        ghosts_of_the_innocent,
         leonin_arbiter,
         sanctifier_en_vec,
         suppression_field,
@@ -2370,6 +2371,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        tooth_and_nail,
         // ── modern_decks-18 ──
         crashing_footfalls,
         dryad_of_the_ilysian_grove,

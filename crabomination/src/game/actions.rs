@@ -1185,7 +1185,7 @@ impl GameState {
             let card = self.players[p].graveyard.remove(pos);
             self.players[p].hand.push(card);
             let r = self.cast_spell_with_convoke(
-                card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false,
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
             match &r {
                 Err(_) => {
@@ -1210,7 +1210,7 @@ impl GameState {
             let card = self.players[p].library.remove(0);
             self.players[p].hand.push(card);
             let r = self.cast_spell_with_convoke(
-                card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false,
+                card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default(),
             );
             if r.is_err()
                 && let Some(pos) = self.players[p].hand.iter().position(|c| c.id == card_id)
@@ -1220,7 +1220,7 @@ impl GameState {
             }
             return r;
         }
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags::default())
     }
 
     /// Muldrotha — when `card_id` sits in `p`'s graveyard, it's `p`'s turn,
@@ -1292,7 +1292,7 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], true, false, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags { kicked: true, ..Default::default() })
     }
 
     /// CR 702.153 — cast a spell paying its optional Casualty cost. The named
@@ -1570,7 +1570,20 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, true, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags { buyback: true, ..Default::default() })
+    }
+
+    /// CR 702.41 — cast a modal spell paying its Entwine cost; every mode
+    /// runs in order at resolution.
+    pub(crate) fn cast_spell_entwine(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags { entwine: true, ..Default::default() })
     }
 
     /// CR 702.62 — suspend a card from hand: pay its suspend cost and exile
@@ -2203,7 +2216,7 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false, true)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags { bestow: true, ..Default::default() })
     }
 
     /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
@@ -2221,7 +2234,7 @@ impl GameState {
         x_value: Option<u32>,
         delve_cards: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, false, false, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, CastFlags::default())
     }
 
     /// Internal cast-spell helper with optional convoke creatures and delve
@@ -2240,10 +2253,9 @@ impl GameState {
         x_value: Option<u32>,
         convoke_creatures: &[CardId],
         delve_cards: &[CardId],
-        kicked: bool,
-        buyback: bool,
-        bestow: bool,
+        flags: CastFlags,
     ) -> Result<Vec<GameEvent>, GameError> {
+        let CastFlags { kicked, buyback, bestow, entwine } = flags;
         let p = self.priority.player_with_priority;
 
         if !self.players[p].has_in_hand(card_id) {
@@ -2267,6 +2279,7 @@ impl GameState {
             && !kicked
             && !buyback
             && !bestow
+            && !entwine
         {
             let card_info = self.players[p]
                 .hand
@@ -2373,6 +2386,9 @@ impl GameState {
         // at resolution to return the spell to hand instead of the gy.
         let buyback = buyback && card.definition.has_buyback().is_some();
         card.bought_back = buyback;
+        // CR 702.41 — opt-in Entwine; only sticks when the card has it.
+        let entwine = entwine && card.definition.has_entwine().is_some();
+        card.entwined = entwine;
         // CR 702.103 — Bestow: cast as an Aura targeting a creature. The
         // bestow cost replaces the regular cost (below); `bestowed` flags
         // the resolving permanent as an Aura that attaches to its target.
@@ -2604,6 +2620,12 @@ impl GameState {
         if buyback && let Some(bb) = card.definition.has_buyback() {
             cost.symbols.extend(bb.symbols.iter().cloned());
         }
+        // CR 702.41b — fold the optional entwine cost into the total cost.
+        if entwine && let Some(ec) = card.definition.has_entwine() {
+            for s in &ec.symbols {
+                cost.symbols.push(s.clone());
+            }
+        }
         let tax = extra_cost_for_spell(self, p, &card);
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
@@ -2669,6 +2691,8 @@ impl GameState {
                 GameAction::CastSpellKicked { card_id, target, additional_targets, mode, x_value }
             } else if buyback {
                 GameAction::CastSpellBuyback { card_id, target, additional_targets, mode, x_value }
+            } else if entwine {
+                GameAction::CastSpellEntwine { card_id, target, additional_targets, mode, x_value }
             } else if bestow {
                 GameAction::CastBestow { card_id, target, additional_targets, mode, x_value }
             } else {
@@ -3437,6 +3461,7 @@ impl GameState {
                     event_amount: 0,
                     kicked: false,
                     bargained: false,
+                    entwined: false,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
@@ -4362,6 +4387,7 @@ impl GameState {
                 event_amount: 0,
                 kicked: false,
                 bargained: false,
+                    entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::NoAlternativeCost);
@@ -5013,6 +5039,7 @@ impl GameState {
                     event_amount: 0,
                     kicked: false,
                     bargained: false,
+                    entwined: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -6149,6 +6176,7 @@ impl GameState {
                 event_amount: 0,
                 kicked: false,
                 bargained: false,
+                    entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);
@@ -6979,4 +7007,16 @@ pub(crate) struct PaymentReceipt {
     pub auto_events: Vec<GameEvent>,
     pub side_effects: crate::mana::PaymentSideEffects,
     pub pool_before: crate::mana::ManaPool,
+}
+
+/// Optional-cost cast variants threaded through
+/// `GameState::cast_spell_with_convoke` (Kicker / Buyback / Bestow /
+/// Entwine). Each flag only sticks when the card carries the matching
+/// keyword.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct CastFlags {
+    pub kicked: bool,
+    pub buyback: bool,
+    pub bestow: bool,
+    pub entwine: bool,
 }

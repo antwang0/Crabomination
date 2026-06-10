@@ -46603,3 +46603,86 @@ fn the_one_ring_protection_until_your_next_turn() {
     g.do_untap();
     assert!(!g.players[0].protected_from_everything, "expires on your turn");
 }
+
+// ── CR 614.5 — damage halving (Ghosts of the Innocent) ──────────────────────
+
+/// Ghosts of the Innocent halves spell damage rounded down; a Bolt deals 1.
+#[test]
+fn ghosts_of_the_innocent_halves_noncombat_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ghosts_of_the_innocent());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the player");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19, "3 halved to 1");
+}
+
+/// Halving applies to combat damage too, and composes with a doubler
+/// (double then halve = unchanged).
+#[test]
+fn ghosts_of_the_innocent_halves_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::ghosts_of_the_innocent());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    g.resolve_combat().expect("combat damage");
+    assert_eq!(g.players[1].life, 19, "2 halved to 1");
+}
+
+// ── CR 702.41 — Entwine (Tooth and Nail) ────────────────────────────────────
+
+/// Plain cast runs only the chosen mode (mode 1: put creatures from hand).
+#[test]
+fn tooth_and_nail_plain_cast_runs_one_mode() {
+    let mut g = two_player_game();
+    let tn = g.add_card_to_hand(0, catalog::tooth_and_nail());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::craw_wurm());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: tn, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast Tooth and Nail mode 1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "Bear put onto battlefield");
+    assert_eq!(g.players[0].library.len(), 1, "no search happened");
+}
+
+/// Entwined cast pays {2} more and runs both modes: tutors to hand, then
+/// puts from hand onto the battlefield.
+#[test]
+fn tooth_and_nail_entwined_runs_both_modes() {
+    let mut g = two_player_game();
+    let tn = g.add_card_to_hand(0, catalog::tooth_and_nail());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let w1 = g.add_card_to_library(0, catalog::craw_wurm());
+    let w2 = g.add_card_to_library(0, catalog::craw_wurm());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    // Without the entwine {2} the cast is rejected.
+    assert!(g.perform_action(GameAction::CastSpellEntwine {
+        card_id: tn, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).is_err(), "entwine cost unpaid");
+    g.players[0].mana_pool.add_colorless(7);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(w1)),
+        DecisionAnswer::Search(Some(w2)),
+        DecisionAnswer::Cards(vec![bear]),
+    ]));
+    g.perform_action(GameAction::CastSpellEntwine {
+        card_id: tn, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("entwined cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "mode 2 put the Bear out");
+    assert!(g.players[0].library.is_empty(), "mode 1 tutored both Wurms");
+}

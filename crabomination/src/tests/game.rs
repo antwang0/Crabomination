@@ -5580,6 +5580,7 @@ fn effect_untap_removes_stun_counter_instead_of_untapping() {
         event_amount: 0,
         kicked: false,
         bargained: false,
+        entwined: false,
     };
     g.resolve_effect(
         &Effect::Untap {
@@ -5806,6 +5807,7 @@ fn cr_121_2b_draw_cap_truncates_draws() {
         event_amount: 0,
         kicked: false,
         bargained: false,
+        entwined: false,
     };
     g.resolve_effect(
         &Effect::Draw { who: Selector::You, amount: Value::Const(3) },
@@ -6274,6 +6276,7 @@ fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
         event_amount: 0,
         kicked: false,
         bargained: false,
+        entwined: false,
     };
     assert!(!g.evaluate_predicate(&morbid, &ctx), "no deaths yet → morbid off");
     // A creature died under the opponent's control (seat 1).

@@ -431,6 +431,10 @@ pub enum Keyword {
     /// instead of the graveyard as it resolves. Cast via
     /// `GameAction::CastSpellBuyback`.
     Buyback(crate::mana::ManaCost),
+    /// CR 702.41 — Entwine. An optional additional cost on a modal spell;
+    /// if paid, every mode runs in order instead of one. Cast via
+    /// `GameAction::CastSpellEntwine`. Tooth and Nail.
+    Entwine(crate::mana::ManaCost),
     /// CR 702.176 — Bargain. An optional additional cost: as you cast the
     /// spell you may sacrifice an artifact, enchantment, or token. If you do,
     /// the spell is "bargained" (`Predicate::SpellWasBargained` gates the
@@ -1801,6 +1805,11 @@ impl CardDefinition {
             if let Keyword::Buyback(cost) = kw { Some(cost) } else { None }
         })
     }
+    pub fn has_entwine(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Entwine(cost) = kw { Some(cost) } else { None }
+        })
+    }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         // Offspring (CR 702.166) is an optional additional cast cost that
         // reuses the Kicker pipeline (pay it → `SpellWasKicked` → ETB mints a
@@ -1955,6 +1964,9 @@ pub struct CardInstance {
     /// cost. On resolution the resolver returns the card to its owner's
     /// hand instead of the graveyard.
     pub bought_back: bool,
+    /// CR 702.41 — true if this spell was cast paying its optional Entwine
+    /// cost: its `ChooseMode` runs every mode in order.
+    pub entwined: bool,
     /// CR 702.103 — true while this permanent is on the battlefield as a
     /// bestowed Aura. It's an Aura (not a creature) for as long as this is
     /// set; cleared by the SBA when the enchanted creature leaves, at which
@@ -2207,6 +2219,7 @@ impl CardInstance {
             squad_count: 0,
             bargained: false,
             bought_back: false,
+            entwined: false,
             bestowed: false,
             face_down: false,
             transformed: false,
@@ -2438,6 +2451,9 @@ struct CardInstanceWire {
     /// as `false`.
     #[serde(default)]
     bought_back: bool,
+    /// CR 702.41 entwine flag. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    entwined: bool,
     /// CR 702.103 bestowed flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -2584,6 +2600,7 @@ impl serde::Serialize for CardInstance {
             soulbond_partner: self.soulbond_partner,
             kicked: self.kicked,
             bought_back: self.bought_back,
+            entwined: self.entwined,
             bestowed: self.bestowed,
             face_down: self.face_down,
             face_down_permanent: self.face_up_def.is_some(),
@@ -2647,6 +2664,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.soulbond_partner = wire.soulbond_partner;
         c.kicked = wire.kicked;
         c.bought_back = wire.bought_back;
+        c.entwined = wire.entwined;
         c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;
         // CR 708 — restore a face-down permanent: stash the real definition

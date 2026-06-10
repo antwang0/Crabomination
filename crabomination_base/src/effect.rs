@@ -115,9 +115,6 @@ pub enum Selector {
     /// Resolves via `GameState.block_map[source]`. Used by "whenever this
     /// blocks a creature, [affect that creature]" triggers (Wall of Frost).
     BlockedAttacker,
-    /// The player/object that answered a pending decision.
-    ChoiceResult(u8),
-
     /// CR 702.76 — the card hidden (exiled) by the source via Hideaway: the
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.

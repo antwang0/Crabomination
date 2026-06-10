@@ -288,6 +288,11 @@ pub enum StaticEffect {
     /// the non-combat `deal_damage_to_from` path; combat-damage doubling is
     /// tracked in TODO.md under CR 614.2.
     DoubleDamageDealt,
+    /// CR 614.5 — "If a source would deal damage to a permanent or player,
+    /// it deals half that damage, rounded down, instead." (Ghosts of the
+    /// Innocent.) Read by `GameState::damage_halvers`; applied after any
+    /// doublers at both damage funnels.
+    HalveDamageDealt,
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

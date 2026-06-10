@@ -40890,3 +40890,53 @@ pub fn street_wraith() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ghosts of the Innocent — {5}{W}{W} 4/4 Spirit. All damage to permanents
+/// and players is halved, rounded down (CR 614.5).
+pub fn ghosts_of_the_innocent() -> CardDefinition {
+    CardDefinition {
+        name: "Ghosts of the Innocent",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "If a source would deal damage to a permanent or player, it deals half that damage, rounded down, instead.",
+            effect: StaticEffect::HalveDamageDealt,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tooth and Nail — {5}{G}{G} Sorcery. Choose one: tutor up to two creature
+/// cards to hand; or put up to two creature cards from hand onto the
+/// battlefield. Entwine {2} (CR 702.41).
+pub fn tooth_and_nail() -> CardDefinition {
+    let tutor = || Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::Creature,
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Tooth and Nail",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Entwine(cost(&[generic(2)]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![tutor(), tutor()]),
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                count: Value::Const(2),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+        ]),
+        ..Default::default()
+    }
+}

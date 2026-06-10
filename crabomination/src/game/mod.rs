@@ -2084,6 +2084,32 @@ impl GameState {
             .sum()
     }
 
+    /// CR 614.5 — number of `StaticEffect::HalveDamageDealt` permanents on
+    /// the battlefield (Ghosts of the Innocent). Each halves the dealt
+    /// amount, rounded down; applied after any doublers.
+    pub fn damage_halvers(&self) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::HalveDamageDealt))
+                    .count() as u32
+            })
+            .sum()
+    }
+
+    /// Scale a pending damage event by the global doubling/halving
+    /// replacements (CR 614.2 / 614.5): every doubler ×2, then every
+    /// halver ÷2 rounded down.
+    pub fn scale_damage(&self, amount: u32) -> u32 {
+        let d = self.damage_doublers().min(16);
+        let h = self.damage_halvers().min(16);
+        amount.saturating_mul(1 << d) >> h
+    }
+
     /// CR 122.1 — true if any active `StaticEffect::CountersCantBePlaced`
     /// (Solemnity) is on the battlefield. While set, every counter-placement
     /// site drops the counters instead of adding them.
@@ -3674,6 +3700,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_buyback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSpellEntwine {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_entwine(card_id, target, additional_targets, mode, x_value),
             GameAction::CastBestow {
                 card_id,
                 target,
@@ -3786,7 +3819,7 @@ impl GameState {
                 mode,
                 x_value,
                 convoke_creatures,
-            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], false, false, false),
+            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], crate::game::actions::CastFlags::default()),
             GameAction::CastSpellDelve {
                 card_id,
                 target,
@@ -5186,6 +5219,7 @@ impl GameState {
                     event_amount,
                     kicked: false,
                     bargained: false,
+                    entwined: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -6605,6 +6639,7 @@ impl GameState {
         );
         ctx.kicked = card.kicked;
         ctx.bargained = card.bargained;
+        ctx.entwined = card.entwined;
         let mut events = self.resolve_effect(&effect, &ctx)?;
         // CR 709 / 702.102 — a fused split cast resolves its right half in a
         // second pass, reading its target from `additional_targets` slot 0
@@ -7427,9 +7462,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // DoubleCounters — read at `Effect::AddCounter` resolution time
             // via `GameState::counter_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleCounters
-            // DoubleDamageDealt — read at non-combat damage time via
-            // `GameState::damage_doublers`; no layer effect.
+            // DoubleDamageDealt / HalveDamageDealt — read at damage time via
+            // `GameState::damage_doublers` / `damage_halvers`; no layer effect.
             | StaticEffect::DoubleDamageDealt
+            | StaticEffect::HalveDamageDealt
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }
