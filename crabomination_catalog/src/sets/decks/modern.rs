@@ -39061,3 +39061,41 @@ pub fn rediscover_the_way() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zirda, the Dawnwaker — {1}{R/W}{R/W} Legendary 3/3 Elemental Fox.
+/// Companion (CR 702.139 — {3}: sideboard → hand; the deck restriction is
+/// unvalidated). Non-mana activated abilities cost {2} less (min one
+/// mana). {1}, {T}: Target creature can't block this turn.
+pub fn zirda_the_dawnwaker() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Duration, StaticAbility, StaticEffect};
+    use crate::mana::hybrid;
+    CardDefinition {
+        name: "Zirda, the Dawnwaker",
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Fox],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Companion],
+        static_abilities: vec![StaticAbility {
+            description: "Abilities you activate that aren't mana abilities cost {2} less to activate.",
+            effect: StaticEffect::ActivationCostReduction { amount: 2 },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

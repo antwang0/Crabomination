@@ -3519,6 +3519,7 @@ impl GameState {
             GameAction::PlayLand(id) => self.play_land(id),
             GameAction::PlayLandBack(id) => self.play_land_with_face(id, true),
             GameAction::PlayLandFromGraveyard(id) => self.play_land_from_graveyard(id),
+            GameAction::CompanionToHand(card_id) => self.companion_to_hand(card_id),
             GameAction::CastSpell {
                 card_id,
                 target,
@@ -7220,6 +7221,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
             | StaticEffect::MayCastPermanentsFromGraveyard
+            | StaticEffect::ActivationCostReduction { .. }
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }

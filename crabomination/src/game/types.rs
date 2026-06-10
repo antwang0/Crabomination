@@ -53,6 +53,10 @@ pub enum GameAction {
     /// a `StaticEffect::MayPlayLandsFromGraveyard` permanent (Crucible of
     /// Worlds, Ramunap Excavator) is in play.
     PlayLandFromGraveyard(CardId),
+    /// CR 702.139 — Companion: pay {3} at sorcery speed to move the
+    /// designated companion from the sideboard ("outside the game") into
+    /// its owner's hand. Once per game (the card leaves the sideboard).
+    CompanionToHand(CardId),
     CastSpell { card_id: CardId, target: Option<Target>, additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// CR 702.32 — cast a spell paying its optional Kicker cost in addition
     /// to the mana cost. The resolving spell is stamped `kicked` so

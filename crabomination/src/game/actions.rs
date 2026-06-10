@@ -853,6 +853,38 @@ impl GameState {
     /// a `StaticEffect::MayPlayLandsFromGraveyard` permanent (Crucible of
     /// Worlds, Ramunap Excavator) is in play. Honors the same sorcery-speed
     /// and one-land-per-turn restrictions as a hand land play.
+    /// CR 702.139 — pay {3} at sorcery speed to move a companion from the
+    /// sideboard to its owner's hand (once per game; it leaves the
+    /// sideboard for good).
+    pub(crate) fn companion_to_hand(
+        &mut self,
+        card_id: CardId,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let Some(idx) = self.players[p]
+            .sideboard
+            .iter()
+            .position(|c| c.id == card_id && c.definition.keywords.contains(&Keyword::Companion))
+        else {
+            return Err(GameError::CardNotInHand(card_id));
+        };
+        let cost = crate::mana::cost(&[crate::mana::generic(3)]);
+        let snapshot = self.snapshot_payment_state(p);
+        let forced_only = self.players[p].wants_ui;
+        let receipt =
+            self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &crate::mana::SpellKind::default(), None)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let card = self.players[p].sideboard.remove(idx);
+        let cid = card.id;
+        self.players[p].hand.push(card);
+        Ok(vec![GameEvent::CardDrawn { player: p, card_id: cid }])
+    }
+
     pub(crate) fn play_land_from_graveyard(
         &mut self,
         card_id: CardId,
@@ -6363,6 +6395,24 @@ impl GameState {
             let count = src.counter_count(kind);
             if count > 0 {
                 effective_mana_cost.reduce_generic(count);
+            }
+        }
+        // Zirda — non-mana activated abilities cost {N} less (generic only),
+        // floored at one mana of the printed cost.
+        if !is_mana_ability(&ability.effect) && !effective_mana_cost.symbols.is_empty() {
+            let total: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::ActivationCostReduction { amount } => amount,
+                    _ => 0,
+                })
+                .sum();
+            if total > 0 {
+                let max_cut = effective_mana_cost.cmc().saturating_sub(1);
+                effective_mana_cost.reduce_generic(total.min(max_cut));
             }
         }
 

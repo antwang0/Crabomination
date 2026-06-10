@@ -44593,3 +44593,44 @@ fn rediscover_the_way_chapter_three_grants_double_strike_per_noncreature_spell()
         "noncreature cast after chapter III grants double strike");
 }
 
+
+#[test]
+fn zirda_companion_comes_to_hand_for_three() {
+    let mut g = two_player_game();
+    let zirda = g.next_id();
+    g.players[0].sideboard.push(crate::card::CardInstance::new(
+        zirda, catalog::zirda_the_dawnwaker(), 0,
+    ));
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CompanionToHand(zirda)).expect("companion for {3}");
+    assert!(g.players[0].hand.iter().any(|c| c.id == zirda), "Zirda in hand");
+    assert!(g.players[0].sideboard.is_empty(), "left the sideboard for good");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "{{3}} paid");
+}
+
+#[test]
+fn zirda_discounts_nonmana_activations_with_a_floor() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let zirda = g.add_card_to_battlefield(0, catalog::zirda_the_dawnwaker());
+    g.clear_sickness(zirda);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Zirda's own {1},{T} ability: {1} − {2} would be free, but the floor
+    // keeps one mana... CR: "can't reduce the mana in that cost to less
+    // than one mana" — {1} stays {1}.
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: zirda, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        })
+        .is_err(),
+        "no mana floating — the floored cost is still {{1}}"
+    );
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zirda, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    })
+    .expect("{1} after floor");
+    drain_stack(&mut g);
+    let computed = g.computed_permanent(bear).unwrap();
+    assert!(computed.keywords.contains(&crate::card::Keyword::CantBlock));
+}

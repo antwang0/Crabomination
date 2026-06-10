@@ -327,6 +327,10 @@ pub enum StaticEffect {
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of
     /// `HasActivatedAbilitiesOfGraveyardCreatures`.
     CounteredCreaturesHaveAbilitiesOfExiledWithSource,
+    /// "Abilities you activate that aren't mana abilities cost {N} less to
+    /// activate. This effect can't reduce the mana in that cost to less
+    /// than one mana." Zirda, the Dawnwaker (generic-only reduction).
+    ActivationCostReduction { amount: u32 },
     /// "During each of your turns, you may cast a permanent spell of each
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).

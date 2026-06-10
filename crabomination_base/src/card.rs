@@ -499,6 +499,10 @@ pub enum Keyword {
     Prowess,
     Ward(WardCost),
     Changeling,
+    /// CR 702.139 — Companion. Deck-construction restriction unvalidated;
+    /// a sideboard copy moves to hand for {3} at sorcery speed via
+    /// `GameAction::CompanionToHand`.
+    Companion,
     /// CR 702.146 — Daybound. A permanent with daybound is on the battlefield
     /// only as day; on the front face of a daybound/nightbound DFC. When it
     /// becomes night, the engine transforms it to its nightbound back face.

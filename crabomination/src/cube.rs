@@ -255,6 +255,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         agathas_soul_cauldron,
         mutated_cultist,
         rediscover_the_way,
+        zirda_the_dawnwaker,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,
