@@ -40658,3 +40658,211 @@ pub fn living_end() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks-20 ──────────────────────────────────────────────────────────
+
+/// The One Ring — {4} Legendary Artifact, indestructible. {T}: add a burden
+/// counter, draw that many. Upkeep: lose 1 life per burden counter. (The
+/// cast-trigger "protection from everything until your next turn" is
+/// dropped.)
+pub fn the_one_ring() -> CardDefinition {
+    CardDefinition {
+        name: "The One Ring",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        keywords: vec![Keyword::Indestructible],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Burden,
+                },
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Burden,
+                    amount: Value::ONE,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Burden,
+                    },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Harbinger of the Seas — {1}{U}{U} 2/2 Merfolk Wizard. Nonbasic lands are
+/// Islands.
+pub fn harbinger_of_the_seas() -> CardDefinition {
+    CardDefinition {
+        name: "Harbinger of the Seas",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Nonbasic lands are Islands.",
+            effect: StaticEffect::LandTypeChanger {
+                applies_to: Selector::EachPermanent(SelectionRequirement::IsNonbasicLand),
+                land_type: LandType::Island,
+                replace: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Flare of Denial — {1}{U}{U} Instant. Counter target spell; castable by
+/// sacrificing a nontoken blue creature instead of paying mana.
+pub fn flare_of_denial() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Flare of Denial",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell { what: Selector::Target(0) },
+        alternative_cost: Some(AlternativeCost {
+            sacrifice_permanents: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasColor(Color::Blue))
+                    .and(SelectionRequirement::NotToken),
+                1,
+            )),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Marauding Mako — {R} 1/1 Shark Pirate. Discarding cards grows it; Cycling {2}.
+pub fn marauding_mako() -> CardDefinition {
+    CardDefinition {
+        name: "Marauding Mako",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shark, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nulldrifter — {7} 4/4 Eldrazi Elemental, flying, annihilator 1, draw two
+/// on arrival (cast trigger modeled as ETB), Evoke {2}{U}.
+pub fn nulldrifter() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Nulldrifter",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Annihilator(1)],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), u()]),
+            evoke_sacrifice: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Guide of Souls — {W} 1/2 Human Cleric. Another creature entering gains
+/// you 1 life and {E}; attacking may pay {E}{E}{E} for two +1/+1 counters
+/// and flying on target attacker (the Angel type rider is dropped).
+pub fn guide_of_souls() -> CardDefinition {
+    CardDefinition {
+        name: "Guide of Souls",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                effect: Effect::Seq(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                    Effect::AddEnergy(Value::ONE),
+                ]),
+            },
+            // "Whenever you attack" — approximated as once per attack batch
+            // via once_per_turn (a single combat per turn in practice).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .once_per_turn(),
+                effect: Effect::MayDo {
+                    description: "Pay {E}{E}{E} for +1/+1 counters and flying?".into(),
+                    body: Box::new(Effect::PayEnergy {
+                        amount: 3,
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::AddCounter {
+                                what: target_filtered(
+                                    SelectionRequirement::Creature
+                                        .and(SelectionRequirement::ControlledByYou)
+                                        .and(SelectionRequirement::IsAttacking),
+                                ),
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::Const(2),
+                            },
+                            Effect::GrantKeyword {
+                                what: Selector::Target(0),
+                                keyword: Keyword::Flying,
+                                duration: Duration::Permanent,
+                            },
+                        ])),
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

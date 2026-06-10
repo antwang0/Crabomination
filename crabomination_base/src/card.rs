@@ -271,6 +271,8 @@ pub enum CounterType {
     /// each of the owner's upkeeps; when the last is removed it becomes
     /// castable from exile for {4} less (`GameState::process_hone`).
     Hone,
+    /// Burden counter — The One Ring's draw/life tally.
+    Burden,
     /// Ice counter — Thing in the Ice ticks one off per instant/sorcery you
     /// cast; when the last is removed it transforms (CR 712).
     Ice,

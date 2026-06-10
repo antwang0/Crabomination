@@ -787,6 +787,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Quest => "Quest",
         CounterType::Study => "Study",
         CounterType::Hone => "Hone",
+        CounterType::Burden => "Burden",
         CounterType::Ice => "Ice",
     }
 }
@@ -803,6 +804,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Poison => "Ten poison counters and that player loses.",
         CounterType::Luck => "Chance Encounter wins the game at ten.",
         CounterType::Hone => "Ticks down each of your upkeeps; cast from exile for {4} less when the last is removed.",
+        CounterType::Burden => "The One Ring's tally: draw one per burden counter; lose that much life each upkeep.",
         CounterType::Ice => "Removed by triggered effects; the permanent transforms when the last one is gone.",
         _ => return None,
     })

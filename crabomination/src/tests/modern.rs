@@ -46339,3 +46339,137 @@ fn living_end_swaps_graveyards_for_battlefields() {
     assert!(g.battlefield_find(their_board).is_none(), "boards swept");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spell_gy), "noncreature stays");
 }
+
+// ── modern_decks-20 ──────────────────────────────────────────────────────────
+
+/// The One Ring ramps its draw and drains by burden count at upkeep.
+#[test]
+fn the_one_ring_burden_draw_and_upkeep_drain() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_battlefield(0, catalog::the_one_ring());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ring, ability_index: 0, target: None, x_value: None,
+    }).expect("tick 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "first tick draws one");
+    g.battlefield.iter_mut().find(|c| c.id == ring).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ring, ability_index: 0, target: None, x_value: None,
+    }).expect("tick 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "second tick draws two");
+    // Upkeep drain: 2 burden counters → lose 2.
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "lost 1 per burden counter");
+}
+
+/// Harbinger of the Seas turns nonbasics into Islands.
+#[test]
+fn harbinger_of_the_seas_floods_nonbasics() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::harbinger_of_the_seas());
+    let valakut = g.add_card_to_battlefield(1, catalog::valakut_the_molten_pinnacle());
+    let basic = g.add_card_to_battlefield(1, catalog::mountain());
+    let cp = g.computed_permanent(valakut).unwrap();
+    assert_eq!(cp.subtypes.land_types, vec![LandType::Island], "nonbasic → Island only");
+    let cb = g.computed_permanent(basic).unwrap();
+    assert!(cb.subtypes.land_types.contains(&LandType::Mountain), "basics untouched");
+}
+
+/// Flare of Denial counters a spell by sacrificing a nontoken blue creature.
+#[test]
+fn flare_of_denial_pitch_counters() {
+    let mut g = two_player_game();
+    let pitcher = g.add_card_to_battlefield(1, catalog::harbinger_of_the_seas());
+    let flare = g.add_card_to_hand(1, catalog::flare_of_denial());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast bolt");
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: flare, pitch_card: None, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free Flare via sacrifice");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pitcher).is_none(), "blue creature sacrificed");
+    assert_eq!(g.players[1].life, 20, "bolt countered");
+}
+
+/// Marauding Mako grows on your discards.
+#[test]
+fn marauding_mako_grows_on_discard() {
+    let mut g = two_player_game();
+    let mako = g.add_card_to_battlefield(0, catalog::marauding_mako());
+    let pitch = g.add_card_to_hand(0, catalog::island());
+    let mut evs = Vec::new();
+    g.discard_card(0, pitch, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(mako).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "discard grew the Mako"
+    );
+}
+
+/// Nulldrifter evoked for {2}{U} draws two and is sacrificed.
+#[test]
+fn nulldrifter_evoke_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::nulldrifter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("evoke");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
+    assert!(g.battlefield_find(id).is_none(), "evoked body sacrificed");
+}
+
+/// Guide of Souls pays out life + energy per creature, then converts
+/// {E}{E}{E} into counters and flying on attack.
+#[test]
+fn guide_of_souls_energy_engine() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::guide_of_souls());
+    for _ in 0..3 {
+        let c = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        cast(&mut g, c);
+    }
+    assert_eq!(g.players[0].life, 23, "1 life per creature entry");
+    assert_eq!(g.players[0].energy, 3, "1 energy per creature entry");
+    let attacker = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").unwrap().id;
+    g.clear_sickness(attacker);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    let events = g
+        .declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "paid three energy");
+    let cp = g.computed_permanent(attacker).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "two +1/+1 counters");
+    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
+}

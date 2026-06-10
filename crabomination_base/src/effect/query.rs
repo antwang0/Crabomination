@@ -598,6 +598,7 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::MayDo { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } => body.primary_target_filter(),
+            Effect::PayEnergy { then, .. } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::IfRevealFromHand { then, else_, .. } => then
                 .primary_target_filter()
