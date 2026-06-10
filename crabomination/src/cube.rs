@@ -515,6 +515,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-18: search hate (CR 701.19) ──
         aven_mindcensor,
         ghosts_of_the_innocent,
+        drannith_healer,
+        flourishing_fox,
+        valiant_rescuer,
+        imposing_vantasaur,
         leonin_arbiter,
         sanctifier_en_vec,
         suppression_field,
@@ -1908,6 +1912,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         grab_the_reins,
         roiling_vortex,
         desert_cerodon,
+        drannith_stinger,
         blood_moon,
         magus_of_the_moon,
         fulminator_mage,
@@ -2316,6 +2321,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         bogardan_hellkite,
     ];
     if pair_contains(pair, Color::White) {
+        v.push(zenith_flare);
+        v.push(savai_thundermane);
         v.push(lightning_helix);
         v.push(talisman_of_conviction);
         v.push(fields_of_strife);

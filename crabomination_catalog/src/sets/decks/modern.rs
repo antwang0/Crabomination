@@ -41647,3 +41647,166 @@ pub fn architects_of_will() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Drannith Healer — {1}{W} 2/2. Gain 1 life when you cycle another card;
+/// Cycling {1}.
+pub fn drannith_healer() -> CardDefinition {
+    CardDefinition {
+        name: "Drannith Healer",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+
+/// Flourishing Fox — {W} 1/1. Grows a +1/+1 counter when you cycle
+/// another card; Cycling {1}.
+pub fn flourishing_fox() -> CardDefinition {
+    CardDefinition {
+        name: "Flourishing Fox",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fox],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Valiant Rescuer — {1}{W} 3/1. First cycle each turn mints a 1/1
+/// Soldier; Cycling {2}.
+pub fn valiant_rescuer() -> CardDefinition {
+    CardDefinition {
+        name: "Valiant Rescuer",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: {
+                let mut e = EventSpec::new(EventKind::CardCycled, EventScope::YourControl);
+                e.once_per_turn = true;
+                e
+            },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Human Soldier".to_string(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Imposing Vantasaur — {5}{W} 3/6 vigilance Dinosaur. Cycling {1}.
+pub fn imposing_vantasaur() -> CardDefinition {
+    CardDefinition {
+        name: "Imposing Vantasaur",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Cycling(cost(&[generic(1)]))],
+        ..Default::default()
+    }
+}
+
+/// Zenith Flare — {2}{R}{W} Instant. X damage to any target and X life,
+/// X = cycling cards in your graveyard.
+pub fn zenith_flare() -> CardDefinition {
+    let x = || Value::CountMatching {
+        sel: Box::new(Selector::EachMatching {
+            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+            filter: SelectionRequirement::HasCyclingAbility,
+        }),
+        filter: SelectionRequirement::Any,
+    };
+    CardDefinition {
+        name: "Zenith Flare",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: x(),
+            },
+            Effect::GainLife { who: Selector::You, amount: x() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Savai Thundermane — {R}{W} 3/2. On any cycle, may pay {2}: 2 damage to
+/// target creature and gain 2.
+pub fn savai_thundermane() -> CardDefinition {
+    CardDefinition {
+        name: "Savai Thundermane",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::AnyPlayer),
+            effect: Effect::MayPay {
+                description: "Pay {2}: deal 2 to target creature and gain 2 life?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: target_filtered(SelectionRequirement::Creature),
+                        amount: Value::Const(2),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}

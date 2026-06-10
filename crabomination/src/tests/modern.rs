@@ -47207,3 +47207,78 @@ fn architects_of_will_etb_and_hybrid_cycle() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::Cycle { card_id: second }).expect("hybrid cycle");
 }
+
+// ── Ikoria cycling payoffs ──────────────────────────────────────────────────
+
+/// Cycling one card pays out across the whole cycle-matters board, and
+/// Valiant Rescuer's token is once-per-turn.
+#[test]
+fn ikoria_cycle_payoffs_fire_on_one_cycle() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let fox = g.add_card_to_battlefield(0, catalog::flourishing_fox());
+    g.add_card_to_battlefield(0, catalog::drannith_healer());
+    g.add_card_to_battlefield(0, catalog::drannith_stinger());
+    g.add_card_to_battlefield(0, catalog::valiant_rescuer());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let c1 = g.add_card_to_hand(0, catalog::imposing_vantasaur());
+    let c2 = g.add_card_to_hand(0, catalog::desert_cerodon());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Cycle { card_id: c1 }).expect("cycle 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 21, "Healer gained 1");
+    assert_eq!(g.players[1].life, 19, "Stinger pinged");
+    assert_eq!(g.battlefield_find(fox).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "Rescuer token");
+    // Second cycle: Rescuer stays quiet (once per turn), the rest fire again.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::Cycle { card_id: c2 }).expect("cycle 2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "still one token");
+    assert_eq!(g.players[1].life, 18, "Stinger pinged again");
+}
+
+/// Zenith Flare scales with cycling cards in the graveyard.
+#[test]
+fn zenith_flare_counts_cycling_cards() {
+    let mut g = two_player_game();
+    // Three cycling cards + one non-cycling card in the graveyard.
+    for f in [catalog::desert_cerodon, catalog::imposing_vantasaur, catalog::street_wraith] {
+        let id = g.add_card_to_hand(0, f());
+        let mut evs = Vec::new();
+        g.discard_card(0, id, &mut evs);
+    }
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.discard_card(0, bear, &mut evs);
+    let zf = g.add_card_to_hand(0, catalog::zenith_flare());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: zf, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Zenith Flare");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "3 cycling cards = 3 damage");
+    assert_eq!(g.players[0].life, 23, "gained 3");
+}
+
+/// Savai Thundermane converts {2} into a 2-damage drain on any cycle.
+#[test]
+fn savai_thundermane_pays_on_cycle() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::savai_thundermane());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let cy = g.add_card_to_hand(0, catalog::desert_cerodon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage killed the bear");
+    assert_eq!(g.players[0].life, 22, "gained 2");
+}

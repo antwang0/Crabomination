@@ -3032,69 +3032,31 @@ pub fn tome_of_the_infinite() -> CardDefinition {
     }
 }
 
-// ── Bury in Books revisited: Drannith Stinger (STX 2021) ────────────────────
+// ── Drannith Stinger ─────────────────────────────────────────────────────────
 
-/// Drannith Stinger — {1}{R}, 2/2 Goblin Wizard (Ikoria reprint via
-/// STX flavor — Drannith was the white-red flagship city).
-///
-/// "Whenever you cast a noncreature spell, this creature deals 1
-/// damage to each opponent."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Magecraft-adjacent
-/// non-creature-spell payoff. Wired via the spell-cast trigger with
-/// a noncreature-filter, dealing 1 to each opp. Auto-targeting is
-/// fan-out via `Selector::Player(EachOpponent)`.
+/// Drannith Stinger — {1}{R} 2/2 Human Wizard. Pings each opponent when you
+/// cycle another card; Cycling {1}.
 pub fn drannith_stinger() -> CardDefinition {
-    use crate::card::Predicate;
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Drannith Stinger",
         cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::Not(Box::new(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Creature,
-                }))),
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
             effect: Effect::DealDamage {
                 to: Selector::Player(PR::EachOpponent),
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
-        miracle: None,
-        room: None,
+        ..Default::default()
     }
 }
 

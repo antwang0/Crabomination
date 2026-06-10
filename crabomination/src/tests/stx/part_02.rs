@@ -2303,52 +2303,28 @@ fn tome_of_the_infinite_etb_scrys_one() {
 
 // ── Drannith Stinger ────────────────────────────────────────────────────────
 
+/// Printed Ikoria text: pings each opponent when you cycle another card
+/// (not on noncreature casts).
 #[test]
-fn drannith_stinger_pings_opp_on_noncreature_spell() {
+fn drannith_stinger_pings_on_cycle_not_on_cast() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::drannith_stinger());
-
+    // A noncreature cast does nothing.
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    let opp_life_before = g.players[1].life;
-
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(crate::game::Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Bolt castable");
+        card_id: bolt, target: Some(crate::game::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
     drain_stack(&mut g);
-
-    // Bolt does 3 damage + Stinger does 1 = 4 damage total.
-    assert_eq!(g.players[1].life, opp_life_before - 4,
-        "Stinger pings on Bolt cast for +1 damage");
-}
-
-#[test]
-fn drannith_stinger_does_not_ping_on_creature_cast() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::drannith_stinger());
-
-    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
-    let opp_life_before = g.players[1].life;
-
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bear,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Bears castable");
+    assert_eq!(g.players[1].life, 17, "only Bolt's 3 — no cast ping");
+    // Cycling another card pings.
+    g.add_card_to_library(0, catalog::island());
+    let cy = g.add_card_to_hand(0, catalog::desert_cerodon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
     drain_stack(&mut g);
-
-    assert_eq!(g.players[1].life, opp_life_before,
-        "Stinger should NOT ping on creature cast");
+    assert_eq!(g.players[1].life, 16, "cycle pinged 1");
 }
 
 // ── Mage Mauler ─────────────────────────────────────────────────────────────

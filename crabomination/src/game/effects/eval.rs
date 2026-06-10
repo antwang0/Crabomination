@@ -1017,6 +1017,18 @@ impl GameState {
                         .iter()
                         .any(|s| matches!(s, ManaSymbol::Colored(cc) if cc == c)),
                     R::HasKeyword(kw) => card.has_keyword(kw),
+            R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
+                k,
+                crate::card::Keyword::Cycling(_)
+                    | crate::card::Keyword::CyclingLife(_)
+                    | crate::card::Keyword::Landcycling(_, _)
+            )),
+                    R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
+                        k,
+                        crate::card::Keyword::Cycling(_)
+                            | crate::card::Keyword::CyclingLife(_)
+                            | crate::card::Keyword::Landcycling(_, _)
+                    )),
                     R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
@@ -1225,6 +1237,12 @@ impl GameState {
             // colorless in hidden zones.
             R::HasColor(c) => card.definition.cost.colors().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
+            R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
+                k,
+                crate::card::Keyword::Cycling(_)
+                    | crate::card::Keyword::CyclingLife(_)
+                    | crate::card::Keyword::Landcycling(_, _)
+            )),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
             // No source/battlefield context in the on-card evaluator (used

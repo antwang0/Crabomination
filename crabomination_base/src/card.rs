@@ -745,6 +745,9 @@ pub enum SelectionRequirement {
     Untapped,
     HasColor(Color),
     HasKeyword(Keyword),
+    /// The card has any cycling ability (Cycling / CyclingLife /
+    /// Landcycling — CR 702.29). Zenith Flare's graveyard count.
+    HasCyclingAbility,
     PowerAtMost(i32),
     ToughnessAtMost(i32),
     WithCounter(CounterType),
