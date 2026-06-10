@@ -40824,6 +40824,84 @@ fn glissa_combat_damage_draws_and_loses_life() {
     assert_eq!(g.players[0].life, life - 1, "lost 1 life");
 }
 
+/// Fulminator Mage sacrifices to blow up a nonbasic land; basics illegal.
+#[test]
+fn fulminator_mage_sacs_to_destroy_nonbasic_land() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::fulminator_mage());
+    g.clear_sickness(mage);
+    let manland = g.add_card_to_battlefield(1, catalog::celestial_colonnade());
+    let basic = g.add_card_to_battlefield(1, catalog::island());
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(basic)), x_value: None,
+    }).is_err(), "basic land is not a legal target");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(manland)), x_value: None,
+    }).expect("sac to destroy nonbasic");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mage).is_none(), "Mage sacrificed");
+    assert!(g.battlefield_find(manland).is_none(), "nonbasic destroyed");
+}
+
+/// Smallpox: symmetric life loss, discard, creature sac, land sac.
+#[test]
+fn smallpox_hits_every_player_four_ways() {
+    let mut g = two_player_game();
+    for p in 0..2 {
+        g.add_card_to_hand(p, catalog::island());
+        g.add_card_to_battlefield(p, catalog::grizzly_bears());
+        g.add_card_to_battlefield(p, catalog::forest());
+    }
+    let pox = g.add_card_to_hand(0, catalog::smallpox());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pox, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Smallpox castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 1);
+    assert_eq!(g.players[1].life, life1 - 1);
+    for p in 0..2 {
+        assert!(!g.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature()),
+            "P{p} creature sacrificed");
+        assert!(!g.battlefield.iter().any(|c| c.controller == p && c.definition.is_land()),
+            "P{p} land sacrificed");
+    }
+}
+
+/// Mox Opal only makes mana with metalcraft (three artifacts).
+#[test]
+fn mox_opal_requires_metalcraft() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_battlefield(0, catalog::mox_opal());
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "one artifact is not metalcraft");
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, x_value: None,
+    }).expect("metalcraft online");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "any color added");
+}
+
+/// Glissa mode 1: destroy target enchantment off the combat-damage modal.
+#[test]
+fn glissa_combat_damage_mode_destroys_enchantment() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::glissa_sunslayer());
+    let ench = g.add_card_to_battlefield(1, catalog::glorious_anthem());
+    let trig = catalog::glissa_sunslayer().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        id, 0, Some(Target::Permanent(ench)), 1,
+    );
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
 /// Preacher of the Schism, attacking a tied-for-most-life player while tied for
 /// most life itself, makes a Vampire and draws (losing 1 life).
 #[test]

@@ -436,6 +436,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         eon_hub,
         ensnaring_bridge,
         kaldra_compleat,
+        mox_opal,
         spine_of_ish_sah,
         ankh_of_mishra,
         // ── Push XXIV (session 8) — colorless cube additions ──
@@ -1431,6 +1432,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         surgical_extraction,
+        smallpox,
         orcish_bowmasters,
         gravecrawler,
         knight_of_the_ebon_legion,
@@ -1854,6 +1856,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         blood_moon,
         magus_of_the_moon,
+        fulminator_mage,
         // Hideaway land (CR 702.76)
         spinerock_knoll,
         embereth_shieldbreaker,

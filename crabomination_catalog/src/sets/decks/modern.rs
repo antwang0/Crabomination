@@ -34301,10 +34301,10 @@ pub fn preacher_of_the_schism() -> CardDefinition {
     }
 }
 
-/// Glissa Sunslayer — {1}{B}{G} 3/3 Legendary Phyrexian Zombie Elf with first
-/// strike and deathtouch. When it deals combat damage to a player, you draw a
-/// card and lose 1 life. (The printed "choose one" also offers destroy-an-
-/// enchantment / remove-three-counters; only the draw mode ships.)
+/// Glissa Sunslayer — {1}{B}{G} 3/3 Legendary Phyrexian Zombie Elf, first
+/// strike, deathtouch. Combat damage to a player → choose one: draw a card
+/// and lose 1 life; destroy target enchantment; or remove all counters from
+/// target permanent (printed "up to three" widened).
 pub fn glissa_sunslayer() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {
@@ -34321,16 +34321,20 @@ pub fn glissa_sunslayer() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::ChooseMode(vec![
+                Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                ]),
+                Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+                Effect::RemoveAllCounters {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                },
             ]),
         }],
         ..Default::default()
     }
 }
-
-
 
 /// Sip of Hemlock — {4}{B}{B} Sorcery. Destroy target creature. Its controller
 /// loses 2 life. (Uses the destroyed creature's owner for the life loss.)
@@ -39514,6 +39518,90 @@ pub fn kaldra_compleat() -> CardDefinition {
             Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
             Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Fulminator Mage — {1}{B/R}{B/R} 2/2 Elemental Shaman. Sacrifice: destroy
+/// target nonbasic land.
+pub fn fulminator_mage() -> CardDefinition {
+    use crate::mana::hybrid;
+    let br = || hybrid(Color::Black, Color::Red);
+    CardDefinition {
+        name: "Fulminator Mage",
+        cost: ManaCost::new(vec![generic(1), br(), br()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::IsNonbasicLand),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Smallpox — {B}{B} Sorcery. Each player loses 1 life, discards a card,
+/// sacrifices a creature, then sacrifices a land.
+pub fn smallpox() -> CardDefinition {
+    CardDefinition {
+        name: "Smallpox",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Land,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mox Opal — {0} Legendary Artifact. Metalcraft — {T}: Add one mana of any
+/// color; activate only if you control three or more artifacts.
+pub fn mox_opal() -> CardDefinition {
+    CardDefinition {
+        name: "Mox Opal",
+        cost: cost(&[]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::AnyColors(Value::Const(1)),
+            },
+            condition: Some(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(3),
+            }),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
