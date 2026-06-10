@@ -47037,3 +47037,26 @@ fn meat_locker_taps_and_stuns() {
     assert!(c.tapped, "tapped");
     assert_eq!(c.counter_count(CounterType::Stun), 2, "two stun counters");
 }
+
+/// Room affordances surface castable doors from hand and unlockable doors
+/// on the battlefield.
+#[test]
+fn room_affordances_surface_doors() {
+    let mut g = two_player_game();
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let aff = g.compute_hand_affordances(0);
+    assert!(aff.room_castable.contains(&(room, 0)), "left door castable");
+    assert!(aff.room_castable.contains(&(room, 1)), "right door castable");
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false }).expect("cast");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let aff = g.compute_hand_affordances(0);
+    assert!(aff.room_unlockable.contains(&(room, 1)), "locked right door unlockable");
+    assert!(!aff.room_unlockable.contains(&(room, 0)), "left already unlocked");
+}

@@ -783,6 +783,45 @@ impl GameState {
             .collect()
     }
 
+    /// CR 709.5 — Room doors castable from `seat`'s hand right now.
+    fn room_castable_on(&self, template: &GameState, seat: usize) -> Vec<(CardId, u8)> {
+        self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| c.definition.room.is_some())
+            .flat_map(|c| [(c.id, 0u8), (c.id, 1u8)])
+            .filter(|(id, door)| {
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastRoomDoor { card_id: *id, right: *door == 1 },
+                )
+            })
+            .collect()
+    }
+
+    /// CR 709.5e — locked Room doors on `seat`'s battlefield permanents whose
+    /// unlock cost is payable right now.
+    fn room_unlockable_on(&self, template: &GameState, seat: usize) -> Vec<(CardId, u8)> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.definition.room.is_some())
+            .flat_map(|c| {
+                let mask = c.unlocked_doors;
+                let id = c.id;
+                [(1u8, 0u8), (2, 1)]
+                    .into_iter()
+                    .filter(move |(bit, _)| mask & bit == 0)
+                    .map(move |(_, door)| (id, door))
+            })
+            .filter(|(id, door)| {
+                Self::would_accept_on(
+                    template,
+                    GameAction::UnlockRoomDoor { card_id: *id, right: *door == 1 },
+                )
+            })
+            .collect()
+    }
+
     /// Compute every from-hand affordance hint for `seat` in one pass.
     ///
     /// The individual `*_hand_cards` / `activatable_permanents` methods each
@@ -827,6 +866,8 @@ impl GameState {
             morphable: self.morphable_hand_cards_on(&template, seat),
             turn_up_able: self.turn_up_able_permanents_on(&template, seat),
             reinforceable: self.reinforceable_hand_cards_on(&template, seat),
+            room_castable: self.room_castable_on(&template, seat),
+            room_unlockable: self.room_unlockable_on(&template, seat),
         }
     }
 

@@ -339,6 +339,13 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub splittable_right_hand: Vec<CardId>,
+    /// CR 709.5 — Room hand cards with a castable door (`(card, door)`,
+    /// door 0 = left / 1 = right). Drives a "cast door" client action.
+    #[serde(default)]
+    pub room_castable_hand: Vec<(CardId, u8)>,
+    /// CR 709.5e — controlled Rooms with a locked, payable door.
+    #[serde(default)]
+    pub room_unlockable: Vec<(CardId, u8)>,
     /// CardIds of permanents the viewer controls with an activated ability
     /// they could use right now (timing/mana/tap/target all checked). Lets
     /// the client highlight "this permanent can do something." Empty

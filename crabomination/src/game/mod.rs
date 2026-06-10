@@ -223,6 +223,12 @@ pub struct HandAffordances {
     /// right now (a legal creature target exists), so the client can offer the
     /// from-hand Reinforce activation.
     pub reinforceable: Vec<CardId>,
+    /// CR 709.5 — Room hand cards whose left/right door is castable right
+    /// now (`(card, door)` — door 0 = left, 1 = right).
+    pub room_castable: Vec<(CardId, u8)>,
+    /// CR 709.5e — Room permanents the seat controls with a locked door
+    /// whose unlock cost is payable right now (`(card, door)`).
+    pub room_unlockable: Vec<(CardId, u8)>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
