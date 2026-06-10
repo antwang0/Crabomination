@@ -41506,3 +41506,144 @@ pub fn omen_of_the_sea() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Memory Deluge — {2}{U}{U} Instant. Look at the top X (X = mana spent),
+/// take two to hand, bottom the rest. Flashback {5}{U}{U}.
+pub fn memory_deluge() -> CardDefinition {
+    CardDefinition {
+        name: "Memory Deluge",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), u(), u()]))],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::CastSpellManaSpent,
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: Some(Value::Const(2)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Desert Cerodon — {5}{R} 6/4 Beast. Cycling {R}.
+pub fn desert_cerodon() -> CardDefinition {
+    CardDefinition {
+        name: "Desert Cerodon",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 4,
+        keywords: vec![Keyword::Cycling(cost(&[r()]))],
+        ..Default::default()
+    }
+}
+
+/// Horror of the Broken Lands — {4}{B} 4/4. +2/+1 when you cycle or
+/// discard another card; Cycling {B}.
+pub fn horror_of_the_broken_lands() -> CardDefinition {
+    CardDefinition {
+        name: "Horror of the Broken Lands",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Cycling(cost(&[b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Monstrous Carabid — {3}{B}{R} 4/4 Insect; attacks each combat if able.
+/// Cycling {B/R}.
+pub fn monstrous_carabid() -> CardDefinition {
+    CardDefinition {
+        name: "Monstrous Carabid",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![
+            Keyword::MustAttack,
+            Keyword::Cycling(cost(&[ManaSymbol::Hybrid(Color::Black, Color::Red)])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shefet Monitor — {5}{G} 6/5 Lizard. Cycling {3}{G}; cycling it may
+/// fetch a basic land onto the battlefield.
+pub fn shefet_monitor() -> CardDefinition {
+    CardDefinition {
+        name: "Shefet Monitor",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Cycling(cost(&[generic(3), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Search for a basic land onto the battlefield?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Architects of Will — {2}{U}{B} 3/3 artifact Human Wizard. ETB: rearrange
+/// the top three of target player's library. Cycling {U/B}.
+pub fn architects_of_will() -> CardDefinition {
+    CardDefinition {
+        name: "Architects of Will",
+        cost: cost(&[generic(2), u(), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Cycling(cost(&[ManaSymbol::Hybrid(Color::Blue, Color::Black)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::RearrangeTop {
+                who: PlayerRef::Target(0),
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    }
+}

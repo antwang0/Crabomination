@@ -47091,8 +47091,7 @@ fn gempalm_incinerator_cycle_burn() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    let evs = g.perform_action(GameAction::Cycle { card_id: gp }).expect("cycle");
-    g.dispatch_triggers_for_events(&evs);
+    g.perform_action(GameAction::Cycle { card_id: gp }).expect("cycle");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).is_none(), "2 Goblins = 2 damage killed the bear");
 }
@@ -47106,8 +47105,7 @@ fn curator_of_mysteries_scries_on_cycle() {
     g.add_card_to_library(0, catalog::forest());
     let cy = g.add_card_to_hand(0, catalog::fetid_pools());
     g.players[0].mana_pool.add_colorless(2);
-    let evs = g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
-    g.dispatch_triggers_for_events(&evs);
+    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
     // The scry trigger is on the stack; resolving it consults the decider.
     drain_stack(&mut g);
     // No assert on ordering — reaching here without panicking means the
@@ -47135,4 +47133,77 @@ fn omen_of_the_sea_etb_and_sac() {
     }).expect("sac to scry");
     drain_stack(&mut g);
     assert!(g.battlefield_find(omen).is_none(), "sacrificed");
+}
+
+/// Memory Deluge digs X = mana spent (4 normally) and takes two.
+#[test]
+fn memory_deluge_digs_mana_spent() {
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let md = g.add_card_to_hand(0, catalog::memory_deluge());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len() - 1;
+    cast(&mut g, md);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "took two of the top four");
+    assert_eq!(g.players[0].library.len(), 4, "rest bottomed");
+}
+
+/// Horror of the Broken Lands grows on cycling another card.
+#[test]
+fn horror_grows_on_cycle() {
+    let mut g = two_player_game();
+    let horror = g.add_card_to_battlefield(0, catalog::horror_of_the_broken_lands());
+    g.add_card_to_library(0, catalog::island());
+    let cy = g.add_card_to_hand(0, catalog::desert_cerodon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(horror).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 5), "+2/+1");
+}
+
+/// Shefet Monitor's cycle fetches a basic land onto the battlefield.
+#[test]
+fn shefet_monitor_cycle_fetches_land() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let monitor = g.add_card_to_hand(0, catalog::shefet_monitor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.perform_action(GameAction::Cycle { card_id: monitor }).expect("cycle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_some(), "Forest fetched onto battlefield");
+}
+
+/// Architects of Will rearranges the top three of a targeted library and
+/// cycles for a hybrid pip.
+#[test]
+fn architects_of_will_etb_and_hybrid_cycle() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let aw = g.add_card_to_hand(0, catalog::architects_of_will());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aw, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aw).is_some());
+    // Hybrid {U/B} cycling pays with black.
+    g.add_card_to_library(0, catalog::island());
+    let second = g.add_card_to_hand(0, catalog::architects_of_will());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::Cycle { card_id: second }).expect("hybrid cycle");
 }

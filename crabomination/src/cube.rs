@@ -1141,6 +1141,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         meat_locker_drowned_diner,
         curator_of_mysteries,
         omen_of_the_sea,
+        memory_deluge,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1441,6 +1442,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(shiko_and_narset_unified);
     }
     if pair_contains(pair, Color::Black) {
+        v.push(architects_of_will);
         v.push(marauding_mako);
         v.push(mistvault_bridge);
         v.push(glimpse_the_unthinkable);
@@ -1478,6 +1480,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         promise_of_power,
         boggart_harbinger,
         unholy_annex_ritual_chamber,
+        horror_of_the_broken_lands,
         // ── modern_decks-19 ──
         living_end,
         orcish_bowmasters,
@@ -1904,6 +1907,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         barbed_lightning,
         grab_the_reins,
         roiling_vortex,
+        desert_cerodon,
         blood_moon,
         magus_of_the_moon,
         fulminator_mage,
@@ -2328,6 +2332,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(terminate);
         v.push(munitions_expert);
         v.push(gempalm_incinerator);
+        v.push(monstrous_carabid);
         v.push(voldaren_epicure);
         v.push(bloodtithe_harvester);
         v.push(drossforge_bridge);
@@ -2392,6 +2397,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         tooth_and_nail,
         rude_awakening,
+        shefet_monitor,
         // ── modern_decks-18 ──
         crashing_footfalls,
         dryad_of_the_ilysian_grove,
