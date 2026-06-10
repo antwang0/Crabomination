@@ -39799,3 +39799,46 @@ pub fn shrapnel_blast() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zealous Persecution — {W}{B} Instant. Until end of turn, your creatures
+/// get +1/+1 and opponents' creatures get -1/-1.
+pub fn zealous_persecution() -> CardDefinition {
+    let pump = |filter: SelectionRequirement, n: i32| Effect::PumpPT {
+        what: Selector::EachPermanent(SelectionRequirement::Creature.and(filter)),
+        power: Value::Const(n),
+        toughness: Value::Const(n),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Zealous Persecution",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            pump(SelectionRequirement::ControlledByYou, 1),
+            pump(SelectionRequirement::ControlledByOpponent, -1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Exalted Angel — {4}{W}{W} 4/5 Angel, flying. Damage it deals gains you
+/// that much life (modeled as lifelink). Morph {2}{W}{W}.
+pub fn exalted_angel() -> CardDefinition {
+    CardDefinition {
+        name: "Exalted Angel",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Lifelink,
+            Keyword::Morph(cost(&[generic(2), w(), w()])),
+        ],
+        ..Default::default()
+    }
+}

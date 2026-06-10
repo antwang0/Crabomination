@@ -40859,6 +40859,42 @@ fn glissa_combat_damage_draws_and_loses_life() {
     assert_eq!(g.players[0].life, life - 1, "lost 1 life");
 }
 
+/// Zealous Persecution swings the whole board ±1/±1 EOT.
+#[test]
+fn zealous_persecution_pumps_yours_shrinks_theirs() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let zp = g.add_card_to_hand(0, catalog::zealous_persecution());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, zp);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "+1/+1 yours");
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 1, "-1/-1 theirs");
+}
+
+/// Exalted Angel casts face down for {3} and turns up for its morph cost.
+#[test]
+fn exalted_angel_morphs_up() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_hand(0, catalog::exalted_angel());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFaceDown { card_id: angel }).expect("morph face down");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(angel).expect("on battlefield");
+    assert!(c.face_down);
+    assert_eq!((c.power(), c.toughness()), (2, 2), "vanilla 2/2 while face down");
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::TurnFaceUp { card_id: angel }).expect("pay morph cost");
+    let c = g.battlefield_find(angel).unwrap();
+    assert!(!c.face_down);
+    assert_eq!((c.power(), c.toughness()), (4, 5), "real face restored");
+}
+
 /// Stony Silence locks artifact activated abilities (mana rocks included).
 #[test]
 fn stony_silence_locks_artifact_abilities() {

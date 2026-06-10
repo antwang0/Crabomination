@@ -503,6 +503,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         ranger_of_eos,
         stony_silence,
+        exalted_angel,
         // Hideaway land (CR 702.76)
         windbrisk_heights,
         // Damage redirection (CR 614.9)
@@ -1437,6 +1438,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         surgical_extraction,
         smallpox,
+        zealous_persecution,
         orcish_bowmasters,
         gravecrawler,
         knight_of_the_ebon_legion,
