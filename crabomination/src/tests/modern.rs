@@ -48407,3 +48407,194 @@ fn part_the_waterveil_regular_cast_skips_awaken() {
     let v = cp.iter().find(|c| c.id == land).unwrap();
     assert!(!v.card_types.contains(&CardType::Creature), "land untouched");
 }
+
+// ── Shadow / artifact-staples batch ──────────────────────────────────────────
+
+#[test]
+fn shadow_creatures_only_block_each_other() {
+    use crate::card::Keyword;
+    let slayer = catalog::dauthi_slayer();
+    assert!(slayer.keywords.contains(&Keyword::Shadow));
+    assert!(slayer.keywords.contains(&Keyword::MustAttack));
+    let mut g = two_player_game();
+    let dauthi = g.add_card_to_battlefield(0, catalog::dauthi_slayer());
+    g.clear_sickness(dauthi);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker: dauthi,
+        target: crate::game::AttackTarget::Player(1),
+    }])).unwrap();
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    // CR 702.28b — a non-shadow creature can't block the Dauthi.
+    let r = g.declare_blockers(vec![(bear, dauthi)]);
+    assert!(r.is_err(), "non-shadow creature must not block a shadow attacker");
+}
+
+#[test]
+fn soltari_champion_pumps_other_attackers() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::soltari_champion());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let trig = catalog::soltari_champion().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(champ, 0, None, 0);
+    let _ = g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "other creature +1/+1");
+    assert_eq!(g.battlefield_find(champ).unwrap().power(), 2, "champion itself untouched");
+}
+
+#[test]
+fn simic_ascendancy_accrues_growth_and_wins_at_twenty() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let asc = g.add_card_to_battlefield(0, catalog::simic_ascendancy());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Three +1/+1 counters land on the bear → three growth counters.
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+        card_id: bear,
+        counter_type: CounterType::PlusOnePlusOne,
+        count: 3,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(asc).unwrap().counter_count(CounterType::Growth),
+        3,
+        "growth counters track the batch size"
+    );
+    // At twenty growth counters the upkeep check wins the game.
+    g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Growth, 17);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.is_game_over(), "twenty growth counters win the game");
+}
+
+#[test]
+fn myr_retriever_dies_returns_an_artifact_from_graveyard() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_battlefield(0, catalog::myr_retriever());
+    let key = g.add_card_to_graveyard(0, catalog::voltaic_key());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(key))]));
+    let mut events = Vec::new();
+    g.sacrifice_one(myr, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == key), "Voltaic Key returned to hand");
+}
+
+#[test]
+fn time_sieve_sacrifices_five_artifacts_for_extra_turn() {
+    let mut g = two_player_game();
+    let sieve = g.add_card_to_battlefield(0, catalog::time_sieve());
+    let fodder: Vec<_> = (0..5).map(|_| g.add_card_to_battlefield(0, catalog::voltaic_key())).collect();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sieve, ability_index: 0, target: None, x_value: None,
+    }).expect("activation");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_turns, 1);
+    for f in fodder {
+        assert!(g.battlefield_find(f).is_none(), "fodder sacrificed");
+    }
+}
+
+#[test]
+fn ichor_wellspring_draws_on_etb_and_on_death() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let well = g.add_card_to_battlefield(0, catalog::ichor_wellspring());
+    let hand_before = g.players[0].hand.len();
+    let mut events = Vec::new();
+    g.sacrifice_one(well, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "death draw fired");
+}
+
+#[test]
+fn jace_beleren_plus_two_draws_for_each_player() {
+    let mut g = two_player_game();
+    for p in 0..2 {
+        for _ in 0..3 { g.add_card_to_library(p, catalog::forest()); }
+    }
+    let jace = g.add_card_to_battlefield(0, catalog::jace_beleren());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jace, ability_index: 0, target: None, x_value: None,
+    }).expect("loyalty +2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 + 1);
+    assert_eq!(g.players[1].hand.len(), h1 + 1);
+    assert_eq!(
+        g.battlefield_find(jace).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        5
+    );
+}
+
+#[test]
+fn darksteel_colossus_shuffles_into_library_instead_of_graveyard() {
+    let mut g = two_player_game();
+    let colossus = g.add_card_to_battlefield(0, catalog::darksteel_colossus());
+    let lib_before = g.players[0].library.len();
+    let mut events = Vec::new();
+    g.sacrifice_one(colossus, 0, &mut events);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != colossus), "never hits the graveyard");
+    assert_eq!(g.players[0].library.len(), lib_before + 1, "shuffled into the library");
+}
+
+#[test]
+fn open_the_vaults_returns_artifacts_and_enchantments_from_all_graveyards() {
+    let mut g = two_player_game();
+    let my_art = g.add_card_to_graveyard(0, catalog::voltaic_key());
+    let opp_art = g.add_card_to_graveyard(1, catalog::ichor_wellspring());
+    let creature = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let effect = catalog::open_the_vaults().effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(&effect, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    let mine = g.battlefield_find(my_art).expect("my artifact returned");
+    assert_eq!(mine.controller, 0);
+    let theirs = g.battlefield_find(opp_art).expect("opp artifact returned");
+    assert_eq!(theirs.controller, 1, "returns under its owner's control");
+    assert!(g.battlefield_find(creature).is_none(), "creatures stay dead");
+}
+
+#[test]
+fn spreading_seas_turns_enchanted_land_into_an_island() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let mountain = g.add_card_to_battlefield(1, catalog::mountain());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let seas = g.add_card_to_hand(0, catalog::spreading_seas());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: seas,
+        target: Some(Target::Permanent(mountain)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draw");
+    let cp = g.compute_battlefield();
+    let v = cp.iter().find(|c| c.id == mountain).unwrap();
+    assert!(v.subtypes.land_types.contains(&LandType::Island), "now an Island");
+    assert!(!v.subtypes.land_types.contains(&LandType::Mountain), "Mountain type replaced");
+}

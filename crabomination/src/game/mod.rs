@@ -2342,6 +2342,15 @@ impl GameState {
             return any_exiled;
         }
         let owner = card.owner;
+        // CR 614.6 — "shuffle into its owner's library instead" (Darksteel
+        // Colossus). The card never touches the graveyard.
+        if card.definition.shuffles_into_library_instead {
+            use rand::seq::SliceRandom;
+            self.players[owner].library.push(card);
+            let mut rng = rand::rng();
+            self.players[owner].library.shuffle(&mut rng);
+            return false;
+        }
         if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() {
             let cid = card.id;
             self.exile.push(card);

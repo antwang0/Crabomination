@@ -1993,7 +1993,23 @@ impl GameState {
             {
                 self.leaves_bf_lki.insert(id, c.clone());
             }
+            let was_land = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .is_some_and(|c| c.definition.is_land());
             self.remove_from_battlefield_to_graveyard(id);
+            // CR 700 — emit the graveyard-arrival event (only when the card
+            // actually landed there; Finality / RIP redirects don't count).
+            // Emrakul-style "put into a graveyard from anywhere" triggers
+            // listen for this.
+            if self.players[owner].graveyard.iter().any(|c| c.id == id) {
+                events.push(GameEvent::CardPutIntoGraveyard {
+                    player: owner,
+                    card_id: id,
+                    is_land: was_land,
+                });
+            }
             // Push Dies triggers to the stack for resolution.
             for (source, effect, controller) in die_triggers {
                 let auto_target =
@@ -2366,6 +2382,14 @@ impl GameState {
         // CR 707 — a temporary copy reverts as it leaves.
         self.revert_copy_on_leave(&mut card);
         match zone {
+            // CR 614.6 — "shuffle into its owner's library instead"
+            // (Darksteel Colossus); the card never touches the graveyard.
+            Zone::Graveyard if card.definition.shuffles_into_library_instead => {
+                use rand::seq::SliceRandom;
+                self.players[owner].library.push(card);
+                let mut rng = rand::rng();
+                self.players[owner].library.shuffle(&mut rng);
+            }
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
             // graveyard arrival to exile; CR 702.146e — so does a Disturb
             // back face.

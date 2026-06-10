@@ -534,7 +534,8 @@ fn kozilek_dies_shuffles_graveyard_into_library() {
     let id = g.add_card_to_battlefield(0, catalog::kozilek_butcher_of_truth());
     let lib_before = g.players[0].library.len();
     g.battlefield_find_mut(id).unwrap().damage = 99;
-    g.check_state_based_actions();
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
     // 2 old cards + Kozilek itself returned to library.

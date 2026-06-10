@@ -1212,32 +1212,40 @@ fn colossus(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> Car
 }
 
 /// Ulamog, the Infinite Gyre — {11} 10/10 Legendary. Cast → destroy target
-/// permanent; Indestructible; Annihilator 4; dies → shuffle graveyard into
-/// library.
+/// permanent; Indestructible; Annihilator 4; put into a graveyard from
+/// anywhere → shuffle graveyard into library.
 pub fn ulamog_the_infinite_gyre() -> CardDefinition {
-    use crate::card::SelectionRequirement;
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
     use crate::effect::PlayerRef;
     CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         keywords: vec![Keyword::Indestructible, Keyword::Annihilator(4)],
         triggered_abilities: vec![
             on_cast(Effect::Destroy { what: target_filtered(SelectionRequirement::Permanent) }),
-            on_dies(Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+            },
         ],
         ..colossus("Ulamog, the Infinite Gyre", cost(&[generic(11)]), 10, 10)
     }
 }
 
 /// Kozilek, Butcher of Truth — {10} 12/12 Legendary. Cast → draw four cards;
-/// Annihilator 4; dies → shuffle graveyard into library.
+/// Annihilator 4; put into a graveyard from anywhere → shuffle graveyard
+/// into library.
 pub fn kozilek_butcher_of_truth() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::{PlayerRef, Selector, Value};
     CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         keywords: vec![Keyword::Annihilator(4)],
         triggered_abilities: vec![
             on_cast(Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::Const(4) }),
-            on_dies(Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+            },
         ],
         ..colossus("Kozilek, Butcher of Truth", cost(&[generic(10)]), 12, 12)
     }

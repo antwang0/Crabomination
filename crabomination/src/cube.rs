@@ -217,6 +217,12 @@ fn colorless_pool() -> Vec<CardFactory> {
     vec![
         // ── Eldrazi / sweeper batch ──
         shadowspear,
+        myr_retriever,
+        junk_diver,
+        voltaic_key,
+        ichor_wellspring,
+        darksteel_colossus,
+        blightsteel_colossus,
         all_is_dust,
         oblivion_stone,
         emrakul_the_aeons_torn,
@@ -523,6 +529,9 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        soltari_monk,
+        soltari_champion,
+        open_the_vaults,
         ranger_of_eos,
         stony_silence,
         exalted_angel,
@@ -1117,6 +1126,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Awaken (CR 702.113)
         part_the_waterveil,
+        spreading_seas,
+        jace_beleren,
         // Disturb (CR 702.146)
         baithook_angler,
         // milled triggers (EventKind::CardMilled)
@@ -1540,6 +1551,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         orcish_bowmasters,
         gravecrawler,
         prized_amalgam,
+        dauthi_slayer,
         knight_of_the_ebon_legion,
         tourach_dread_cantor,
         yawgmoth_thran_physician,
@@ -1896,6 +1908,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(fix_whats_broken);
     }
     if pair_contains(pair, Color::Blue) {
+        v.push(time_sieve);
         v.push(marauding_mako);
         v.push(mistvault_bridge);
         v.push(glimpse_the_unthinkable);
@@ -2887,6 +2900,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(fangkeepers_familiar);
     }
     if pair_contains(pair, Color::Blue) {
+        v.push(simic_ascendancy);
         v.push(uro_titan_of_natures_wrath);
         v.push(gaeas_skyfolk);
         v.push(talisman_of_curiosity);

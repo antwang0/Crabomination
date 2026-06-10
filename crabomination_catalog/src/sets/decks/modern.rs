@@ -42868,3 +42868,370 @@ pub fn relentless_assault() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Shadow / artifact-staples batch ──────────────────────────────────────────
+
+/// Dauthi Slayer — {B}{B} 2/2 Dauthi Soldier. Shadow; attacks each combat
+/// if able.
+pub fn dauthi_slayer() -> CardDefinition {
+    CardDefinition {
+        name: "Dauthi Slayer",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dauthi, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Shadow, Keyword::MustAttack],
+        ..Default::default()
+    }
+}
+
+/// Soltari Monk — {W}{W} 2/1 Soltari Monk Cleric. Protection from black;
+/// shadow.
+pub fn soltari_monk() -> CardDefinition {
+    CardDefinition {
+        name: "Soltari Monk",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soltari, CreatureType::Monk, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Protection(Color::Black), Keyword::Shadow],
+        ..Default::default()
+    }
+}
+
+/// Soltari Champion — {2}{W} 2/2 Soltari Soldier. Shadow; whenever this
+/// attacks, other creatures you control get +1/+1 until end of turn.
+pub fn soltari_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Soltari Champion",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soltari, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Shadow],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Simic Ascendancy — {G}{U} Enchantment. {1}{G}{U}: +1/+1 counter on
+/// target creature you control. Counters placed on your creatures add that
+/// many growth counters; at your upkeep, win with twenty or more.
+pub fn simic_ascendancy() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Simic Ascendancy",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g(), u()]),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Growth,
+                    amount: Value::TriggerEventAmount,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Growth,
+                        },
+                        Value::Const(20),
+                    ),
+                    then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Myr Retriever — {2} 1/1 Myr artifact creature. Dies → return another
+/// target artifact card from your graveyard to your hand.
+pub fn myr_retriever() -> CardDefinition {
+    CardDefinition {
+        name: "Myr Retriever",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .and(SelectionRequirement::InGraveyard)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Junk Diver — {3} 1/1 Bird artifact creature. Flying; dies → return
+/// another target artifact card from your graveyard to your hand.
+pub fn junk_diver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        cost: cost(&[generic(3)]),
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        ..CardDefinition { name: "Junk Diver", ..myr_retriever() }
+    }
+}
+
+/// Voltaic Key — {1} Artifact. {1}, {T}: Untap target artifact.
+pub fn voltaic_key() -> CardDefinition {
+    CardDefinition {
+        name: "Voltaic Key",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::Untap {
+                what: target_filtered(SelectionRequirement::Artifact),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Time Sieve — {U}{B} Artifact. {T}, Sacrifice five artifacts: Take an
+/// extra turn after this one.
+pub fn time_sieve() -> CardDefinition {
+    CardDefinition {
+        name: "Time Sieve",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Artifact, 5)),
+            effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ichor Wellspring — {2} Artifact. Draws a card when it enters and when
+/// it hits a graveyard (the printed "from the battlefield" qualifier is
+/// approximated as any graveyard entry).
+pub fn ichor_wellspring() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Ichor Wellspring",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Jace Beleren — {1}{U}{U} planeswalker. +2: each player draws; −1:
+/// target player draws; −10: target player mills twenty.
+pub fn jace_beleren() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Jace Beleren",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Draw {
+                    who: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Player,
+                    },
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -10,
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(20),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Darksteel Colossus — {11} 11/11 Golem. Trample, indestructible; would
+/// be put into a graveyard from anywhere → shuffled into its owner's
+/// library instead (CR 614.6).
+pub fn darksteel_colossus() -> CardDefinition {
+    CardDefinition {
+        name: "Darksteel Colossus",
+        cost: cost(&[generic(11)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 11,
+        toughness: 11,
+        keywords: vec![Keyword::Trample, Keyword::Indestructible],
+        shuffles_into_library_instead: true,
+        ..Default::default()
+    }
+}
+
+/// Blightsteel Colossus — {12} 11/11 Phyrexian Golem. Trample, infect,
+/// indestructible; shuffled into its owner's library instead of any
+/// graveyard (CR 614.6).
+pub fn blightsteel_colossus() -> CardDefinition {
+    CardDefinition {
+        name: "Blightsteel Colossus",
+        cost: cost(&[generic(12)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 11,
+        toughness: 11,
+        keywords: vec![Keyword::Trample, Keyword::Infect, Keyword::Indestructible],
+        shuffles_into_library_instead: true,
+        ..Default::default()
+    }
+}
+
+/// Open the Vaults — {4}{W}{W} Sorcery. Return all artifact and
+/// enchantment cards from all graveyards to the battlefield under their
+/// owners' control.
+pub fn open_the_vaults() -> CardDefinition {
+    CardDefinition {
+        name: "Open the Vaults",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::CardsInZone {
+                who: PlayerRef::EachPlayer,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            },
+            body: Box::new(Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
+                    tapped: false,
+                },
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Spreading Seas — {1}{U} Aura. Enchant land; ETB draw a card; enchanted
+/// land is an Island.
+pub fn spreading_seas() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Spreading Seas",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Land },
+        },
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land is an Island.",
+            effect: StaticEffect::LandTypeChanger {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                land_type: LandType::Island,
+                replace: true,
+            },
+        }],
+        ..Default::default()
+    }
+}

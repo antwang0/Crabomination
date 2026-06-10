@@ -40,7 +40,7 @@ pub enum Supertype {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CreatureType {
     Human, Elf, Goblin, Merfolk, Zombie, Vampire, Angel, Demon, Dragon,
-    Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari,
+    Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari, Dauthi,
     Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm,
     Bear, Ape, Rat, Fungus, Treefolk, Giant, Ogre, Shaman, Druid,
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose,
@@ -1213,6 +1213,11 @@ pub struct CardDefinition {
     /// layer-7a SetPT effect from the formula on every recompute.
     #[serde(default)]
     pub dynamic_pt: Option<DynamicPt>,
+    /// CR 614.6 — "If this would be put into a graveyard from anywhere,
+    /// shuffle it into its owner's library instead." Checked at the
+    /// `route_to_graveyard` funnel (Darksteel / Blightsteel Colossus).
+    #[serde(default)]
+    pub shuffles_into_library_instead: bool,
     /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
     /// A combined chapter ("I, II — …") is listed once per number with the
     /// same effect. Non-empty marks the card a Saga: it enters with one lore

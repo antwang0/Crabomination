@@ -3033,22 +3033,10 @@ A → B → C → D → E
 These cards are in the cube or demo decks and need only existing primitives —
 no new engine features required:
 
-| Card | Missing Piece | Effort | Status |
-|---|---|---|---|
-| Grim Lavamancer | Exile-2-from-GY additional cost | Low | ✅ (done — push modern_decks batch 114, `exile_other_filter` count `(Any, 2)`) |
-| Bloodtithe Harvester | Sac-Blood ping (sac_cost activation) | Low | ⏳ |
-| Dread Return | Flashback sac-3-creatures cost | Medium | ⏳ |
-| Swan Song | Correct Bird token controller | Low | ✅ (done in earlier push — `PlayerRef::ControllerOf(Target(0))`) |
-| Frantic Search | Untap cap (up to 3) | Low | ✅ (done in earlier push — `up_to: Some(Value::Const(3))`) |
-| Windfall | Dynamic draw-equal-to-max-discarded | Medium | ✅ (done — push modern_decks batch 115, `Value::MaxCardsDiscardedThisEffectByAnyPlayer`) |
-| Balefire Dragon | Dynamic "that much damage" (use creature's power) | Medium | ⏳ |
-| Dark Confidant | CMC-dependent life loss | High (needs card-CMC Value) | ✅ (done — push modern_decks batch 111, `LoseLife(ManaValueOf(TopOfLibrary))`) |
-| Rofellos | Forest-count mana scaling | Medium | ✅ (done — `Times(Const(2), CountOf(Forest))`) |
-| Tidehollow Sculler | Exile-until-LTB primitive | High | ✅ (done — `Effect::ExileChosenUntilSourceLeaves` + `return_linked_exiles`) |
-| Ichorid | Graveyard-color trigger filter | Medium | ✅ (done — push modern_decks batch 112, opp-GY black-creature `SelectorExists` gate) |
-| Coalition Relic | Charge-counter burst | Medium | ✅ (done — push modern_decks batch 110, Remove-3-charge-counters WUBRG burst wired) |
-| Tezzeret, Cruel Captain | Artifact-creature static pump | Low | ✅ (done — `crabomination/src/catalog/sets/decks/modern.rs:6365`) |
-| Karn, Scion of Urza | Artifact-count scaling Construct | Medium | ⏳ |
+Every row in this table has shipped (Bloodtithe Harvester's sac-a-Blood
+ping, Dread Return's flashback sacrifice, Balefire Dragon's power-scaled
+sweep, and Karn, Scion of Urza's real text included — earlier ⏳ marks
+were stale). See git history for the per-card details.
 
 ## New TODO suggestions (push modern_decks)
 
