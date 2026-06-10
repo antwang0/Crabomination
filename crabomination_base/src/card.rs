@@ -878,6 +878,12 @@ pub enum SelectionRequirement {
     /// creature card with mana value equal to 1 plus the sacrificed creature's
     /// mana value." Evaluates to `mv == 0 + offset` when nothing was recorded.
     ManaValueEqualsSacrificedPlus(u32),
+    /// True when the card's mana value is strictly less than the firing
+    /// trigger event's amount — for died events, the dying card's mana value
+    /// (`GameState.trigger_event_amount_scratch`). Powers Scrap Trawler's
+    /// "return target artifact card with lesser mana value than that
+    /// artifact". False outside a trigger context (scratch = 0).
+    ManaValueLessThanEventAmount,
     HasCardType(CardType),
     /// True when the card's printed mana cost contains at least one
     /// `{X}` symbol. Used by SOS Paradox Surveyor's reveal filter
@@ -925,6 +931,10 @@ pub enum SelectionRequirement {
     /// arm looks the candidate up in `players[*].graveyard`. Returns
     /// false for non-Permanent targets and for cards in any other zone.
     InGraveyard,
+    /// True when the candidate card is in the exile zone. Mirrors
+    /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
+    /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
+    InExile,
     /// True when the candidate has the greatest mana value among all
     /// permanents that match `inner` and are controlled by the same
     /// player as the candidate. Used by SOS End of the Hunt's

@@ -98,6 +98,7 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
 /// validates + pays them on top of the flashback mana cost.
 pub(crate) fn flashback_additional_cost_for_name(
     name: &str,
+    x: u32,
 ) -> Vec<crate::card::AdditionalCastCost> {
     use crate::card::{AdditionalCastCost as A, LandType, SelectionRequirement as S};
     match name {
@@ -105,6 +106,9 @@ pub(crate) fn flashback_additional_cost_for_name(
             filter: S::Land.and(S::HasLandType(LandType::Mountain)),
             count: 1,
         }],
+        // Variable additional cost: "Flashback—{R}{R}, Discard X cards"
+        // (the flashback cast's chosen X defines the discard count).
+        "Conflagrate" => vec![A::Discard { count: x }],
         "Dread Return" => vec![A::SacrificePermanent {
             filter: S::Creature.and(S::ControlledByYou),
             count: 3,
@@ -3812,7 +3816,8 @@ impl GameState {
         // card name (the idiom for rare riders that would otherwise bloat
         // every CardDefinition literal). Reject up front if unpayable so no
         // mana is spent on an uncastable flashback.
-        let mut flashback_additional = flashback_additional_cost_for_name(card.definition.name);
+        let mut flashback_additional =
+            flashback_additional_cost_for_name(card.definition.name, x_value.unwrap_or(0));
         if jumpstart {
             flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1 });
         }

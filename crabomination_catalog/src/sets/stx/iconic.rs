@@ -1426,6 +1426,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
         who: PlayerRef::You,
         count: Value::Const(1),
         duration: MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false,
+        uncast_penalty: None,
     };
     CardDefinition {
         name: "Conspiracy Theorist",

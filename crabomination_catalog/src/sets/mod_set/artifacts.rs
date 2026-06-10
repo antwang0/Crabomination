@@ -1571,3 +1571,40 @@ pub fn null_rod() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Scrap Trawler — {3} Artifact Creature — Construct 3/2. Whenever this or
+/// another artifact you control dies, return to your hand target artifact
+/// card in your graveyard with lesser mana value than that artifact.
+pub fn scrap_trawler() -> CardDefinition {
+    use crate::card::{CreatureType, Predicate};
+    CardDefinition {
+        name: "Scrap Trawler",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                },
+            ),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::And(
+                    Box::new(SelectionRequirement::Artifact),
+                    Box::new(SelectionRequirement::And(
+                        Box::new(SelectionRequirement::InGraveyard),
+                        Box::new(SelectionRequirement::ManaValueLessThanEventAmount),
+                    )),
+                )),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}

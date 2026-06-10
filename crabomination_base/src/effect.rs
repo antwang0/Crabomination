@@ -2559,6 +2559,11 @@ pub enum Effect {
         /// `false` keeps the free-cast grant (Robber of the Rich).
         #[serde(default)]
         pay_any_color: bool,
+        /// "If you don't [cast it], …" fallback (Chandra, Torch of
+        /// Defiance's +1). Registers a next-end-step delayed trigger that
+        /// runs this body if the exiled card is still in exile (uncast).
+        #[serde(default)]
+        uncast_penalty: Option<Box<Effect>>,
     },
 
     // ── Sacrifice ────────────────────────────────────────────────────────────

@@ -162,6 +162,7 @@ pub fn ardent_dustspeaker() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(2),
             duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+            uncast_penalty: None,
         })],
         ..Default::default()
     }

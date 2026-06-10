@@ -1258,8 +1258,29 @@ pub fn jeskas_will() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+                uncast_penalty: None,
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Conflagrate — {X}{R} Sorcery. Deals X damage divided as you choose among
+/// any number of targets. Flashback—{R}{R}, Discard X cards
+/// (`flashback_additional_cost_for_name` supplies the variable discard).
+pub fn conflagrate() -> CardDefinition {
+    CardDefinition {
+        name: "Conflagrate",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::XFromCost,
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 4,
+        },
+        keywords: vec![Keyword::Flashback(cost(&[r(), r()]))],
         ..Default::default()
     }
 }

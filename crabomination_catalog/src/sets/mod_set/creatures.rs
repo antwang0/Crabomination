@@ -8039,6 +8039,7 @@ pub fn ragavan_nimble_pilferer() -> CardDefinition {
                     who: PlayerRef::Target(0),
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false,
+                    uncast_penalty: None,
                 },
             ]),
         }],
@@ -8756,6 +8757,75 @@ pub fn torbran_thane_of_red_fell() -> CardDefinition {
                 amount: 2,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Chandra, Torch of Defiance — {2}{R}{R} Legendary Planeswalker — Chandra,
+/// loyalty 4. +1: exile top; you may cast it, else 2 damage to each
+/// opponent. +1: add {R}{R}. −3: 4 damage to target creature. −7: emblem
+/// "Whenever you cast a spell, this emblem deals 5 damage to any target."
+pub fn chandra_torch_of_defiance() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype};
+    use crate::effect::shortcut::target_any;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Chandra, Torch of Defiance",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Chandra],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: true,
+                    uncast_penalty: Some(Box::new(Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(2),
+                    })),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Red, Value::Const(2)),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(4),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Chandra, Torch of Defiance".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                        effect: Effect::DealDamage {
+                            to: target_any(),
+                            amount: Value::Const(5),
+                        },
+                    }],
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

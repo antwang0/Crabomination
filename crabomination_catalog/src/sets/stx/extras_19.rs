@@ -293,6 +293,7 @@ fn nassari_dean_of_expression() -> CardDefinition {
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
                     pay_any_color: true,
+                    uncast_penalty: None,
                 },
             },
             TriggeredAbility {

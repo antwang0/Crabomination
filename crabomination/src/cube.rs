@@ -840,6 +840,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         walking_ballista,
         triskelion,
         hangarback_walker,
+        scrap_trawler,
         sea_gate_oracle,
         fertilid,
         spark_double,
@@ -847,6 +848,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         man_o_war,
         siege_gang_commander,
         flame_javelin,
+        conflagrate,
         pongify,
         arc_trail,
         cone_of_flame,
@@ -2068,6 +2070,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // cast-trigger ritual god
         birgi_god_of_storytelling,
         torbran_thane_of_red_fell,
+        chandra_torch_of_defiance,
         // modal ritual / impulse
         jeskas_will,
         // free-with-commander counter (simplified)

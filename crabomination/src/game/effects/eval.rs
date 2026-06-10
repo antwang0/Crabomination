@@ -1116,6 +1116,9 @@ impl GameState {
                         card.definition.cost.cmc()
                             == self.sacrificed_mana_value.unwrap_or(0) + *off
                     }
+                    R::ManaValueLessThanEventAmount => {
+                        card.definition.cost.cmc() < self.trigger_event_amount_scratch
+                    }
                     R::HasCardType(ct) => {
                         // CR 715 — an adventuring card is its instant/sorcery
                         // half while on the stack, so report the adventure types.
@@ -1147,6 +1150,7 @@ impl GameState {
                         .players
                         .iter()
                         .any(|p| p.graveyard.iter().any(|c| c.id == *cid)),
+                    R::InExile => self.exile.iter().any(|c| c.id == *cid),
                     // CR-spec: "the greatest mana value among [filter] they
                     // control" — the candidate must (a) match `inner` and
                     // (b) have an MV ≥ every other matching permanent under
@@ -1293,6 +1297,9 @@ impl GameState {
             R::ManaValueEqualsSacrificedPlus(off) => {
                 card.definition.cost.cmc() == self.sacrificed_mana_value.unwrap_or(0) + *off
             }
+            R::ManaValueLessThanEventAmount => {
+                card.definition.cost.cmc() < self.trigger_event_amount_scratch
+            }
             R::HasCardType(ct) => {
                         // CR 715 — an adventuring card is its instant/sorcery
                         // half while on the stack, so report the adventure types.
@@ -1320,6 +1327,7 @@ impl GameState {
                 .players
                 .iter()
                 .any(|p| p.graveyard.iter().any(|c| c.id == card.id)),
+            R::InExile => self.exile.iter().any(|c| c.id == card.id),
             // Battlefield-only ("greatest MV among controlled" walks the
             // battlefield in the static variant; library searches don't
             // surface this filter).

@@ -358,6 +358,13 @@ pub struct GameState {
     /// Reset between independent resolutions.
     #[serde(default)]
     pub(crate) sacrificed_mana_value: Option<u32>,
+    /// Transient: the firing event's amount for the trigger currently being
+    /// targeted or resolved (stamped in `drain_trigger_queue` and
+    /// `continue_trigger_resolution_with_source`). For died events this is
+    /// the dying card's mana value, read by
+    /// `SelectionRequirement::ManaValueLessThanEventAmount` (Scrap Trawler).
+    #[serde(default)]
+    pub(crate) trigger_event_amount_scratch: u32,
     /// Transient: id of the most-recently-created token within the current
     /// effect resolution. Set by `Effect::CreateToken` and read by
     /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
@@ -870,6 +877,7 @@ impl Clone for GameState {
             sacrificed_power: self.sacrificed_power,
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
+            trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
             extra_cast_reduction: self.extra_cast_reduction,
@@ -988,6 +996,7 @@ impl GameState {
             sacrificed_power: None,
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
+            trigger_event_amount_scratch: 0,
             last_created_token: None,
             last_die_roll: 0,
             extra_cast_reduction: 0,
@@ -5121,7 +5130,7 @@ impl GameState {
                             controller: card.controller,
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                            event_amount: event_amount(ev),
+                            event_amount: self.event_amount_for(ev),
                             triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         });
                         if ta.event.once_per_turn && trig_idx < n_printed {
@@ -5166,7 +5175,7 @@ impl GameState {
                             controller: snap.controller,
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                            event_amount: event_amount(ev),
+                            event_amount: self.event_amount_for(ev),
                             triggered_by_etb: false,
                         });
                     }
@@ -5222,7 +5231,7 @@ impl GameState {
                                 controller: card.owner,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                                event_amount: event_amount(ev),
+                                event_amount: self.event_amount_for(ev),
                                 triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                             });
                             break;
@@ -5257,7 +5266,7 @@ impl GameState {
                                 controller: seat_idx,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
-                                event_amount: event_amount(ev),
+                                event_amount: self.event_amount_for(ev),
                                 triggered_by_etb: false,
                             });
                         }
@@ -5580,6 +5589,10 @@ impl GameState {
         // tail into `remaining` when we suspend mid-batch.
         let mut iter = queue.into_iter();
         while let Some(pending) = iter.next() {
+            // Event-amount-relative target filters (Scrap Trawler's
+            // "lesser mana value than that artifact") read this scratch
+            // during legal-target enumeration below.
+            self.trigger_event_amount_scratch = pending.event_amount;
             let needs = pending.effect.requires_target();
             let wants_ui = self
                 .players
@@ -7056,6 +7069,9 @@ impl GameState {
         trigger_source_ent: Option<crate::game::effects::EntityRef>,
         event_amount: u32,
     ) -> Result<Vec<GameEvent>, GameError> {
+        // Event-amount-relative filters re-checked at resolution
+        // (ManaValueLessThanEventAmount) read this scratch.
+        self.trigger_event_amount_scratch = event_amount;
         // If the trigger has a stored target that's no longer legal (e.g.
         // an Elesh-Norn-doubled Solitude ETB whose first target was just
         // exiled by the prior copy), re-pick a fresh target on resolution.
@@ -7146,6 +7162,23 @@ impl GameState {
         self.battlefield.iter().find(|c| c.id == id)
     }
 
+    /// The firing event's magnitude for `Value::TriggerEventAmount` /
+    /// `ManaValueLessThanEventAmount`. Mostly the event payload's `amount`;
+    /// for died events it's the dying card's mana value (Scrap Trawler's
+    /// "lesser mana value than that artifact"), read from the death
+    /// snapshot cache (tokens are already gone from every zone).
+    pub(crate) fn event_amount_for(&self, ev: &GameEvent) -> u32 {
+        if let GameEvent::CreatureDied { card_id } = ev {
+            return self
+                .died_card_snapshots
+                .get(card_id)
+                .or_else(|| self.find_card_anywhere(*card_id))
+                .map(|c| c.definition.cost.cmc())
+                .unwrap_or(0);
+        }
+        event_amount(ev)
+    }
+
     pub(crate) fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
         self.battlefield.iter_mut().find(|c| c.id == id)
     }
@@ -7154,9 +7187,7 @@ impl GameState {
     /// resolution order — battlefield → each player's graveyard / hand /
     /// library → exile → stack. General-purpose helper for predicates
     /// or effects that need to introspect a card regardless of where
-    /// it currently lives. Currently surfaced for the test suite
-    /// (`#[allow(dead_code)]` keeps it warning-free until callers land).
-    #[allow(dead_code)]
+    /// it currently lives.
     pub(crate) fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);

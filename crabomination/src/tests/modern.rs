@@ -48995,3 +48995,135 @@ fn torbran_combat_damage_bonus_red_attacker_only() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 16, "2 + 2 = 4 combat damage");
 }
+
+// ── Scrap Trawler (lesser-MV-than-dying-artifact return) ─────────────────────
+
+/// An artifact creature dying (lethal damage → SBA) returns a
+/// strictly-cheaper artifact card from the graveyard to hand; equal-MV
+/// cards are not legal targets.
+#[test]
+fn scrap_trawler_returns_lesser_mv_artifact_on_artifact_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::scrap_trawler());
+    // MV-2 artifact creature to die; MV-0 + MV-2 artifacts in graveyard.
+    let dying = g.add_card_to_battlefield(0, catalog::hedron_crawler());
+    let cheap = g.add_card_to_graveyard(0, catalog::ornithopter()); // MV 0
+    let equal = g.add_card_to_graveyard(0, catalog::hedron_crawler()); // MV 2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(dying)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the crawler");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == cheap), "MV 0 < 2 returned");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == equal), "equal MV stays");
+}
+
+/// A nonartifact creature dying doesn't fire the Trawler.
+#[test]
+fn scrap_trawler_ignores_nonartifact_deaths() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::scrap_trawler());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cheap = g.add_card_to_graveyard(0, catalog::ornithopter());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cheap), "no trigger");
+}
+
+// ── Conflagrate (flashback with discard-X) ───────────────────────────────────
+
+/// Hard-cast: X damage divided; single target takes all of it.
+#[test]
+fn conflagrate_hard_cast_deals_x() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::conflagrate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: Some(3),
+    }).expect("X=3 cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+}
+
+/// Flashback charges {R}{R} plus discarding X cards; X drives the damage.
+#[test]
+fn conflagrate_flashback_discards_x_cards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::conflagrate());
+    for _ in 0..2 { g.add_card_to_hand(0, catalog::forest()); }
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: Some(2),
+    }).expect("flashback X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 2, "discarded X=2");
+    assert_eq!(g.players[1].life, 18, "2 damage");
+    assert!(g.exile.iter().any(|c| c.id == id), "flashback exiles");
+}
+
+/// Flashback with X greater than hand size is rejected.
+#[test]
+fn conflagrate_flashback_rejected_without_enough_cards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::conflagrate());
+    g.players[0].hand.clear();
+    g.players[0].mana_pool.add(Color::Red, 2);
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: Some(2),
+    }).is_err());
+}
+
+// ── Chandra, Torch of Defiance (impulse with fallback) ───────────────────────
+
+/// +1 exiles the top card with a may-cast grant; if it's still in exile at
+/// the end step (uncast), each opponent takes 2.
+#[test]
+fn chandra_torch_plus_one_burns_when_impulse_uncast() {
+    let mut g = two_player_game();
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_torch_of_defiance());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: chandra, ability_index: 0, target: None, x_value: None,
+    }).expect("+1");
+    drain_stack(&mut g);
+    let exiled = g.exile.last().expect("top card exiled");
+    assert!(exiled.may_play_until.is_some(), "may-cast grant stamped");
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "uncast impulse → 2 damage");
+}
+
+/// Casting the impulsed card consumes it; no end-step damage.
+#[test]
+fn chandra_torch_plus_one_no_burn_when_cast() {
+    let mut g = two_player_game();
+    let chandra = g.add_card_to_battlefield(0, catalog::chandra_torch_of_defiance());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: chandra, ability_index: 0, target: None, x_value: None,
+    }).expect("+1");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the impulsed card");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "cast → no fallback damage");
+}

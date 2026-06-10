@@ -7396,7 +7396,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopAndGrantMayPlay { who, count, duration, pay_any_color } => {
+            Effect::ExileTopAndGrantMayPlay { who, count, duration, pay_any_color, uncast_penalty } => {
                 // Atomic helper: move the top `count` cards of `who`'s library
                 // to exile and stamp `may_play_until` on each in one step.
                 // The top of the library is index 0 (see `Player::draw_top`
@@ -7430,6 +7430,26 @@ impl GameState {
                                         card.definition.cost.cmc(),
                                     )]));
                             }
+                        }
+                        // "If you don't [cast it], …" — check at the next
+                        // end step whether the card is still in exile.
+                        if let Some(pen) = uncast_penalty {
+                            self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                                controller: ctx.controller,
+                                source: ctx.source.unwrap_or(CardId(0)),
+                                kind: crate::game::types::DelayedKind::NextEndStep,
+                                effect: Effect::If {
+                                    cond: crate::effect::Predicate::EntityMatches {
+                                        what: crate::effect::Selector::Target(0),
+                                        filter: crate::card::SelectionRequirement::InExile,
+                                    },
+                                    then: pen.clone(),
+                                    else_: Box::new(Effect::Noop),
+                                },
+                                target: Some(Target::Permanent(top_id)),
+                                bound_token: None,
+                                fires_once: true,
+                            });
                         }
                     }
                 }
