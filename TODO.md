@@ -2546,11 +2546,6 @@ Static Prison and Rapier Wit add stun counters.  No indicator currently shows
 that a permanent has a stun counter (i.e., won't untap next turn).  A small
 badge or coloured ring on the card would communicate this clearly.
 
-### Mana Pool HUD
-During the player's main phase, their current mana pool is shown in the player
-status text but as a compact string.  A pip-style display (coloured circles for
-each mana symbol available) would be faster to read at a glance.
-
 ### Damage Overlays
 When combat damage is assigned, show floating damage numbers rising off
 affected creatures before SBA removes the dead ones.
@@ -2596,8 +2591,8 @@ drifts up and fades. Hook off `GameEventWire::DamageDealt`, `LifeLost`,
 Mana is rendered as text codes (`W:1 R:2`) in the player status, ability
 costs, alt-cast modal, and decision modals. Adopt a mana-symbol font or
 PNG atlas plus a text segmenter that splits `{2}{R}{R}` into icons +
-numerals. Subsumes the existing "Mana Pool HUD" entry above — once the
-glyph primitive exists every mana surface benefits.
+numerals. Once the glyph primitive exists every mana surface benefits
+(the pip-style mana-pool HUD already ships in `player_stats.rs`).
 
 ### Phase Chart Progress Indicator
 `update_phase_chart` highlights only the current step in yellow. Add a
@@ -2679,10 +2674,6 @@ indicator + click target. Slims the 2-D chip strip.
 ### Undo / Take-Back
 A "request take-back" action the opponent can approve would reduce frustration
 from misclicks, especially during the targeting flow.
-
-### Keyboard Shortcut Reference
-Add a `?` or `H` key that opens an in-game overlay listing all keyboard
-shortcuts (A = attack all, Space/P = pass, E = end turn, N = next turn, etc.).
 
 ### Responsive Stack Display
 The stack panel (bottom-center) is a fixed-width overlay.  On narrow windows

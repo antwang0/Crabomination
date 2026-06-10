@@ -298,14 +298,21 @@ pub fn draw_stack_arrows(
     let n_seats = cv.players.len();
     let color = glow(Color::srgba(1.0, 0.6, 0.05, 0.9), CUE_GLOW);
 
+    // Secondary targets draw slightly dimmer so the primary stays legible
+    // when a multi-target spell fans out (Forked Bolt, Cone of Flame).
+    let secondary = glow(Color::srgba(1.0, 0.45, 0.05, 0.65), CUE_GLOW * 0.7);
+
     for item in &cv.stack {
         let StackItemView::Known(known) = item else { continue };
         let source_id = known.source;
-        let Some(ref target) = known.target else { continue };
 
         let from = stack_pos.get(&source_id).or_else(|| bf_pos.get(&source_id)).copied();
-        let to = match target {
-            Target::Permanent(id) => bf_pos.get(id).copied(),
+        // A target can be a battlefield permanent, a player zone, or
+        // another spell on the stack (counter magic).
+        let resolve = |target: &Target| match target {
+            Target::Permanent(id) => {
+                bf_pos.get(id).copied().or_else(|| stack_pos.get(id).copied())
+            }
             Target::Player(idx) => {
                 if *idx < n_seats {
                     let mut p = player_hand_anchor(*idx, viewer, n_seats);
@@ -317,8 +324,15 @@ pub fn draw_stack_arrows(
             }
         };
 
-        if let (Some(from), Some(to)) = (from, to) {
+        let Some(from) = from else { continue };
+        if let Some(to) = known.target.as_ref().and_then(resolve) {
             gizmos.arrow(from, to, color).with_tip_length(0.7);
+        }
+        // Slots 1+ — every extra target of a multi-target spell.
+        for t in &known.additional_targets {
+            if let Some(to) = resolve(t) {
+                gizmos.arrow(from, to, secondary).with_tip_length(0.55);
+            }
         }
     }
 }
