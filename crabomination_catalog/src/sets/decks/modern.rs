@@ -12123,30 +12123,16 @@ pub fn black_suns_zenith() -> CardDefinition {
 
 // ── claude/modern_decks batch 102: multicolor cube expansion ────────────────
 
-/// Sorin, Grim Nemesis — {4}{B}{B} Legendary Planeswalker — Sorin.
-/// 6 loyalty.
-/// **+1**: Reveal the top card of your library and put that card into your
-/// hand. You lose life equal to its mana value. If it's a creature card,
-/// create an X/X black Knight creature token with lifelink, where X is
-/// its mana value.
-/// **-X**: Sorin deals X damage to target creature or planeswalker and you
-/// gain X life.
-/// **-9**: Target opponent loses life equal to the number of cards in their
-/// graveyard.
-///
-/// Cube-style approximation: the headline play pattern is the +1 (a
-/// life-loss-for-cards exchange) and the -X (a tutored drain). The +1's
-/// "reveal then take into hand" branch is collapsed to a straight Draw
-/// 1 + LoseLife 3 (the most common cost — an average top-of-library mana
-/// value). The Knight-token half is dropped (no mana-value-scaled token
-/// primitive at this fidelity). The -X drain reads `Value::XFromCost`
-/// (set by the `x_value` rider on `GameAction::ActivateLoyaltyAbility`).
-/// The -9 ult uses a flat 10 drain (typical late-game state).
+/// Sorin, Grim Nemesis — {4}{W}{B} 6-loyalty Planeswalker.
+/// +1: Reveal the top card into your hand; each opponent loses its MV.
+/// -X: X damage to target creature or planeswalker, gain X life.
+/// -9: Create 1/1 black Vampire Knight lifelink tokens equal to the
+/// highest life total among all players.
 pub fn sorin_grim_nemesis() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     CardDefinition {
         name: "Sorin, Grim Nemesis",
-        cost: cost(&[generic(4), b(), b()]),
+        cost: cost(&[generic(4), w(), b()]),
         supertypes: vec![Sup::Legendary],
         card_types: vec![CardType::Planeswalker],
         subtypes: Subtypes {
@@ -12156,44 +12142,44 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
         base_loyalty: 6,
         loyalty_abilities: vec![
             LoyaltyAbility {
-                x_cost: false,
                 loyalty_cost: 1,
-                effect: Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::LoseLife {
-                        who: Selector::You,
-                        amount: Value::Const(3),
-                    },
-                ]),
+                effect: Effect::RevealTopToHandOpponentsLoseMv,
+                ..Default::default()
             },
             LoyaltyAbility {
-                x_cost: false,
-                loyalty_cost: -1,
+                x_cost: true,
                 effect: Effect::Seq(vec![
                     Effect::DealDamage {
                         to: target_filtered(
                             SelectionRequirement::Creature
                                 .or(SelectionRequirement::Planeswalker),
                         ),
-                        amount: Value::Const(1),
+                        amount: Value::XFromCost,
                     },
-                    Effect::GainLife {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
                 ]),
+                ..Default::default()
             },
             LoyaltyAbility {
-                x_cost: false,
                 loyalty_cost: -9,
-                effect: Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    to: Selector::You,
-                    amount: Value::Const(10),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::HighestLifeTotal,
+                    definition: TokenDefinition {
+                        name: "Vampire Knight".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        keywords: vec![crate::card::Keyword::Lifelink],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
                 },
+                ..Default::default()
             },
         ],
         ..Default::default()
@@ -12286,44 +12272,39 @@ pub fn saheeli_rai() -> CardDefinition {
                 loyalty_cost: -2,
                 effect: copy_friendly(),
             },
-            // -7: emblem — "At the beginning of your end step, create two
-            // tokens that are copies of target artifact or creature you
-            // control, except they have haste." Modeled via the CR 114
-            // emblem zone (one CreateTokenCopyOf count 2 + haste on
-            // `LastCreatedTokens` so both copies are hasty). The step-trigger
-            // path auto-targets the copy source correctly.
+            // -7: search up to three artifact cards with different names,
+            // put them onto the battlefield, then shuffle. Modeled as three
+            // sequential searches to the battlefield (the distinct-names
+            // clause isn't enforced by the search decision).
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -7,
-                effect: Effect::CreateEmblem {
-                    who: PlayerRef::You,
-                    name: "Saheeli Rai".into(),
-                    triggered: vec![TriggeredAbility {
-                        event: EventSpec::new(
-                            EventKind::StepBegins(crate::game::TurnStep::End),
-                            EventScope::YourControl,
-                        ),
-                        effect: Effect::Seq(vec![
-                            Effect::CreateTokenCopyOf {
-                                who: PlayerRef::You,
-                                count: Value::Const(2),
-                                source: target_filtered(
-                                    SelectionRequirement::Creature
-                                        .or(SelectionRequirement::Artifact)
-                                        .and(SelectionRequirement::ControlledByYou),
-                                ),
-                                extra_creature_types: vec![],
-                                override_pt: None,
-                                non_legendary: false,
-                            },
-                            Effect::GrantKeyword {
-                                what: Selector::LastCreatedTokens,
-                                keyword: crate::card::Keyword::Haste,
-                                duration: Duration::Permanent,
-                            },
-                        ]),
-                    }],
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Artifact,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Artifact,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Artifact,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                ]),
             },
         ],
         ..Default::default()
@@ -12332,22 +12313,11 @@ pub fn saheeli_rai() -> CardDefinition {
 
 // ── modern_decks-16: new cube cards ──────────────────────────────────────────
 
-/// Ashiok, Nightmare Weaver — {1}{U}{B} Legendary Planeswalker — Ashiok.
-/// 3 loyalty.
-/// **+2**: Exile the top three cards of target opponent's library.
-/// **-X**: Exile target creature an opponent controls. Put onto the
-/// battlefield under your control a token that's a copy of a creature
-/// card with mana value X or less exiled with Ashiok.
-/// **-10**: Each opponent draws seven cards from cards exiled with this.
-///
-/// Cube-style approximation. The +2 mills 3 (engine routes exile-from-
-/// library through `Mill`-style movement, but Ashiok's "exiled with this"
-/// linkage is engine-wide ⏳ — for cube play the milled cards stay in
-/// the opponent's removal pile rather than a dedicated exile-with-this
-/// zone). The -X uses `Effect::Exile` on the targeted opponent creature
-/// (the "create a copy of exiled creature" rider is dropped, same gap as
-/// Saheeli's emblem). The -10 ult is collapsed to "each opponent loses
-/// the game" via the standard `WinGame` pattern.
+/// Ashiok, Nightmare Weaver — {1}{U}{B} 3-loyalty Planeswalker.
+/// +2: Exile the top three of target opponent's library (linked to Ashiok).
+/// -X: Put a creature card with MV X exiled with Ashiok onto the battlefield
+/// under your control as a Nightmare. -10: Exile all cards from all
+/// opponents' hands and graveyards.
 pub fn ashiok_nightmare_weaver() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     CardDefinition {
@@ -12362,27 +12332,27 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
-                x_cost: false,
                 loyalty_cost: 2,
-                effect: Effect::Mill {
+                effect: Effect::ExileTopOfLibrary {
                     who: target_filtered(SelectionRequirement::Player),
                     amount: Value::Const(3),
+                    link_to_source: true,
+                    face_down: false,
                 },
+                ..Default::default()
             },
             LoyaltyAbility {
-                x_cost: false,
-                loyalty_cost: -1,
-                effect: Effect::Exile {
-                    what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                },
+                x_cost: true,
+                effect: Effect::PutExiledCreatureOntoBattlefield { mv: Value::XFromCost },
+                ..Default::default()
             },
             LoyaltyAbility {
-                x_cost: false,
                 loyalty_cost: -10,
-                effect: Effect::WinGame { who: PlayerRef::You },
+                effect: Effect::Seq(vec![
+                    Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent },
+                    Effect::ExileHand { who: PlayerRef::EachOpponent },
+                ]),
+                ..Default::default()
             },
         ],
         ..Default::default()
@@ -12438,25 +12408,10 @@ pub fn kolaghans_command() -> CardDefinition {
     }
 }
 
-/// Tamiyo, Collector of Tales — {2}{G}{U} Legendary Planeswalker — Tamiyo.
-/// 4 loyalty.
-/// **Static**: "Spells your opponents control can't cause you to discard
-/// cards or sacrifice permanents." (Approximation: collapsed — engine
-/// has no opponent-spell-effect filter on `DiscardChosen` / `Sacrifice`.)
-/// **-2**: Return target card from your graveyard to your hand.
-/// **-3**: Search your library for a card with the same name as a card
-/// in target player's graveyard, reveal it, put it into your hand, then
-/// shuffle.
-/// **-7**: Draw cards equal to the number of nonland card types among
-/// cards in your graveyard. You get an emblem with "Spells you cast
-/// have convoke."
-///
-/// Cube-style approximation. The static is dropped (engine-wide gap).
-/// The -2 reanimate uses `Move(target → Hand)`. The -3 is approximated
-/// as `Search → Hand` on the controller's library with no name-match
-/// (any card; future name-match primitive will tighten this). The -7
-/// uses `Draw 4` (a reasonable midgame approximation; the full
-/// distinct-types-in-gy + convoke-emblem is engine-wide ⏳).
+/// Tamiyo, Collector of Tales — {2}{G}{U} 5-loyalty Planeswalker.
+/// Opponents' spells and abilities can't make you discard or sacrifice.
+/// +1: Name a nonland card, reveal top four — matches to hand, rest to
+/// graveyard. -3: Return target card from your graveyard to your hand.
 pub fn tamiyo_collector_of_tales() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     use crate::effect::{StaticAbility, StaticEffect};
@@ -12469,37 +12424,30 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Tamiyo],
             ..Default::default()
         },
-        static_abilities: vec![StaticAbility {
-            // The "can't make you discard" half remains a separate gap.
-            description: "Spells your opponents control can't cause you to sacrifice permanents.",
-            effect: StaticEffect::OpponentsCantMakeYouSacrifice,
-        }],
-        base_loyalty: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spells and abilities your opponents control can't cause you to sacrifice permanents.",
+                effect: StaticEffect::OpponentsCantMakeYouSacrifice,
+            },
+            StaticAbility {
+                description: "Spells and abilities your opponents control can't cause you to discard cards.",
+                effect: StaticEffect::OpponentsCantMakeYouDiscard,
+            },
+        ],
+        base_loyalty: 5,
         loyalty_abilities: vec![
             LoyaltyAbility {
-                x_cost: false,
-                loyalty_cost: -2,
+                loyalty_cost: 1,
+                effect: Effect::NameCardRevealTop { count: Value::Const(4) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
                 effect: Effect::Move {
                     what: target_filtered(SelectionRequirement::Any),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-            },
-            LoyaltyAbility {
-                x_cost: false,
-                loyalty_cost: -3,
-                effect: Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Any,
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-            },
-            LoyaltyAbility {
-                x_cost: false,
-                loyalty_cost: -7,
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(4),
-                },
+                ..Default::default()
             },
         ],
         ..Default::default()
@@ -15642,13 +15590,10 @@ pub fn spell_queller() -> CardDefinition {
     }
 }
 
-/// Lonis, Genetics Expert — {1}{G}{U} Legendary Creature — Otter
-/// Detective. 2/2. "Whenever a creature you control enters, investigate."
-///
-/// Synthesised body for the ⏳ cube row. Investigates via the
-/// existing `clue_token()` helper. The "Sacrifice X Clues: target
-/// opponent reveals top X cards" activated ability is collapsed as a
-/// future polish item (no per-activation X prompt for clue scaling).
+/// Lonis, Genetics Expert — {1}{G}{U} Legendary 2/2 Otter Detective.
+/// Whenever a creature you control enters, investigate. {T}, Sacrifice X
+/// Clues: target opponent reveals top X; put a nonland permanent MV ≤ X
+/// among them onto the battlefield under your control; they shuffle.
 pub fn lonis_genetics_expert() -> CardDefinition {
     use crate::card::Supertype;
     use crate::effect::Predicate;
@@ -15678,6 +15623,20 @@ pub fn lonis_genetics_expert() -> CardDefinition {
                 count: Value::Const(1),
                 definition: clue_token(),
             },
+        }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            sorcery_speed: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Clue),
+                0,
+            )),
+            sac_other_x: true,
+            effect: Effect::RevealOpponentTopPutOntoBattlefield {
+                count: Value::XFromCost,
+                filter: SelectionRequirement::Nonland.and(SelectionRequirement::Permanent),
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -19549,13 +19508,10 @@ pub fn goblin_wardriver() -> CardDefinition {
     }
 }
 
-/// Dakkon, Shadow Slayer — {W}{U}{B} Legendary Planeswalker — Dakkon.
-/// "+1: Surveil 2. / -3: Exile target creature. / -6: You get an
-///  emblem with 'At the beginning of your upkeep, draw a card.'"
-///
-/// +1 Surveil 2, -3 exile target creature, -6 upkeep-draw emblem all
-/// wired. Base loyalty = 3 (printed: loyalty equals lands you control,
-/// approximated as a fixed 3).
+/// Dakkon, Shadow Slayer — {W}{U}{B} Planeswalker. Enters with loyalty
+/// equal to the number of lands you control. +1: Surveil 2. -3: Exile
+/// target creature. -6: You may put an artifact card from your hand or
+/// graveyard onto the battlefield.
 pub fn dakkon_shadow_slayer() -> CardDefinition {
     use crate::card::LoyaltyAbility;
     CardDefinition {
@@ -19563,7 +19519,18 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
         cost: cost(&[w(), u(), b()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
-        base_loyalty: 3,
+        base_loyalty: 0,
+        enters_with_counters: Some((
+            CounterType::Loyalty,
+            Value::CountMatching {
+                sel: Box::new(Selector::EachMatching {
+                    zone: crate::effect::ZoneRef::Battlefield,
+                    filter: SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou),
+                }),
+                filter: SelectionRequirement::Any,
+            },
+        )),
         loyalty_abilities: vec![
             LoyaltyAbility {
                 x_cost: false,
@@ -19580,21 +19547,11 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
                     what: target_filtered(SelectionRequirement::Creature),
                 },
             },
-            // -6: You get an emblem with "At the beginning of your
-            // upkeep, draw a card."
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -6,
-                effect: Effect::CreateEmblem {
-                    who: PlayerRef::You,
-                    name: "Dakkon, Shadow Slayer".into(),
-                    triggered: vec![TriggeredAbility {
-                        event: EventSpec::new(
-                            EventKind::StepBegins(crate::game::TurnStep::Upkeep),
-                            EventScope::YourControl,
-                        ),
-                        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    }],
+                effect: Effect::PutFromHandOrGraveyardOntoBattlefield {
+                    filter: SelectionRequirement::Artifact,
                 },
             },
         ],

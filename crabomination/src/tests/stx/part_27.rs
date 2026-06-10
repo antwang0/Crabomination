@@ -693,6 +693,54 @@ fn kasmina_minus_x_makes_a_scaled_fractal() {
 }
 
 #[test]
+fn kasmina_shares_loyalty_abilities_with_other_planeswalkers() {
+    // Each other planeswalker you control has Kasmina's loyalty abilities:
+    // activating Dakkon at an index past his printed list reaches
+    // Kasmina's +2 Scry (printed 3 + granted 3 → index 3 = Kasmina's +2).
+    let mut g = two_player_game();
+    let _k = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    let dakkon = g.add_card_to_battlefield(0, catalog::dakkon_shadow_slayer());
+    g.battlefield_find_mut(dakkon).unwrap()
+        .counters.insert(crate::card::CounterType::Loyalty, 3);
+    let printed = g.battlefield_find(dakkon).unwrap().definition.loyalty_abilities.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dakkon, ability_index: printed, target: None, x_value: None,
+    }).expect("granted Kasmina +2 activates off Dakkon");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(dakkon).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        5, "Dakkon paid Kasmina's +2 cost",
+    );
+}
+
+#[test]
+fn kasmina_minus_eight_exiles_and_casts_a_matching_spell_free() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let k = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    g.battlefield_find_mut(k).unwrap()
+        .counters.insert(crate::card::CounterType::Loyalty, 8);
+    // Library: a green sorcery (eligible) and a red instant (not).
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let growth = g.next_id();
+    g.players[0].add_to_library_top(growth, catalog::giant_growth());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(growth)),
+        DecisionAnswer::Bool(true), // "cast without paying?"
+    ]));
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: k, ability_index: 2, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("-8 activatable");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == growth),
+        "Giant Growth was cast (free) and resolved to the graveyard");
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 5, "Giant Growth resolved on the Bear");
+}
+
+#[test]
 fn kasmina_minus_x_capped_at_current_loyalty() {
     let mut g = two_player_game();
     let k = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
@@ -983,3 +1031,4 @@ fn rootha_bounces_itself_to_copy_a_spell() {
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "Rootha returned to hand");
     assert_eq!(g.players[1].life, life - 6, "original + copy each deal 3");
 }
+

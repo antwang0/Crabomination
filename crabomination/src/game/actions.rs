@@ -4605,6 +4605,19 @@ impl GameState {
         })
     }
 
+    /// The discard sibling of the above (Tamiyo, Collector of Tales).
+    /// Consulted by the `Effect::Discard` resolver.
+    pub(crate) fn player_cant_be_made_to_discard(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantMakeYouDiscard))
+        })
+    }
+
     // Note: `fire_ward_triggers` (the old Ward(u32) version) was removed
     // during the merge — Ward is now enforced via
     // `push_ward_triggers_for_cast` (CR 702.21) which handles the full
@@ -5959,7 +5972,12 @@ impl GameState {
         let sac_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.sac_other_filter.as_ref()
         {
-            let count = *count as usize;
+            // "Sacrifice X [filter]:" costs read the activation's X.
+            let count = if ability.sac_other_x {
+                x_value.unwrap_or(0) as usize
+            } else {
+                *count as usize
+            };
             let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
@@ -6166,7 +6184,11 @@ impl GameState {
         } else {
             ability.mana_cost.clone()
         };
-        let activated_x = if ability.mana_cost.has_x() { x_value.unwrap_or(0) } else { 0 };
+        let activated_x = if ability.mana_cost.has_x() || ability.sac_other_x {
+            x_value.unwrap_or(0)
+        } else {
+            0
+        };
         if let Some(kind) = ability.self_counter_cost_reduction
             && !source_in_gy
             && let Some(src) = self.battlefield_find(card_id)

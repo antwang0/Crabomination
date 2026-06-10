@@ -798,6 +798,11 @@ pub enum PendingEffectState {
     RearrangePeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
     SearchPending { player: usize, to: crate::effect::ZoneDest },
+    /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
+    PutFromZonesPending { player: usize },
+    /// Tamiyo +1: the named-card answer drives the reveal-top sort
+    /// (matching name → hand, rest → graveyard).
+    NameRevealTopPending { player: usize, count: usize },
     /// CR 701.45 — suspended on a `Decision::Learn`. The resume step reads
     /// `DecisionAnswer::Learn(choice)` and reveals a Lesson into `player`'s
     /// hand, rummages (discard-then-draw), or declines.

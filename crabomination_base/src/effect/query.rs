@@ -111,6 +111,14 @@ impl Effect {
         }
         match self {
             Effect::Noop => false,
+            // Targets an opponent, but resolution auto-binds slot 0 / the
+            // lowest-seat opponent, so no cast-time target is demanded.
+            Effect::RevealOpponentTopPutOntoBattlefield { .. } => false,
+            Effect::NameCardRevealTop { .. } => false,
+            Effect::RevealTopToHandOpponentsLoseMv => false,
+            Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
+            Effect::PutExiledCreatureOntoBattlefield { .. } => false,
+            Effect::ExileHand { who } => player_has_target(who),
             Effect::Demonstrate => false,
             Effect::Cipher => false,
             Effect::Myriad => false,

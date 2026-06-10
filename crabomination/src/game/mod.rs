@@ -5276,9 +5276,24 @@ impl GameState {
             return Err(GameError::LoyaltyAbilityAlreadyUsed(card_id));
         }
 
-        let ability = self.battlefield[pos]
-            .definition
-            .loyalty_abilities
+        // Printed abilities, plus any granted by another friendly
+        // planeswalker's ability-sharing static (Kasmina, Enigma Sage) at
+        // indices past the printed count.
+        let mut abilities = self.battlefield[pos].definition.loyalty_abilities.clone();
+        for c in &self.battlefield {
+            if c.id != card_id
+                && c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
+                    )
+                })
+            {
+                abilities.extend(c.definition.loyalty_abilities.iter().cloned());
+            }
+        }
+        let ability = abilities
             .get(ability_index)
             .cloned()
             .ok_or(GameError::AbilityIndexOutOfBounds)?;
@@ -6177,6 +6192,57 @@ impl GameState {
                 }
                 Ok(Vec::new())
             }
+            PendingEffectState::PutFromZonesPending { player } => {
+                let DecisionAnswer::Search(chosen_id) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                if let Some(cid) = chosen_id {
+                    let from_hand =
+                        self.players[player].hand.iter().position(|c| c.id == *cid);
+                    let from_gy =
+                        self.players[player].graveyard.iter().position(|c| c.id == *cid);
+                    let card = match (from_hand, from_gy) {
+                        (Some(pos), _) => Some(self.players[player].hand.remove(pos)),
+                        (None, Some(pos)) => Some(self.players[player].graveyard.remove(pos)),
+                        _ => None,
+                    };
+                    if let Some(card) = card {
+                        let dest = crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(player),
+                            tapped: false,
+                        };
+                        self.place_card_in_dest(card, player, &dest, &mut events);
+                    }
+                }
+                Ok(events)
+            }
+            PendingEffectState::NameRevealTopPending { player, count } => {
+                let DecisionAnswer::NamedCard(name) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                let revealed: Vec<CardId> = self.players[player]
+                    .library
+                    .iter()
+                    .take(count)
+                    .map(|c| c.id)
+                    .collect();
+                for id in revealed {
+                    let Some(pos) = self.players[player].library.iter().position(|c| c.id == id)
+                    else {
+                        continue;
+                    };
+                    let matches = self.players[player].library[pos].definition.name == name;
+                    let card = self.players[player].library.remove(pos);
+                    if matches {
+                        self.players[player].hand.push(card);
+                    } else {
+                        self.route_to_graveyard(card, &mut events);
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::NameCardPending { target_id } => {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -7074,6 +7140,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
             // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).
             | StaticEffect::SuppressCreatureEtbTriggers { .. }
+            // OtherPlaneswalkersHaveSourceLoyaltyAbilities — read at loyalty
+            // activation time in `activate_loyalty_ability`; no layer effect.
+            | StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities
             // SpellsYouCastHaveDelve (Teval) — read at cast time by
             // `controller_grants_spells_delve`; no layer effect.
             | StaticEffect::SpellsYouCastHaveDelve
@@ -7193,6 +7262,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // OpponentsCantMakeYouSacrifice (Sigarda/Tamiyo) — consulted in
             // the `Effect::Sacrifice` resolver; no continuous-layer effect.
             | StaticEffect::OpponentsCantMakeYouSacrifice
+            | StaticEffect::OpponentsCantMakeYouDiscard
             | StaticEffect::ControllerDrawsDoubled
             | StaticEffect::RedirectDamageToSelf
             | StaticEffect::ControllerCantCastPermanentSpells => vec![],

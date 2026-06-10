@@ -293,6 +293,9 @@ pub enum Value {
     /// in Kind: "each player's life total becomes the lowest life total
     /// among all players").
     LowestLifeTotal,
+    /// The highest life total among all (alive) players. Sorin, Grim
+    /// Nemesis −9.
+    HighestLifeTotal,
     HandSizeOf(PlayerRef),
     /// Life `who` has gained so far this turn (CR 119.3). Backed by
     /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
@@ -1749,6 +1752,29 @@ pub enum Effect {
         #[serde(default)]
         take: Option<Value>,
     },
+    /// "You may put a card matching `filter` from your hand or graveyard
+    /// onto the battlefield." Dakkon, Shadow Slayer −6. Auto-pick: the
+    /// highest-MV match; a `wants_ui` controller picks (or declines) via
+    /// the search decision.
+    PutFromHandOrGraveyardOntoBattlefield { filter: crate::card::SelectionRequirement },
+    /// "Reveal the top card of your library and put it into your hand. Each
+    /// opponent loses life equal to its mana value." Sorin, Grim Nemesis +1.
+    RevealTopToHandOpponentsLoseMv,
+    /// "Choose a nonland card name, then reveal the top `count` cards of
+    /// your library. Put all cards with the chosen name from among them into
+    /// your hand and the rest into your graveyard." Tamiyo, Collector of
+    /// Tales +1.
+    NameCardRevealTop { count: Value },
+    /// "Put a creature card with mana value `mv` exiled with [the source]
+    /// onto the battlefield under your control. That creature is a Nightmare
+    /// in addition to its other types." Ashiok, Nightmare Weaver −X.
+    PutExiledCreatureOntoBattlefield { mv: Value },
+    /// "Target opponent reveals the top `count` cards of their library. You
+    /// may put a nonland permanent card with mana value `count` or less from
+    /// among them onto the battlefield under your control. Then that player
+    /// shuffles." (Both Xs are the same value, as printed.) Lonis, Genetics
+    /// Expert.
+    RevealOpponentTopPutOntoBattlefield { count: Value, filter: SelectionRequirement },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the
     /// rest on the bottom of your library in a random order." Atraxa, Grand
@@ -1882,6 +1908,9 @@ pub enum Effect {
     /// "Exile that player's graveyard" — graveyard hate scoped to a single
     /// player (Go Blank). `who` resolves to the affected player.
     ExilePlayerGraveyard { who: PlayerRef },
+    /// Exile all cards from `who`'s hand (each resolved player). Ashiok's
+    /// −10 pairs this with `ExilePlayerGraveyard`.
+    ExileHand { who: PlayerRef },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the

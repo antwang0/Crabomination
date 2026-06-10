@@ -1064,11 +1064,10 @@ pub fn harness_infinity() -> CardDefinition {
 
 // ── Planeswalker & Land ──────────────────────────────────────────────────────
 
-/// Kasmina, Enigma Sage — {1}{G}{U} 5-loyalty Planeswalker. +2: Scry 1.
-/// -X: Create a 0/0 G/U Fractal with X +1/+1 counters (variable-X loyalty via
-/// `LoyaltyAbility.x_cost`). -8: Search your library for a card to hand.
-/// (The "other planeswalkers you control gain Kasmina's abilities" static is
-/// dropped.)
+/// Kasmina, Enigma Sage — {1}{G}{U} 2-loyalty Planeswalker. Each other
+/// planeswalker you control has Kasmina's loyalty abilities. +2: Scry 1.
+/// -X: 0/0 G/U Fractal with X +1/+1 counters. -8: Search for an instant or
+/// sorcery sharing a color with Kasmina, exile it, cast it free.
 pub fn kasmina_enigma_sage() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
     CardDefinition {
@@ -1080,7 +1079,11 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Kasmina],
             ..Default::default()
         },
-        base_loyalty: 5,
+        base_loyalty: 2,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Each other planeswalker you control has the loyalty abilities of Kasmina.",
+            effect: crate::effect::StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities,
+        }],
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 2,
@@ -1106,11 +1109,23 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -8,
-                effect: Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Any,
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                            .and(
+                                SelectionRequirement::HasColor(Color::Green)
+                                    .or(SelectionRequirement::HasColor(Color::Blue)),
+                            ),
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::CastWithoutPayingImmediate {
+                        what: Selector::LastMoved,
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                    },
+                ]),
                 ..Default::default()
             },
         ],

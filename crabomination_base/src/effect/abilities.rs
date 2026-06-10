@@ -312,6 +312,11 @@ pub enum StaticEffect {
         #[serde(default)]
         also_dies: bool,
     },
+    /// "Each other planeswalker you control has the loyalty abilities of
+    /// [this]." (Kasmina, Enigma Sage.) Read by `activate_loyalty_ability`,
+    /// which appends the source's loyalty abilities (indices ≥ printed
+    /// count) to every other friendly planeswalker.
+    OtherPlaneswalkersHaveSourceLoyaltyAbilities,
     /// "Creatures you control of the chosen type get +P/+T" — a tribal anthem
     /// keyed to the source permanent's `chosen_creature_type` (set at ETB via
     /// `Effect::NameCreatureType`). Resolved live in `gather_continuous_effects`
@@ -528,6 +533,10 @@ pub enum StaticEffect {
     /// to sacrifice, that player is skipped. Sigarda, Host of Herons; Tamiyo,
     /// Collector of Tales (the discard half is a separate gap).
     OpponentsCantMakeYouSacrifice,
+    /// "Spells and abilities your opponents control can't cause you to
+    /// discard cards." (Tamiyo, Collector of Tales.) Consulted by the
+    /// `Effect::Discard` resolver; the sacrifice half is the sibling above.
+    OpponentsCantMakeYouDiscard,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -670,6 +679,11 @@ pub struct ActivatedAbility {
     /// shapes).
     #[serde(default)]
     pub sac_other_filter: Option<(SelectionRequirement, u32)>,
+    /// When true, `sac_other_filter`'s count is the activation's X value
+    /// ("Sacrifice X [filter]:" costs — Lonis, Genetics Expert). The X is
+    /// threaded to the effect as `Value::XFromCost`.
+    #[serde(default)]
+    pub sac_other_x: bool,
     /// Optional cost: tap an *untapped, different* permanent the activator
     /// controls matching this filter (CR 602.5b "tap an untapped … you
     /// control" costs). Mirrors `sac_other_filter` but taps rather than

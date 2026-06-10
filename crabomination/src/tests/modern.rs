@@ -16432,43 +16432,68 @@ fn yavimaya_elder_sac_draws_a_card() {
 // ── claude/modern_decks batch 102: multicolor cube expansion ────────────────
 
 #[test]
-fn sorin_grim_nemesis_plus_one_draws_and_loses_three_life() {
+fn sorin_plus_one_reveals_top_to_hand_and_drains_its_mv() {
     let mut g = two_player_game();
     let sorin = g.add_card_to_battlefield(0, catalog::sorin_grim_nemesis());
-    g.add_card_to_library(0, catalog::island());
-    let life_before = g.players[0].life;
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::mind_stone()); // MV 2
+    let p1_life = g.players[1].life;
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
+        x_value: None,
         card_id: sorin, ability_index: 0, target: None,
-    }).expect("Sorin +1 castable");
+    }).expect("Sorin +1");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, life_before - 3, "Lost 3 life");
-    assert!(g.players[0].hand.len() > hand_before, "Drew a card");
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "revealed card to hand");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[1].life, p1_life - 2, "opponent lost the card's MV");
 }
 
 #[test]
-fn sorin_grim_nemesis_minus_nine_drains_each_opponent() {
+fn sorin_minus_x_pings_and_gains() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_grim_nemesis());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let p0_life = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: Some(2),
+        card_id: sorin, ability_index: 1, target: Some(Target::Permanent(bear)),
+    }).expect("Sorin -X");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "Bear took 2 and died");
+    assert_eq!(g.players[0].life, p0_life + 2, "gained X life");
+    assert_eq!(
+        g.battlefield_find(sorin).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        4, "paid X=2 from 6",
+    );
+}
+
+#[test]
+fn sorin_minus_nine_mints_tokens_equal_to_highest_life() {
     use crate::card::CounterType;
     let mut g = two_player_game();
     let sorin = g.add_card_to_battlefield(0, catalog::sorin_grim_nemesis());
-    // Pump loyalty so -9 is legal (6 base + 3 = 9).
     if let Some(s) = g.battlefield_find_mut(sorin) {
         s.add_counters(CounterType::Loyalty, 3);
     }
-    let p0_life = g.players[0].life;
-    let p1_life = g.players[1].life;
+    g.players[0].life = 12;
+    g.players[1].life = 17;
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
+        x_value: None,
         card_id: sorin, ability_index: 2, target: None,
-    }).expect("Sorin -9 ult");
+    }).expect("Sorin -9");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, p1_life - 10, "Opp lost 10");
-    assert_eq!(g.players[0].life, p0_life + 10, "Gained 10");
+    let knights = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Vampire Knight" && c.controller == 0)
+        .count();
+    assert_eq!(knights, 17, "tokens = highest life total among all players");
 }
 
 #[test]
@@ -16645,63 +16670,150 @@ fn saheeli_rai_minus_two_creates_haste_copy() {
 }
 
 #[test]
-fn ashiok_nightmare_weaver_plus_two_mills_opponent_three() {
+fn ashiok_plus_two_exiles_top_three_linked() {
     use crate::game::types::Target;
     let mut g = two_player_game();
     let ashiok = g.add_card_to_battlefield(0, catalog::ashiok_nightmare_weaver());
     for _ in 0..5 {
         g.add_card_to_library(1, catalog::island());
     }
-    let yard_before = g.players[1].graveyard.len();
+    let exile_before = g.exile.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
+        x_value: None,
         card_id: ashiok,
         ability_index: 0,
         target: Some(Target::Player(1)),
-    }).expect("Ashiok +2 mills opp 3");
+    }).expect("Ashiok +2");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].graveyard.len(), yard_before + 3, "Opp milled 3");
+    assert_eq!(g.exile.len(), exile_before + 3, "top three exiled");
+    assert_eq!(
+        g.exile.iter().filter(|c| c.exiled_with == Some(ashiok)).count(),
+        3,
+        "exiled cards are linked to Ashiok"
+    );
 }
 
 #[test]
-fn ashiok_nightmare_weaver_minus_one_exiles_creature() {
-    use crate::game::types::Target;
+fn ashiok_minus_x_reanimates_an_exiled_creature_as_a_nightmare() {
     let mut g = two_player_game();
     let ashiok = g.add_card_to_battlefield(0, catalog::ashiok_nightmare_weaver());
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(ashiok).unwrap()
+        .counters.insert(crate::card::CounterType::Loyalty, 5);
+    // A MV-2 creature exiled with Ashiok.
+    let bear = g.add_card_to_exile(1, catalog::grizzly_bears());
+    g.exile.iter_mut().find(|c| c.id == bear).unwrap().exiled_with = Some(ashiok);
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
+        x_value: Some(2),
         card_id: ashiok,
         ability_index: 1,
-        target: Some(Target::Permanent(bear)),
-    }).expect("Ashiok -1 exiles bear");
+        target: None,
+    }).expect("Ashiok -X");
     drain_stack(&mut g);
 
-    assert!(g.battlefield_find(bear).is_none(), "Bear exiled");
+    let stolen = g.battlefield_find(bear).expect("Bear on battlefield");
+    assert_eq!(stolen.controller, 0, "under Ashiok's controller");
+    assert!(
+        stolen.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare),
+        "a Nightmare in addition to its other types"
+    );
+    assert_eq!(
+        g.battlefield_find(ashiok).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        3, "paid X=2 loyalty",
+    );
 }
 
 #[test]
-fn tamiyo_collector_minus_two_returns_card_from_graveyard() {
+fn ashiok_minus_ten_exiles_opponent_hands_and_graveyards() {
     let mut g = two_player_game();
-    let tamiyo = g.add_card_to_battlefield(0, catalog::tamiyo_collector_of_tales());
-    // Stage a card in the graveyard.
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let hand_before = g.players[0].hand.len();
+    let ashiok = g.add_card_to_battlefield(0, catalog::ashiok_nightmare_weaver());
+    g.battlefield_find_mut(ashiok).unwrap()
+        .counters.insert(crate::card::CounterType::Loyalty, 10);
+    let in_hand = g.add_card_to_hand(1, catalog::island());
+    let in_gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
-        card_id: tamiyo, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(bear)),
-    }).expect("Tamiyo -2 reanimate-to-hand");
+        x_value: None,
+        card_id: ashiok,
+        ability_index: 2,
+        target: None,
+    }).expect("Ashiok -10");
     drain_stack(&mut g);
 
-    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
-        "Bear returned to hand");
-    assert!(g.players[0].hand.len() >= hand_before,
-        "Hand size sane (got bear back)");
+    assert!(g.exile.iter().any(|c| c.id == in_hand), "opponent hand exiled");
+    assert!(g.exile.iter().any(|c| c.id == in_gy), "opponent graveyard exiled");
+}
+
+#[test]
+fn tamiyo_plus_one_names_a_card_and_sorts_the_top_four() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let tamiyo = g.add_card_to_battlefield(0, catalog::tamiyo_collector_of_tales());
+    // Top four: Bear, Island, Bear, Island (top-first).
+    for def in [catalog::island(), catalog::grizzly_bears(), catalog::island(), catalog::grizzly_bears()] {
+        let id = g.next_id();
+        g.players[0].add_to_library_top(id, def);
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Grizzly Bears".into()),
+    ]));
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: None,
+        card_id: tamiyo, ability_index: 0, target: None,
+    }).expect("Tamiyo +1");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "both Bears to hand");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2, "both Islands to graveyard");
+    assert_eq!(
+        g.battlefield_find(tamiyo).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        6, "+1 loyalty",
+    );
+}
+
+#[test]
+fn tamiyo_minus_three_returns_card_from_graveyard() {
+    let mut g = two_player_game();
+    let tamiyo = g.add_card_to_battlefield(0, catalog::tamiyo_collector_of_tales());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: None,
+        card_id: tamiyo, ability_index: 1,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+    }).expect("Tamiyo -3");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "Bear returned to hand");
+}
+
+#[test]
+fn tamiyo_static_blocks_opponent_forced_discard() {
+    let mut g = two_player_game();
+    let _tamiyo = g.add_card_to_battlefield(0, catalog::tamiyo_collector_of_tales());
+    let keep = g.add_card_to_hand(0, catalog::island());
+    // P1 casts a discard spell at P0 (on P1's own turn — Mind Rot is a sorcery).
+    let spell = g.add_card_to_hand(1, catalog::mind_rot());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Mind Rot castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == keep),
+        "Tamiyo's static blocks the forced discard");
 }
 
 #[test]
@@ -18676,6 +18788,47 @@ fn lonis_genetics_expert_creates_clue_when_other_creature_enters() {
         .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue))
         .collect();
     assert_eq!(clues.len(), 1, "Lonis mints a Clue when another creature enters");
+}
+
+#[test]
+fn lonis_sacrifices_x_clues_to_steal_a_permanent() {
+    use crate::game::effects::clue_token;
+    let mut g = two_player_game();
+    let lonis = g.add_card_to_battlefield(0, catalog::lonis_genetics_expert());
+    g.clear_sickness(lonis);
+    let _c1 = g.add_token_to_battlefield(0, &clue_token());
+    let _c2 = g.add_token_to_battlefield(0, &clue_token());
+    // P1's top two cards: a MV-2 artifact (steal target) and a land.
+    let stone = g.next_id();
+    g.players[1].add_to_library_top(stone, catalog::mind_stone());
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lonis, ability_index: 0, target: None, x_value: Some(2),
+    })
+    .expect("{T}, Sacrifice 2 Clues activates");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(lonis).unwrap().tapped, "Lonis tapped as a cost");
+    assert!(
+        !g.battlefield.iter().any(|c| c.is_token),
+        "both Clues sacrificed as a cost"
+    );
+    let stolen = g.battlefield_find(stone).expect("Mind Stone put onto the battlefield");
+    assert_eq!(stolen.controller, 0, "stolen permanent enters under Lonis's controller");
+}
+
+#[test]
+fn lonis_x_exceeding_clues_is_rejected() {
+    let mut g = two_player_game();
+    let lonis = g.add_card_to_battlefield(0, catalog::lonis_genetics_expert());
+    g.clear_sickness(lonis);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: lonis, ability_index: 0, target: None, x_value: Some(1),
+        })
+        .is_err(),
+        "can't sacrifice more Clues than you control"
+    );
 }
 
 #[test]
@@ -24611,9 +24764,27 @@ fn finale_of_devastation_searches_creature_to_battlefield() {
 }
 
 #[test]
+fn dakkon_enters_with_loyalty_equal_to_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let dakkon = g.add_card_to_hand(0, catalog::dakkon_shadow_slayer());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, dakkon);
+    assert_eq!(
+        g.battlefield_find(dakkon).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        3, "loyalty = lands you control",
+    );
+}
+
+#[test]
 fn dakkon_shadow_slayer_minus_three_exiles_a_creature() {
     let mut g = two_player_game();
     let dakkon = g.add_card_to_battlefield(0, catalog::dakkon_shadow_slayer());
+    g.battlefield_find_mut(dakkon).unwrap().add_counters(crate::card::CounterType::Loyalty, 4);
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
             x_value: None,
@@ -24624,55 +24795,41 @@ fn dakkon_shadow_slayer_minus_three_exiles_a_creature() {
 }
 
 #[test]
-fn dakkon_minus_six_emblem_draws_on_upkeep() {
-    // -6 grants an emblem "at the beginning of your upkeep, draw a card";
-    // exercises the step-keyed emblem path in fire_step_triggers.
+fn dakkon_minus_six_puts_an_artifact_from_graveyard_onto_battlefield() {
     let mut g = two_player_game();
     let pw = g.add_card_to_battlefield(0, catalog::dakkon_shadow_slayer());
-    g.battlefield_find_mut(pw).unwrap().add_counters(crate::card::CounterType::Loyalty, 6);
-    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(pw).unwrap().add_counters(crate::card::CounterType::Loyalty, 7);
+    let stone = g.add_card_to_graveyard(0, catalog::mind_stone());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
             x_value: None,
         card_id: pw, ability_index: 2, target: None,
-    }).expect("Dakkon -6 castable at 9 loyalty");
+    }).expect("Dakkon -6 castable at 7 loyalty");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].emblems.len(), 1, "emblem created by -6");
-    let before = g.players[0].hand.len();
-    g.active_player_idx = 0;
-    g.fire_step_triggers(crate::game::TurnStep::Upkeep);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), before + 1, "emblem drew a card on P0's upkeep");
+    assert!(g.battlefield_find(stone).is_some(), "artifact entered from the graveyard");
 }
 
 #[test]
-fn saheeli_rai_minus_seven_emblem_copies_on_end_step() {
-    // -7 grants an emblem making two haste copies of a friendly permanent
-    // at each of your end steps (step-keyed emblem path).
+fn saheeli_rai_minus_seven_fetches_three_artifacts() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());
     g.battlefield_find_mut(saheeli).unwrap().add_counters(crate::card::CounterType::Loyalty, 7);
-    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_library(0, catalog::mind_stone());
+    let b = g.add_card_to_library(0, catalog::pithing_needle());
+    let c = g.add_card_to_library(0, catalog::shuko());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(b)),
+        DecisionAnswer::Search(Some(c)),
+    ]));
     g.perform_action(GameAction::ActivateLoyaltyAbility {
             x_value: None,
         card_id: saheeli, ability_index: 2, target: None,
     }).expect("Saheeli -7 castable at 10 loyalty");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].emblems.len(), 1, "emblem created by -7");
-    // The end-step trigger auto-targets the friendly Grizzly Bears and mints
-    // two haste token copies of it (CR 114 emblem + step-keyed dispatch).
-    let bears = |g: &GameState| g.battlefield.iter()
-        .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count();
-    let before = bears(&g);
-    g.active_player_idx = 0;
-    g.fire_step_triggers(crate::game::TurnStep::End);
-    drain_stack(&mut g);
-    assert_eq!(bears(&g), before + 2, "emblem minted two token copies");
-    let hasty = g.battlefield.iter()
-        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Grizzly Bears")
-        .filter(|c| g.computed_permanent(c.id)
-            .map(|p| p.keywords.contains(&crate::card::Keyword::Haste)).unwrap_or(false))
-        .count();
-    assert_eq!(hasty, 2, "both copies have haste");
+    for id in [a, b, c] {
+        assert!(g.battlefield_find(id).is_some(), "searched artifact on battlefield");
+    }
 }
 
 #[test]

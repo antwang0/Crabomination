@@ -367,6 +367,13 @@ impl GameState {
                 .map(|p| p.life)
                 .min()
                 .unwrap_or(0),
+            Value::HighestLifeTotal => self
+                .players
+                .iter()
+                .filter(|p| p.is_alive())
+                .map(|p| p.life)
+                .max()
+                .unwrap_or(0),
             Value::Pow2(inner) => {
                 let exp = self.evaluate_value(inner, ctx).clamp(0, 30);
                 1i32.checked_shl(exp as u32).unwrap_or(i32::MAX)

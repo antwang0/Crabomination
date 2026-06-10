@@ -1717,6 +1717,12 @@ impl GameState {
                 if n == 0 { return Ok(()); }
                 for ent in self.resolve_selector(who, ctx) {
                     let EntityRef::Player(p) = ent else { continue };
+                    // Tamiyo: opponents' spells/abilities can't make you discard.
+                    if !self.same_team(p, ctx.controller)
+                        && self.player_cant_be_made_to_discard(p)
+                    {
+                        continue;
+                    }
                     if *random {
                         // Random-discard semantics: deterministic-pick-first
                         // for the in-process tests; a real client would seed
@@ -2721,9 +2727,21 @@ impl GameState {
             }
 
             Effect::ExilePlayerGraveyard { who } => {
-                // Go Blank — move one player's graveyard to exile.
-                if let Some(p) = self.resolve_player(who, ctx) {
+                // Go Blank / Ashiok −10 — move graveyards to exile.
+                for p in self.resolve_players(who, ctx) {
                     let cards: Vec<CardInstance> = std::mem::take(&mut self.players[p].graveyard);
+                    for card in cards {
+                        let cid = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileHand { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    let cards: Vec<CardInstance> = std::mem::take(&mut self.players[p].hand);
                     for card in cards {
                         let cid = card.id;
                         self.exile.push(card);
@@ -4904,6 +4922,169 @@ impl GameState {
                         self.players[p].library.push(card);
                     }
                 }
+                Ok(())
+            }
+
+            Effect::PutFromHandOrGraveyardOntoBattlefield { filter } => {
+                use crate::decision::Decision;
+                let p = ctx.controller;
+                let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .chain(self.players[p].graveyard.iter())
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let decision = Decision::SearchLibrary { player: p, candidates: candidates.clone() };
+                let pending = PendingEffectState::PutFromZonesPending { player: p };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                // Auto-pick: the highest-MV match ("may" never declined).
+                let pick = candidates
+                    .iter()
+                    .map(|(id, _)| *id)
+                    .max_by_key(|id| {
+                        self.find_card_anywhere(*id).map(|c| c.definition.cost.cmc()).unwrap_or(0)
+                    });
+                let answer = crate::decision::DecisionAnswer::Search(pick);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::RevealTopToHandOpponentsLoseMv => {
+                // Sorin +1: top card to hand; each opponent loses its MV.
+                let p = ctx.controller;
+                if self.players[p].library.is_empty() {
+                    return Ok(());
+                }
+                let card = self.players[p].library.remove(0);
+                let mv = card.definition.cost.cmc() as i32;
+                events.push(GameEvent::TopCardRevealed {
+                    player: p,
+                    card_name: card.definition.name,
+                    is_land: card.definition.is_land(),
+                });
+                self.players[p].hand.push(card);
+                if mv > 0 {
+                    for opp in self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx) {
+                        self.adjust_life(opp, -mv);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::NameCardRevealTop { count } => {
+                // Tamiyo +1: choose a nonland card name, reveal the top N —
+                // matching names to hand, the rest to the graveyard.
+                use crate::decision::Decision;
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let source_name = ctx
+                    .source
+                    .and_then(|cid| self.find_card_anywhere(cid))
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                let decision = Decision::NameCard {
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    source_name,
+                };
+                let pending = PendingEffectState::NameRevealTopPending { player: p, count: n };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::PutExiledCreatureOntoBattlefield { mv } => {
+                // Ashiok −X: a creature card with MV X exiled with the source
+                // enters under your control as a Nightmare.
+                let x = self.evaluate_value(mv, ctx).max(0) as u32;
+                let pick = self
+                    .exile
+                    .iter()
+                    .find(|c| {
+                        ctx.source.is_some()
+                            && c.exiled_with == ctx.source
+                            && c.definition.is_creature()
+                            && c.definition.cost.cmc() == x
+                    })
+                    .map(|c| c.id);
+                if let Some(id) = pick {
+                    let dest = ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                        tapped: false,
+                    };
+                    self.move_card_to(id, &dest, ctx, events);
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        let def = std::sync::Arc::make_mut(&mut c.definition);
+                        if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare) {
+                            def.subtypes.creature_types.push(crate::card::CreatureType::Nightmare);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::RevealOpponentTopPutOntoBattlefield { count, filter } => {
+                // Lonis, Genetics Expert: target opponent (slot 0, else the
+                // lowest-seat opponent) reveals the top N; put one matching
+                // nonland permanent card with MV ≤ N onto the battlefield
+                // under your control (auto-pick: highest MV); they shuffle.
+                let n = self.evaluate_value(count, ctx).max(0);
+                let opp = self
+                    .resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
+                    .or_else(|| {
+                        (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller))
+                    });
+                let Some(opp) = opp else { return Ok(()) };
+                let revealed: Vec<crate::card::CardId> = self.players[opp]
+                    .library
+                    .iter()
+                    .take(n as usize)
+                    .map(|c| c.id)
+                    .collect();
+                let pick = revealed
+                    .iter()
+                    .copied()
+                    .filter(|id| {
+                        self.players[opp].library.iter().find(|c| c.id == *id).is_some_and(|c| {
+                            (c.definition.cost.cmc() as i32) <= n
+                        }) && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(*id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .max_by_key(|id| {
+                        self.players[opp]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| c.definition.cost.cmc())
+                            .unwrap_or(0)
+                    });
+                if let Some(id) = pick {
+                    let dest = ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                        tapped: false,
+                    };
+                    self.move_card_to(id, &dest, ctx, events);
+                }
+                use rand::seq::SliceRandom;
+                self.players[opp].library.shuffle(&mut rand::rng());
                 Ok(())
             }
 
