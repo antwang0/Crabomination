@@ -2843,10 +2843,12 @@ resource. Subsumes the existing "Responsive Stack Display" entry above.
 ## Bot / AI
 
 ### Instant-Speed Responses
-The bot currently never responds to spells on the stack — it auto-passes
-priority whenever it gets it during an opponent's turn.  A rule-based layer
-that recognises "this creature is being targeted by removal, I have a
-counterspell" would make the bot feel more like a real opponent.
+~~The bot never responds to spells on the stack.~~ `pick_stack_response`
+now counters an opponent's spell when it targets the bot's permanents /
+the bot, or costs 3+ — cheapest affordable counter first, `would_accept`
+dry-run as the final gate (so Spell Snare's MV filter etc. are honored).
+Future: respond with removal/protection instants, not just counters;
+race-aware "is this worth a card" valuation.
 
 ### Sacrifice Prioritisation
 ~~When forced to sacrifice, the bot always picks the first eligible

@@ -457,8 +457,74 @@ impl Bot for RandomBot {
             TurnStep::PreCombatMain | TurnStep::PostCombatMain if is_active => {
                 Some(main_phase_action(state, seat))
             }
-            _ => Some(GameAction::PassPriority),
+            _ => Some(
+                pick_stack_response(state, seat).unwrap_or(GameAction::PassPriority),
+            ),
         }
+    }
+}
+
+/// Instant-speed response layer: when an opponent's spell sits on top of
+/// the stack and it's worth answering (it targets the bot's stuff / the
+/// bot itself, or it's expensive), cast a counterspell from hand at it.
+/// The `would_accept` dry-run is the final gate (timing, mana via
+/// auto-tap, per-counter target filters like Spell Snare's MV gate).
+fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::game::types::StackItem;
+    let (spell_id, threat) = state.stack.iter().rev().find_map(|si| {
+        let StackItem::Spell { card, caster, target, uncounterable, .. } = si else {
+            return None;
+        };
+        if *caster == seat || *uncounterable {
+            return None;
+        }
+        let targets_us = match target {
+            Some(crate::game::Target::Player(p)) => *p == seat,
+            Some(crate::game::Target::Permanent(id)) => state
+                .battlefield_find(*id)
+                .is_some_and(|c| c.controller == seat),
+            None => false,
+        };
+        Some((card.id, targets_us || card.definition.cost.cmc() >= 3))
+    })?;
+    if !threat {
+        return None;
+    }
+    let mut counters: Vec<&crate::card::CardInstance> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && effect_counters_spells(&c.definition.effect)
+        })
+        .collect();
+    // Cheapest answer first — hold the expensive counter for later.
+    counters.sort_by_key(|c| c.definition.cost.cmc());
+    for c in counters {
+        let action = GameAction::CastSpell {
+            card_id: c.id,
+            target: Some(crate::game::Target::Permanent(spell_id)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
+/// True when the effect tree's primary action counters a spell (the shapes
+/// a dedicated counterspell card uses — not buried `MayDo` riders).
+fn effect_counters_spells(eff: &Effect) -> bool {
+    match eff {
+        Effect::CounterSpell { .. }
+        | Effect::CounterSpellToZone { .. }
+        | Effect::CounterUnlessPaid { .. }
+        | Effect::CounterUnless { .. } => true,
+        Effect::Seq(v) => v.first().is_some_and(effect_counters_spells),
+        _ => false,
     }
 }
 
@@ -3583,5 +3649,68 @@ mod self_cost_tests {
             }),
         }]);
         assert!(find_maydo_body(&nested, "Pay the price.").is_some());
+    }
+}
+
+#[cfg(test)]
+mod stack_response_tests {
+    use super::*;
+    use crate::catalog;
+    use crate::game::{GameAction, GameState, Target, TurnStep};
+    use crate::player::Player;
+
+    fn two_player_game() -> GameState {
+        let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::PreCombatMain;
+        g
+    }
+
+    #[test]
+    fn bot_counters_a_big_opponent_spell() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // P0 casts a 7-drop.
+        let wurm = g.add_card_to_hand(0, catalog::pelakka_wurm());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+        g.players[0].mana_pool.add_colorless(5);
+        g.perform_action(GameAction::CastSpell {
+            card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).unwrap();
+        // Bot (seat 1) holds Counterspell + two untapped Islands.
+        let cs = g.add_card_to_hand(1, catalog::counterspell());
+        for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
+        g.priority.player_with_priority = 1;
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 1).expect("bot acts");
+        match action {
+            GameAction::CastSpell { card_id, target, .. } => {
+                assert_eq!(card_id, cs, "casts the counterspell");
+                assert_eq!(target, Some(Target::Permanent(wurm)), "targets the 7-drop");
+            }
+            other => panic!("expected a counterspell cast, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn bot_holds_counter_against_cheap_nonthreatening_spell() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // A cheap spell that doesn't touch the bot's board.
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).unwrap();
+        g.add_card_to_hand(1, catalog::counterspell());
+        for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
+        g.priority.player_with_priority = 1;
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 1).expect("bot acts");
+        assert!(matches!(action, GameAction::PassPriority),
+            "a 2-drop bear isn't worth the counter: {action:?}");
     }
 }
