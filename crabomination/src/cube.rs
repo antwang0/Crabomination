@@ -220,6 +220,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         myr_retriever,
         junk_diver,
         voltaic_key,
+        sunscorched_desert,
         ichor_wellspring,
         darksteel_colossus,
         blightsteel_colossus,
@@ -532,6 +533,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         soltari_monk,
         soltari_champion,
         open_the_vaults,
+        elesh_norn_grand_cenobite,
+        aven_riftwatcher,
         ranger_of_eos,
         stony_silence,
         exalted_angel,
@@ -1128,6 +1131,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         part_the_waterveil,
         spreading_seas,
         jace_beleren,
+        jin_gitaxias_core_augur,
         // Disturb (CR 702.146)
         baithook_angler,
         // milled triggers (EventKind::CardMilled)
@@ -1973,6 +1977,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         relentless_assault,
+        urabrask_the_hidden,
+        den_of_the_bugbear,
         barbed_lightning,
         grab_the_reins,
         roiling_vortex,
@@ -2478,6 +2484,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         chord_of_calling,
+        vorinclex_voice_of_hunger,
         tooth_and_nail,
         rude_awakening,
         shefet_monitor,

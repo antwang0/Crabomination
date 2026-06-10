@@ -2071,6 +2071,10 @@ pub enum Effect {
     /// turn). Shadowspear's "creatures your opponents control lose
     /// hexproof and indestructible until end of turn".
     LoseKeywordThisTurn { what: Selector, keyword: Keyword },
+    /// Each permanent picked by `what` doesn't untap during its
+    /// controller's next untap step (Vorinclex's land lock, Exert-style
+    /// `skip_next_untap` flag).
+    SkipNextUntap { what: Selector },
     /// Each permanent picked by `what` becomes a single color of the
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").

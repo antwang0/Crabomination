@@ -43235,3 +43235,229 @@ pub fn spreading_seas() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Praetor cycle + utility lands ────────────────────────────────────────────
+
+fn praetor(name: &'static str, mana: ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Praetor],
+            ..Default::default()
+        },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+/// Elesh Norn, Grand Cenobite — {5}{W}{W} 4/7 Vigilance. Other creatures
+/// you control get +2/+2; creatures your opponents control get -2/-2.
+pub fn elesh_norn_grand_cenobite() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other creatures you control get +2/+2.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 2,
+                    toughness: 2,
+                },
+            },
+            StaticAbility {
+                description: "Creatures your opponents control get -2/-2.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    power: -2,
+                    toughness: -2,
+                },
+            },
+        ],
+        ..praetor("Elesh Norn, Grand Cenobite", cost(&[generic(5), w(), w()]), 4, 7)
+    }
+}
+
+/// Urabrask the Hidden — {3}{R}{R} 4/4. Creatures you control have haste;
+/// creatures your opponents control enter tapped.
+pub fn urabrask_the_hidden() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control have haste.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                },
+            },
+            StaticAbility {
+                description: "Creatures your opponents control enter the battlefield tapped.",
+                effect: StaticEffect::EntersTapped {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+            },
+        ],
+        ..praetor("Urabrask the Hidden", cost(&[generic(3), r(), r()]), 4, 4)
+    }
+}
+
+/// Vorinclex, Voice of Hunger — {6}{G}{G} 7/6 Trample. Your tapped-for-mana
+/// permanents produce double (lands-only printed; the shared doubler also
+/// catches mana rocks); an opponent's land tapped for mana skips its next
+/// untap.
+pub fn vorinclex_voice_of_hunger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Whenever you tap a land for mana, add one mana of any type it produced.",
+            effect: StaticEffect::ManaProductionDoubled,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::SkipNextUntap { what: Selector::TriggerSource },
+        }],
+        ..praetor("Vorinclex, Voice of Hunger", cost(&[generic(6), g(), g()]), 7, 6)
+    }
+}
+
+/// Jin-Gitaxias, Core Augur — {8}{U}{U} 5/4 Flash. Draw seven at your end
+/// step; each opponent's maximum hand size is reduced by seven.
+pub fn jin_gitaxias_core_augur() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Each opponent's maximum hand size is reduced by seven.",
+            effect: StaticEffect::OpponentsMaxHandSizeReduced(7),
+        }],
+        ..praetor("Jin-Gitaxias, Core Augur", cost(&[generic(8), u(), u()]), 5, 4)
+    }
+}
+
+/// Aven Riftwatcher — {2}{W} 2/3 Bird Rebel Soldier. Flying, Vanishing 2;
+/// gains you 2 life on entry and on leaving the battlefield.
+pub fn aven_riftwatcher() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    let gain = || Effect::GainLife { who: Selector::You, amount: Value::Const(2) };
+    CardDefinition {
+        name: "Aven Riftwatcher",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Rebel, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vanishing(2)],
+        triggered_abilities: vec![
+            etb(gain()),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: gain(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Den of the Bugbear — red manland. Enters tapped with four-plus lands
+/// (fastland gate); {1}{R}: 3/2 Goblin until end of turn; while animated,
+/// attacking mints a 1/1 Goblin tapped and attacking.
+pub fn den_of_the_bugbear() -> CardDefinition {
+    use crate::effect::AttackingTokenCleanup;
+    CardDefinition {
+        name: "Den of the Bugbear",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Red]),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(2),
+                    creature_types: vec![CreatureType::Goblin],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![
+            crate::sets::fastland_etb_conditional_tap(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                    .with_filter(Predicate::SourceIsCreature),
+                effect: Effect::CreateTokenAttacking {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: goblin_token(),
+                    cleanup: AttackingTokenCleanup::None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sunscorched Desert — Desert land. Enters dealing 1 damage to any
+/// target; taps for {C}.
+pub fn sunscorched_desert() -> CardDefinition {
+    use crate::effect::shortcut::{etb, target_any};
+    CardDefinition {
+        name: "Sunscorched Desert",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![LandType::Desert],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_any(),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}

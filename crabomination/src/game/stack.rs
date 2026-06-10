@@ -578,6 +578,9 @@ impl GameState {
                         usize::from(card.split_cast == Some(1))
                     });
                     self.battlefield.push(card);
+                    // CR 614.13 — enters-tapped replacements (Imposing
+                    // Sovereign, Urabrask) apply to cast permanents too.
+                    self.apply_enters_tapped_replacement(card_id);
                     // CR 709.5d — a Room enters with the cast door unlocked
                     // (709.5h: its unlock trigger fires).
                     if let Some(door) = room_door {

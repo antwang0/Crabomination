@@ -54,7 +54,7 @@ pub enum CreatureType {
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
-    Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Archon, Aetherborn,
+    Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow,
     Ooze, Plant, Saproling,
     // Strixhaven-era subtypes.

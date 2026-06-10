@@ -3292,6 +3292,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SkipNextUntap { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.skip_next_untap = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnSelfAsEnchantment => {
                 use crate::card::CardType;
                 let Some(src) = ctx.source else { return Ok(()); };

@@ -48598,3 +48598,134 @@ fn spreading_seas_turns_enchanted_land_into_an_island() {
     assert!(v.subtypes.land_types.contains(&LandType::Island), "now an Island");
     assert!(!v.subtypes.land_types.contains(&LandType::Mountain), "Mountain type replaced");
 }
+
+// ── Praetor cycle + utility lands ────────────────────────────────────────────
+
+#[test]
+fn elesh_norn_anthems_both_sides() {
+    let mut g = two_player_game();
+    let _norn = g.add_card_to_battlefield(0, catalog::elesh_norn_grand_cenobite());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cp = g.compute_battlefield();
+    let m = cp.iter().find(|c| c.id == mine).unwrap();
+    assert_eq!((m.power, m.toughness), (4, 4), "your bear +2/+2");
+    let t = cp.iter().find(|c| c.id == theirs).unwrap();
+    assert_eq!((t.power, t.toughness), (0, 0), "opp bear -2/-2");
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(theirs).is_none(), "0-toughness bear dies to SBA");
+}
+
+#[test]
+fn urabrask_grants_haste_and_taps_opponent_creatures() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let _ura = g.add_card_to_battlefield(0, catalog::urabrask_the_hidden());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.compute_battlefield();
+    assert!(cp.iter().find(|c| c.id == mine).unwrap().keywords.contains(&Keyword::Haste));
+    // An opponent's creature enters tapped (CR 614.13 replacement).
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let opp_bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: opp_bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_bear).unwrap().tapped, "enters tapped under Urabrask");
+}
+
+#[test]
+fn vorinclex_locks_an_opponent_land_after_it_taps_for_mana() {
+    let mut g = two_player_game();
+    let _vor = g.add_card_to_battlefield(0, catalog::vorinclex_voice_of_hunger());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().skip_next_untap,
+        "the tapped land is flagged to skip its next untap");
+}
+
+#[test]
+fn jin_gitaxias_reduces_opponent_max_hand_size() {
+    let mut g = two_player_game();
+    let _jin = g.add_card_to_battlefield(0, catalog::jin_gitaxias_core_augur());
+    assert_eq!(g.effective_max_hand_size(1), Some(0), "7 - 7 = 0 for the opponent");
+    assert_eq!(g.effective_max_hand_size(0), Some(7), "controller unaffected");
+}
+
+#[test]
+fn aven_riftwatcher_gains_life_on_entry_and_exit() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let aven = g.add_card_to_hand(0, catalog::aven_riftwatcher());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aven, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "ETB gain");
+    assert_eq!(
+        g.battlefield_find(aven).unwrap().counter_count(crate::card::CounterType::Time),
+        2,
+        "vanishing 2"
+    );
+    let mut events = Vec::new();
+    g.sacrifice_one(aven, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "leave-the-battlefield gain");
+}
+
+#[test]
+fn den_of_the_bugbear_attacks_and_mints_an_attacking_goblin() {
+    let mut g = two_player_game();
+    let den = g.add_card_to_battlefield(0, catalog::den_of_the_bugbear());
+    g.clear_sickness(den);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: den, ability_index: 1, target: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker: den,
+        target: crate::game::AttackTarget::Player(1),
+    }])).expect("animated Den attacks");
+    drain_stack(&mut g);
+    let goblin = g.battlefield.iter().find(|c| c.is_token && c.controller == 0)
+        .expect("a Goblin token was minted");
+    assert!(g.attacking().iter().any(|a| a.attacker == goblin.id), "token enters attacking");
+}
+
+#[test]
+fn sunscorched_desert_pings_on_entry() {
+    let mut g = two_player_game();
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let desert = g.add_card_to_hand(0, catalog::sunscorched_desert());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(desert)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "ETB ping");
+}

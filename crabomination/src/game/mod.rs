@@ -7690,9 +7690,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.
             | StaticEffect::ExileNontokenCreaturesNotCast
-            // NoMaximumHandSize — consulted at cleanup via
-            // `effective_max_hand_size`; no layer effect.
+            // NoMaximumHandSize / OpponentsMaxHandSizeReduced — consulted
+            // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize
+            | StaticEffect::OpponentsMaxHandSizeReduced(_)
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard

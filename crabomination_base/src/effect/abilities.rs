@@ -554,6 +554,10 @@ pub enum StaticEffect {
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,
     /// Thought Vessel, Spellbook, Library of Leng-adjacent statics.
     NoMaximumHandSize,
+    /// "Each opponent's maximum hand size is reduced by N" (Jin-Gitaxias,
+    /// Core Augur). Folded into `effective_max_hand_size` for every seat
+    /// not on the source controller's team.
+    OpponentsMaxHandSizeReduced(u32),
     /// CR 305 / 718 — "You may play lands from your graveyard." Crucible of
     /// Worlds, Ramunap Excavator. Read by the land-play legality + the
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard

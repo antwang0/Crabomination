@@ -737,10 +737,22 @@ impl crate::game::GameState {
                     .any(|sa| matches!(sa.effect, StaticEffect::NoMaximumHandSize))
         });
         if no_max {
-            None
-        } else {
-            self.players[player].max_hand_size
+            return None;
         }
+        // Jin-Gitaxias — "each opponent's maximum hand size is reduced by N."
+        let reduction: usize = self
+            .battlefield
+            .iter()
+            .filter(|c| !self.same_team(c.controller, player))
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .map(|sa| match sa.effect {
+                StaticEffect::OpponentsMaxHandSizeReduced(n) => n as usize,
+                _ => 0,
+            })
+            .sum();
+        self.players[player]
+            .max_hand_size
+            .map(|m| m.saturating_sub(reduction))
     }
 
     /// CR 305 — Whether `player` may play lands from their graveyard
@@ -6884,6 +6896,12 @@ impl GameState {
         }
 
         let mut events = auto_mana_events;
+        // The paid tap-cost is a "becomes tapped" event (Vampire Envoy,
+        // Vorinclex's opponent-land lock). Emitted after the mana payment
+        // succeeded so a rolled-back activation never announces a tap.
+        if ability.tap_cost {
+            events.push(GameEvent::PermanentTapped { card_id });
+        }
         // Mana abilities don't emit the activation event — every printed
         // "whenever an opponent activates an ability" trigger carves them
         // out (Flamescroll Celebrant, CR 605.1), and the log skips the
