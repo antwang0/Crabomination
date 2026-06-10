@@ -1768,6 +1768,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         bloodhusk_ritualist,
         wight_of_precinct_six,
         gatekeeper_of_malakir,
+        indulgent_aristocrat,
+        drana_liberator_of_malakir,
+        cryptbreaker,
         malakir_bloodwitch,
         bloodghast,
         ichorid,
@@ -2094,6 +2097,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         torbran_thane_of_red_fell,
         chandra_torch_of_defiance,
         skitter_of_lizards,
+        stromkirk_noble,
         // modal ritual / impulse
         jeskas_will,
         // free-with-commander counter (simplified)

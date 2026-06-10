@@ -49722,3 +49722,101 @@ fn drowned_secrets_mills_on_blue_casts_only() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib - 2, "blue spell → mill 2");
 }
+
+// ── Tribal one-drops ─────────────────────────────────────────────────────────
+
+/// Indulgent Aristocrat's sac ability counters every Vampire you control.
+#[test]
+fn indulgent_aristocrat_sac_counters_vampires() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let aristo = g.add_card_to_battlefield(0, catalog::indulgent_aristocrat());
+    let hawk = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+    let fodder = g.add_card_to_battlefield(0, catalog::ornithopter()); // lowest power → auto-pick
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aristo, ability_index: 0, target: None, x_value: None,
+    }).expect("sac activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != fodder), "fodder sacrificed");
+    assert_eq!(g.battlefield_find(aristo).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(hawk).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Stromkirk Noble can't be blocked by a Human and grows on connection.
+#[test]
+fn stromkirk_noble_unblockable_by_humans_and_grows() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let noble = g.add_card_to_battlefield(0, catalog::stromkirk_noble());
+    g.clear_sickness(noble);
+    let human = g.add_card_to_battlefield(1, catalog::champion_of_the_parish());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: noble, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(human, noble)])).is_err(),
+        "Human can't block");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(noble).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Drana counters every attacking creature you control when she connects.
+#[test]
+fn drana_counters_attackers_on_combat_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let drana = g.add_card_to_battlefield(0, catalog::drana_liberator_of_malakir());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(drana);
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: drana, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_first_strike_damage().expect("first-strike damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "Drana's first-strike connection counters the attacking bear");
+    let _ = drana;
+}
+
+/// Cryptbreaker mints Zombies for a discard and taps three Zombies to draw.
+#[test]
+fn cryptbreaker_mints_and_draws() {
+    let mut g = two_player_game();
+    let cb = g.add_card_to_battlefield(0, catalog::cryptbreaker());
+    g.add_card_to_hand(0, catalog::forest()); // discard fodder
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cb, ability_index: 0, target: None, x_value: None,
+    }).expect("mint");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(), 1);
+    // Two more Zombies + Cryptbreaker untapped = three to tap for the draw.
+    g.battlefield_find_mut(cb).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cb, ability_index: 0, target: None, x_value: None,
+    }).err(); // out of mana — ignore
+    let z2 = g.add_card_to_battlefield(0, catalog::diregraf_ghoul());
+    g.battlefield_find_mut(z2).unwrap().tapped = false;
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    g.add_card_to_library(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cb, ability_index: 1, target: None, x_value: None,
+    }).expect("tap-three draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[0].life, life - 1);
+}

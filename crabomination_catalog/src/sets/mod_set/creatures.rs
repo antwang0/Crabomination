@@ -9279,3 +9279,149 @@ pub fn malakir_bloodwitch() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Indulgent Aristocrat — {B} Creature — Vampire Noble 1/1, Lifelink.
+/// {2}, Sacrifice a creature: +1/+1 counter on each Vampire you control.
+pub fn indulgent_aristocrat() -> CardDefinition {
+    CardDefinition {
+        name: "Indulgent Aristocrat",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stromkirk Noble — {R} Creature — Vampire Noble 1/1. Can't be blocked by
+/// Humans; grows on combat damage to a player.
+pub fn stromkirk_noble() -> CardDefinition {
+    CardDefinition {
+        name: "Stromkirk Noble",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(
+            SelectionRequirement::HasCreatureType(CreatureType::Human),
+        ))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Drana, Liberator of Malakir — {1}{B}{B} Legendary Creature — Vampire
+/// Ally 2/3, Flying, First strike. Combat damage to a player → +1/+1
+/// counter on each attacking creature you control.
+pub fn drana_liberator_of_malakir() -> CardDefinition {
+    CardDefinition {
+        name: "Drana, Liberator of Malakir",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            // `AttackedThisTurn` instead of `IsAttacking`: the combat
+            // arrays are cleared before the trigger resolves.
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::AttackedThisTurn),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cryptbreaker — {B} Creature — Zombie 1/1. {1}{B}, {T}, Discard a card:
+/// create a 2/2 black Zombie. Tap three untapped Zombies you control: draw
+/// a card and lose 1 life.
+pub fn cryptbreaker() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Cryptbreaker",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b()]),
+                tap_cost: true,
+                discard_cost: Some((SelectionRequirement::Any, 1)),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Zombie".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Zombie],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_n_filter: Some((
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::ControlledByYou),
+                    3,
+                )),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
