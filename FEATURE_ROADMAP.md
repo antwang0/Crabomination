@@ -122,8 +122,9 @@ not how Magic works" moments.
    redirection** (CR 614.9) ships via `StaticEffect::RedirectDamageToSelf`
    at both damage funnels — Palisade Giant. **Draw replacement** (CR 121.2a)
    ships via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought
-   Reflection; stacks per 614.5). Remaining: damage *halving*, skip-step/turn
-   replacements.
+   Reflection; stacks per 614.5). Damage *halving* ✅ (614.5 —
+   `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent). Skip-step ✅;
+   skip-*turn* ✅ (`Player.skip_turns`).
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes` is
    wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). "Pick from
    revealed cards" is also wired: `Effect::LookPickToHand` (Impulse /
@@ -231,8 +232,11 @@ not how Magic works" moments.
   Rider // Swift End, Foulmire Knight // Profane Insight, Order of Midnight
   // Alter Fate, Rimrock Knight // Boulder Rush, Garenbrig Carver // Shield's
   Might.
-- ⏳ **Classes / Rooms / Cases / Backgrounds** (enchantment subtypes with
-  level/door mechanics).
+- 🟡 **Classes / Cases / Backgrounds** (enchantment subtypes with level
+  mechanics). **Rooms ship** (CR 709.5 — `CardDefinition.room` +
+  `CardInstance.unlocked_doors`; `GameAction::CastRoomDoor` /
+  `UnlockRoomDoor`, door-scoped abilities via live definition rebuild,
+  `EventKind::DoorUnlocked`; Unholy Annex // Ritual Chamber).
 - ⏳ **Leveler cards** (level-up counters).
 - ✅ **Transforming DFCs** (CR 712) — `Effect::Transform` toggles a
   permanent's active face in place (`CardInstance.{transformed,front_face}`,

@@ -46909,3 +46909,85 @@ fn roiling_vortex_punishes_free_spells() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 14, "free spell cost its caster 5");
 }
+
+// ── CR 709.5 — Rooms (Unholy Annex // Ritual Chamber) ───────────────────────
+
+/// Casting the left door unlocks only it: the end-step trigger is live
+/// (no Demon → lose 2 + draw), the Chamber's unlock trigger is not.
+#[test]
+fn room_left_door_cast_unlocks_annex_only() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false })
+        .expect("cast Unholy Annex");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(room).unwrap();
+    assert_eq!(c.unlocked_doors, 1, "left unlocked");
+    assert!(!g.battlefield.iter().any(|c| c.is_token), "no Demon minted");
+    // End-step trigger fires for the controller; no Demon → draw + lose 2.
+    g.active_player_idx = 0;
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew");
+    assert_eq!(g.players[0].life, 18, "no Demon: lost 2");
+}
+
+/// Casting the right door mints the 6/6 Demon; unlocking the left later at
+/// sorcery speed turns the end-step trigger into a drain.
+#[test]
+fn room_right_door_then_unlock_left() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: true })
+        .expect("cast Ritual Chamber");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(room).unwrap().unlocked_doors, 2, "right unlocked");
+    let demon = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Demon")
+        .expect("6/6 Demon minted");
+    assert_eq!((demon.power(), demon.toughness()), (6, 6));
+    // Unlock the left door at sorcery speed (CR 709.5e).
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::UnlockRoomDoor { card_id: room, right: false })
+        .expect("unlock Unholy Annex");
+    assert_eq!(g.battlefield_find(room).unwrap().unlocked_doors, 3, "fully unlocked");
+    // With a Demon, the end-step trigger drains.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "opponent drained 2");
+    assert_eq!(g.players[0].life, 22, "gained 2");
+}
+
+/// Unlocked designations are battlefield-only: a bounced Room comes back
+/// locked, and a Room round-trips through a snapshot.
+#[test]
+fn room_designations_reset_on_leave_and_roundtrip_serde() {
+    let mut g = two_player_game();
+    let room = g.add_card_to_hand(0, catalog::unholy_annex_ritual_chamber());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastRoomDoor { card_id: room, right: false }).expect("cast");
+    drain_stack(&mut g);
+    // Snapshot round-trip preserves the unlocked designation.
+    let json = serde_json::to_string(&g.battlefield_find(room).unwrap()).unwrap();
+    let restored: crate::card::CardInstance = serde_json::from_str(&json).unwrap();
+    assert_eq!(restored.unlocked_doors, 1, "serde keeps the designation");
+    assert_eq!(restored.definition.triggered_abilities.len(), 1, "left door live after load");
+    // Bounce: designation clears (CR 709.5c).
+    let mut evs = Vec::new();
+    g.move_card_to(room, &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(0)),
+        &crate::game::effects::EffectContext::for_spell(0, None, 0, 0), &mut evs);
+    let back = g.players[0].hand.iter().find(|c| c.id == room).expect("bounced");
+    assert_eq!(back.unlocked_doors, 0, "locked again");
+    assert!(back.definition.triggered_abilities.is_empty(), "no live abilities off-battlefield");
+}

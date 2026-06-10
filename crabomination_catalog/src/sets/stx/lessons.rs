@@ -94,6 +94,7 @@ pub fn square_up() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -154,6 +155,7 @@ pub fn brilliant_plan() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -211,6 +213,7 @@ pub fn fortifying_draught() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -271,6 +274,7 @@ pub fn guiding_voice() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -328,6 +332,7 @@ pub fn expanded_anatomy() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -399,6 +404,7 @@ pub fn mercurial_transformation() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -460,6 +466,7 @@ pub fn pest_inheritance() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -521,6 +528,7 @@ pub fn mascot_interpretation() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -581,6 +589,7 @@ pub fn reduce_rubble() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -641,6 +650,7 @@ pub fn containment_studies() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -710,6 +720,7 @@ pub fn reflective_anatomy() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -766,6 +777,7 @@ pub fn pest_studies() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -827,6 +839,7 @@ pub fn lecture_in_strategy() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -881,6 +894,7 @@ pub fn necrotic_studies() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -935,6 +949,7 @@ pub fn pyromathematics() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -987,6 +1002,7 @@ pub fn inkling_lesson() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1068,6 +1084,7 @@ pub fn fractal_studies() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1121,6 +1138,7 @@ pub fn spirit_lesson() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1182,6 +1200,7 @@ pub fn advanced_cartography() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1250,6 +1269,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1306,6 +1326,7 @@ pub fn confront_the_doubt() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1427,5 +1448,6 @@ pub fn plant_adept_lesson() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }

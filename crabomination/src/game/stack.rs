@@ -564,7 +564,15 @@ impl GameState {
                     // cards: Gonti, Hostage Taker).
                     card.controller = caster;
                     card.controller = self.apply_etb_control_replacement(&card, card.controller);
+                    let room_door = card.definition.room.as_ref().map(|_| {
+                        usize::from(card.split_cast == Some(1))
+                    });
                     self.battlefield.push(card);
+                    // CR 709.5d — a Room enters with the cast door unlocked
+                    // (709.5h: its unlock trigger fires).
+                    if let Some(door) = room_door {
+                        self.set_room_door_unlocked(card_id, door == 1, &mut events);
+                    }
                     // Collect the printed `enters_with_counters` spec and
                     // any active `ExtraEtbCountersForCreatureCasts` static
                     // effects controlled by the caster. The static fires
@@ -2330,6 +2338,8 @@ impl GameState {
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).
         card.turn_face_up();
+        // CR 709.5c — Room unlocked designations are battlefield-only.
+        card.reset_room_doors();
         // CR 707 — a temporary copy reverts as it leaves.
         self.revert_copy_on_leave(&mut card);
         match zone {

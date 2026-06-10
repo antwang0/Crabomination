@@ -1471,6 +1471,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         street_wraith,
         promise_of_power,
         boggart_harbinger,
+        unholy_annex_ritual_chamber,
         // ── modern_decks-19 ──
         living_end,
         orcish_bowmasters,

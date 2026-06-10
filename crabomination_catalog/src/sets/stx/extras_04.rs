@@ -91,6 +91,7 @@ pub fn sigardian_savior() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -164,6 +165,7 @@ pub fn sneaky_snacker() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -231,6 +233,7 @@ pub fn soulknife_spy() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -321,6 +324,7 @@ pub fn daring_diversion() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -376,6 +380,7 @@ pub fn possibility_storm() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -451,6 +456,7 @@ pub fn pilgrim_of_the_ages() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -537,6 +543,7 @@ pub fn strixhaven_spawner() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -590,6 +597,7 @@ pub fn mage_hunter_defender() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -647,6 +655,7 @@ pub fn detention_sphere() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -718,6 +727,7 @@ pub fn mascot_trainer() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -782,6 +792,7 @@ pub fn quandrix_cryptidkeeper() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -859,6 +870,7 @@ pub fn ember_anvil() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -923,6 +935,7 @@ pub fn witherbloom_strangler() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -982,6 +995,7 @@ pub fn glasspool_embellisher() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1053,6 +1067,7 @@ pub fn lorehold_reanimator() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1120,6 +1135,7 @@ pub fn prismari_eruption() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1183,6 +1199,7 @@ pub fn silverquill_inquisitor() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1253,6 +1270,7 @@ pub fn lorehold_spectral_lecturer() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1333,6 +1351,7 @@ pub fn pop_quiz_recital() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1419,6 +1438,7 @@ pub fn fascinating_lecture() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1483,6 +1503,7 @@ pub fn quandrix_sphinx() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1570,6 +1591,7 @@ pub fn lorehold_excavator() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1637,6 +1659,7 @@ pub fn stridehollow_vampire() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1704,6 +1727,7 @@ pub fn witherbloom_necrotutor() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1758,6 +1782,7 @@ pub fn silverquill_pledge() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1810,6 +1835,7 @@ pub fn inkwell_strider() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1870,6 +1896,7 @@ pub fn scolding_detention() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1932,6 +1959,7 @@ pub fn lesson_recall() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1992,6 +2020,7 @@ pub fn pestilent_acolyte() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2056,6 +2085,7 @@ pub fn stoneglare_lecturer() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2114,6 +2144,7 @@ pub fn critical_critique() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2176,6 +2207,7 @@ pub fn quandrix_manipulator() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2233,6 +2265,7 @@ pub fn prismari_iteration() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2283,6 +2316,7 @@ pub fn lorehold_battle_priest() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2345,6 +2379,7 @@ pub fn witherbloom_reaper() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2399,6 +2434,7 @@ pub fn pyromancers_bolt() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2462,6 +2498,7 @@ pub fn symmetry_lecturer() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2513,6 +2550,7 @@ pub fn wisdom_of_the_ancients() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2593,6 +2631,7 @@ pub fn mob_mentality() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2646,6 +2685,7 @@ pub fn witherbloom_drain_ritual() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2700,6 +2740,7 @@ pub fn mystical_inquiry() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2773,6 +2814,7 @@ pub fn conjurers_bauble() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2823,6 +2865,7 @@ pub fn quartzwood_inkling() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2880,6 +2923,7 @@ pub fn pop_quiz_lecturer() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2945,6 +2989,7 @@ pub fn brilliant_restoration() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2999,6 +3044,7 @@ pub fn inkling_studies() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3060,6 +3106,7 @@ pub fn spirit_banner() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3108,6 +3155,7 @@ pub fn spectral_adjudicator() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3177,6 +3225,7 @@ pub fn quandrix_doubling_tutor() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3227,6 +3276,7 @@ pub fn inkling_scholar() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3278,6 +3328,7 @@ pub fn inkling_squire() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3339,6 +3390,7 @@ pub fn silverquill_scholar() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3393,6 +3445,7 @@ pub fn inkling_reinforcement() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3450,6 +3503,7 @@ pub fn pestilent_verse() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3500,6 +3554,7 @@ pub fn inkling_ambusher() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3560,6 +3615,7 @@ pub fn silver_quill_scholarship() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3621,6 +3677,7 @@ pub fn silvercrown_lecturer() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3673,6 +3730,7 @@ pub fn demolishing_lecture() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3744,5 +3802,6 @@ pub fn inkling_mentor() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }

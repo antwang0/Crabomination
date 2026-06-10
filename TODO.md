@@ -8,8 +8,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Rooms subsystem** (Unholy Annex // Ritual Chamber) and **meld**
-  (The Mightstone and Weakstone) — each is its own object-model feature.
+- ⏳ **Meld** (The Mightstone and Weakstone) — its own object-model
+  feature. (Rooms ✅ — CR 709.5, Unholy Annex // Ritual Chamber.)
 - ✅ **This batch shipped** (was the "deferred, each wants one primitive"
   list): DFC sagas (`Effect::ExileSelfReturnTransformed` — Fable of the
   Mirror-Breaker), search statics (`OpponentsSearchTopN` / `SearchTax` —
@@ -19,19 +19,21 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   tax (`StaticEffect::ActivationTax` — Suppression Field), Reckoner
   Bankbuster (charge-empty payout via `remove_counter_cost` + If).
 - ⏳ **Still deferred:**
-  - **Hofri's token-leaves rider** ("when this token leaves, return the
-    exiled card to its owner's graveyard").
+  - ✅ **Hofri's token-leaves rider** ships
+    (`DelayedKind::WhenCardLeavesBattlefield` +
+    `Effect::WhenLastCreatedTokenLeaves`; the shared `on_left_battlefield`
+    funnel fires it).
   - **Exalted Angel's printed trigger** is modeled as Lifelink (gains on
     any damage it deals — equivalent in practice).
   - **Eon Hub vs. suspend/pacts**: skipped upkeeps also skip suspend ticks
     and pact payments — correct per CR 614.10b, but worth a regression test
     when pact decks meet Eon Hub.
-  - **Noticed this run:** Wandering Fumarole's `{0}` P/T-switch wants a
-    layer-7d `Effect::SwitchPT`; Lavaclaw Reaches' firebreathing wants
-    activated abilities scoped to the animated state; Street Wraith wants
-    a life-payment Cycling cost; The One Ring's "protection from everything
-    until your next turn" wants a player-level protection grant. (Improvise
-    shipped — CR 702.126 rides the Convoke cast path; Kappa Cannoneer.)
+  - ✅ **Shipped this run:** `Effect::SwitchPT` (CR 613.7d) + Wandering
+    Fumarole's `{0}` switch; Lavaclaw Reaches' firebreathing
+    (`Predicate::SourceIsCreature` gates animated-state abilities);
+    Street Wraith's life-payment Cycling (`Keyword::CyclingLife`); The One
+    Ring's protection from everything
+    (`Effect::PlayerProtectionUntilNextTurn`).
 - ⏳ **Tempting offer / opponent-may wants_ui suspend** —
   `Effect::TemptingOffer` and the new `Effect::PlayersMayAccept` (Vexing
   Devil, Browbeat, Risk Factor) ask via the synchronous decider; a
@@ -1261,7 +1263,7 @@ picking an item up.
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
 - ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
-- 🟡 **CR 614 — Replacement Effects** — general "instead" framework; damage *halving*. Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* still ⏳. Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
+- 🟡 **CR 614 — Replacement Effects** — general "instead" framework. Damage *halving* ✅ (614.5 — `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent; composed with doublers via `scale_damage` at both damage funnels). Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* ✅ (`Player.skip_turns`, Chronatog / Ral Zarek -7). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
 - 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Source-of-your-choice prevention (615.7) ✅ via
   `Effect::PreventAllDamageFromChosenSourceThisTurn` +
   `GameState.damage_prevented_sources`, consulted at both damage funnels

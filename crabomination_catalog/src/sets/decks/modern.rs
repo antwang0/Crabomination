@@ -41248,3 +41248,79 @@ pub fn boggart_harbinger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Unholy Annex // Ritual Chamber — {2}{B} Room (CR 709.5). Annex: your end
+/// step, draw; drain 2 with a Demon, else lose 2. Chamber {3}{B}{B}: unlock
+/// mints a 6/6 flying Demon.
+pub fn unholy_annex_ritual_chamber() -> CardDefinition {
+    use crate::card::{RoomDoor, RoomDoors};
+    let demon = || {
+        SelectionRequirement::HasCreatureType(CreatureType::Demon)
+            .and(SelectionRequirement::ControlledByYou)
+    };
+    CardDefinition {
+        name: "Unholy Annex // Ritual Chamber",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Room],
+            ..Default::default()
+        },
+        room: Some(Box::new(RoomDoors {
+            left: RoomDoor {
+                name: "Unholy Annex".to_string(),
+                cost: cost(&[generic(2), b()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(crate::game::types::TurnStep::End),
+                        EventScope::ActivePlayer,
+                    ),
+                    effect: Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::If {
+                            cond: Predicate::SelectorExists(Selector::EachPermanent(demon())),
+                            then: Box::new(Effect::Seq(vec![
+                                Effect::LoseLife {
+                                    who: Selector::Player(PlayerRef::EachOpponent),
+                                    amount: Value::Const(2),
+                                },
+                                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                            ])),
+                            else_: Box::new(Effect::LoseLife {
+                                who: Selector::You,
+                                amount: Value::Const(2),
+                            }),
+                        },
+                    ]),
+                }],
+                ..Default::default()
+            },
+            right: RoomDoor {
+                name: "Ritual Chamber".to_string(),
+                cost: cost(&[generic(3), b(), b()]),
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::DoorUnlocked, EventScope::SelfSource),
+                    effect: Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: TokenDefinition {
+                            name: "Demon".to_string(),
+                            power: 6,
+                            toughness: 6,
+                            keywords: vec![Keyword::Flying],
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Black],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Demon],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                }],
+                ..Default::default()
+            },
+        })),
+        ..Default::default()
+    }
+}

@@ -2508,6 +2508,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     };
 
     let mut g = two_player_game();

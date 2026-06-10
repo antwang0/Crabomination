@@ -1272,6 +1272,40 @@ pub struct CardDefinition {
     /// Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub miracle: Option<crate::mana::ManaCost>,
+    /// CR 709.5 — Room enchantment doors. When `Some`, this card is a split
+    /// permanent: cast either door (`GameAction::CastRoomDoor`); on the
+    /// battlefield only unlocked doors' abilities are live
+    /// (`CardInstance.unlocked_doors` + `room_definition_with`), and a locked
+    /// door can be unlocked at sorcery speed for its cost
+    /// (`GameAction::UnlockRoomDoor`). Defaults to `None` for back-compat.
+    #[serde(default)]
+    pub room: Option<Box<RoomDoors>>,
+}
+
+/// CR 709.5 — a Room's two door halves. The parent `CardDefinition` is the
+/// combined object (full name, Enchantment — Room); each door carries its
+/// own name, cost, and abilities, live only while that door is unlocked.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct RoomDoors {
+    pub left: RoomDoor,
+    pub right: RoomDoor,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct RoomDoor {
+    /// Door name (e.g. "Ritual Chamber"). Owned: door names only feed
+    /// logs/UI labels, so no `&'static str` interning is needed.
+    pub name: String,
+    pub cost: ManaCost,
+    pub triggered_abilities: Vec<TriggeredAbility>,
+    pub activated_abilities: Vec<ActivatedAbility>,
+    // Skipped on the wire like `TokenDefinition.static_abilities` — a Room
+    // instance round-trips by card name + `unlocked_doors`, and the live
+    // definition is rebuilt from the catalog factory on load.
+    #[serde(skip)]
+    pub static_abilities: Vec<StaticAbility>,
 }
 
 /// CR 709 — the split layout. The left half lives on the parent
@@ -1810,6 +1844,25 @@ impl CardDefinition {
             if let Keyword::Entwine(cost) = kw { Some(cost) } else { None }
         })
     }
+    /// CR 709.5 — this Room definition with only the unlocked doors' (bit 0 =
+    /// left, bit 1 = right) abilities live. Locked halves contribute nothing.
+    pub fn room_definition_with(&self, unlocked: u8) -> CardDefinition {
+        let Some(room) = self.room.as_deref() else {
+            return self.clone();
+        };
+        let mut d = self.clone();
+        d.triggered_abilities.clear();
+        d.activated_abilities.clear();
+        d.static_abilities.clear();
+        for (bit, door) in [(1u8, &room.left), (2u8, &room.right)] {
+            if unlocked & bit != 0 {
+                d.triggered_abilities.extend(door.triggered_abilities.iter().cloned());
+                d.activated_abilities.extend(door.activated_abilities.iter().cloned());
+                d.static_abilities.extend(door.static_abilities.iter().cloned());
+            }
+        }
+        d
+    }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         // Offspring (CR 702.166) is an optional additional cast cost that
         // reuses the Kicker pipeline (pay it → `SpellWasKicked` → ETB mints a
@@ -1994,6 +2047,10 @@ pub struct CardInstance {
     /// real card carries no keyword to re-derive this, so it's tracked here and
     /// serialized.
     pub cloaked: bool,
+    /// CR 709.5c — Room unlocked-door designations (bit 0 = left, bit 1 =
+    /// right). The live `definition` is rebuilt to the union of unlocked
+    /// doors' abilities (`room_definition_with`).
+    pub unlocked_doors: u8,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
     /// True if this card was cast via an evoke alternative cost — it will
@@ -2224,6 +2281,7 @@ impl CardInstance {
             face_down: false,
             transformed: false,
             front_face: None,
+            unlocked_doors: 0,
             face_up_def: None,
             cloaked: false,
             is_token: false,
@@ -2363,6 +2421,33 @@ impl CardInstance {
     /// CR 708.5/708.10 — flip this permanent face up (or restore the real
     /// card as it leaves the battlefield), restoring its real definition.
     /// Returns the real definition's name when a flip actually happened.
+    /// CR 709.5c — unlocked-door designations are battlefield-only; clear
+    /// them (and restore the printed no-abilities definition) as a Room
+    /// permanent leaves the battlefield.
+    pub fn reset_room_doors(&mut self) {
+        if self.unlocked_doors != 0 && self.definition.room.is_some() {
+            self.unlocked_doors = 0;
+            self.definition = Arc::new(self.definition.room_definition_with(0));
+        }
+    }
+
+    /// CR 709.5c/f — give this Room permanent an unlocked-door designation
+    /// (bit 0 = left, bit 1 = right) and rebuild the live definition to the
+    /// union of unlocked doors. Returns false if not a Room or already
+    /// unlocked.
+    pub fn unlock_room_door(&mut self, right: bool) -> bool {
+        if self.definition.room.is_none() {
+            return false;
+        }
+        let bit = if right { 2u8 } else { 1u8 };
+        if self.unlocked_doors & bit != 0 {
+            return false;
+        }
+        self.unlocked_doors |= bit;
+        self.definition = Arc::new(self.definition.room_definition_with(self.unlocked_doors));
+        true
+    }
+
     pub fn turn_face_up(&mut self) -> Option<&'static str> {
         let real = self.face_up_def.take()?;
         let name = real.name;
@@ -2459,6 +2544,10 @@ struct CardInstanceWire {
     #[serde(default)]
     bestowed: bool,
     face_down: bool,
+    /// CR 709.5c — Room unlocked-door bitmask. `#[serde(default)]` for
+    /// back-compat; the live definition is rebuilt on load.
+    #[serde(default)]
+    unlocked_doors: u8,
     /// CR 708 — on the battlefield face down (morph / manifest). `name` stores
     /// the real card's name so the registry resolves it; on load the real
     /// definition is stashed and `definition` swapped to the vanilla 2/2.
@@ -2603,6 +2692,7 @@ impl serde::Serialize for CardInstance {
             entwined: self.entwined,
             bestowed: self.bestowed,
             face_down: self.face_down,
+            unlocked_doors: self.unlocked_doors,
             face_down_permanent: self.face_up_def.is_some(),
             cloaked: self.cloaked,
             transformed: self.transformed,
@@ -2682,6 +2772,12 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.front_face = Some(c.definition.clone());
             c.definition = Arc::new(back);
             c.transformed = true;
+        }
+        // CR 709.5 — restore a Room permanent's unlocked doors (the live
+        // definition is the union of unlocked doors' abilities).
+        if wire.unlocked_doors != 0 && c.definition.room.is_some() {
+            c.unlocked_doors = wire.unlocked_doors;
+            c.definition = Arc::new(c.definition.room_definition_with(wire.unlocked_doors));
         }
         c.is_token = wire.is_token;
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;

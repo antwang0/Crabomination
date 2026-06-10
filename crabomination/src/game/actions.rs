@@ -1573,6 +1573,108 @@ impl GameState {
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags { buyback: true, ..Default::default() })
     }
 
+    /// CR 709.5 — cast a Room card's chosen door for that door's cost. The
+    /// permanent enters with that door unlocked.
+    pub(crate) fn cast_room_door(
+        &mut self,
+        card_id: CardId,
+        right: bool,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let is_room = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.room.is_some())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        if !is_room {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        self.cast_spell_with_convoke(
+            card_id, None, vec![], None, None, &[], &[],
+            CastFlags { room_door: Some(u8::from(right)), ..Default::default() },
+        )
+    }
+
+    /// CR 709.5e / 116.2m — special action: pay a locked door's cost at
+    /// sorcery speed (main phase, empty stack) to unlock it.
+    pub(crate) fn unlock_room_door(
+        &mut self,
+        card_id: CardId,
+        right: bool,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let cost = {
+            let card = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == card_id && c.controller == p)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            let room = card.definition.room.as_deref().ok_or(GameError::InvalidTarget)?;
+            let bit = if right { 2u8 } else { 1u8 };
+            if card.unlocked_doors & bit != 0 {
+                return Err(GameError::InvalidTarget);
+            }
+            if right { room.right.cost.clone() } else { room.left.cost.clone() }
+        };
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let mut events = receipt.auto_events;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        self.set_room_door_unlocked(card_id, right, &mut events);
+        Ok(events)
+    }
+
+    /// CR 709.5c/h — give a Room permanent the unlocked designation for one
+    /// door, rebuild its live definition, and fire that door's "when you
+    /// unlock this door" triggers.
+    pub(crate) fn set_room_door_unlocked(
+        &mut self,
+        card_id: CardId,
+        right: bool,
+        _events: &mut Vec<GameEvent>,
+    ) {
+        let Some(card) = self.battlefield_find_mut(card_id) else { return };
+        if !card.unlock_room_door(right) {
+            return;
+        }
+        let controller = card.controller;
+        let unlock_triggers: Vec<crate::effect::Effect> = card
+            .definition
+            .room
+            .as_deref()
+            .map(|room| {
+                let door = if right { &room.right } else { &room.left };
+                door.triggered_abilities
+                    .iter()
+                    .filter(|t| t.event.kind == crate::card::EventKind::DoorUnlocked)
+                    .map(|t| t.effect.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        for effect in unlock_triggers {
+            let auto_target = self.auto_target_for_effect(&effect, controller);
+            self.stack.push(crate::game::types::StackItem::Trigger {
+                source: card_id,
+                controller,
+                effect: Box::new(effect),
+                target: auto_target,
+                mode: None,
+                x_value: 0,
+                converged_value: 0,
+                trigger_source: None,
+                mana_spent: 0,
+                event_amount: 0,
+                intervening_if: None,
+            });
+        }
+    }
+
     /// CR 702.41 — cast a modal spell paying its Entwine cost; every mode
     /// runs in order at resolution.
     pub(crate) fn cast_spell_entwine(
@@ -2255,7 +2357,7 @@ impl GameState {
         delve_cards: &[CardId],
         flags: CastFlags,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let CastFlags { kicked, buyback, bestow, entwine } = flags;
+        let CastFlags { kicked, buyback, bestow, entwine, room_door } = flags;
         let p = self.priority.player_with_priority;
 
         if !self.players[p].has_in_hand(card_id) {
@@ -2280,6 +2382,7 @@ impl GameState {
             && !buyback
             && !bestow
             && !entwine
+            && room_door.is_none()
         {
             let card_info = self.players[p]
                 .hand
@@ -2389,6 +2492,12 @@ impl GameState {
         // CR 702.41 — opt-in Entwine; only sticks when the card has it.
         let entwine = entwine && card.definition.has_entwine().is_some();
         card.entwined = entwine;
+        // CR 709.5 — a Room cast remembers which door was cast (reusing the
+        // split-cast slot); resolution unlocks that door.
+        let room_door = room_door.filter(|_| card.definition.room.is_some());
+        if let Some(d) = room_door {
+            card.split_cast = Some(d);
+        }
         // CR 702.103 — Bestow: cast as an Aura targeting a creature. The
         // bestow cost replaces the regular cost (below); `bestowed` flags
         // the resolving permanent as an Aura that attaches to its target.
@@ -2603,9 +2712,14 @@ impl GameState {
         // first spell each turn").
         // CR 702.103c — Bestow replaces the regular mana cost with the
         // bestow cost; otherwise the printed cost is used.
-        let base_cost = match (bestow, card.definition.has_bestow()) {
-            (true, Some(bc)) => bc.clone(),
-            _ => card.definition.cost.clone(),
+        let base_cost = if let (Some(d), Some(room)) = (room_door, card.definition.room.as_deref()) {
+            // CR 709.5 — each door is cast for its own cost.
+            if d == 1 { room.right.cost.clone() } else { room.left.cost.clone() }
+        } else {
+            match (bestow, card.definition.has_bestow()) {
+                (true, Some(bc)) => bc.clone(),
+                _ => card.definition.cost.clone(),
+            }
         };
         let mut cost = if base_cost.has_x() {
             base_cost.with_x_value(x_value.unwrap_or(0))
@@ -7019,4 +7133,6 @@ pub(crate) struct CastFlags {
     pub buyback: bool,
     pub bestow: bool,
     pub entwine: bool,
+    /// CR 709.5 — Room door being cast (`Some(0)` left, `Some(1)` right).
+    pub room_door: Option<u8>,
 }

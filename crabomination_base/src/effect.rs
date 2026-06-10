@@ -1159,6 +1159,9 @@ pub enum EventKind {
     /// turned face up", megamorph payoffs). The flipped permanent is the
     /// subject (`EventScope::SelfSource`). Matched to `GameEvent::TurnedFaceUp`.
     TurnedFaceUp,
+    /// CR 709.5h — a Room door was unlocked (at cast-entry or via the unlock
+    /// special action). Fired with the Room permanent as the subject.
+    DoorUnlocked,
     /// A **land card** was put into a graveyard from anywhere (death,
     /// sacrifice, mill, discard, spell resolution). Matched to
     /// `GameEvent::CardPutIntoGraveyard { is_land: true, .. }`. Not a

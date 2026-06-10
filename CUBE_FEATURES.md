@@ -29,7 +29,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Unholy Annex // Ritual Chamber | ⏳ | Room enchantment (door halves + unlock) — needs the Rooms subsystem. |
 
 ### Red
 

@@ -101,6 +101,18 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 709.5 — Cast a Room card's chosen door (left or right) for that
+    /// door's cost; the permanent enters with that door unlocked.
+    CastRoomDoor {
+        card_id: CardId,
+        right: bool,
+    },
+    /// CR 709.5e / 116.2m — special action: pay a locked door's cost at
+    /// sorcery speed to unlock it.
+    UnlockRoomDoor {
+        card_id: CardId,
+        right: bool,
+    },
     /// CR 702.62 — Suspend a card from hand: pay its suspend cost and exile
     /// it with N time counters. Removed one per owner's upkeep; the spell is
     /// cast for free when the last counter comes off.
@@ -789,6 +801,7 @@ impl GameAction {
                 | A::CastBestow { .. }
                 | A::CastSpellBuyback { .. }
                 | A::CastSpellEntwine { .. }
+                | A::CastRoomDoor { .. }
                 | A::CastFaceDown { .. }
                 | A::CastForetold { .. }
                 | A::CastAdventure { .. }

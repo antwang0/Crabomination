@@ -83,6 +83,7 @@ pub fn take_up_the_shield() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -160,6 +161,7 @@ pub fn star_pupils_papers() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -233,6 +235,7 @@ fn snarl_land(
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -372,6 +375,7 @@ pub fn dragons_approach() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -433,6 +437,7 @@ pub fn defiant_strike() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -519,6 +524,7 @@ pub fn divine_gambit() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -605,6 +611,7 @@ pub fn soothsayer_adept() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -683,6 +690,7 @@ pub fn crux_of_fate() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -815,6 +823,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     };
     CardDefinition {
         name: "Pestilent Cauldron",
@@ -879,6 +888,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -983,6 +993,7 @@ fn diamond(name: &'static str, color: Color) -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1071,6 +1082,7 @@ pub fn goblin_lore() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1125,6 +1137,7 @@ pub fn whirlwind_denial() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1177,6 +1190,7 @@ pub fn eliminate() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1233,6 +1247,7 @@ pub fn pull_from_tomorrow() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1349,6 +1364,7 @@ pub fn postmortem_lunge() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1403,6 +1419,7 @@ pub fn curious_cryomancer() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1463,6 +1480,7 @@ pub fn verdant_pledgemage() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1517,6 +1535,7 @@ pub fn channeled_force() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1614,6 +1633,7 @@ pub fn inscription_of_insight() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1715,6 +1735,7 @@ pub fn manifold_key() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1784,6 +1805,7 @@ pub fn leyline_invocation() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1840,6 +1862,7 @@ pub fn spitfire_lagac() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1903,6 +1926,7 @@ pub fn settle_the_score() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -1960,6 +1984,7 @@ pub fn exsanguinate() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2028,6 +2053,7 @@ pub fn fire_prophecy() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2088,6 +2114,7 @@ pub fn divide_by_zero() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2174,6 +2201,7 @@ pub fn maelstrom_muse() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2253,6 +2281,7 @@ pub fn approach_of_the_second_sun() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2309,6 +2338,7 @@ pub fn resurrection() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2412,6 +2442,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2464,6 +2495,7 @@ pub fn eladamris_call() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2520,6 +2552,7 @@ pub fn yawning_fissure() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2590,6 +2623,7 @@ pub fn cleansing_wildfire() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2654,6 +2688,7 @@ pub fn tendrils_of_agony() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2702,6 +2737,7 @@ pub fn saw_it_coming() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2831,6 +2867,7 @@ pub fn increasing_vengeance() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2883,6 +2920,7 @@ pub fn quench() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -2988,6 +3026,7 @@ pub fn inspiring_veteran() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3058,6 +3097,7 @@ pub fn snipe() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3136,6 +3176,7 @@ pub fn witherbloom_pest_eater() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3197,6 +3238,7 @@ pub fn inkmoth_initiate() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3253,6 +3295,7 @@ pub fn stoic_tutelage() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }
 
@@ -3314,5 +3357,6 @@ pub fn lorehold_recovery() -> CardDefinition {
         split: None,
         saga_chapters: vec![],
         miracle: None,
+        room: None,
     }
 }

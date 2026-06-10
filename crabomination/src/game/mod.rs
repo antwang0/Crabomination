@@ -3714,6 +3714,8 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_bestow(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastRoomDoor { card_id, right } => self.cast_room_door(card_id, right),
+            GameAction::UnlockRoomDoor { card_id, right } => self.unlock_room_door(card_id, right),
             GameAction::Suspend { card_id } => self.suspend_card(card_id),
             GameAction::Foretell { card_id } => self.foretell_card(card_id),
             GameAction::CastFaceDown { card_id } => self.cast_face_down(card_id),
