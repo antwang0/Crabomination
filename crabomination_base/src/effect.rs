@@ -2960,6 +2960,12 @@ pub enum Effect {
     /// Main-phase-cast "after this main phase, an additional combat + main"
     /// sorceries (Relentless Assault) aren't supported yet — see TODO.md.
     AdditionalCombatPhase { count: Value },
+    /// CR 505.1b — "After this main phase, there is an additional combat
+    /// phase followed by an additional main phase." Banks a combat phase
+    /// that begins when the active player leaves their current main phase;
+    /// the following main phase comes from the normal EndCombat → PostMain
+    /// flow. Relentless Assault.
+    AdditionalCombatPhaseAfterMain { count: Value },
     /// CR 114 — "[Player] gets an emblem with '[triggered abilities]'."
     /// Appends an `Emblem` (named after its source) to the player's
     /// emblem zone. Emblems never leave; their triggered abilities fire

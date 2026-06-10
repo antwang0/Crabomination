@@ -125,6 +125,17 @@ impl GameState {
             next = TurnStep::BeginCombat;
         }
 
+        // CR 505.1b — "after this main phase, an additional combat phase
+        // followed by an additional main phase" (Relentless Assault). When
+        // the active player leaves the postcombat main with one banked,
+        // enter Begin Combat; EndCombat → PostCombatMain then supplies the
+        // extra main. (A precombat-main cast banks the phase until after
+        // the turn's scheduled combat rather than inserting it before.)
+        if self.step == TurnStep::PostCombatMain && self.additional_post_main_combats > 0 {
+            self.additional_post_main_combats -= 1;
+            next = TurnStep::BeginCombat;
+        }
+
         // CR 511.2 — "Effects that last 'until end of combat' expire at the
         // end of the combat phase." Sweep `UntilEndOfCombat` continuous
         // effects whenever we leave EndCombat — including into an additional
@@ -1473,6 +1484,7 @@ impl GameState {
         // CR 505.1b — discard any unconsumed additional combat phases so they
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;
+        self.additional_post_main_combats = 0;
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;

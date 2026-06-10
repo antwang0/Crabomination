@@ -48302,3 +48302,36 @@ fn chord_of_calling_rejects_pick_above_x() {
     let _ = g.resolve_effect(&effect, &ctx).unwrap();
     assert!(g.battlefield_find(wurm).is_none(), "an over-X pick must be rejected");
 }
+
+#[test]
+fn relentless_assault_untaps_attackers_and_adds_post_main_combat() {
+    use crate::effect::Effect;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().attacked_this_turn = true;
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let effect = catalog::relentless_assault().effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let _ = g.resolve_effect(&effect, &ctx).unwrap();
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "attacker untapped");
+    assert_eq!(g.additional_post_main_combats, 1);
+    let _ = Effect::Noop;
+
+    // Leaving the postcombat main loops back to Begin Combat once.
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PostCombatMain;
+    let mut steps = Vec::new();
+    for _ in 0..24 {
+        g.perform_action(GameAction::PassPriority).unwrap();
+        if steps.last() != Some(&g.step) {
+            steps.push(g.step);
+        }
+        if g.step == TurnStep::End { break; }
+    }
+    assert!(steps.contains(&TurnStep::BeginCombat),
+        "an extra combat phase begins after the main phase: {steps:?}");
+    let after_combat = steps.iter().skip_while(|s| **s != TurnStep::EndCombat).nth(1);
+    assert_eq!(after_combat, Some(&TurnStep::PostCombatMain),
+        "the extra combat is followed by an additional main phase");
+}

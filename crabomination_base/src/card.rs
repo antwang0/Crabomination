@@ -811,6 +811,10 @@ pub enum SelectionRequirement {
     IsNonbasicLand,
     IsAttacking,
     IsBlocking,
+    /// True when the candidate creature was declared as an attacker at any
+    /// point this turn (`CardInstance.attacked_this_turn`). Relentless
+    /// Assault's "untap all creatures that attacked this turn".
+    AttackedThisTurn,
     /// CR 603.4 — true when the candidate permanent entered the battlefield
     /// this turn (its `CardInstance.entered_turn` equals the current
     /// `GameState.turn_number`). Battlefield-only; powers "each creature that

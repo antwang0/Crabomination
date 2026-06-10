@@ -437,7 +437,8 @@ impl Effect {
             Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
-            Effect::AdditionalCombatPhase { count } => value_has_target(count),
+            Effect::AdditionalCombatPhase { count }
+            | Effect::AdditionalCombatPhaseAfterMain { count } => value_has_target(count),
             Effect::CreateEmblem { who, .. } => player_has_target(who),
             Effect::CreateTokenCopyOf { who, count, source, .. } => {
                 player_has_target(who) || value_has_target(count) || sel_has_target(source)

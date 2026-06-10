@@ -42835,3 +42835,25 @@ pub fn emrakul_the_aeons_torn() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Relentless Assault — {2}{R}{R} Sorcery. Untap all creatures that attacked
+/// this turn. After this main phase, there is an additional combat phase
+/// followed by an additional main phase.
+pub fn relentless_assault() -> CardDefinition {
+    CardDefinition {
+        name: "Relentless Assault",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::AttackedThisTurn),
+                ),
+                up_to: None,
+            },
+            Effect::AdditionalCombatPhaseAfterMain { count: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}

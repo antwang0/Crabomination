@@ -581,6 +581,13 @@ pub struct GameState {
     /// main. Reset at cleanup so it can't bleed into the next turn.
     #[serde(default)]
     pub(crate) additional_combat_phases: u32,
+    /// CR 505.1b — combat phases banked by `AdditionalCombatPhaseAfterMain`
+    /// (Relentless Assault): when the active player leaves a main phase with
+    /// one banked, the turn enters Begin Combat instead of the next phase
+    /// (the follow-up main comes from the normal EndCombat → PostMain flow).
+    /// Reset at cleanup.
+    #[serde(default)]
+    pub(crate) additional_post_main_combats: u32,
     /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
     /// directions for the rest of the turn (Maze of Ith: "prevent all combat
     /// damage that would be dealt to and dealt by that creature"). The combat
@@ -886,6 +893,7 @@ impl Clone for GameState {
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             mana_production_doublers: self.mana_production_doublers,
             additional_combat_phases: self.additional_combat_phases,
+            additional_post_main_combats: self.additional_post_main_combats,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
@@ -1002,6 +1010,7 @@ impl GameState {
             prevent_combat_damage_this_turn: false,
             mana_production_doublers: 0,
             additional_combat_phases: 0,
+            additional_post_main_combats: 0,
             combat_damage_prevented_creatures: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),

@@ -1957,6 +1957,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        relentless_assault,
         barbed_lightning,
         grab_the_reins,
         roiling_vortex,

@@ -534,13 +534,14 @@ feature; sweep card-batch by card-batch.
 - ⏳ **Damage assignment order** (Tier-1 #3) and **trample math** with
   multiple/deathtouch blockers.
 - ⏳ **Banding** combat rules (keyword exists; rules not wired).
-- 🟡 **Multiple combat phases / extra attack steps.** `Effect::Additional
+- ✅ **Multiple combat phases / extra attack steps.** `Effect::Additional
   CombatPhase` + `GameState.additional_combat_phases` (CR 505.1b) loop the
   turn back to Begin Combat when the active player leaves End of Combat with
-  a phase banked — built for combat-activated extra-combat effects (Hellkite
-  Charger), usually paired with `Untap`. Remaining: main-phase-cast "after
-  this main phase, an additional combat phase followed by an additional main
-  phase" sorceries (Relentless Assault) need post-main insertion.
+  a phase banked (Hellkite Charger). Post-main insertion ships too:
+  `Effect::AdditionalCombatPhaseAfterMain` + `additional_post_main_combats`
+  re-enter Begin Combat when the postcombat main ends, with the follow-up
+  main from the normal EndCombat → PostMain flow (Relentless Assault, plus
+  `SelectionRequirement::AttackedThisTurn` for its untap clause).
 - 🟡 **"Must attack/block", "can't attack alone", "attacks each combat"**
   restrictions and requirements. `Keyword::CantAttack` / `CantBlock`
   (Pacifism), `Keyword::AttacksAlone` (CR 508.0 — Master of Cruelties),
