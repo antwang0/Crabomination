@@ -961,26 +961,30 @@ fn restless_land(
     }
 }
 
-/// Restless Reef — U/B. `{4}{U}{B}`: becomes a 4/3 Fish. Whenever it attacks,
-/// surveil 2.
+/// Restless Reef — U/B. `{2}{U}{B}`: 4/4 deathtouch Shark. Whenever it
+/// attacks, target player mills four.
 pub fn restless_reef() -> CardDefinition {
-    use crate::card::CreatureType;
+    use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
+    use crate::effect::shortcut::target_filtered;
     restless_land(
         "Restless Reef", Color::Blue, Color::Black,
-        cost(&[generic(4), u(), crate::mana::b()]), 4, 3,
-        vec![CreatureType::Fish], vec![],
-        Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+        cost(&[generic(2), u(), crate::mana::b()]), 4, 4,
+        vec![CreatureType::Shark], vec![Keyword::Deathtouch],
+        Effect::Mill {
+            who: target_filtered(R::Player),
+            amount: Value::Const(4),
+        },
     )
 }
 
-/// Restless Bivouac — R/W. `{3}{R}{W}`: becomes a 2/2 Ox. Whenever it attacks,
-/// put a +1/+1 counter on target creature you control.
+/// Restless Bivouac — R/W. `{1}{R}{W}`: 2/2 Ox. Whenever it attacks, put a
+/// +1/+1 counter on target creature you control.
 pub fn restless_bivouac() -> CardDefinition {
     use crate::card::{CreatureType, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
     restless_land(
         "Restless Bivouac", Color::Red, Color::White,
-        cost(&[generic(3), crate::mana::r(), crate::mana::w()]), 2, 2,
+        cost(&[generic(1), crate::mana::r(), crate::mana::w()]), 2, 2,
         vec![CreatureType::Ox], vec![],
         Effect::AddCounter {
             what: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -990,8 +994,8 @@ pub fn restless_bivouac() -> CardDefinition {
     )
 }
 
-/// Restless Vinestalk — G/U. `{3}{G}{U}`: becomes a 5/5 Plant with trample.
-/// Whenever it attacks, put a +1/+1 counter on target creature you control.
+/// Restless Vinestalk — G/U. `{3}{G}{U}`: 5/5 trample Plant. Whenever it
+/// attacks, up to one other target creature has base P/T 3/3 until EOT.
 pub fn restless_vinestalk() -> CardDefinition {
     use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
@@ -999,16 +1003,20 @@ pub fn restless_vinestalk() -> CardDefinition {
         "Restless Vinestalk", Color::Green, Color::Blue,
         cost(&[generic(3), crate::mana::g(), u()]), 5, 5,
         vec![CreatureType::Plant], vec![Keyword::Trample],
-        Effect::AddCounter {
-            what: target_filtered(R::Creature.and(R::ControlledByYou)),
-            kind: crate::card::CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
+        Effect::MayDo {
+            description: "Up to one other target creature has base power and toughness 3/3".into(),
+            body: Box::new(Effect::SetBasePT {
+                what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: crate::effect::Duration::EndOfTurn,
+            }),
         },
     )
 }
 
-/// Restless Fortress — W/B. `{2}{W}{B}`: becomes a 1/4 Nightmare. Whenever it
-/// attacks, an opponent loses 1 life and you gain 1 life.
+/// Restless Fortress — W/B. `{2}{W}{B}`: 1/4 Nightmare. Whenever it
+/// attacks, defending player loses 2 life and you gain 2 life.
 pub fn restless_fortress() -> CardDefinition {
     use crate::card::CreatureType;
     restless_land(
@@ -1016,15 +1024,15 @@ pub fn restless_fortress() -> CardDefinition {
         cost(&[generic(2), crate::mana::w(), crate::mana::b()]), 1, 4,
         vec![CreatureType::Nightmare], vec![],
         Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
+            from: Selector::Player(PlayerRef::DefendingPlayer),
             to: Selector::You,
-            amount: Value::Const(1),
+            amount: Value::Const(2),
         },
     )
 }
 
-/// Restless Ridgeline — R/G. `{2}{R}{G}`: becomes a 3/4 Dinosaur. Whenever it
-/// attacks, target creature you control gets +1/+1 until end of turn.
+/// Restless Ridgeline — R/G. `{2}{R}{G}`: 3/4 Dinosaur. Whenever it
+/// attacks, another target attacking creature gets +2/+0 and untaps.
 pub fn restless_ridgeline() -> CardDefinition {
     use crate::card::{CreatureType, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
@@ -1033,28 +1041,39 @@ pub fn restless_ridgeline() -> CardDefinition {
         "Restless Ridgeline", Color::Red, Color::Green,
         cost(&[generic(2), crate::mana::r(), crate::mana::g()]), 3, 4,
         vec![CreatureType::Dinosaur], vec![],
-        Effect::PumpPT {
-            what: target_filtered(R::Creature.and(R::ControlledByYou)),
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
-        },
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+        ]),
     )
 }
 
-/// Restless Cottage — B/G. `{2}{B}{G}`: becomes a 4/4 Horror. Whenever it
-/// attacks, create a Food token. (The graveyard-exile rider is dropped.)
+/// Restless Cottage — B/G. `{2}{B}{G}`: 4/4 Horror. Whenever it attacks,
+/// create a Food token and exile up to one target card from a graveyard.
 pub fn restless_cottage() -> CardDefinition {
     use crate::card::CreatureType;
     restless_land(
         "Restless Cottage", Color::Black, Color::Green,
         cost(&[generic(2), crate::mana::b(), crate::mana::g()]), 4, 4,
         vec![CreatureType::Horror], vec![],
-        Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: crabomination_base::tokens::food_token(),
-        },
+        Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::food_token(),
+            },
+            Effect::MayDo {
+                description: "Exile up to one target card from a graveyard".into(),
+                body: Box::new(Effect::Exile {
+                    what: crate::effect::shortcut::target_filtered(SelectionRequirement::Any),
+                }),
+            },
+        ]),
     )
 }
 

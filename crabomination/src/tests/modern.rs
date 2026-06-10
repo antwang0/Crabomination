@@ -43093,30 +43093,30 @@ fn cloak_hide_in_plain_sight_makes_two_warded_face_down_creatures() {
     assert_eq!(up.ward_cost(), None, "real face has no ward");
 }
 
-/// Restless Reef animates into a 4/3 and surveils 2 on attack.
+/// Restless Reef animates into a 4/4 deathtouch Shark; attack: target
+/// player mills four.
 #[test]
-fn restless_reef_animates_and_surveils_on_attack() {
+fn restless_reef_animates_and_mills_on_attack() {
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(0, catalog::restless_reef());
     g.clear_sickness(land);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 2, target: None, x_value: None,
     }).expect("animate Restless Reef");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
-    assert_eq!((post.power, post.toughness), (4, 3));
-    // Library cards to surveil.
-    for _ in 0..3 { let cid = g.next_id(); g.players[0].library.push(CardInstance::new(cid, catalog::grizzly_bears(), 0)); }
-    let lib_before = g.players[0].library.len();
+    assert_eq!((post.power, post.toughness), (4, 4));
+    assert!(post.keywords.contains(&crate::card::Keyword::Deathtouch));
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let lib_before = g.players[1].library.len();
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }]).expect("attack");
     drain_stack(&mut g);
-    // Surveil 2 keeps cards on top or bins them; library either same or smaller.
-    assert!(g.players[0].library.len() <= lib_before, "surveil 2 resolved");
+    assert_eq!(g.players[1].library.len(), lib_before - 4, "target player milled four");
 }
 
 /// Restless Vinestalk animates into a 5/5 trampler.
@@ -43152,7 +43152,7 @@ fn trygon_predator_destroys_artifact_on_combat_damage() {
     assert!(g.battlefield_find(art).is_none(), "Trygon destroyed the opponent's artifact");
 }
 
-/// Restless Fortress animates 1/4 and drains 1 on attack.
+/// Restless Fortress animates 1/4 and drains 2 from the defender on attack.
 #[test]
 fn restless_fortress_drains_on_attack() {
     let mut g = two_player_game();
@@ -43169,8 +43169,8 @@ fn restless_fortress_drains_on_attack() {
     g.priority.player_with_priority = 0;
     g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }]).expect("attack");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp - 1, "opp lost 1");
-    assert_eq!(g.players[0].life, me + 1, "you gained 1");
+    assert_eq!(g.players[1].life, opp - 2, "defending player lost 2");
+    assert_eq!(g.players[0].life, me + 2, "you gained 2");
 }
 
 /// Restless Cottage animates 4/4 and creates a Food on attack.

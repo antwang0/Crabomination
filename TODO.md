@@ -29,10 +29,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Tamiyo +1 / Cabal Therapy / Spoils (empty name → no matches). A
   heuristic namer (most-common name in the targeted hand/library) would
   make these bot-playable.
-- ⏳ **Restless Reef fidelity** — printed is a 4/4 deathtouch Shark whose
-  attack trigger mills four; the shipped row is an older 4/3 "surveil 2"
-  approximation. Same sweep should re-verify Bivouac/Fortress/Ridgeline/
-  Cottage/Vinestalk riders against oracle.
 - ⏳ **Saheeli Rai -7 distinct-names clause** — the triple Search doesn't
   forbid duplicate picks.
 
