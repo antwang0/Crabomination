@@ -46840,3 +46840,72 @@ fn merfolk_thaumaturgist_double_switch_cancels() {
     let cp = g.computed_permanent(wraith).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 4), "two switches cancel (CR 613.7d)");
 }
+
+// ── Goblin / Vortex batch ───────────────────────────────────────────────────
+
+/// Munitions Expert's ETB deals damage equal to your Goblin count.
+#[test]
+fn munitions_expert_scales_with_goblins() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    let bear = g.add_card_to_battlefield(1, catalog::street_wraith());
+    let me = g.add_card_to_hand(0, catalog::munitions_expert());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: me, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Munitions Expert");
+    drain_stack(&mut g);
+    // 3 Goblins on resolution (the Expert counts itself).
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 3);
+}
+
+/// Boggart Harbinger tutors a Goblin to the top of the library.
+#[test]
+fn boggart_harbinger_tutors_goblin_to_top() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let guide = g.add_card_to_library(0, catalog::goblin_guide());
+    g.add_card_to_library(0, catalog::island());
+    let bh = g.add_card_to_hand(0, catalog::boggart_harbinger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(guide)),
+    ]));
+    cast(&mut g, bh);
+    assert_eq!(g.players[0].library[0].id, guide, "Goblin on top");
+}
+
+/// Roiling Vortex pings each upkeep and punishes free spells for 5.
+#[test]
+fn roiling_vortex_punishes_free_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::roiling_vortex());
+    // Upkeep ping hits the active player.
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "upkeep ping");
+    // A sacrifice-cast (no mana spent) Flare costs its caster 5.
+    g.add_card_to_battlefield(1, catalog::delver_of_secrets());
+    let flare = g.add_card_to_hand(1, catalog::flare_of_denial());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: flare, pitch_card: None, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free Flare");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "free spell cost its caster 5");
+}

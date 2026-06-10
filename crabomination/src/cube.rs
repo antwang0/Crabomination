@@ -1470,6 +1470,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         zealous_persecution,
         street_wraith,
         promise_of_power,
+        boggart_harbinger,
         // ── modern_decks-19 ──
         living_end,
         orcish_bowmasters,
@@ -1895,6 +1896,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         barbed_lightning,
         grab_the_reins,
+        roiling_vortex,
         blood_moon,
         magus_of_the_moon,
         fulminator_mage,
@@ -2317,6 +2319,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Black) {
         v.push(terminate);
+        v.push(munitions_expert);
         v.push(voldaren_epicure);
         v.push(bloodtithe_harvester);
         v.push(drossforge_bridge);

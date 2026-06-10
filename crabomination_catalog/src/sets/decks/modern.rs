@@ -41142,3 +41142,109 @@ pub fn merfolk_thaumaturgist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Roiling Vortex — {1}{R} Enchantment. Each upkeep: 1 damage to that
+/// player; free spells cost their caster 5 damage; {R}: opponents can't
+/// gain life this turn.
+pub fn roiling_vortex() -> CardDefinition {
+    CardDefinition {
+        name: "Roiling Vortex",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::AnyPlayer,
+                ),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(Predicate::Not(Box::new(
+                        Predicate::CastSpellManaSpentAtLeast(1),
+                    ))),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(5),
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::LifeGainLockThisTurn { who: Selector::Player(PlayerRef::EachOpponent) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Munitions Expert — {B}{R} 1/1 Goblin. Flash; ETB may deal damage equal
+/// to your Goblin count to target creature or planeswalker.
+pub fn munitions_expert() -> CardDefinition {
+    CardDefinition {
+        name: "Munitions Expert",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Deal damage equal to your Goblins to target creature or planeswalker?".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                                .and(SelectionRequirement::ControlledByYou),
+                        )),
+                        filter: SelectionRequirement::Any,
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Boggart Harbinger — {2}{B} 2/1 Goblin Shaman. ETB: may tutor a Goblin
+/// to the top of your library.
+pub fn boggart_harbinger() -> CardDefinition {
+    CardDefinition {
+        name: "Boggart Harbinger",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Search for a Goblin card and put it on top of your library?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::You,
+                        pos: crate::effect::LibraryPosition::Top,
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
