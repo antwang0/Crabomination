@@ -47657,3 +47657,208 @@ fn lunarch_veteran_front_gains_on_creature_etb() {
     cast(&mut g, bear);
     assert_eq!(g.players[0].life, 21);
 }
+
+// ── Modern staples batch: CoCo / Twin / draw-win / discard-matters ──────────
+
+/// Collected Company puts up to two MV≤3 creatures from the top six onto
+/// the battlefield; non-eligible cards stay out.
+#[test]
+fn collected_company_puts_two_cheap_creatures_onto_battlefield() {
+    let mut g = two_player_game();
+    for f in [
+        catalog::grizzly_bears, catalog::island, catalog::raging_goblin,
+        catalog::vulpine_goliath, catalog::forest, catalog::island,
+    ] {
+        g.add_card_to_library(0, f());
+    }
+    let coco = g.add_card_to_hand(0, catalog::collected_company());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let bf = g.battlefield.len();
+    cast(&mut g, coco);
+    assert_eq!(g.battlefield.len(), bf + 2, "two creatures entered");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Raging Goblin"));
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Vulpine Goliath"),
+        "MV 5 creature not eligible");
+}
+
+/// Splinter Twin grants the enchanted creature a tap ability minting a
+/// hasty token copy that's exiled at the next end step.
+#[test]
+fn splinter_twin_grants_copy_ability() {
+    let mut g = two_player_game();
+    let exarch = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(exarch);
+    let twin = g.add_card_to_hand(0, catalog::splinter_twin());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, twin, Target::Permanent(exarch));
+    // the granted ability surfaces past the printed list (index 0 — Bears
+    // print none)
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: exarch, ability_index: 0, target: None, x_value: None,
+    }).expect("granted twin ability");
+    drain_stack(&mut g);
+    let copies: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears" && c.is_token).collect();
+    assert_eq!(copies.len(), 1, "token copy minted");
+}
+
+/// Laboratory Maniac flips an empty-library draw into a win.
+#[test]
+fn laboratory_maniac_wins_on_empty_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::laboratory_maniac());
+    g.players[0].library.clear();
+    let opt = g.add_card_to_hand(0, catalog::ponder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, opt);
+    assert!(g.players[1].eliminated, "opponent eliminated — P0 wins");
+    assert!(!g.players[0].eliminated);
+}
+
+/// Without the Maniac the empty draw still eliminates the drawer.
+#[test]
+fn empty_draw_without_override_still_loses() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let opt = g.add_card_to_hand(0, catalog::ponder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, opt);
+    assert!(g.players[0].eliminated);
+}
+
+/// Thassa's Oracle wins when devotion to blue covers the (empty) library.
+#[test]
+fn thassas_oracle_wins_with_empty_library() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let oracle = g.add_card_to_hand(0, catalog::thassas_oracle());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, oracle);
+    assert!(g.players[1].eliminated, "devotion 2 >= library 0 wins");
+}
+
+/// Bedlam Reveler's graveyard-affinity reduction + ETB hand-flush draw 3.
+#[test]
+fn bedlam_reveler_discount_and_etb() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let rev = g.add_card_to_hand(0, catalog::bedlam_reveler());
+    g.add_card_to_hand(0, catalog::forest());
+    // {6}{R}{R} - 4 IS cards = {2}{R}{R}
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, rev);
+    assert!(g.battlefield.iter().any(|c| c.id == rev));
+    assert_eq!(g.players[0].hand.len(), 3, "hand flushed, drew 3");
+}
+
+/// Tolarian Winds draws as many as it discarded.
+#[test]
+fn tolarian_winds_swaps_hand() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    let winds = g.add_card_to_hand(0, catalog::tolarian_winds());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, winds);
+    assert_eq!(g.players[0].hand.len(), 2, "discarded two, drew two");
+}
+
+/// Flameblade Adept grows +1/+0 per discard this turn.
+#[test]
+fn flameblade_adept_grows_per_discard() {
+    let mut g = two_player_game();
+    let adept = g.add_card_to_battlefield(0, catalog::flameblade_adept());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    let winds = g.add_card_to_hand(0, catalog::tolarian_winds());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, winds); // discards the two Forests
+    let c = g.battlefield_find(adept).unwrap();
+    assert_eq!(c.power(), 3, "+1/+0 per discard");
+}
+
+/// Hollow One can be cast for free after three discards.
+#[test]
+fn hollow_one_free_after_three_discards() {
+    let mut g = two_player_game();
+    g.players[0].cards_discarded_this_turn = 3;
+    let hollow = g.add_card_to_hand(0, catalog::hollow_one());
+    cast(&mut g, hollow); // {5} - {6} clamps to 0
+    assert!(g.battlefield.iter().any(|c| c.id == hollow));
+}
+
+/// Jori En draws on the second spell each turn — and only the second.
+#[test]
+fn jori_en_draws_on_second_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::jori_en_ruin_diver());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand0 = g.players[0].hand.len();
+    for i in 0..3 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast_at(&mut g, bolt, Target::Player(1));
+        let expected = hand0 + usize::from(i >= 1);
+        assert_eq!(g.players[0].hand.len(), expected, "after spell {}", i + 1);
+    }
+}
+
+/// Surged Crush of Tentacles bounces the board and leaves an 8/8 Octopus.
+#[test]
+fn crush_of_tentacles_surged_makes_octopus() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // a spell this turn satisfies surge
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    let crush = g.add_card_to_hand(0, catalog::crush_of_tentacles());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: crush, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("surge cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "board bounced");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Octopus"),
+        "surged rider minted the Octopus");
+}
+
+/// Lightning Skelemental forces two discards and dies at end of turn.
+#[test]
+fn lightning_skelemental_discards_and_sacrifices() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::forest());
+    let skel = g.add_card_to_hand(0, catalog::lightning_skelemental());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast_at(&mut g, skel, Target::Player(1));
+    assert_eq!(g.players[1].hand.len(), 0, "discarded two");
+    g.active_player_idx = 0;
+    g.step = TurnStep::End;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(skel).is_none(), "sacrificed at end step");
+}

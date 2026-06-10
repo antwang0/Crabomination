@@ -308,6 +308,14 @@ pub(crate) fn cost_reduction_for_spell(
             }
         }
     }
+    // Card-intrinsic "costs {N} less per card you've discarded this turn"
+    // (Hollow One). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerDiscardThisTurn { per } = &sa.effect {
+            reduction = reduction
+                .saturating_add(per * state.players[caster].cards_discarded_this_turn);
+        }
+    }
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"
     // grants (Urza, Planeswalker's +2). Cleared at cleanup.
     for (filter, amount) in &state.players[caster].turn_spell_discounts {
@@ -5991,11 +5999,23 @@ impl GameState {
                 else {
                     continue;
                 };
-                let Selector::EachPermanent(req) = applies_to else { continue };
-                // Evaluate the filter from the granting source's controller
-                // so "ControlledByYou" picks that player's permanents.
-                if self.evaluate_requirement_static(req, &tgt, src.controller, None) {
-                    out.push(ability.clone());
+                match applies_to {
+                    Selector::EachPermanent(req) => {
+                        // Evaluate the filter from the granting source's
+                        // controller so "ControlledByYou" picks that
+                        // player's permanents.
+                        if self.evaluate_requirement_static(req, &tgt, src.controller, None) {
+                            out.push(ability.clone());
+                        }
+                    }
+                    // "Enchanted/equipped creature has [ability]" — the
+                    // grant rides the attachment link (Splinter Twin).
+                    Selector::AttachedTo(inner) if matches!(**inner, Selector::This) => {
+                        if src.attached_to == Some(card_id) {
+                            out.push(ability.clone());
+                        }
+                    }
+                    _ => continue,
                 }
             }
         }

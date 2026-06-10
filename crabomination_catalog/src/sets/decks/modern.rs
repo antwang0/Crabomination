@@ -2686,6 +2686,7 @@ pub fn satyr_wayfinder() -> CardDefinition {
                 pick_filter: Some(SelectionRequirement::Land),
 
                 take: None,
+                to_battlefield: false,
             },
         }],
         ..Default::default()
@@ -5455,6 +5456,7 @@ pub fn anticipate() -> CardDefinition {
             pick_filter: None,
 
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }
@@ -8437,6 +8439,7 @@ pub fn forbidden_alchemy() -> CardDefinition {
             pick_filter: None,
 
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }
@@ -9266,6 +9269,7 @@ pub fn glint_nest_crane() -> CardDefinition {
             pick_filter: Some(SelectionRequirement::Artifact),
 
             take: None,
+            to_battlefield: false,
         })],
         ..Default::default()
     }
@@ -10692,6 +10696,7 @@ pub fn strategic_planning() -> CardDefinition {
             pick_filter: None,
 
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }
@@ -12789,6 +12794,7 @@ pub fn faerie_snoop() -> CardDefinition {
                 rest_to_graveyard: true,
                 pick_filter: None,
                 take: None,
+                to_battlefield: false,
             },
         }],
         ..Default::default()
@@ -22357,6 +22363,7 @@ pub fn impulse() -> CardDefinition {
             pick_filter: None,
 
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }
@@ -23658,6 +23665,7 @@ pub fn consult_the_star_charts() -> CardDefinition {
         rest_to_graveyard: false,
         pick_filter: None,
         take: Some(Value::Const(take)),
+        to_battlefield: false,
     };
     CardDefinition {
         name: "Consult the Star Charts",
@@ -24952,6 +24960,7 @@ pub fn narset_parter_of_veils() -> CardDefinition {
                 rest_to_graveyard: false,
                 pick_filter: Some(SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland)),
                 take: None,
+                to_battlefield: false,
             },
         }],
         ..Default::default()
@@ -25167,6 +25176,7 @@ pub fn ancient_stirrings() -> CardDefinition {
             rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Colorless),
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }
@@ -27963,6 +27973,7 @@ pub fn search_for_azcanta() -> CardDefinition {
                             .and(SelectionRequirement::Nonland),
                     ),
                     take: None,
+                    to_battlefield: false,
                 },
                 ..Default::default()
             },
@@ -28038,6 +28049,7 @@ pub fn growing_rites_of_itlimoc() -> CardDefinition {
                     rest_to_graveyard: false,
                     pick_filter: Some(SelectionRequirement::Creature),
                     take: None,
+                    to_battlefield: false,
                 },
             },
             TriggeredAbility {
@@ -36804,6 +36816,7 @@ pub fn prophetic_bolt() -> CardDefinition {
                 rest_to_graveyard: false,
                 pick_filter: None,
                 take: None,
+                to_battlefield: false,
             },
         ]),
         ..Default::default()
@@ -38652,6 +38665,7 @@ pub fn rediscover_the_way() -> CardDefinition {
             rest_to_graveyard: false,
             pick_filter: None,
             take: None,
+            to_battlefield: false,
         }
     }
     CardDefinition {
@@ -41120,6 +41134,7 @@ pub fn memory_deluge() -> CardDefinition {
             rest_to_graveyard: false,
             pick_filter: None,
             take: Some(Value::Const(2)),
+            to_battlefield: false,
         },
         ..Default::default()
     }
@@ -41776,6 +41791,422 @@ pub fn lunarch_veteran() -> CardDefinition {
             effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
         }],
         back_face: Some(back),
+        ..Default::default()
+    }
+}
+
+// ── Modern staples batch: CoCo / Twin / draw-win / discard-matters ──────────
+
+/// Collected Company — {3}{G} Instant. Look at the top six; put up to two
+/// creature cards with MV ≤ 3 onto the battlefield, rest to the bottom.
+pub fn collected_company() -> CardDefinition {
+    CardDefinition {
+        name: "Collected Company",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(6),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            take: Some(Value::Const(2)),
+            to_battlefield: true,
+        },
+        ..Default::default()
+    }
+}
+
+/// Splinter Twin — {2}{R}{R} Aura. Enchanted creature has "{T}: Create a
+/// hasty token copy of this creature. Exile it at the next end step."
+pub fn splinter_twin() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Splinter Twin",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+        },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has \"{T}: Create a token copy with haste; exile it at the next end step.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::Seq(vec![
+                        Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: Value::Const(1),
+                            source: Selector::This,
+                            extra_creature_types: vec![],
+                            override_pt: None,
+                            non_legendary: false,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::LastCreatedToken,
+                            keyword: Keyword::Haste,
+                            duration: Duration::Permanent,
+                        },
+                        Effect::DelayUntil {
+                            kind: DelayedTriggerKind::NextEndStep,
+                            body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
+                        },
+                    ]),
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Garruk Wildspeaker — {2}{G}{G} Planeswalker, loyalty 3.
+/// +1 untap two lands; -1 3/3 Beast; -4 team +3/+3 and trample.
+pub fn garruk_wildspeaker() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Garruk Wildspeaker",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Garruk],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Untap {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                        )),
+                        count: Box::new(Value::Const(2)),
+                    },
+                    up_to: None,
+                },
+                x_cost: false,
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Beast".to_string(),
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Beast],
+                            ..Default::default()
+                        },
+                        power: 3,
+                        toughness: 3,
+                        colors: vec![Color::Green],
+                        ..Default::default()
+                    },
+                },
+                x_cost: false,
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: each_your_creature(),
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: each_your_creature(),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                x_cost: false,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Laboratory Maniac — {2}{U} Human Wizard 2/2. Drawing from an empty
+/// library wins the game instead (CR 104.3c override).
+pub fn laboratory_maniac() -> CardDefinition {
+    CardDefinition {
+        name: "Laboratory Maniac",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card while your library has no cards in it, you win the game instead.",
+            effect: StaticEffect::WinInsteadOfDrawFromEmpty,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Jace, Wielder of Mysteries — {2}{U}{U} Planeswalker, loyalty 4.
+/// Empty-draw win static; +1 mill-two a player; -8 draw seven.
+pub fn jace_wielder_of_mysteries() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Jace, Wielder of Mysteries",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Jace],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card while your library has no cards in it, you win the game instead.",
+            effect: StaticEffect::WinInsteadOfDrawFromEmpty,
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Mill {
+                    who: target_filtered(SelectionRequirement::Player),
+                    amount: Value::Const(2),
+                },
+                x_cost: false,
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+                x_cost: false,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Thassa's Oracle — {U}{U} Merfolk Wizard 1/3. ETB: rearrange the top X
+/// (X = devotion to blue); win if X ≥ your library size.
+pub fn thassas_oracle() -> CardDefinition {
+    CardDefinition {
+        name: "Thassa's Oracle",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::DevotionTo(vec![Color::Blue]),
+                Value::LibrarySizeOf(PlayerRef::You),
+            ),
+            then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+            else_: Box::new(Effect::RearrangeTop {
+                who: PlayerRef::You,
+                amount: Value::DevotionTo(vec![Color::Blue]),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bedlam Reveler — {6}{R}{R} Devil Horror 3/4 Prowess. Costs {1} less per
+/// instant/sorcery in your graveyard; ETB discard your hand, draw three.
+pub fn bedlam_reveler() -> CardDefinition {
+    CardDefinition {
+        name: "Bedlam Reveler",
+        cost: cost(&[generic(6), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Prowess],
+        affinity_graveyard_filter: Some(
+            SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+        ),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::HandSizeOf(PlayerRef::You),
+                random: false,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Tolarian Winds — {1}{U} Instant. Discard your hand, then draw that many.
+pub fn tolarian_winds() -> CardDefinition {
+    CardDefinition {
+        name: "Tolarian Winds",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::HandSizeOf(PlayerRef::You),
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::CardsDiscardedThisEffect,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flameblade Adept — {R} Jackal Warrior 1/2 Menace; +1/+0 until end of
+/// turn whenever you discard or cycle a card.
+pub fn flameblade_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Flameblade Adept",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jackal, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hollow One — {5} Artifact Creature 4/4. Costs {2} less per card you've
+/// discarded this turn.
+pub fn hollow_one() -> CardDefinition {
+    CardDefinition {
+        name: "Hollow One",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast for each card you've discarded this turn.",
+            effect: StaticEffect::SelfCostReducedPerDiscardThisTurn { per: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Jori En, Ruin Diver — {1}{U}{R} Legendary Merfolk Wizard 2/3. Whenever
+/// you cast your second spell each turn, draw a card.
+pub fn jori_en_ruin_diver() -> CardDefinition {
+    CardDefinition {
+        name: "Jori En, Ruin Diver",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crush of Tentacles — {4}{U}{U} Sorcery, Surge {3}{U}{U}. Bounce all
+/// nonland permanents; if surged, create an 8/8 blue Octopus.
+pub fn crush_of_tentacles() -> CardDefinition {
+    use crate::effect::shortcut::surge;
+    CardDefinition {
+        name: "Crush of Tentacles",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        alternative_cost: Some(surge(cost(&[generic(3), u(), u()]), true)),
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::EachPermanent(SelectionRequirement::Nonland),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Octopus".to_string(),
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Octopus],
+                            ..Default::default()
+                        },
+                        power: 8,
+                        toughness: 8,
+                        colors: vec![Color::Blue],
+                        ..Default::default()
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lightning Skelemental — {B}{R}{R} Elemental Skeleton 6/1 Trample Haste.
+/// ETB: target player discards two. Sacrificed at the next end step.
+pub fn lightning_skelemental() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning Skelemental",
+        cost: cost(&[b(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Skeleton],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![
+            etb(Effect::Discard {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+                random: false,
+            }),
+            sacrifice_at_end_step(),
+        ],
         ..Default::default()
     }
 }

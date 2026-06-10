@@ -385,6 +385,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         strixhaven_skycoach,
         the_dawning_archaic,
         // ── claude/modern_decks push: new colorless cards ──
+        hollow_one,
         portal_to_phyrexia,
         mesmeric_orb,
         chalice_of_the_void,
@@ -1098,6 +1099,11 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Disturb (CR 702.146)
         baithook_angler,
+        // empty-draw win (CR 104.3c override) + devotion gate
+        laboratory_maniac,
+        jace_wielder_of_mysteries,
+        thassas_oracle,
+        tolarian_winds,
         // Cipher (Gatecrash/Dragon's Maze) — CR 702.46
         last_thoughts,
         hidden_strings,
@@ -1947,6 +1953,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         shrapnel_blast,
         // Tribute (CR 702.104)
         oracle_of_bones,
+        bedlam_reveler,
+        flameblade_adept,
+        splinter_twin,
         // Hideaway land (CR 702.76)
         spinerock_knoll,
         embereth_shieldbreaker,
@@ -2374,6 +2383,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(canyon_slough);
         v.push(talisman_of_indulgence);
         v.push(rakdos_signet);
+        v.push(lightning_skelemental);
     }
     if pair_contains(pair, Color::Green) {
         v.push(ghor_clan_rampager);
@@ -2385,6 +2395,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Blue) {
         v.push(stormchaser_mage);
+        v.push(jori_en_ruin_diver);
+        v.push(crush_of_tentacles);
         v.push(talisman_of_creativity);
         v.push(silverbluff_bridge);
         v.push(thundering_falls);
@@ -2427,6 +2439,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         rude_awakening,
         shefet_monitor,
         aftermath_analyst,
+        collected_company,
+        garruk_wildspeaker,
         // ── modern_decks-18 ──
         crashing_footfalls,
         dryad_of_the_ilysian_grove,

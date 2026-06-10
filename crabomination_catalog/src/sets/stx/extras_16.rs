@@ -33,6 +33,7 @@ pub fn basic_conjuration() -> CardDefinition {
                 rest_to_graveyard: false,
                 pick_filter: Some(SelectionRequirement::Creature),
                 take: None,
+                to_battlefield: false,
             },
             gain_life(3),
         ]),
@@ -516,6 +517,7 @@ pub fn bond_of_flourishing() -> CardDefinition {
                 rest_to_graveyard: false,
                 pick_filter: Some(SelectionRequirement::Permanent),
                 take: None,
+                to_battlefield: false,
             },
             gain_life(3),
         ]),
@@ -1168,6 +1170,7 @@ pub fn the_biblioplex() -> CardDefinition {
                             .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                     ),
                     take: None,
+                    to_battlefield: false,
                 },
                 ..Default::default()
             },

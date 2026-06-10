@@ -182,10 +182,9 @@ impl GameState {
                 } else {
                     let p = self.active_player_idx;
                     if !self.draw_one(p, &mut events) {
-                        // Drawing from an empty library eliminates `p`.
-                        // Game-over check happens inside SBA and may end
-                        // the game if only one player remains.
-                        self.players[p].eliminated = true;
+                        // CR 104.3c (or the Lab-Man win override). Game-over
+                        // check happens inside SBA.
+                        self.lose_to_empty_draw(p);
                         let mut sba = self.check_state_based_actions();
                         events.append(&mut sba);
                         if self.is_game_over() {
@@ -1331,6 +1330,7 @@ impl GameState {
         // "if one or more cards were put into exile this turn" payoffs
         // (Ennis the Debate Moderator) per turn.
         self.players[p].cards_exiled_this_turn = 0;
+        self.players[p].cards_discarded_this_turn = 0;
         // Reset per-spell-type tallies (instant/sorcery vs creature
         // casts). These refine `spells_cast_this_turn` for cards that
         // need exact-type filtering (Potioner's Trove "instant or

@@ -749,6 +749,7 @@ pub fn quandrix_quickener() -> CardDefinition {
                 pick_filter: None,
             
                 take: None,
+                to_battlefield: false,
             },
             Effect::Untap {
                 what: target_filtered(

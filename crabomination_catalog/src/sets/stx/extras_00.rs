@@ -471,6 +471,7 @@ pub fn curate() -> CardDefinition {
             pick_filter: None,
         
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }

@@ -1675,10 +1675,9 @@ impl GameState {
                             // (CR 702.52) before falling back to a normal
                             // draw; AutoDecider declines dredge by default.
                             if !self.draw_one(p, events) {
-                                // Drawing from empty library eliminates p
-                                // (SBA at the end of the call decides
-                                // game-over).
-                                self.players[p].eliminated = true;
+                                // CR 104.3c (or the Lab-Man win override);
+                                // the SBA pass decides game-over.
+                                self.lose_to_empty_draw(p);
                                 return Ok(());
                             }
                         }
@@ -1738,7 +1737,7 @@ impl GameState {
                     .collect();
                 if lessons.is_empty() {
                     if !self.draw_one(p, events) {
-                        self.players[p].eliminated = true;
+                        self.lose_to_empty_draw(p);
                     }
                     return Ok(());
                 }
@@ -5081,7 +5080,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -5129,6 +5128,7 @@ impl GameState {
                     rest_to_graveyard: *rest_to_graveyard,
                     eligible,
                     take,
+                    to_battlefield: *to_battlefield,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -8508,7 +8508,7 @@ impl GameState {
                 if self.players[p].hand.iter().any(|c| c.id == discard) {
                     self.discard_card(p, discard, events);
                     if !self.draw_one(p, events) {
-                        self.players[p].eliminated = true;
+                        self.lose_to_empty_draw(p);
                     }
                 }
             }

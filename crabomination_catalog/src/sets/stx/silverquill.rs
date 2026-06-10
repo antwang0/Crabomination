@@ -3073,6 +3073,7 @@ pub fn silverquill_scrivener_b30() -> CardDefinition {
                 pick_filter: None,
             
                 take: None,
+                to_battlefield: false,
             },
         }],
         ..Default::default()

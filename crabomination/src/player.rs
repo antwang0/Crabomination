@@ -201,6 +201,10 @@ pub struct Player {
     /// (Mutated Cultist): `(amount, spells_cast_this_turn at grant)`.
     #[serde(default)]
     pub pending_spell_discounts: Vec<(u32, u32)>,
+    /// Cards this player discarded this turn (Hollow One's cost reduction).
+    /// Bumped in `discard_card`; reset in `do_untap`.
+    #[serde(default)]
+    pub cards_discarded_this_turn: u32,
     /// "[Filter] spells you cast this turn cost {N} less" grants
     /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
     /// Each entry applies to every matching spell for the rest of the
@@ -380,6 +384,7 @@ impl Player {
             pending_is_discounts: Vec::new(),
             pending_spell_discounts: Vec::new(),
             turn_spell_discounts: Vec::new(),
+            cards_discarded_this_turn: 0,
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,

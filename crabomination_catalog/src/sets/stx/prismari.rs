@@ -251,6 +251,7 @@ pub fn creative_outburst() -> CardDefinition {
                 pick_filter: None,
             
                 take: None,
+                to_battlefield: false,
             },
         ]),
         ..Default::default()

@@ -4032,6 +4032,8 @@ impl GameState {
         // 701.8b), so emit the event + bump the discard-matters counters
         // up front, before resolving the Madness replacement.
         events.push(GameEvent::CardDiscarded { player: p, card_id });
+        self.players[p].cards_discarded_this_turn =
+            self.players[p].cards_discarded_this_turn.saturating_add(1);
         self.cards_discarded_this_resolution += 1;
         *self
             .cards_discarded_per_player_this_resolution
@@ -4255,6 +4257,32 @@ impl GameState {
         }
         self.players[seat].library.shuffle(&mut rand::rng());
         Ok(events)
+    }
+
+    /// CR 104.3c, with the 104.2 override — a failed draw from an empty
+    /// library eliminates `p`, unless they control a "you win the game
+    /// instead" static (Laboratory Maniac, Jace, Wielder of Mysteries):
+    /// then every other player is eliminated and the SBA pass promotes the
+    /// win.
+    pub(crate) fn lose_to_empty_draw(&mut self, p: usize) {
+        let wins = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::WinInsteadOfDrawFromEmpty
+                    )
+                })
+        });
+        if wins {
+            for (idx, pl) in self.players.iter_mut().enumerate() {
+                if idx != p {
+                    pl.eliminated = true;
+                }
+            }
+        } else {
+            self.players[p].eliminated = true;
+        }
     }
 
     /// Draw one card for `p`, first offering the Dredge replacement
@@ -6253,7 +6281,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
@@ -6285,8 +6313,22 @@ impl GameState {
                 for &pick in &picks {
                     if let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
                         let card = self.players[player].library.remove(pos);
-                        self.players[player].hand.push(card);
-                        events.push(GameEvent::CardDrawn { player, card_id: pick });
+                        if to_battlefield {
+                            // Collected Company — picks enter the battlefield
+                            // (ETBs fire through the shared placement funnel).
+                            self.place_card_in_dest(
+                                card,
+                                player,
+                                &crate::effect::ZoneDest::Battlefield {
+                                    controller: crate::effect::PlayerRef::Seat(player),
+                                    tapped: false,
+                                },
+                                &mut events,
+                            );
+                        } else {
+                            self.players[player].hand.push(card);
+                            events.push(GameEvent::CardDrawn { player, card_id: pick });
+                        }
                     }
                 }
                 // Move the rest of the revealed set to the bottom of the
@@ -7682,7 +7724,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::OpponentsCantMakeYouDiscard
             | StaticEffect::ControllerDrawsDoubled
             | StaticEffect::RedirectDamageToSelf
-            | StaticEffect::ControllerCantCastPermanentSpells => vec![],
+            | StaticEffect::ControllerCantCastPermanentSpells
+            | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
+            | StaticEffect::WinInsteadOfDrawFromEmpty => vec![],
         })
         .collect()
 }

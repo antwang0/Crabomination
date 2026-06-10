@@ -890,6 +890,10 @@ pub enum PendingEffectState {
         /// the first; any remainder auto-fills from the eligible revealed set.
         #[serde(default = "crate::game::types::one")]
         take: usize,
+        /// Picks enter the battlefield instead of going to hand (Collected
+        /// Company).
+        #[serde(default)]
+        to_battlefield: bool,
     },
     /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
     /// (Plunge into Darkness mode 1): the chosen card goes to hand and the

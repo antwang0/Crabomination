@@ -272,6 +272,7 @@ pub fn rakshasas_bargain() -> CardDefinition {
             rest_to_graveyard: true,
             pick_filter: None,
             take: Some(Value::Const(2)),
+            to_battlefield: false,
         },
         ..Default::default()
     }
@@ -931,6 +932,7 @@ pub fn commune_with_nature() -> CardDefinition {
             rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Creature),
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }

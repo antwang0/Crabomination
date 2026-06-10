@@ -1957,6 +1957,7 @@ pub fn augur_of_bolas() -> CardDefinition {
                 pick_filter: None,
             
                 take: None,
+                to_battlefield: false,
             },
         }],
         ..Default::default()
@@ -2226,6 +2227,7 @@ pub fn sea_gate_oracle() -> CardDefinition {
                 pick_filter: None,
             
                 take: None,
+                to_battlefield: false,
             },
         }],
         ..Default::default()

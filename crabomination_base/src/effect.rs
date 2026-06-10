@@ -1756,6 +1756,10 @@ pub enum Effect {
         /// remaining eligible revealed cards. Consult the Star Charts kicked.
         #[serde(default)]
         take: Option<Value>,
+        /// Picks go onto the battlefield instead of to hand (Collected
+        /// Company's "put them onto the battlefield").
+        #[serde(default)]
+        to_battlefield: bool,
     },
     /// Remove all counters from the selected permanent; the controller's
     /// next spell this turn costs {1} less per counter removed (Mutated

@@ -1559,6 +1559,7 @@ pub fn adventurous_impulse() -> CardDefinition {
             ),
         
             take: None,
+            to_battlefield: false,
         },
         ..Default::default()
     }

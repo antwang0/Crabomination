@@ -119,6 +119,15 @@ pub enum StaticEffect {
     /// among the caster's lands (0–5). Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByDomain,
+    /// "This spell costs {N} less to cast for each card you've discarded
+    /// this turn" (Hollow One). Card-intrinsic; read by
+    /// `cost_reduction_for_spell` off `Player.cards_discarded_this_turn`.
+    SelfCostReducedPerDiscardThisTurn { per: u32 },
+    /// CR 104.3c override — "If you would draw a card while your library has
+    /// no cards in it, you win the game instead" (Laboratory Maniac, Jace,
+    /// Wielder of Mysteries, Thassa's Oracle's gate). Consulted by
+    /// `lose_to_empty_draw`.
+    WinInsteadOfDrawFromEmpty,
     /// CR 601.2b — card-intrinsic optional additional cost: "you may sacrifice
     /// any number of creatures; this spell costs {N} less to cast for each."
     /// `per` is the per-creature generic reduction. Carried on the spell's own

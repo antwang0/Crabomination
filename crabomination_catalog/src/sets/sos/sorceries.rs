@@ -1900,6 +1900,7 @@ pub fn flow_state() -> CardDefinition {
                 pick_filter: None,
             
                 take: None,
+                to_battlefield: false,
             }),
         },
         ..Default::default()
