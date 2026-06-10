@@ -13,7 +13,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 STX = REPO / "crabomination_catalog" / "src" / "sets" / "stx"
 CACHE = json.load(open(Path(__file__).resolve().parent / ".scryfall_cache.json"))
-CACHE_LC = {k.lower(): v for k, v in CACHE.items()}
+CACHE_LC = {k.lower(): v for k, v in CACHE.items() if isinstance(v, dict)}
 
 COLOR = {"White": "W", "Blue": "U", "Black": "B", "Red": "R", "Green": "G"}
 
