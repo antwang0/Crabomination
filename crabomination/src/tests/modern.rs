@@ -49514,3 +49514,99 @@ fn joraga_warcaller_anthem_scales_with_counters() {
     let bear_v = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((bear_v.power, bear_v.toughness), (2, 2), "non-Elf untouched");
 }
+
+// ── Mill batch ───────────────────────────────────────────────────────────────
+
+/// Traumatize halves the opponent's library (rounded down).
+#[test]
+fn traumatize_mills_half_library() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::traumatize());
+    while g.players[1].library.len() < 11 { g.add_card_to_library(1, catalog::forest()); }
+    let lib = g.players[1].library.len();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - lib / 2);
+}
+
+/// Bruvac doubles an opponent's mill.
+#[test]
+fn bruvac_doubles_opponent_mill() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bruvac_the_grandiloquent());
+    for _ in 0..20 { g.add_card_to_library(1, catalog::forest()); }
+    let lib = g.players[1].library.len();
+    let ms = g.add_card_to_hand(0, catalog::mind_sculpt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, ms);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 14, "7 doubled to 14");
+}
+
+/// Chasm Skulker grows on draws and leaves Squids behind.
+#[test]
+fn chasm_skulker_grows_and_spawns_squids() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let skulker = g.add_card_to_battlefield(0, catalog::chasm_skulker());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, opt);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(skulker).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    g.remove_to_graveyard_with_triggers(skulker);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Squid").count(), 1);
+}
+
+/// Wight of Precinct Six scales with opponents' graveyard creatures only.
+#[test]
+fn wight_of_precinct_six_scales_with_opp_graveyard_creatures() {
+    let mut g = two_player_game();
+    let wight = g.add_card_to_battlefield(0, catalog::wight_of_precinct_six());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt()); // noncreature — ignored
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // own gy — ignored
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == wight).map(|c| (c.power, c.toughness)), Some((2, 2)));
+}
+
+/// Maddening Cacophony kicked mills half the library rounded up.
+#[test]
+fn maddening_cacophony_kicked_mills_half_up() {
+    let mut g = two_player_game();
+    while g.players[1].library.len() < 9 { g.add_card_to_library(1, catalog::forest()); }
+    let lib = g.players[1].library.len();
+    let id = g.add_card_to_hand(0, catalog::maddening_cacophony());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - lib.div_ceil(2));
+}
+
+/// Consuming Aberration's CDA tracks opponents' graveyards; its cast
+/// trigger mills them further.
+#[test]
+fn consuming_aberration_scales_and_mills_on_cast() {
+    let mut g = two_player_game();
+    let ab = g.add_card_to_battlefield(0, catalog::consuming_aberration());
+    for _ in 0..5 { g.add_card_to_library(1, catalog::forest()); }
+    g.add_card_to_graveyard(1, catalog::forest());
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == ab).map(|c| c.power), Some(1));
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.add_card_to_library(0, catalog::forest());
+    cast(&mut g, opt);
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == ab).map(|c| c.power), Some(4), "1 + 3 milled");
+}

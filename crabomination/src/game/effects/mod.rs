@@ -1392,7 +1392,8 @@ impl GameState {
                     .collect();
                 for p in seats {
                     let lib = self.players[p].library.len();
-                    let n = if *rounded_up { lib.div_ceil(2) } else { lib / 2 };
+                    let half = if *rounded_up { lib.div_ceil(2) } else { lib / 2 };
+                    let n = self.mill_count_for(p, half);
                     for _ in 0..n {
                         if self.players[p].library.is_empty() { break; }
                         let card = self.players[p].library.remove(0);
@@ -1824,9 +1825,10 @@ impl GameState {
             }
 
             Effect::Mill { who, amount } => {
-                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                let base = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
+                        let n = self.mill_count_for(p, base);
                         for _ in 0..n {
                             if self.players[p].library.is_empty() { break; }
                             let card = self.players[p].library.remove(0);

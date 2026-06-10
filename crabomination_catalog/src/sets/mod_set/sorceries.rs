@@ -1337,3 +1337,42 @@ pub fn marsh_casualties() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Traumatize — {3}{U}{U} Sorcery. Target player mills half their library,
+/// rounded down.
+pub fn traumatize() -> CardDefinition {
+    CardDefinition {
+        name: "Traumatize",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::MillHalf {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            rounded_up: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Maddening Cacophony — {1}{U} Sorcery, Kicker {3}{U}. Each opponent mills
+/// eight; if kicked, half their library rounded up instead.
+pub fn maddening_cacophony() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Maddening Cacophony",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Kicker(cost(&[generic(3), u()]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::MillHalf {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                rounded_up: true,
+            }),
+            else_: Box::new(Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(8),
+            }),
+        },
+        ..Default::default()
+    }
+}

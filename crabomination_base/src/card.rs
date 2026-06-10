@@ -1637,6 +1637,10 @@ pub enum DynamicPt {
     /// Imprint CDA (CR 604.3): P/T of the creature card exiled with this
     /// permanent; printed base when nothing is exiled. Duplicant.
     ExiledWithSourcePt { base_p: i32, base_t: i32 },
+    /// Power = toughness = base + cards in opponents' graveyards, optionally
+    /// creature cards only. Consuming Aberration (base 0, all cards), Wight
+    /// of Precinct Six (base 1, creatures only).
+    BasePlusOpponentGraveyards { base: i32, creatures_only: bool },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

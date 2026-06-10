@@ -2280,6 +2280,29 @@ impl GameState {
         (redirects, void)
     }
 
+    /// CR 614.5 — the actual mill count for `p` after doubling replacements
+    /// (Bruvac the Grandiloquent: an opponent's mill is doubled, once per
+    /// active static). 0 stays 0 (no event to replace).
+    pub(crate) fn mill_count_for(&self, p: usize, n: usize) -> usize {
+        use crate::effect::StaticEffect;
+        if n == 0 {
+            return 0;
+        }
+        let doublers = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                !self.same_team(c.controller, p)
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::OpponentMillDoubled))
+            })
+            .count()
+            .min(16);
+        n << doublers
+    }
+
     /// CR 701.19c (Aven Mindcensor) — the number of cards from the top of
     /// the library `seat` may look at while searching, or `None` if
     /// unrestricted. The minimum across every opposing
@@ -3148,6 +3171,20 @@ impl GameState {
                 crate::card::DynamicPt::ControllerGraveyardSize => {
                     let n = self.players[card.controller].graveyard.len() as i32;
                     (n, n)
+                }
+                crate::card::DynamicPt::BasePlusOpponentGraveyards { base, creatures_only } => {
+                    let n: i32 = self
+                        .opponents_of(card.controller)
+                        .iter()
+                        .map(|&o| {
+                            self.players[o]
+                                .graveyard
+                                .iter()
+                                .filter(|c| !creatures_only || c.definition.is_creature())
+                                .count() as i32
+                        })
+                        .sum();
+                    (base + n, base + n)
                 }
                 crate::card::DynamicPt::BasePlusLandsInAllGraveyards { base_p, base_t } => {
                     (base_p + lands_in_gys, base_t + lands_in_gys)
@@ -7818,6 +7855,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::HalveDamageToYou
             | StaticEffect::AddDamageToOpponents { .. }
+            | StaticEffect::OpponentMillDoubled
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }

@@ -619,6 +619,10 @@ pub enum StaticEffect {
         #[serde(default)]
         void_counter: bool,
     },
+    /// CR 614.5 — "If an opponent would mill one or more cards, they mill
+    /// twice that many cards instead." (Bruvac the Grandiloquent.) Consulted
+    /// by `GameState::mill_count_for` at every mill site.
+    OpponentMillDoubled,
     /// CR 701.19c — "If an opponent would search a library, that player
     /// searches the top `count` cards of that library instead." Consulted by
     /// `Effect::Search`: an opponent of this static's controller only sees

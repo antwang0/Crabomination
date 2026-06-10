@@ -9097,3 +9097,119 @@ pub fn joraga_warcaller() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Chasm Skulker — {2}{U} Creature — Squid Horror 1/1. Whenever you draw a
+/// card, put a +1/+1 counter on it. When it dies, create X 1/1 blue Squid
+/// tokens with islandwalk, X = its +1/+1 counters.
+pub fn chasm_skulker() -> CardDefinition {
+    use crate::card::{LandType, TokenDefinition};
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Chasm Skulker",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squid, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    definition: TokenDefinition {
+                        name: "Squid".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Blue],
+                        keywords: vec![Keyword::Landwalk(LandType::Island)],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Squid],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wight of Precinct Six — {1}{B} Creature — Zombie 1/1. Gets +1/+1 for
+/// each creature card in your opponents' graveyards.
+pub fn wight_of_precinct_six() -> CardDefinition {
+    use crate::card::DynamicPt;
+    CardDefinition {
+        name: "Wight of Precinct Six",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        dynamic_pt: Some(DynamicPt::BasePlusOpponentGraveyards { base: 1, creatures_only: true }),
+        ..Default::default()
+    }
+}
+
+/// Consuming Aberration — {3}{U}{B} Creature — Horror */*. P/T = cards in
+/// your opponents' graveyards. Whenever you cast a spell, each opponent
+/// reveals from the top until a land, then mills those cards.
+pub fn consuming_aberration() -> CardDefinition {
+    use crate::card::DynamicPt;
+    CardDefinition {
+        name: "Consuming Aberration",
+        cost: cost(&[generic(3), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        dynamic_pt: Some(DynamicPt::BasePlusOpponentGraveyards { base: 0, creatures_only: false }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            // Reveal-until-land approximated as mill 3 (the printed average);
+            // a reveal-until-type mill primitive is tracked in TODO.md.
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bruvac the Grandiloquent — {2}{U} Legendary Creature — Human Advisor
+/// 1/4. If an opponent would mill one or more cards, they mill twice that
+/// many instead.
+pub fn bruvac_the_grandiloquent() -> CardDefinition {
+    CardDefinition {
+        name: "Bruvac the Grandiloquent",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "If an opponent would mill one or more cards, they mill twice that many cards instead.",
+            effect: StaticEffect::OpponentMillDoubled,
+        }],
+        ..Default::default()
+    }
+}
