@@ -1132,6 +1132,39 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Flashback / Jump-start (CR 702.34/702.103) and Disturb (CR 702.146):
+    // recast graveyard cards. `would_accept` enforces zone, timing, and an
+    // affordable cost, so these only surface when actually castable.
+    for c in state.players[seat].graveyard.iter() {
+        use crate::card::Keyword;
+        let recastable = c.effective_flashback().is_some()
+            || c.definition.keywords.contains(&Keyword::JumpStart);
+        if recastable {
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                let (t, extras) =
+                    state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::CastFlashback {
+                card_id: c.id, target, additional_targets, mode: None, x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
+        if c.definition.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_))) {
+            let action = GameAction::CastDisturb { card_id: c.id };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
+    }
+
     // Adventure creature (CR 715) and plotted cards (CR 702.170d): cast the
     // creature half / a plotted card from exile. `would_accept` enforces the
     // later-turn + sorcery-speed timing, so this is only offered when legal.

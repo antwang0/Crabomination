@@ -1497,9 +1497,20 @@ pub fn update_stack_panel(
                     } else {
                         player_name(cv, k.controller)
                     };
-                    let tgt = k.target.as_ref()
-                        .map(|t| format!("  →  {}", target_display(cv, t)))
-                        .unwrap_or_default();
+                    // Every chosen target — primary slot plus the
+                    // additional-target slots of multi-target spells
+                    // (Divide-damage, Support, fused splits).
+                    let all_targets: Vec<String> = k
+                        .target
+                        .iter()
+                        .chain(k.additional_targets.iter())
+                        .map(|t| target_display(cv, t))
+                        .collect();
+                    let tgt = if all_targets.is_empty() {
+                        String::new()
+                    } else {
+                        format!("  →  {}", all_targets.join(", "))
+                    };
                     (kstr, kcol, k.name.clone(), ctrl, tgt, is_trig)
                 }
                 StackItemView::Hidden { controller, .. } => {

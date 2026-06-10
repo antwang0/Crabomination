@@ -47862,3 +47862,35 @@ fn lightning_skelemental_discards_and_sacrifices() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(skel).is_none(), "sacrificed at end step");
 }
+
+/// The bot recasts a graveyard Flashback card when it's the only play.
+#[test]
+fn bot_offers_flashback_recast() {
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let action = RandomBot::new().next_action(&g, 0);
+    assert!(matches!(action, Some(GameAction::CastFlashback { card_id, .. }) if card_id == id),
+        "bot flashbacks Hellspark Elemental: {action:?}");
+}
+
+/// The bot disturb-casts a graveyard DFC when it's the only play.
+#[test]
+fn bot_offers_disturb_recast() {
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::baithook_angler());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let action = RandomBot::new().next_action(&g, 0);
+    assert!(matches!(action, Some(GameAction::CastDisturb { card_id }) if card_id == id),
+        "bot disturb-casts Baithook Angler: {action:?}");
+}
