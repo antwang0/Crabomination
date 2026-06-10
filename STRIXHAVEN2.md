@@ -19,25 +19,3 @@ No 🟡 partials remain. Kasmina, Enigma Sage is now fully faithful:
 loyalty 2, the "each other planeswalker you control has Kasmina's loyalty
 abilities" static (`StaticEffect::OtherPlaneswalkersHaveSourceLoyaltyAbilities`),
 and the real -8 (search a color-sharing instant/sorcery, exile, cast free).
-
-✅ recent: Shaile // Embrose, Plargg // Augusta (Dean MDFC — loot + reveal-cast /
-tapped+untapped anthems + untap-on-attack; tapped/untapped anthem filters now
-live), Extus // Awaken the Blood Avatar (magecraft gy-return + each-opp-sac +
-3/6 Avatar), Mascot Exhibition (corrected to the real {7} Lesson). Emergent
-Sequence, Torrent Sculptor // Flamethrower Sonata, Blex // Search for Blex.
-
-✅ also: Rowan//Will, Mila//Lukka (planeswalker MDFCs), Valentin//Lisette
-(`StaticEffect::ExileDyingOpponentCreatures` death-replacement + reflexive).
-Demonstrate cycle ✅ — Creative / Excavation / Healing / Incarnation /
-Replication Technique + Transforming Flourish (`Effect::Demonstrate`, CR
-702.150).
-
-All previously-blocked printed STX cards now ship:
-- ✅ Echoing Equation (Augmenter's back) — `Effect::BecomeCopyOfFor`
-  (CR 707.2 continuous copy with EOT/leave revert).
-- ✅ Codie, Vociferous Codex — `ControllerCantCastPermanentSpells` +
-  `OnYourNextSpellCastThisTurn` + filtered `Discover` impulse.
-- ✅ Ecological Appreciation (`Effect::SearchSplitWithOpponent`),
-  Jadzi // Journey to the Oracle (pay-{1} top-of-library cast +
-  put-lands-from-hand + self-return), Flamescroll // Revel in Silence
-  (opponent non-mana-activation trigger + `SilencePlayersThisTurn`).

@@ -8319,20 +8319,26 @@ fn mind_sculpt_mills_each_opponent_seven() {
     assert_eq!(g.players[1].graveyard.len(), 7);
 }
 
-/// Cabal Therapy: caster picks a nonland card from each opponent's hand.
+/// Cabal Therapy: name a card; the target player discards every copy.
 #[test]
-fn cabal_therapy_discards_a_nonland_from_opponent() {
+fn cabal_therapy_discards_all_copies_of_the_named_card() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let target_card = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.add_card_to_hand(1, catalog::forest());
     let ct = g.add_card_to_hand(0, catalog::cabal_therapy());
     g.players[0].mana_pool.add(Color::Black, 1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Lightning Bolt".into()),
+    ]));
     g.perform_action(GameAction::CastSpell {
         card_id: ct, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cabal Therapy castable for {B}");
     drain_stack(&mut g);
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == target_card),
-        "Lightning Bolt (the only nonland in P1's hand) should be discarded");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt1));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt2),
+        "every copy of the named card is discarded");
     assert_eq!(g.players[1].hand.len(), 1, "Forest still in hand");
 }
 
@@ -44643,7 +44649,7 @@ fn faerie_vandal_grows_on_the_second_draw_each_turn() {
     let vandal = g.add_card_to_battlefield(0, catalog::faerie_vandal());
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     g.players[0].cards_drawn_this_turn = 0;
-    let mut draw = |g: &mut GameState| {
+    let draw = |g: &mut GameState| {
         let mut events = vec![];
         g.draw_one(0, &mut events);
         g.dispatch_triggers_for_events(&events);
