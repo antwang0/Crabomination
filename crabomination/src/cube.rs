@@ -535,6 +535,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         open_the_vaults,
         elesh_norn_grand_cenobite,
         aven_riftwatcher,
+        emeria_angel,
+        felidar_retreat,
+        admonition_angel,
         ranger_of_eos,
         stony_silence,
         exalted_angel,
@@ -1132,6 +1135,12 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         spreading_seas,
         jace_beleren,
         jin_gitaxias_core_augur,
+        // mill package
+        hedron_crab,
+        ruin_crab,
+        fractured_sanity,
+        tashas_hideous_laughter,
+        court_of_cunning,
         // Disturb (CR 702.146)
         baithook_angler,
         // milled triggers (EventKind::CardMilled)
@@ -1556,6 +1565,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         gravecrawler,
         prized_amalgam,
         dauthi_slayer,
+        pack_rat,
         knight_of_the_ebon_legion,
         tourach_dread_cantor,
         yawgmoth_thran_physician,
@@ -2485,6 +2495,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         chord_of_calling,
         vorinclex_voice_of_hunger,
+        rampaging_baloths,
+        scute_swarm,
+        burgeoning,
         tooth_and_nail,
         rude_awakening,
         shefet_monitor,

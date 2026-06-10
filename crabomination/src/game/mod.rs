@@ -3040,6 +3040,15 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::CreaturesOfTypeControlled { creature_type } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && c.definition.is_creature()
+                            && (c.definition.subtypes.creature_types.contains(&creature_type)
+                                || c.has_keyword(&crate::card::Keyword::Changeling))
+                    }).count() as i32;
+                    (n, n)
+                }
                 crate::card::DynamicPt::LandsControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_land()

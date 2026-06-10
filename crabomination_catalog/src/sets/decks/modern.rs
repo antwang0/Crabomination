@@ -43461,3 +43461,370 @@ pub fn sunscorched_desert() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Mill + landfall batch ────────────────────────────────────────────────────
+
+fn landfall(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+        effect,
+    }
+}
+
+/// Hedron Crab — {U} 0/2 Crab. Landfall: target player mills three.
+pub fn hedron_crab() -> CardDefinition {
+    CardDefinition {
+        name: "Hedron Crab",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crab],
+            ..Default::default()
+        },
+        toughness: 2,
+        triggered_abilities: vec![landfall(Effect::Mill {
+            who: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Player },
+            amount: Value::Const(3),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ruin Crab — {U} 0/3 Crab. Landfall: each opponent mills three.
+pub fn ruin_crab() -> CardDefinition {
+    CardDefinition {
+        name: "Ruin Crab",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crab],
+            ..Default::default()
+        },
+        toughness: 3,
+        triggered_abilities: vec![landfall(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fractured Sanity — {U}{U}{U} Sorcery. Each opponent mills fourteen.
+/// Cycling {1}{U}; when you cycle this, each opponent mills four.
+pub fn fractured_sanity() -> CardDefinition {
+    CardDefinition {
+        name: "Fractured Sanity",
+        cost: cost(&[u(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), u()]))],
+        effect: Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(14),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(4),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tasha's Hideous Laughter — {1}{U}{U} Sorcery. Each opponent exiles
+/// cards from the top of their library until that pile's total mana value
+/// is twenty or more.
+pub fn tashas_hideous_laughter() -> CardDefinition {
+    CardDefinition {
+        name: "Tasha's Hideous Laughter",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::TopOfLibraryUntilMvAtLeast {
+                who: PlayerRef::EachOpponent,
+                threshold: Value::Const(20),
+            },
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Court of Cunning — {1}{U} Enchantment. ETB: become the monarch. At your
+/// upkeep, each opponent mills two — or ten while you're the monarch.
+pub fn court_of_cunning() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Court of Cunning",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::IsMonarch { who: PlayerRef::You },
+                    then: Box::new(Effect::Mill {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(10),
+                    }),
+                    else_: Box::new(Effect::Mill {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(2),
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Emeria Angel — {2}{W}{W} 3/3 Angel, flying. Landfall: a 1/1 white Bird
+/// with flying.
+pub fn emeria_angel() -> CardDefinition {
+    let bird = TokenDefinition {
+        name: "Bird".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Emeria Angel",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![landfall(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: bird,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Rampaging Baloths — {4}{G}{G} 6/6 Beast, trample. Landfall: a 4/4
+/// green Beast.
+pub fn rampaging_baloths() -> CardDefinition {
+    let beast = TokenDefinition {
+        name: "Beast".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rampaging Baloths",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![landfall(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: beast,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Felidar Retreat — {3}{W} Enchantment. Landfall: choose a 2/2 white Cat
+/// Beast, or +1/+1 counters and vigilance for your creatures.
+pub fn felidar_retreat() -> CardDefinition {
+    let cat = TokenDefinition {
+        name: "Cat Beast".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Felidar Retreat",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![landfall(Effect::ChooseMode(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: cat,
+            },
+            Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: each_your_creature(),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: each_your_creature(),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Scute Swarm — {2}{G} 1/1 Insect. Landfall: a 1/1 Insect — or a copy of
+/// Scute Swarm with six or more lands.
+pub fn scute_swarm() -> CardDefinition {
+    let insect = TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Scute Swarm",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![landfall(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(6),
+            },
+            then: Box::new(Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: Selector::This,
+                extra_creature_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+            }),
+            else_: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: insect,
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Burgeoning — {G} Enchantment. Whenever an opponent plays a land, you
+/// may put a land card from your hand onto the battlefield.
+pub fn burgeoning() -> CardDefinition {
+    CardDefinition {
+        name: "Burgeoning",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "Put a land from your hand onto the battlefield?".into(),
+                body: Box::new(Effect::PutFromHandOrGraveyardOntoBattlefield {
+                    filter: SelectionRequirement::Land,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Admonition Angel — {3}{W}{W}{W} 6/6 Angel, flying. Landfall: may exile
+/// target nonland permanent (other than this) until it leaves.
+pub fn admonition_angel() -> CardDefinition {
+    CardDefinition {
+        name: "Admonition Angel",
+        cost: cost(&[generic(3), w(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![landfall(Effect::MayDo {
+            description: "Exile a nonland permanent until this leaves?".into(),
+            body: Box::new(Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Nonland
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pack Rat — {1}{B} Rat whose power and toughness equal your Rat count;
+/// {2}{B}, Discard a card: a token copy of this.
+pub fn pack_rat() -> CardDefinition {
+    CardDefinition {
+        name: "Pack Rat",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        dynamic_pt: Some(DynamicPt::CreaturesOfTypeControlled {
+            creature_type: CreatureType::Rat,
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: Selector::This,
+                extra_creature_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

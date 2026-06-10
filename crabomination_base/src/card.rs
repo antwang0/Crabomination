@@ -1601,6 +1601,9 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of creatures the controller
     /// controls (counting the source itself). Burrowguard Mentor (base 0/0).
     CreaturesControlled { base: i32 },
+    /// Power = toughness = the number of creatures of `creature_type` the
+    /// controller controls (counting the source). Pack Rat.
+    CreaturesOfTypeControlled { creature_type: CreatureType },
     /// Power = toughness = `base` + the number of lands the controller
     /// controls. Lumra, Bellow of the Woods (base 0/0).
     LandsControlled { base: i32 },

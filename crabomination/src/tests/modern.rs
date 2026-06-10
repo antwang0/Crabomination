@@ -48729,3 +48729,158 @@ fn sunscorched_desert_pings_on_entry() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "ETB ping");
 }
+
+// ── Mill + landfall batch ────────────────────────────────────────────────────
+
+#[test]
+fn ruin_crab_landfall_mills_each_opponent() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::forest()); }
+    let _crab = g.add_card_to_battlefield(0, catalog::ruin_crab());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 3, "opponent milled three");
+}
+
+#[test]
+fn fractured_sanity_cycle_trigger_mills_four() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(1, catalog::forest()); }
+    g.add_card_to_library(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let fs = g.add_card_to_hand(0, catalog::fractured_sanity());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Cycle { card_id: fs }).expect("cycle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 4, "cycle trigger milled four");
+}
+
+#[test]
+fn tashas_hideous_laughter_exiles_to_twenty_mana_value() {
+    let mut g = two_player_game();
+    // 7 + 7 + 7 = 21 ≥ 20 after three wurms; the fourth stays.
+    for _ in 0..4 { g.add_card_to_library(1, catalog::pelakka_wurm()); }
+    let effect = catalog::tashas_hideous_laughter().effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let _ = g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[1].library.len(), 1, "stops once the MV pile reaches 20");
+    assert_eq!(g.exile.len(), 3, "exiled, not milled");
+}
+
+#[test]
+fn court_of_cunning_mills_more_while_monarch() {
+    let mut g = two_player_game();
+    for _ in 0..15 { g.add_card_to_library(1, catalog::forest()); }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let court = g.add_card_to_hand(0, catalog::court_of_cunning());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: court, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0), "ETB crowns the controller");
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 10, "monarch mills ten");
+}
+
+#[test]
+fn scute_swarm_copies_itself_with_six_lands() {
+    let mut g = two_player_game();
+    let swarm = g.add_card_to_battlefield(0, catalog::scute_swarm());
+    for _ in 0..5 { g.add_card_to_battlefield(0, catalog::forest()); }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).unwrap(); // sixth land
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Scute Swarm")
+        .count();
+    assert_eq!(copies, 1, "six lands → token copy of Scute Swarm");
+    let _ = swarm;
+}
+
+#[test]
+fn rampaging_baloths_landfall_mints_a_beast() {
+    let mut g = two_player_game();
+    let _b = g.add_card_to_battlefield(0, catalog::rampaging_baloths());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.power() == 4), "4/4 Beast minted");
+}
+
+#[test]
+fn burgeoning_drops_a_land_when_the_opponent_plays_one() {
+    let mut g = two_player_game();
+    let _b = g.add_card_to_battlefield(0, catalog::burgeoning());
+    let mine = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let theirs = g.add_card_to_hand(1, catalog::forest());
+    g.perform_action(GameAction::PlayLand(theirs)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some(), "free land drop off Burgeoning");
+}
+
+#[test]
+fn admonition_angel_landfall_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::admonition_angel());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none() && g.exile.iter().any(|c| c.id == bear),
+        "bear exiled by the landfall trigger");
+    let mut events = Vec::new();
+    g.sacrifice_one(angel, 0, &mut events);
+    assert!(g.battlefield_find(bear).is_some(), "bear returns when the Angel leaves");
+}
+
+#[test]
+fn pack_rat_scales_with_rats_and_copies_itself() {
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::pack_rat());
+    let cp = g.compute_battlefield();
+    let v = cp.iter().find(|c| c.id == rat).unwrap();
+    assert_eq!((v.power, v.toughness), (1, 1), "lone rat is 1/1");
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_hand(0, catalog::forest()); // discard fodder
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rat, ability_index: 0, target: None, x_value: None,
+    }).expect("copy activation");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let v = cp.iter().find(|c| c.id == rat).unwrap();
+    assert_eq!((v.power, v.toughness), (2, 2), "two rats → 2/2 each");
+}
