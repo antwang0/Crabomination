@@ -46686,3 +46686,31 @@ fn tooth_and_nail_entwined_runs_both_modes() {
     assert!(g.battlefield_find(bear).is_some(), "mode 2 put the Bear out");
     assert!(g.players[0].library.is_empty(), "mode 1 tutored both Wurms");
 }
+
+// ── CR 614.10 — skip-turn (Chronatog) ───────────────────────────────────────
+
+/// Chronatog's {0} pumps +3/+3 once per turn and banks a skipped turn:
+/// the activator's next turn never happens.
+#[test]
+fn chronatog_pumps_and_skips_your_next_turn() {
+    let mut g = two_player_game();
+    let atog = g.add_card_to_battlefield(0, catalog::chronatog());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: atog, ability_index: 0, target: None, x_value: None,
+    }).expect("{0}: pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(atog).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 5));
+    // Once each turn.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: atog, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "once per turn");
+    assert_eq!(g.players[0].skip_turns, 1);
+    // P0's turn ends; P1's turn comes; then P0's turn is skipped → P1 again.
+    g.active_player_idx = 0;
+    let _ = g.do_cleanup();
+    assert_eq!(g.active_player_idx, 1);
+    let _ = g.do_cleanup();
+    assert_eq!(g.active_player_idx, 1, "P0's turn was skipped");
+    assert_eq!(g.players[0].skip_turns, 0);
+}

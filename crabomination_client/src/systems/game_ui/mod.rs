@@ -1636,6 +1636,20 @@ pub fn update_combat_preview_panel(
         rows.push((format!("{who}:  {} → {}{}", p.life, new_life, note), color));
     }
 
+    // One row per attacked planeswalker projected to lose loyalty.
+    for (pw, dmg) in &cp.damage_to_planeswalkers {
+        let Some(p) = cv.battlefield.iter().find(|c| c.id == *pw) else { continue };
+        let loyalty = p
+            .counters
+            .iter()
+            .find(|(k, _)| matches!(k, crabomination::card::CounterType::Loyalty))
+            .map(|(_, n)| *n as i32)
+            .unwrap_or(0);
+        let new_loyalty = (loyalty - dmg).max(0);
+        let color = if p.controller == cv.your_seat { theme::TEXT_DANGER } else { theme::TEXT_GOOD };
+        rows.push((format!("{}:  {} → {}", p.name, loyalty, new_loyalty), color));
+    }
+
     // Numeric "who dies" summary to complement the red dying-creature borders:
     // split the projected casualties by controller so the player sees the
     // trade at a glance (yours in danger-red, opponents' in good-green).

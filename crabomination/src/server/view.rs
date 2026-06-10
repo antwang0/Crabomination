@@ -143,6 +143,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
     }
     let block_map = state.block_map_snapshot(); // (blocker, attacker)
     let mut dmg: std::collections::HashMap<usize, i32> = std::collections::HashMap::new();
+    let mut pw_dmg: std::collections::HashMap<CardId, i32> = std::collections::HashMap::new();
     let mut lifegain: std::collections::HashMap<usize, i32> = std::collections::HashMap::new();
     let mut dying: Vec<CardId> = Vec::new();
 
@@ -174,13 +175,17 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
         let a_power = a.power.max(0);
         let lifelink = kw(a, &Keyword::Lifelink);
         if blockers.is_empty() {
-            // Unblocked: full damage to the defending player (planeswalker
-            // targets don't hit a player's life).
-            if let AttackTarget::Player(p) = atk.target {
-                *dmg.entry(p).or_insert(0) += a_power;
-                if lifelink {
-                    *lifegain.entry(a.controller).or_insert(0) += a_power;
+            // Unblocked: full damage to the defending player or planeswalker.
+            match atk.target {
+                AttackTarget::Player(p) => {
+                    *dmg.entry(p).or_insert(0) += a_power;
                 }
+                AttackTarget::Planeswalker(pw) => {
+                    *pw_dmg.entry(pw).or_insert(0) += a_power;
+                }
+            }
+            if lifelink && a_power > 0 {
+                *lifegain.entry(a.controller).or_insert(0) += a_power;
             }
         } else {
             // Blocked: attacker assigns lethal to blockers in id order;
@@ -226,10 +231,15 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                     .map(|b| if kw(a, &Keyword::Deathtouch) { 1 } else { b.toughness.max(0) })
                     .sum();
                 let overflow = (a_power - assign_to_block).max(0);
-                if overflow > 0
-                    && let AttackTarget::Player(p) = atk.target
-                {
-                    *dmg.entry(p).or_insert(0) += overflow;
+                if overflow > 0 {
+                    match atk.target {
+                        AttackTarget::Player(p) => {
+                            *dmg.entry(p).or_insert(0) += overflow;
+                        }
+                        AttackTarget::Planeswalker(pw) => {
+                            *pw_dmg.entry(pw).or_insert(0) += overflow;
+                        }
+                    }
                 }
             }
             if lifelink {
@@ -252,7 +262,15 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
     damage_to_players.sort();
     let mut lifegain_to_players: Vec<(usize, i32)> = lifegain.into_iter().filter(|(_, d)| *d != 0).collect();
     lifegain_to_players.sort();
-    Some(crate::net::CombatPreview { damage_to_players, lifegain_to_players, dying_creatures: dying })
+    let mut damage_to_planeswalkers: Vec<(CardId, i32)> =
+        pw_dmg.into_iter().filter(|(_, d)| *d != 0).collect();
+    damage_to_planeswalkers.sort();
+    Some(crate::net::CombatPreview {
+        damage_to_players,
+        lifegain_to_players,
+        dying_creatures: dying,
+        damage_to_planeswalkers,
+    })
 }
 
 fn exile_entry(card: &CardInstance, viewer: Option<usize>) -> ExileCardView {

@@ -40940,3 +40940,33 @@ pub fn tooth_and_nail() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Chronatog — {1}{U} 1/2 Atog. {0}: +3/+3 until end of turn, you skip
+/// your next turn; once each turn.
+pub fn chronatog() -> CardDefinition {
+    CardDefinition {
+        name: "Chronatog",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Atog],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::SkipTurns { who: PlayerRef::You, count: Value::ONE },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

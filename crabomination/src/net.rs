@@ -407,6 +407,10 @@ pub struct CombatPreview {
     /// CardIds of creatures (attackers and blockers) projected to die from
     /// this combat's damage.
     pub dying_creatures: Vec<CardId>,
+    /// `(planeswalker, damage)` — combat damage each attacked planeswalker
+    /// would take (unblocked attackers + trample overflow). Loyalty loss.
+    #[serde(default)]
+    pub damage_to_planeswalkers: Vec<(CardId, i32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

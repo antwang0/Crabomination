@@ -43,6 +43,14 @@ pub struct TriggerReorderButton {
     pub delta: i32,
 }
 
+/// ← / → reorder button for the CombatDamageOrder modal (CR 510.1c). Moves
+/// the blocker `delta` slots in the damage-assignment ordering.
+#[derive(Component)]
+pub struct DamageOrderReorderButton {
+    pub blocker: CardId,
+    pub delta: i32,
+}
+
 #[derive(Component)]
 pub struct MulliganKeepButton;
 
@@ -90,6 +98,9 @@ pub struct DecisionUiState {
     /// For OrderTriggers (CR 603.3b): the working stack-push order of the
     /// controller's simultaneous triggers (index 0 pushed first).
     pub trigger_order: Vec<CardId>,
+    /// For CombatDamageOrder (CR 510.1c): the working blocker damage order
+    /// (index 0 takes damage first).
+    pub damage_order: Vec<CardId>,
     /// CardId the modal was last spawned for — avoids respawning each frame.
     pub spawned_for: Option<DecisionKey>,
 }
@@ -112,6 +123,8 @@ pub enum DecisionKey {
     Learn(Vec<CardId>),
     /// `Decision::OrderTriggers` — keyed by the trigger source ids.
     OrderTriggers(Vec<CardId>),
+    /// `Decision::CombatDamageOrder` (CR 510.1c) — keyed by attacker + blockers.
+    CombatDamageOrder(CardId, Vec<CardId>),
     /// `Decision::ChooseCards` — keyed by the candidate ids + (min, max) so a
     /// re-posed pick (e.g. a chained second cost) re-spawns the modal.
     ChooseCards(Vec<CardId>, u32, u32),
@@ -150,6 +163,12 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         }
         DecisionWire::OrderTriggers { triggers, .. } => {
             Some(DecisionKey::OrderTriggers(triggers.iter().map(|(id, _)| *id).collect()))
+        }
+        DecisionWire::CombatDamageOrder { attacker, blockers } => {
+            Some(DecisionKey::CombatDamageOrder(
+                *attacker,
+                blockers.iter().map(|(id, _)| *id).collect(),
+            ))
         }
         DecisionWire::ChooseCards { candidates, min, max, .. } => Some(DecisionKey::ChooseCards(
             candidates.iter().map(|(id, _)| *id).collect(),
@@ -349,6 +368,28 @@ pub fn spawn_decision_ui(
                 .map(|id| (*id, name_map.get(id).copied().unwrap_or("Triggered ability").to_string()))
                 .collect();
             spawn_order_triggers_modal(&mut commands, &asset_server, &ui_fonts, &ordered);
+        }
+        DecisionWire::CombatDamageOrder { attacker, blockers } => {
+            if state.damage_order.is_empty() {
+                state.damage_order = blockers.iter().map(|(id, _)| *id).collect();
+            }
+            state.spawned_for = Some(key);
+            let name_of = |id: CardId| -> String {
+                blockers
+                    .iter()
+                    .find(|(b, _)| *b == id)
+                    .map(|(_, n)| n.clone())
+                    .unwrap_or_else(|| "Creature".to_string())
+            };
+            let attacker_name = cv
+                .battlefield
+                .iter()
+                .find(|p| p.id == *attacker)
+                .map(|p| p.name.clone())
+                .unwrap_or_else(|| "Attacker".to_string());
+            let ordered: Vec<(CardId, String)> =
+                state.damage_order.iter().map(|id| (*id, name_of(*id))).collect();
+            spawn_damage_order_modal(&mut commands, &asset_server, &ui_fonts, &attacker_name, &ordered);
         }
         DecisionWire::ChooseTarget { legal, source_name, description, .. } => {
             // No modal — reuse the existing in-scene targeting cursor.
@@ -699,6 +740,172 @@ fn spawn_order_triggers_modal(
                                         REORDER_BG
                                     }),
                                     TriggerReorderButton { source: *source, delta },
+                                ))
+                                .with_children(|b| {
+                                    b.spawn((
+                                        Text::new(label),
+                                        ui_fonts.tf(16.0),
+                                        TextColor(if disabled {
+                                            theme::TEXT_MUTED
+                                        } else {
+                                            theme::TEXT_PRIMARY
+                                        }),
+                                        Pickable::IGNORE,
+                                    ));
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+        panel
+            .spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                DecisionConfirmButton,
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new("Confirm"),
+                    ui_fonts.tf(18.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                    Pickable::IGNORE,
+                ));
+            });
+    });
+}
+
+/// CR 510.1c — modal letting the attacking player order blockers for damage
+/// assignment. Same layout as the trigger-order modal: cards in a row,
+/// ← / → to reorder, leftmost is damaged first.
+fn spawn_damage_order_modal(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
+    attacker_name: &str,
+    ordered: &[(CardId, String)],
+) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG),
+            Button,
+            DecisionModal,
+        ))
+        .id();
+
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                row_gap: Val::Px(16.0),
+                padding: UiRect::all(Val::Px(20.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+
+    commands.entity(root).add_child(panel);
+
+    let n = ordered.len();
+    commands.entity(panel).with_children(|panel| {
+        panel.spawn((
+            Text::new(format!(
+                "{attacker_name}: order blockers for damage  ·  ← → to reorder  ·  leftmost damaged first",
+            )),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+
+        panel
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(12.0),
+                ..default()
+            })
+            .with_children(|row| {
+                for (i, (blocker, name)) in ordered.iter().enumerate() {
+                    let path = scryfall::card_asset_path(name);
+                    let texture: Handle<Image> = asset_server.load(&path);
+                    let at_left = i == 0;
+                    let at_right = i == n - 1;
+
+                    row.spawn(Node {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        row_gap: Val::Px(6.0),
+                        ..default()
+                    })
+                    .with_children(|col| {
+                        col.spawn((
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                width: Val::Px(CARD_W),
+                                padding: UiRect::all(Val::Px(6.0)),
+                                row_gap: Val::Px(4.0),
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            BackgroundColor(MODAL_TILE_BG),
+                        ))
+                        .with_children(|cb| {
+                            cb.spawn((
+                                ImageNode { image: texture, ..default() },
+                                Node {
+                                    width: Val::Px(CARD_W - 12.0),
+                                    height: Val::Px(CARD_H - 12.0),
+                                    ..default()
+                                },
+                                Pickable::IGNORE,
+                            ));
+                            cb.spawn((
+                                Text::new(format!("{}.", i + 1)),
+                                ui_fonts.tf(14.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                Pickable::IGNORE,
+                            ));
+                        });
+
+                        col.spawn(Node {
+                            flex_direction: FlexDirection::Row,
+                            column_gap: Val::Px(8.0),
+                            ..default()
+                        })
+                        .with_children(|r| {
+                            for (label, delta, disabled) in
+                                [("←", -1i32, at_left), ("→", 1, at_right)]
+                            {
+                                r.spawn((
+                                    Button,
+                                    Node {
+                                        padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(if disabled {
+                                        REORDER_BG_DISABLED
+                                    } else {
+                                        REORDER_BG
+                                    }),
+                                    DamageOrderReorderButton { blocker: *blocker, delta },
                                 ))
                                 .with_children(|b| {
                                     b.spawn((
@@ -1406,6 +1613,33 @@ pub fn handle_trigger_reorder(
     }
 }
 
+/// Handle clicks on the CombatDamageOrder ← / → buttons: swap the blocker in
+/// the damage ordering and respawn the modal to reflect the new positions.
+pub fn handle_damage_order_reorder(
+    mut state: ResMut<DecisionUiState>,
+    query: Query<(&Interaction, &DamageOrderReorderButton), Changed<Interaction>>,
+    modal: Query<Entity, With<DecisionModal>>,
+    mut commands: Commands,
+) {
+    for (interaction, btn) in &query {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let Some(pos) = state.damage_order.iter().position(|id| *id == btn.blocker) else {
+            continue;
+        };
+        let new_pos =
+            (pos as i32 + btn.delta).clamp(0, state.damage_order.len() as i32 - 1) as usize;
+        if new_pos != pos {
+            state.damage_order.swap(pos, new_pos);
+        }
+        for e in &modal {
+            commands.entity(e).despawn();
+        }
+        state.spawned_for = None;
+    }
+}
+
 /// Handle the Confirm button: build the appropriate answer based on which
 /// decision is pending and submit it to the server via NetOutbox.
 pub fn handle_confirm(
@@ -1454,6 +1688,9 @@ pub fn handle_confirm(
             DecisionWire::OrderTriggers { .. } => {
                 DecisionAnswer::TriggerOrder(state.trigger_order.clone())
             }
+            DecisionWire::CombatDamageOrder { .. } => {
+                DecisionAnswer::DamageOrder(state.damage_order.clone())
+            }
             _ => continue,
         };
 
@@ -1466,22 +1703,18 @@ pub fn handle_confirm(
         state.put_on_library.clear();
         state.discard_selected.clear();
         state.trigger_order.clear();
+        state.damage_order.clear();
         state.spawned_for = None;
     }
 }
 
-/// Interim fallback for CR 510.1c-d combat-damage ordering / assignment.
-///
-/// The engine now surfaces these as `pending_decision`s for a `wants_ui`
-/// player, but the client doesn't render ordering / assignment modals yet.
-/// To avoid a soft-lock when one is posed for the local player, auto-submit
-/// the engine default — an empty answer, which keeps the default
-/// declaration-order, lethal-to-each split (exactly the pre-interactive
-/// behavior). The `Local` tracks the last auto-answered `(attacker, kind)` so
-/// each decision fires once despite the submit→new-view round-trip.
-///
-/// TODO: replace with real reorder + per-blocker assignment modals so a human
-/// can actually choose (the engine and bots already support it).
+/// Interim fallback for CR 510.1d combat-damage *assignment* (ordering has a
+/// real modal now — `spawn_damage_order_modal`). To avoid a soft-lock when an
+/// assignment decision is posed for the local player, auto-submit the engine
+/// default — an empty answer keeps the lethal-to-each split. The `Local`
+/// tracks the last auto-answered `(attacker, kind)` so each decision fires
+/// once despite the submit→new-view round-trip. A per-blocker assignment
+/// modal is the remaining piece (tracked in TODO.md).
 pub fn auto_resolve_combat_damage_decisions(
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
@@ -1493,9 +1726,8 @@ pub fn auto_resolve_combat_damage_decisions(
         _ => { *last = None; return; }
     };
     let combat = match pending.decision.as_ref() {
-        Some(DecisionWire::CombatDamageOrder { attacker, .. }) => {
-            Some(((*attacker, 0u8), DecisionAnswer::DamageOrder(vec![])))
-        }
+        // CombatDamageOrder now has a real reorder modal (see
+        // `spawn_damage_order_modal`); only assignment still auto-answers.
         Some(DecisionWire::AssignCombatDamage { attacker, .. }) => {
             Some(((*attacker, 1u8), DecisionAnswer::CombatDamageAssignment(vec![])))
         }
