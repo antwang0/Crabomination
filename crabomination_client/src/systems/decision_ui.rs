@@ -118,6 +118,8 @@ pub enum DecisionKey {
     /// `Decision::OptionalTrigger` — a yes/no prompt (e.g. the float-spend
     /// confirmation), keyed by the source + description.
     OptionalTrigger(CardId, String),
+    /// `Decision::NameCard` (CR 201.3) — keyed by the asking source.
+    NameCard(CardId),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -157,6 +159,7 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         DecisionWire::OptionalTrigger { source, description } => {
             Some(DecisionKey::OptionalTrigger(*source, description.clone()))
         }
+        DecisionWire::NameCard { source, .. } => Some(DecisionKey::NameCard(*source)),
         _ => None,
     }
 }
@@ -328,6 +331,10 @@ pub fn spawn_decision_ui(
             } else {
                 spawn_optional_modal(&mut commands, &ui_fonts, description);
             }
+        }
+        DecisionWire::NameCard { source_name, suggestions, .. } => {
+            state.spawned_for = Some(key);
+            spawn_name_card_modal(&mut commands, &ui_fonts, source_name, suggestions);
         }
         DecisionWire::OrderTriggers { triggers, .. } => {
             if state.trigger_order.is_empty() {
@@ -1838,6 +1845,114 @@ fn spawn_choose_color_modal(
             }
         });
     });
+}
+
+// ── Name-a-card modal (CR 201.3) ─────────────────────────────────────────────
+
+/// One suggestion (or the "name nothing" decline) in the NameCard modal.
+#[derive(Component)]
+pub struct NameCardPickButton(pub String);
+
+fn spawn_name_card_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    source_name: &str,
+    suggestions: &[String],
+) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            DecisionModal,
+        ))
+        .id();
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(8.0),
+                align_items: AlignItems::Stretch,
+                min_width: Val::Px(280.0),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+    commands.entity(root).add_child(panel);
+
+    commands.entity(panel).with_children(|p| {
+        p.spawn((
+            Text::new(format!("{source_name} — choose a card name")),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+        for name in suggestions.iter().take(8) {
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(14.0), Val::Px(7.0)),
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_INFO_BG),
+                NameCardPickButton(name.clone()),
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new(name.clone()),
+                    ui_fonts.tf(13.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                    bevy::picking::Pickable::IGNORE,
+                ));
+            });
+        }
+        p.spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(14.0), Val::Px(7.0)),
+                justify_content: JustifyContent::Center,
+                margin: UiRect::top(Val::Px(6.0)),
+                ..default()
+            },
+            BackgroundColor(theme::BUTTON_TERTIARY_BG),
+            NameCardPickButton(String::new()),
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new("Name nothing"),
+                ui_fonts.tf(13.0),
+                TextColor(theme::TEXT_SECONDARY),
+                bevy::picking::Pickable::IGNORE,
+            ));
+        });
+    });
+}
+
+/// Click a NameCard suggestion → submit the name (empty = name nothing).
+pub fn handle_name_card_buttons(
+    outbox: Option<Res<NetOutbox>>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &NameCardPickButton), Changed<Interaction>>,
+) {
+    let Some(outbox) = outbox else { return };
+    for (interaction, btn) in &buttons {
+        if *interaction == Interaction::Pressed {
+            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::NamedCard(btn.0.clone())));
+            state.spawned_for = None;
+            return;
+        }
+    }
 }
 
 // ── Learn modal (Lessons sideboard) ─────────────────────────────────────────

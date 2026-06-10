@@ -1212,6 +1212,10 @@ pub enum DecisionWire {
     NameCard {
         source: CardId,
         source_name: String,
+        /// Engine-ranked candidates (most common name in the relevant zone
+        /// first) for the client to offer as quick picks.
+        #[serde(default)]
+        suggestions: Vec<String>,
     },
     /// CR 903.9b commander redirect — owner may send the commander to
     /// the command zone instead of `would_be`.
@@ -1353,9 +1357,10 @@ impl From<&Decision> for DecisionWire {
             Decision::ChooseCreatureType { source } => {
                 DecisionWire::ChooseCreatureType { source: *source }
             }
-            Decision::NameCard { source, source_name, .. } => DecisionWire::NameCard {
+            Decision::NameCard { source, source_name, suggestions } => DecisionWire::NameCard {
                 source: *source,
                 source_name: source_name.clone(),
+                suggestions: suggestions.clone(),
             },
             Decision::CommanderRedirect { commander, would_be } => {
                 DecisionWire::CommanderRedirect {
