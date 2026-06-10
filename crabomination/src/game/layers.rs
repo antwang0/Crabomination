@@ -81,6 +81,15 @@ pub enum Modification {
     // ── Layer 2 ──────────────────────────────────────────────────────────────
     ChangeController(usize),
 
+    // ── Layer 3 ──────────────────────────────────────────────────────────────
+    /// CR 612 — replace all instances of one color word with another
+    /// (Protection-from-color keywords). Trait Doctoring, Mind Bend.
+    ReplaceColorWord(Color, Color),
+    /// CR 612 / 305.7 — replace all instances of one basic land type with
+    /// another (type line + landwalk; the intrinsic mana ability follows
+    /// the computed land type).
+    ReplaceBasicLandType(crate::card::LandType, crate::card::LandType),
+
     // ── Layer 4 ──────────────────────────────────────────────────────────────
     AddCardType(CardType),
     RemoveCardType(CardType),
@@ -350,6 +359,28 @@ fn compute_permanent(
         match &effect.modification {
             // Layer 2
             Modification::ChangeController(c) => controller = *c,
+
+            // Layer 3 — text-changing (CR 612). Runs before type/color/
+            // ability layers, so the swapped words feed everything below.
+            Modification::ReplaceColorWord(from, to) => {
+                for kw in keywords.iter_mut() {
+                    if matches!(kw, crate::card::Keyword::Protection(c) if c == from) {
+                        *kw = crate::card::Keyword::Protection(*to);
+                    }
+                }
+            }
+            Modification::ReplaceBasicLandType(from, to) => {
+                for lt in subtypes.land_types.iter_mut() {
+                    if lt == from {
+                        *lt = *to;
+                    }
+                }
+                for kw in keywords.iter_mut() {
+                    if matches!(kw, crate::card::Keyword::Landwalk(l) if l == from) {
+                        *kw = crate::card::Keyword::Landwalk(*to);
+                    }
+                }
+            }
 
             // Layer 4
             Modification::AddCardType(t) => {

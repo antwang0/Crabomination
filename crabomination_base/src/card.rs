@@ -1971,6 +1971,10 @@ pub struct CardInstance {
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
     /// (rebound does **not** chain).
     pub cast_from_hand: bool,
+    /// True if this spell's primary target was a battlefield permanent at
+    /// cast time. Drives the CR 608.2b resolution-time legality re-check
+    /// (a zone-loose filter targeting a graveyard card never fizzles).
+    pub cast_target_was_battlefield: bool,
     /// True if this card was cast from a graveyard via its Flashback
     /// cost. On resolution the resolver routes the card to exile instead
     /// of the owner's graveyard. Replaces an earlier overload of the
@@ -2177,6 +2181,7 @@ impl CardInstance {
             blitzed: false,
             impending_counters: 0,
             cast_from_hand: false,
+            cast_target_was_battlefield: false,
             cast_via_flashback: false,
             cast_from_exile: false,
             chosen_creature_type: None,

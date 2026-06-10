@@ -313,6 +313,8 @@ impl Effect {
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
             Effect::BecomeChosenColor { what, .. }
             | Effect::BecomeColor { what, .. }
+            | Effect::ReplaceColorWord { what, .. }
+            | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. } => sel_has_target(what),
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
@@ -530,6 +532,8 @@ impl Effect {
             }
             Effect::BecomeCreature { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. }
+            | Effect::ReplaceColorWord { what, .. }
+            | Effect::ReplaceBasicLandType { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. } => sel_filter(what),
             Effect::Move { what, .. } => sel_filter(what),
             // Player-targeting effects: surface the filter so the bot's

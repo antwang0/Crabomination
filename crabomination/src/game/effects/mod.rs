@@ -3222,6 +3222,94 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReplaceColorWord { what, duration } => {
+                // CR 612 — two ChooseColor prompts pick the word to replace
+                // and its replacement; applied as a layer-3 text change.
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                let legal = vec![
+                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                ];
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let from = match self.decider.decide(&Decision::ChooseColor {
+                        source: cid,
+                        legal: legal.clone(),
+                    }) {
+                        DecisionAnswer::Color(c) => c,
+                        _ => Color::White,
+                    };
+                    let to = match self.decider.decide(&Decision::ChooseColor {
+                        source: cid,
+                        legal: legal.clone(),
+                    }) {
+                        DecisionAnswer::Color(c) => c,
+                        _ => Color::Blue,
+                    };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L3Text,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::ReplaceColorWord(from, to),
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::ReplaceBasicLandType { what, duration } => {
+                // CR 612 / 305.7 — the from/to basic land types ride the
+                // ChooseColor decision (basics map 1:1 onto colors).
+                use crate::card::LandType;
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let land_for = |c: Color| match c {
+                    Color::White => LandType::Plains,
+                    Color::Blue => LandType::Island,
+                    Color::Black => LandType::Swamp,
+                    Color::Red => LandType::Mountain,
+                    Color::Green => LandType::Forest,
+                };
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                let legal = vec![
+                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                ];
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let from = match self.decider.decide(&Decision::ChooseColor {
+                        source: cid,
+                        legal: legal.clone(),
+                    }) {
+                        DecisionAnswer::Color(c) => land_for(c),
+                        _ => LandType::Forest,
+                    };
+                    let to = match self.decider.decide(&Decision::ChooseColor {
+                        source: cid,
+                        legal: legal.clone(),
+                    }) {
+                        DecisionAnswer::Color(c) => land_for(c),
+                        _ => LandType::Island,
+                    };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L3Text,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::ReplaceBasicLandType(from, to),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::BecomeColor { what, colors, duration } => {
                 let duration_kind = map_effect_duration(*duration);
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -5038,7 +5126,11 @@ impl GameState {
                     duration: crate::card::MayPlayDuration::WhileExiled,
                     exile_after: false,
                 });
-                card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                // Gonti's "spend mana as though it were mana of any type"
+                // (CR 609.4b) — the pay-to-cast cost is the MV as generic.
+                card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![
+                    crate::mana::generic(card.definition.cost.cmc()),
+                ]));
                 let cid = card.id;
                 self.exile.push(card);
                 events.push(GameEvent::PermanentExiled { card_id: cid });
@@ -6926,6 +7018,7 @@ impl GameState {
                 to_owner,
                 exile_after,
                 pay_own_cost,
+                any_color,
             } => {
                 // Resolve `what` to a set of cards and stamp each with a
                 // `MayPlayPermission`. The selector can match cards in
@@ -6955,7 +7048,15 @@ impl GameState {
                             exile_after: *exile_after,
                         });
                         if *pay_own_cost {
-                            card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
+                            // "Spend mana as though it were mana of any type"
+                            // (CR 609.4b) — pay the MV as generic.
+                            card.granted_alt_cast_cost_eot = Some(if *any_color {
+                                crate::mana::ManaCost::new(vec![crate::mana::generic(
+                                    card.definition.cost.cmc(),
+                                )])
+                            } else {
+                                card.definition.cost.clone()
+                            });
                         }
                     }
                 }

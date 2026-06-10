@@ -11346,7 +11346,7 @@ pub fn snapcaster_mage() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
                 exile_after: true,
-                pay_own_cost: false,
+                pay_own_cost: false, any_color: false,
             },
         }],
         ..Default::default()
@@ -37628,6 +37628,26 @@ pub fn hidden_strings() -> CardDefinition {
     }
 }
 
+/// Trait Doctoring — {U} Sorcery. Change the text of target permanent by
+/// replacing all instances of one color word with another or one basic land
+/// type with another until end of turn (CR 612). Cipher.
+pub fn trait_doctoring() -> CardDefinition {
+    let what = || target_filtered(SelectionRequirement::Permanent);
+    CardDefinition {
+        name: "Trait Doctoring",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ChooseMode(vec![
+                Effect::ReplaceColorWord { what: what(), duration: Duration::EndOfTurn },
+                Effect::ReplaceBasicLandType { what: what(), duration: Duration::EndOfTurn },
+            ]),
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Paranoid Delusions — {U}{B} Sorcery. Target player mills three cards. Cipher.
 pub fn paranoid_delusions() -> CardDefinition {
     CardDefinition {
@@ -38771,7 +38791,7 @@ pub fn containment_construct() -> CardDefinition {
                         duration: MayPlayDuration::EndOfThisTurn,
                         to_owner: false,
                         exile_after: false,
-                        pay_own_cost: false,
+                        pay_own_cost: false, any_color: false,
                     },
                 ])),
             },
@@ -39202,8 +39222,8 @@ pub fn wavebreak_hippocamp() -> CardDefinition {
 }
 
 /// Hostage Taker — {2}{U}{B} 2/3 Human Pirate. ETB: exile another target
-/// creature or artifact until this leaves; you may cast it while exiled
-/// (the any-color spend clause is dropped).
+/// creature or artifact until this leaves; you may cast it while exiled,
+/// spending mana as though it were mana of any type.
 pub fn hostage_taker() -> CardDefinition {
     CardDefinition {
         name: "Hostage Taker",
@@ -39227,7 +39247,7 @@ pub fn hostage_taker() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::WhileExiled,
                 to_owner: false,
                 exile_after: false,
-                pay_own_cost: true,
+                pay_own_cost: true, any_color: true,
             },
         ]))],
         ..Default::default()
@@ -39236,7 +39256,7 @@ pub fn hostage_taker() -> CardDefinition {
 
 /// Gonti, Lord of Luxury — {2}{B}{B} Legendary 2/3 Aetherborn Rogue,
 /// deathtouch. ETB: look at target opponent's top four, exile one face
-/// down — you may cast it while exiled (any-color clause dropped).
+/// down — you may cast it while exiled, spending mana of any type.
 pub fn gonti_lord_of_luxury() -> CardDefinition {
     CardDefinition {
         name: "Gonti, Lord of Luxury",

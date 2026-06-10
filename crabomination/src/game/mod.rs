@@ -6410,18 +6410,39 @@ impl GameState {
                 card.definition.effect.clone()
             }
         });
-        // CR 608.2b — a copy of a spell whose single target no longer matches
-        // the spell's target filter (e.g. an earlier copy already destroyed it)
-        // is removed from the stack without resolving. Scoped to token copies
-        // so ordinary spells are untouched; the copy just ceases to exist (it's
-        // already off the stack here).
-        if card.is_token
-            && additional_targets.is_empty()
+        // CR 608.2b — a spell whose single target is illegal as it tries to
+        // resolve doesn't resolve. Applies when the primary target was a
+        // battlefield permanent at cast time (zone-loose filters aimed at
+        // graveyard cards are unaffected): the spell fizzles if the target
+        // left the battlefield, stopped matching the spell's target filter,
+        // or became illegal to target (granted Hexproof/Shroud). Token
+        // copies additionally keep the bare filter re-check.
+        if additional_targets.is_empty()
             && let Some(t) = &target
-            && let Some(filter) = effect.target_filter_for_slot(0)
-            && !self.evaluate_requirement_static(filter, t, caster, Some(card.id))
         {
-            return Ok(Vec::new());
+            let filter_fails = |g: &Self| {
+                effect
+                    .target_filter_for_slot_in_mode_kicked(0, Some(mode), card.kicked)
+                    .is_some_and(|f| !g.evaluate_requirement_static(f, t, caster, Some(card.id)))
+            };
+            let fizzled = if card.cast_target_was_battlefield
+                && let Target::Permanent(tid) = t
+            {
+                self.battlefield_find(*tid).is_none()
+                    || filter_fails(self)
+                    || self.check_target_legality_with_source(t, caster, Some(card.id)).is_err()
+            } else {
+                card.is_token && filter_fails(self)
+            };
+            if fizzled {
+                // A fizzled token copy ceases to exist (already off the
+                // stack); a real card is countered into its owner's graveyard.
+                let mut events = Vec::new();
+                if !card.is_token {
+                    self.route_to_graveyard(card, &mut events);
+                }
+                return Ok(events);
+            }
         }
         let mut ctx = EffectContext::for_spell_with_source_and_origin(
             card.id,

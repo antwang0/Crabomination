@@ -1525,7 +1525,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
             duration: MayPlayDuration::EndOfControllersNextTurn,
             to_owner: false,
             exile_after: false,
-            pay_own_cost: false,
+            pay_own_cost: false, any_color: false,
         },
     ]);
     // Simpler model: use `CastWithoutPayingImmediate` — but the test

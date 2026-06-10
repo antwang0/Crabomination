@@ -43698,6 +43698,97 @@ fn hidden_strings_untaps_first_and_taps_second_target() {
     assert!(g.battlefield_find(theirs).unwrap().tapped, "second target tapped");
 }
 
+/// CR 608.2b — a spell whose battlefield target died before resolution
+/// doesn't resolve; the card is countered into its owner's graveyard.
+#[test]
+fn cr_608_2b_spell_fizzles_when_battlefield_target_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Giant Growth castable");
+    // The target dies with the spell still on the stack.
+    let pos = g.battlefield.iter().position(|c| c.id == bear).unwrap();
+    let dead = g.battlefield.remove(pos);
+    g.players[1].graveyard.push(dead);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pump),
+        "fizzled spell goes to its owner's graveyard");
+}
+
+/// CR 608.2b — a graveyard-targeting spell (zone-loose filter) is unaffected
+/// by the battlefield re-check.
+#[test]
+fn cr_608_2b_graveyard_target_does_not_fizzle() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::reanimate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reanimate castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "reanimation resolves normally");
+}
+
+/// CR 612 — Trait Doctoring's color-word mode rewrites Protection-from-red
+/// to Protection-from-blue until end of turn.
+#[test]
+fn trait_doctoring_swaps_protection_color_word() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, crate::card::CardDefinition {
+        name: "Test Knight",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::Red)],
+        ..Default::default()
+    });
+    let td = g.add_card_to_hand(0, catalog::trait_doctoring());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    precombat(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Color(Color::Red),  // replace "red"...
+        DecisionAnswer::Color(Color::Blue), // ...with "blue"
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: td, target: Some(Target::Permanent(knight)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Trait Doctoring castable");
+    drain_stack(&mut g);
+    let computed = g.computed_permanent(knight).unwrap();
+    assert!(computed.keywords.contains(&Keyword::Protection(Color::Blue)), "word swapped");
+    assert!(!computed.keywords.contains(&Keyword::Protection(Color::Red)));
+}
+
+/// CR 612 / 305.7 — the basic-land-type mode turns a Forest into an Island
+/// (type line + landwalk follow the computed land type).
+#[test]
+fn trait_doctoring_swaps_basic_land_type() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let td = g.add_card_to_hand(0, catalog::trait_doctoring());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    precombat(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Color(Color::Green), // replace "Forest"...
+        DecisionAnswer::Color(Color::Blue),  // ...with "Island"
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: td, target: Some(Target::Permanent(forest)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Trait Doctoring castable");
+    drain_stack(&mut g);
+    let computed = g.computed_permanent(forest).unwrap();
+    assert_eq!(computed.subtypes.land_types, vec![LandType::Island], "type line swapped");
+}
+
 // ── Bloodrush ─────────────────────────────────────────────────────────────────
 
 #[test]
@@ -44794,14 +44885,15 @@ fn hostage_taker_exiles_and_lets_you_cast_the_hostage() {
     let exiled = g.exile.iter().find(|c| c.id == bear).expect("Bear exiled");
     assert_eq!(exiled.may_play_until.map(|p| p.player), Some(0), "you may cast it");
 
-    // Cast the hostage from exile — it enters under your control.
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    // Cast the hostage from exile, spending mana as though it were mana of
+    // any type — {1}{G} Bear paid entirely with black mana.
+    g.players[0].mana_pool.add(Color::Black, 2);
     g.perform_action(GameAction::CastFromZoneWithoutPaying {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("hostage castable from exile (paying its cost)");
+    }).expect("hostage castable from exile paying any-type mana");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen for good");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the MV was actually paid");
 }
 
 #[test]

@@ -3142,6 +3142,13 @@ impl GameState {
                     .then(|| (card.definition.clone(), self.permanents_to_graveyard_this_turn))
             });
 
+        // CR 608.2b — remember whether the primary target is a battlefield
+        // permanent right now; resolution re-checks its legality.
+        let mut card = card;
+        card.cast_target_was_battlefield = matches!(
+            &target,
+            Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
+        );
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
@@ -3160,6 +3167,10 @@ impl GameState {
                 let new_id = self.next_id();
                 let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), p);
                 copy_inst.is_token = true;
+                copy_inst.cast_target_was_battlefield = matches!(
+                    &target,
+                    Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
+                );
                 self.stack.push(StackItem::Spell {
                     card: Box::new(copy_inst),
                     caster: p,

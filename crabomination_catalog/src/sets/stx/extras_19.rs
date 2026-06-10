@@ -398,7 +398,7 @@ pub fn radiant_scrollwielder() -> CardDefinition {
                     duration: MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: true,
-                    pay_own_cost: false,
+                    pay_own_cost: false, any_color: false,
                 },
             ]),
         }],

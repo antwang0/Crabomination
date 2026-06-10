@@ -2017,6 +2017,15 @@ pub enum Effect {
     /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes
     /// red"), Crimson Wisps-style color set without a player choice.
     BecomeColor { what: Selector, colors: Vec<crate::mana::Color>, duration: Duration },
+    /// CR 612 — change the target's text by replacing all instances of one
+    /// color word with another, both chosen by the controller (layer 3;
+    /// rewrites Protection-from-color). Trait Doctoring, Mind Bend.
+    ReplaceColorWord { what: Selector, duration: Duration },
+    /// CR 612 / 305.7 — change the target's text by replacing all instances
+    /// of one basic land type with another, both chosen by the controller
+    /// (layer 3; rewrites the type line + landwalk, so a swapped basic taps
+    /// for the new color). Trait Doctoring, Mind Bend.
+    ReplaceBasicLandType { what: Selector, duration: Duration },
     /// The controller chooses a color as the source enters; stamp it onto the
     /// source's `chosen_color` (CR 614 — Coldsteel Heart, choose-a-color mana
     /// rocks). Read later by `ManaPayload::ChosenColorOfSource`.
@@ -2372,6 +2381,11 @@ pub enum Effect {
         /// the may-play cast isn't free.
         #[serde(default)]
         pay_own_cost: bool,
+        /// "…and you may spend mana as though it were mana of any type to
+        /// cast it" (Gonti, Hostage Taker): the stamped alt-cast cost is
+        /// the card's mana value as generic, payable by any colors.
+        #[serde(default)]
+        any_color: bool,
     },
     /// Resolve-now equivalent of `GrantMayPlay`: at effect resolution
     /// time, ask the controller "cast `what` without paying its mana

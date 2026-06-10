@@ -175,7 +175,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
                     duration: MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: false,
+                    pay_own_cost: false, any_color: false,
                 },
             ]),
         }],

@@ -1050,6 +1050,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Cipher (Gatecrash/Dragon's Maze) — CR 702.46
         last_thoughts,
         hidden_strings,
+        trait_doctoring,
         aether_gust,
         thought_reflection,
         mirrorform,
