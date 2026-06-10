@@ -49,6 +49,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
+        (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
@@ -131,6 +132,11 @@ pub(crate) fn event_matches_spec(
             // card's printed abilities.
             event,
             GameEvent::CardCycled { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // "When this card is milled" — fires from the graveyard off
+            // the milled card itself (Narcomoeba, Creeping Chill).
+            event,
+            GameEvent::CardMilled { card_id, .. } if *card_id == source.id
         ) || matches!(
             // CR 702.108 Inspired — "Whenever this becomes untapped."
             event,
@@ -424,6 +430,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CreatureDied { card_id }
         | GameEvent::CreatureSacrificed { card_id, .. }
         | GameEvent::CardCycled { card_id, .. }
+        | GameEvent::CardMilled { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::PermanentTapped { card_id }
         | GameEvent::PermanentUntapped { card_id }

@@ -228,6 +228,7 @@ pub fn reject() -> CardDefinition {
             )),
             mana_cost: cost(&[generic(3)]),
             exile: true,
+            extra_generic: None,
         },
         ..Default::default()
     }

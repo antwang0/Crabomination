@@ -1118,6 +1118,11 @@ pub enum EventKind {
     /// source card was the one cycled; `EventScope::YourControl` fires
     /// when any of the controller's cards were cycled.
     CardCycled,
+    /// CR 614.13ish "milled" — this card was put into a graveyard from a
+    /// library (`GameEvent::CardMilled`). With `SelfSource` scope the
+    /// trigger fires from the graveyard off the milled card itself
+    /// (Narcomoeba, Creeping Chill).
+    CardMilled,
     /// CR 702.108 — a permanent became untapped (Inspired). Fired once per
     /// permanent that flips tapped→untapped during the untap step. The
     /// triggering permanent is the event subject.
@@ -2326,6 +2331,10 @@ pub enum Effect {
         /// counter routes the spell to exile. Reject. Defaults to false.
         #[serde(default)]
         exile: bool,
+        /// Extra generic pips, evaluated at resolution — "pays {X}, where X
+        /// is its power" (Mausoleum Wanderer rides `SacrificedPower`).
+        #[serde(default)]
+        extra_generic: Option<Value>,
     },
     /// CR 702.21 — Ward's "counter that spell or ability unless its
     /// controller pays [cost]" trigger body. Walks the stack for the

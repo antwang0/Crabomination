@@ -345,6 +345,10 @@ pub enum SpendRestriction {
     /// Spending it stamps the cast uncounterable via
     /// [`PaymentSideEffects::spent_restrictions`].
     CreatureOfTypeUncounterable(crate::card::CreatureType),
+    /// "Spend this mana only to cast [type] creature spells" — the plain
+    /// per-type restriction without Cavern's uncounterable rider
+    /// (Eldrazi Temple).
+    CreatureOfType(crate::card::CreatureType),
 }
 
 impl SpendRestriction {
@@ -353,7 +357,8 @@ impl SpendRestriction {
         match self {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
             SpendRestriction::ArtifactOnly => kind.artifact,
-            SpendRestriction::CreatureOfTypeUncounterable(t) => {
+            SpendRestriction::CreatureOfTypeUncounterable(t)
+            | SpendRestriction::CreatureOfType(t) => {
                 kind.changeling || kind.creature_types.contains(&t)
             }
         }

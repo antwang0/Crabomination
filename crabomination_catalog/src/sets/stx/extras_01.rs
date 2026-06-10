@@ -766,6 +766,7 @@ pub fn whirlwind_denial() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(4)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -1839,6 +1840,7 @@ pub fn quench() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }

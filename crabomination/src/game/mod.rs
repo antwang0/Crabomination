@@ -5090,14 +5090,22 @@ impl GameState {
                         ta.event.scope,
                         crate::effect::EventScope::FromYourGraveyard
                     );
-                    let cycle_self = matches!(
-                        ta.event.kind,
-                        crate::effect::EventKind::CardCycled
-                    ) && matches!(
+                    let self_scope = matches!(
                         ta.event.scope,
                         crate::effect::EventScope::SelfSource
                     );
-                    if !from_gy_scope && !cycle_self {
+                    // CR 702.29c cycle triggers and "when this card is
+                    // milled" triggers both fire off the card in the
+                    // graveyard.
+                    let cycle_self = matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::CardCycled
+                    ) && self_scope;
+                    let milled_self = matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::CardMilled
+                    ) && self_scope;
+                    if !from_gy_scope && !cycle_self && !milled_self {
                         continue;
                     }
                     for ev in events {

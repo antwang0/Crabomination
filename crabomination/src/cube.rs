@@ -386,6 +386,14 @@ fn colorless_pool() -> Vec<CardFactory> {
         the_dawning_archaic,
         // ── claude/modern_decks push: new colorless cards ──
         hollow_one,
+        // Tron + Eldrazi lands
+        urzas_tower,
+        urzas_mine,
+        urzas_power_plant,
+        eldrazi_temple,
+        eye_of_ugin,
+        paradise_mantle,
+        kite_shield,
         portal_to_phyrexia,
         mesmeric_orb,
         chalice_of_the_void,
@@ -524,6 +532,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sanctifier_en_vec,
         suppression_field,
         burrenton_forge_tender,
+        kor_firewalker,
         // Disturb (CR 702.146)
         beloved_beggar,
         mourning_patrol,
@@ -1099,6 +1108,12 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Disturb (CR 702.146)
         baithook_angler,
+        // milled triggers (EventKind::CardMilled)
+        narcomoeba,
+        // Spirits package
+        rattlechains,
+        mausoleum_wanderer,
+        thought_monitor,
         // empty-draw win (CR 104.3c override) + devotion gate
         laboratory_maniac,
         jace_wielder_of_mysteries,
@@ -1499,6 +1514,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        creeping_chill,
         surgical_extraction,
         smallpox,
         zealous_persecution,

@@ -525,6 +525,7 @@ pub fn mystical_dispute() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(3)]),
             exile: false,
+            extra_generic: None,
         },
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[u()]),

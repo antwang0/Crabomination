@@ -133,6 +133,7 @@ pub fn decisive_denial() -> CardDefinition {
                 ),
                 mana_cost: two,
                 exile: false,
+                extra_generic: None,
             },
             // Mode 1: fight — target creature you don't control takes
             // damage from your biggest creature (auto-picked from the
@@ -5842,6 +5843,7 @@ pub fn quandrix_counterweave() -> CardDefinition {
                 },
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
+                extra_generic: None,
             },
             Effect::AddCounter {
                 what: Selector::TargetFiltered {
@@ -7999,6 +8001,7 @@ pub fn quandrix_counterspell_b146() -> CardDefinition {
             what: Selector::Target(0),
             mana_cost: cost(&[generic(2)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -8516,6 +8519,7 @@ pub fn quandrix_mind_curl_b150() -> CardDefinition {
             ),
             mana_cost: mc(&[gc(2)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -9404,6 +9408,7 @@ pub fn quandrix_counterpoint_b158() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -10428,6 +10433,7 @@ pub fn quandrix_echobinder_b167() -> CardDefinition {
             what: Selector::Target(0),
             mana_cost: crate::mana::cost(&[generic(2)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -10667,6 +10673,7 @@ pub fn quandrix_sumcheck_b172() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -11390,6 +11397,7 @@ pub fn quandrix_quickdraw_b187() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -11565,6 +11573,7 @@ pub fn quandrix_wavelock_b174() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }

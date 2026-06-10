@@ -47894,3 +47894,191 @@ fn bot_offers_disturb_recast() {
     assert!(matches!(action, Some(GameAction::CastDisturb { card_id }) if card_id == id),
         "bot disturb-casts Baithook Angler: {action:?}");
 }
+
+// ── Tron + Eldrazi lands + Spirits batch ─────────────────────────────────────
+
+/// Urza's Tower taps for {C} alone and {C}{C}{C} with full Tron assembled.
+#[test]
+fn urza_tron_assembles() {
+    let mut g = two_player_game();
+    let tower = g.add_card_to_battlefield(0, catalog::urzas_tower());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tower, ability_index: 0, target: None, x_value: None,
+    }).expect("tap tower");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "lone tower: {{C}}");
+    g.battlefield_find_mut(tower).unwrap().tapped = false;
+    g.players[0].mana_pool = Default::default();
+    g.add_card_to_battlefield(0, catalog::urzas_mine());
+    g.add_card_to_battlefield(0, catalog::urzas_power_plant());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tower, ability_index: 0, target: None, x_value: None,
+    }).expect("tap assembled tower");
+    assert_eq!(g.players[0].mana_pool.total(), 3, "full tron: {{C}}{{C}}{{C}}");
+}
+
+/// Eldrazi Temple's second ability is Eldrazi-creature-spell-only mana.
+#[test]
+fn eldrazi_temple_restricted_mana() {
+    let mut g = two_player_game();
+    let temple = g.add_card_to_battlefield(0, catalog::eldrazi_temple());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: temple, ability_index: 1, target: None, x_value: None,
+    }).expect("tap for restricted {C}{C}");
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+    // a non-Eldrazi spell can't spend it
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "restricted mana refuses a Bear");
+}
+
+/// Eye of Ugin discounts colorless Eldrazi spells by {2}.
+#[test]
+fn eye_of_ugin_discounts_eldrazi() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::eye_of_ugin());
+    // Reality Smasher {5} -> {3}
+    let smasher = g.add_card_to_hand(0, catalog::reality_smasher());
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, smasher);
+    assert!(g.battlefield.iter().any(|c| c.id == smasher));
+}
+
+/// Kor Firewalker gains 1 when ANY player casts a red spell.
+#[test]
+fn kor_firewalker_gains_on_red_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kor_firewalker());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("opponent bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "bolt for 3, gained 1 from the cast");
+}
+
+/// Mausoleum Wanderer's sac ability taxes the spell by its power.
+#[test]
+fn mausoleum_wanderer_taxes_by_power() {
+    let mut g = two_player_game();
+    let wanderer = g.add_card_to_battlefield(0, catalog::mausoleum_wanderer());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("bolt");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wanderer, ability_index: 0, target: Some(Target::Permanent(bolt)),
+        x_value: None,
+    }).expect("sac wanderer");
+    drain_stack(&mut g);
+    // bolt's controller had no mana left to pay {1} -> countered
+    assert_eq!(g.players[0].life, 20, "bolt countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// Paradise Mantle grants the equipped creature a tap-for-any-color mana
+/// ability.
+#[test]
+fn paradise_mantle_grants_mana_ability() {
+    use crate::decision::{DecisionAnswer};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let mantle = g.add_card_to_battlefield(0, catalog::paradise_mantle());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: mantle, target: bear }).expect("equip");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, x_value: None,
+    }).expect("granted mana ability");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+/// Thought Monitor's affinity discounts it; ETB draws two.
+#[test]
+fn thought_monitor_affinity_and_draw() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::ornithopter());
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let tm = g.add_card_to_hand(0, catalog::thought_monitor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1); // {6}{U} - 5 artifacts
+    cast(&mut g, tm);
+    assert!(g.battlefield.iter().any(|c| c.id == tm));
+    assert_eq!(g.players[0].hand.len(), 2, "drew two");
+}
+
+/// Rattlechains grants flash to Spirit spells.
+#[test]
+fn rattlechains_spirit_flash() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rattlechains());
+    // not our turn — a Spirit can still be cast
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    let spirit = g.add_card_to_hand(0, catalog::mausoleum_wanderer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spirit, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flash spirit");
+}
+
+// ── Milled triggers (EventKind::CardMilled) ──────────────────────────────────
+
+/// Narcomoeba jumps to the battlefield when milled.
+#[test]
+fn narcomoeba_returns_when_milled() {
+    use crate::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::narcomoeba());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let events = g
+        .resolve_effect(
+            &Effect::Mill {
+                who: crate::effect::Selector::You,
+                amount: crate::effect::Value::Const(1),
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Narcomoeba"));
+}
+
+/// Creeping Chill drains 3 when milled and exiles itself.
+#[test]
+fn creeping_chill_drains_when_milled() {
+    use crate::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::creeping_chill());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let events = g
+        .resolve_effect(
+            &Effect::Mill {
+                who: crate::effect::Selector::You,
+                amount: crate::effect::Value::Const(1),
+            },
+            &ctx,
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert_eq!(g.players[0].life, 23);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Creeping Chill"));
+}

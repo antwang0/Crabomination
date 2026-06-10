@@ -1232,6 +1232,7 @@ pub fn prismari_conflagration() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
+                extra_generic: None,
             },
         ]),
         ..Default::default()

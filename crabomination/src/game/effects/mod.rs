@@ -4376,7 +4376,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CounterUnlessPaid { what, mana_cost, exile } => {
+            Effect::CounterUnlessPaid { what, mana_cost, exile, extra_generic } => {
                 // Counter target spell unless its controller pays `mana_cost`.
                 // Auto-pays on behalf of the spell's controller via the
                 // existing `auto_tap_for_cost` + `mana_pool.pay` path: if
@@ -4401,9 +4401,16 @@ impl GameState {
                 // override priority temporarily so `auto_tap_for_cost`
                 // taps that player's lands. `try_pay_with_auto_tap` rolls
                 // back the pool + tap state on payment failure.
+                let mut cost = mana_cost.clone();
+                if let Some(v) = extra_generic {
+                    let x = self.evaluate_value(v, ctx).max(0) as u32;
+                    if x > 0 {
+                        cost.symbols.push(crate::mana::ManaSymbol::Generic(x));
+                    }
+                }
                 let saved_priority = self.priority.player_with_priority;
                 self.priority.player_with_priority = spell_caster;
-                let paid = self.try_pay_with_auto_tap(spell_caster, mana_cost).is_ok();
+                let paid = self.try_pay_with_auto_tap(spell_caster, &cost).is_ok();
                 self.priority.player_with_priority = saved_priority;
 
                 if !paid

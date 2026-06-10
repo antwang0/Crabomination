@@ -1629,6 +1629,7 @@ pub fn force_spike() -> CardDefinition {
             what: crate::effect::shortcut::target(),
             mana_cost: cost(&[generic(1)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -5005,6 +5006,7 @@ pub fn mana_tithe() -> CardDefinition {
             what: crate::effect::shortcut::target(),
             mana_cost: cost(&[generic(1)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -7238,6 +7240,7 @@ pub fn miscalculation() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -10305,11 +10308,13 @@ pub fn stubborn_denial() -> CardDefinition {
                 what: target_filtered(spell_filter.clone()),
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
+                extra_generic: None,
             }),
             else_: Box::new(Effect::CounterUnlessPaid {
                 what: target_filtered(spell_filter),
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
+                extra_generic: None,
             }),
         },
         ..Default::default()
@@ -22108,6 +22113,7 @@ pub fn spiketail_hatchling() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
+                extra_generic: None,
             },
             ..Default::default()
         }],
@@ -25283,7 +25289,9 @@ pub fn izzet_charm() -> CardDefinition {
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(2)]), exile: false },
+            Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(2)]), exile: false,
+    extra_generic: None,
+},
             Effect::DealDamage { to: tf(SelectionRequirement::Creature), amount: Value::Const(2) },
             Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::Const(2) },
@@ -25344,7 +25352,9 @@ pub fn flusterstorm() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Storm],
-        effect: Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(1)]), exile: false },
+        effect: Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(1)]), exile: false,
+    extra_generic: None,
+},
         ..Default::default()
     }
 }
@@ -33655,6 +33665,7 @@ pub fn make_disappear() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(3)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -34841,6 +34852,7 @@ pub fn cursecatcher() -> CardDefinition {
                 ),
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
+                extra_generic: None,
             },
             ..Default::default()
         }],
@@ -36865,6 +36877,7 @@ pub fn censor() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
             exile: false,
+            extra_generic: None,
         },
         ..Default::default()
     }
@@ -42207,6 +42220,342 @@ pub fn lightning_skelemental() -> CardDefinition {
             }),
             sacrifice_at_end_step(),
         ],
+        ..Default::default()
+    }
+}
+
+// ── Tron + Eldrazi lands + spirits batch ─────────────────────────────────────
+
+/// One Urza's Tron land: taps for 1 (or `full` with the other two pieces
+/// out — the count gate ORs `Min(count,1)` per other piece).
+fn tron_land(name: &'static str, other_a: &'static str, other_b: &'static str, full: i32) -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let piece = |n: &str| {
+        Value::Min(
+            Box::new(Value::count(Selector::EachPermanent(
+                SelectionRequirement::HasName(n.to_string())
+                    .and(SelectionRequirement::ControlledByYou),
+            ))),
+            Box::new(Value::Const(1)),
+        )
+    };
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::IfAtLeast {
+                    value: Box::new(Value::Sum(vec![piece(other_a), piece(other_b)])),
+                    threshold: 2,
+                    then: Box::new(Value::Const(full)),
+                    else_: Box::new(Value::Const(1)),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Urza's Tower — Land. {T}: Add {C} ({C}{C}{C} with Mine + Power Plant).
+pub fn urzas_tower() -> CardDefinition {
+    tron_land("Urza's Tower", "Urza's Mine", "Urza's Power Plant", 3)
+}
+
+/// Urza's Mine — Land. {T}: Add {C} ({C}{C} with Tower + Power Plant).
+pub fn urzas_mine() -> CardDefinition {
+    tron_land("Urza's Mine", "Urza's Tower", "Urza's Power Plant", 2)
+}
+
+/// Urza's Power Plant — Land. {T}: Add {C} ({C}{C} with Tower + Mine).
+pub fn urzas_power_plant() -> CardDefinition {
+    tron_land("Urza's Power Plant", "Urza's Tower", "Urza's Mine", 2)
+}
+
+/// Eldrazi Temple — Land. {T}: Add {C}; {T}: Add {C}{C}, Eldrazi creature
+/// spells only.
+pub fn eldrazi_temple() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Eldrazi Temple",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colorless(Value::Const(2))),
+                        crate::mana::SpendRestriction::CreatureOfType(CreatureType::Eldrazi),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Eye of Ugin — Legendary Land. Colorless Eldrazi spells cost {2} less;
+/// {7}, {T}: tutor a colorless creature card to hand.
+pub fn eye_of_ugin() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Eye of Ugin",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "Colorless Eldrazi spells you cast cost {2} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::Colorless
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Eldrazi)),
+                amount: 2,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(7)]),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::Colorless),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kor Firewalker — {W}{W} Kor Soldier 2/2, protection from red; gain 1
+/// whenever any player casts a red spell.
+pub fn kor_firewalker() -> CardDefinition {
+    CardDefinition {
+        name: "Kor Firewalker",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::Red)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Red),
+                },
+            ),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rattlechains — {1}{U} Spirit 2/1 Flash Flying. ETB: target Spirit gains
+/// hexproof EOT; you may cast Spirit spells as though they had flash.
+pub fn rattlechains() -> CardDefinition {
+    CardDefinition {
+        name: "Rattlechains",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::HasCreatureType(CreatureType::Spirit)),
+            keyword: Keyword::Hexproof,
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast Spirit spells as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mausoleum Wanderer — {U} Spirit 1/1 Flying. Other Spirit ETB: +1/+1 EOT.
+/// Sacrifice: counter target instant/sorcery unless its controller pays X,
+/// X = its power.
+pub fn mausoleum_wanderer() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Mausoleum Wanderer",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::CounterUnlessPaid {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
+                mana_cost: ManaCost::default(),
+                exile: false,
+                // X = the sacrificed Wanderer's power (cost-sac LKI).
+                extra_generic: Some(Value::SacrificedPower),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thought Monitor — {6}{U} Artifact Construct 2/2, affinity for artifacts,
+/// Flying, ETB draw two.
+pub fn thought_monitor() -> CardDefinition {
+    CardDefinition {
+        name: "Thought Monitor",
+        cost: cost(&[generic(6), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Paradise Mantle — {0} Equipment, Equip {1}. Equipped creature has
+/// "{T}: Add one mana of any color."
+pub fn paradise_mantle() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::add_any_one_color;
+    CardDefinition {
+        name: "Paradise Mantle",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        static_abilities: vec![StaticAbility {
+            description: "Equipped creature has \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: add_any_one_color(1),
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kite Shield — {0} Equipment, Equip {3}. Equipped creature gets +0/+3.
+pub fn kite_shield() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Kite Shield",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus { toughness: 3, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Narcomoeba — {1}{U} Illusion 1/1 Flying. When milled from your library,
+/// you may put it onto the battlefield.
+pub fn narcomoeba() -> CardDefinition {
+    CardDefinition {
+        name: "Narcomoeba",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardMilled, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Put Narcomoeba onto the battlefield?".to_string(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Creeping Chill — {3}{B} Sorcery: drain each opponent for 3. When milled,
+/// you may exile it for the same drain.
+pub fn creeping_chill() -> CardDefinition {
+    let drain = Effect::Seq(vec![
+        Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        },
+        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+    ]);
+    CardDefinition {
+        name: "Creeping Chill",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: drain.clone(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardMilled, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Exile Creeping Chill for its drain?".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    drain,
+                    Effect::Exile { what: Selector::This },
+                ])),
+            },
+        }],
         ..Default::default()
     }
 }
