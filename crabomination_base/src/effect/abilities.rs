@@ -293,6 +293,16 @@ pub enum StaticEffect {
     /// Innocent.) Read by `GameState::damage_halvers`; applied after any
     /// doublers at both damage funnels.
     HalveDamageDealt,
+    /// CR 614.5 — "If a source would deal damage to an opponent or a
+    /// permanent an opponent controls, it deals double that damage instead."
+    /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's
+    /// opponents; consulted by `GameState::scale_damage_to`.
+    DoubleDamageToOpponents,
+    /// CR 614.5/615 — "If a source would deal damage to you or a permanent
+    /// you control, prevent half that damage, rounded up." (Gisela.) The
+    /// remainder is floor(amount/2) — same arithmetic as a halver, scoped
+    /// to the static's controller's side.
+    HalveDamageToYou,
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

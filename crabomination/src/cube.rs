@@ -2321,6 +2321,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         bogardan_hellkite,
     ];
     if pair_contains(pair, Color::White) {
+        v.push(gisela_blade_of_goldnight);
         v.push(zenith_flare);
         v.push(savai_thundermane);
         v.push(lightning_helix);

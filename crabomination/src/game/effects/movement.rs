@@ -166,7 +166,7 @@ impl GameState {
         // shield soaks the already-scaled total (CR 616 lets the affected
         // player order the replacements — double-then-halve is the common
         // pick and keeps the event single-pass here).
-        let amount = self.scale_damage(amount);
+        let amount = self.scale_damage_to(ent, amount);
         // CR 615.1 — prevention shields. Before applying the damage, let
         // any shield around the target soak it (unless a "damage can't be
         // prevented this turn" effect is active, CR 615.12). Returns the

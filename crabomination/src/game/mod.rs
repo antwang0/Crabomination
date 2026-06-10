@@ -2116,6 +2116,38 @@ impl GameState {
         amount.saturating_mul(1 << d) >> h
     }
 
+    /// Target-aware damage scaling: the global doublers/halvers plus the
+    /// side-scoped ones (Gisela, Blade of Goldnight — `DoubleDamageToOpponents`
+    /// doubles events hitting an opponent's side, `HalveDamageToYou` halves
+    /// events hitting the controller's own side, CR 614.5).
+    pub fn scale_damage_to(&self, ent: crate::game::effects::EntityRef, amount: u32) -> u32 {
+        use crate::effect::StaticEffect;
+        use crate::game::effects::EntityRef;
+        let affected = match ent {
+            EntityRef::Player(p) => Some(p),
+            EntityRef::Permanent(c) => self.battlefield_find(c).map(|c| c.controller),
+            EntityRef::Card(_) => None,
+        };
+        let mut d = self.damage_doublers();
+        let mut h = self.damage_halvers();
+        if let Some(p) = affected {
+            for c in &self.battlefield {
+                for sa in &c.definition.static_abilities {
+                    match sa.effect {
+                        StaticEffect::DoubleDamageToOpponents
+                            if !self.same_team(c.controller, p) =>
+                        {
+                            d += 1;
+                        }
+                        StaticEffect::HalveDamageToYou if c.controller == p => h += 1,
+                        _ => {}
+                    }
+                }
+            }
+        }
+        amount.saturating_mul(1 << d.min(16)) >> h.min(16)
+    }
+
     /// CR 122.1 — true if any active `StaticEffect::CountersCantBePlaced`
     /// (Solemnity) is on the battlefield. While set, every counter-placement
     /// site drops the counters instead of adding them.
@@ -7470,10 +7502,13 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // DoubleCounters — read at `Effect::AddCounter` resolution time
             // via `GameState::counter_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleCounters
-            // DoubleDamageDealt / HalveDamageDealt — read at damage time via
-            // `GameState::damage_doublers` / `damage_halvers`; no layer effect.
+            // Damage doubling/halving — read at damage time via
+            // `GameState::damage_doublers` / `damage_halvers` /
+            // `scale_damage_to`; no layer effect.
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
+            | StaticEffect::DoubleDamageToOpponents
+            | StaticEffect::HalveDamageToYou
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }

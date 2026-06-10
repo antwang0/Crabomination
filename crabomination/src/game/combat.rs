@@ -1317,12 +1317,7 @@ impl GameState {
         // dealt (after assignment, before prevention), so a creature is still
         // assigned base lethal but takes the scaled total, and trample-over /
         // player damage scale too.
-        let dmg_mult = {
-            let d = self.damage_doublers();
-            if d > 0 { 1u32 << d.min(16) } else { 1 }
-        };
-        let dmg_halv = self.damage_halvers().min(16);
-        let dmg_scale = move |a: u32| a.saturating_mul(dmg_mult) >> dmg_halv;
+
 
         // Creature-vs-creature combat damage recorded here and dispatched after
         // all damage in this step is dealt, so `DealsCombatDamageToCreature`
@@ -1362,7 +1357,7 @@ impl GameState {
                 // player/planeswalker also reduce unblocked combat damage.
                 // Lifelink scales off the post-prevention amount (702.15a).
                 let amount =
-                    self.prevent_combat_to_target(atk.target, dmg_scale(raw), &mut events);
+                    self.prevent_combat_to_target(atk.target, self.scale_combat_damage(atk.target, raw), &mut events);
                 if amount > 0 {
                     self.deal_combat_damage_to_target(atk, amount, &mut events);
                     if atk.has_lifelink {
@@ -1421,7 +1416,10 @@ impl GameState {
                     // (post-prevention) amount dealt (CR 702.15a).
                     let dealt = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
-                        dmg_scale(assign),
+                        self.scale_damage_to(
+                            crate::game::effects::EntityRef::Permanent(blocker_id),
+                            assign,
+                        ),
                         &mut events,
                     ) as i32;
                     lifelink_dealt += dealt;
@@ -1463,7 +1461,7 @@ impl GameState {
                     // post-prevention amount.
                     let amount = self.prevent_combat_to_target(
                         atk.target,
-                        dmg_scale(trample_leftover),
+                        self.scale_combat_damage(atk.target, trample_leftover),
                         &mut events,
                     );
                     lifelink_dealt += amount as i32;
@@ -1528,7 +1526,10 @@ impl GameState {
                     // CR 614.2 doubling also applies to the blocker's strike.
                     let dmg = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(atk.id),
-                        dmg_scale(blocker_damage_to_attacker.max(0) as u32),
+                        self.scale_damage_to(
+                            crate::game::effects::EntityRef::Permanent(atk.id),
+                            blocker_damage_to_attacker.max(0) as u32,
+                        ),
                         &mut events,
                     );
                     if dmg > 0 && let Some(attacker) = self.battlefield_find_mut(atk.id) {
@@ -1584,7 +1585,7 @@ impl GameState {
                             .map(|c| c.controller)
                             .unwrap_or(atk.defender_player);
                         *lifelink_by_controller.entry(controller).or_insert(0) +=
-                            dmg_scale(bc.power.max(0) as u32) as i32;
+                            self.scale_damage_to(crate::game::effects::EntityRef::Permanent(atk.id), bc.power.max(0) as u32) as i32;
                     }
                     // Sort by seat for deterministic event ordering;
                     // life-gain math is commutative but the event log
@@ -1620,6 +1621,17 @@ impl GameState {
     /// attack target (player or planeswalker). Returns the unprevented
     /// remainder. Creature-vs-creature combat damage is not yet routed
     /// through shields (tracked in TODO.md).
+    /// Target-aware scaling for a combat-damage event aimed at a player or
+    /// planeswalker attack target (CR 614.2 / 614.5).
+    fn scale_combat_damage(&self, target: AttackTarget, amount: u32) -> u32 {
+        use crate::game::effects::EntityRef;
+        let ent = match target {
+            AttackTarget::Player(p) => EntityRef::Player(p),
+            AttackTarget::Planeswalker(pw) => EntityRef::Permanent(pw),
+        };
+        self.scale_damage_to(ent, amount)
+    }
+
     fn prevent_combat_to_target(
         &mut self,
         target: AttackTarget,

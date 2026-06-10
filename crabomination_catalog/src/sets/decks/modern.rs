@@ -41810,3 +41810,33 @@ pub fn savai_thundermane() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gisela, Blade of Goldnight — {4}{R}{W}{W} 5/5 legendary Angel, flying +
+/// first strike. Damage to opponents' side is doubled; damage to your side
+/// is halved (prevent half, rounded up).
+pub fn gisela_blade_of_goldnight() -> CardDefinition {
+    CardDefinition {
+        name: "Gisela, Blade of Goldnight",
+        cost: cost(&[generic(4), r(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If a source would deal damage to an opponent or a permanent an opponent controls, it deals double that damage instead.",
+                effect: StaticEffect::DoubleDamageToOpponents,
+            },
+            StaticAbility {
+                description: "If a source would deal damage to you or a permanent you control, prevent half that damage, rounded up.",
+                effect: StaticEffect::HalveDamageToYou,
+            },
+        ],
+        ..Default::default()
+    }
+}

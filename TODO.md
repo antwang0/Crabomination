@@ -12,9 +12,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Per-blocker combat-damage assignment modal** — ordering now has a real
     client modal (`spawn_damage_order_modal`); `AssignCombatDamage` still
     auto-answers the engine default split.
-  - **Controller-scoped damage doubling/halving** — `DoubleDamageDealt` /
-    `HalveDamageDealt` are global; Gisela, Blade of Goldnight wants
-    "to opponents ×2 / to you ÷2 rounded-up-prevention" scoping.
+  - ✅ **Controller-scoped damage doubling/halving** ships —
+    `DoubleDamageToOpponents` / `HalveDamageToYou` + the target-aware
+    `scale_damage_to` at both funnels (Gisela, Blade of Goldnight).
   - **Room rules corners** — lock-a-door effects (709.5g), "fully unlock"
     triggers (709.5i), and combined MV in non-stack zones (709.4b) are not
     modeled; door casts also skip the convoke/delve/alt-cost riders.

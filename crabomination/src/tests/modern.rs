@@ -47282,3 +47282,30 @@ fn savai_thundermane_pays_on_cycle() {
     assert!(g.battlefield_find(bear).is_none(), "2 damage killed the bear");
     assert_eq!(g.players[0].life, 22, "gained 2");
 }
+
+/// Gisela doubles damage to the opponent's side and halves damage to her
+/// controller's side (CR 614.5, side-scoped).
+#[test]
+fn gisela_scoped_damage_scaling() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gisela_blade_of_goldnight());
+    // Bolt at the opponent: 3 → 6.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt opponent");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "3 doubled to 6");
+    // Bolt at Gisela's controller: 3 → 1 (prevent half rounded up).
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt controller");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19, "3 halved to 1");
+}
