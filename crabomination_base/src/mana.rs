@@ -352,6 +352,11 @@ pub enum SpendRestriction {
     /// "Spend this mana only to activate abilities of land sources."
     /// (Sunken Citadel.)
     LandAbilitiesOnly,
+    /// "Spend this mana only to cast a creature spell." (Ancient Ziggurat.)
+    CreatureOnly,
+    /// "Spend this mana only to cast creature spells or activate abilities
+    /// of creatures." (Castle Garenbrig.)
+    CreatureSpellsOrAbilities,
 }
 
 impl SpendRestriction {
@@ -364,6 +369,10 @@ impl SpendRestriction {
             SpendRestriction::CreatureOfTypeUncounterable(t)
             | SpendRestriction::CreatureOfType(t) => {
                 kind.changeling || kind.creature_types.contains(&t)
+            }
+            SpendRestriction::CreatureOnly => kind.creature,
+            SpendRestriction::CreatureSpellsOrAbilities => {
+                kind.creature || kind.creature_ability
             }
         }
     }
@@ -387,6 +396,10 @@ pub struct SpellKind {
     pub changeling: bool,
     /// Activating an ability of a land source (Sunken Citadel).
     pub land_ability: bool,
+    /// Casting a creature spell (Ancient Ziggurat).
+    pub creature: bool,
+    /// Activating an ability of a creature (Castle Garenbrig).
+    pub creature_ability: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

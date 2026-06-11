@@ -2397,6 +2397,18 @@ impl GameState {
                             chosen.map(crate::mana::SpendRestriction::CreatureOfTypeUncounterable),
                         )
                     }
+                    // Unclaimed Territory: same chosen-type tagging without
+                    // the uncounterable rider.
+                    ManaPayload::RestrictedToChosenTypePlain(inner) => {
+                        let chosen = ctx
+                            .source
+                            .and_then(|cid| self.battlefield_find(cid))
+                            .and_then(|c| c.chosen_creature_type);
+                        (
+                            inner.as_ref(),
+                            chosen.map(crate::mana::SpendRestriction::CreatureOfType),
+                        )
+                    }
                     other => (other, None),
                 };
                 // CR 701.10f — Mana Reflection doubles every pip this mana
@@ -2656,7 +2668,9 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
-                    ManaPayload::Restricted(..) | ManaPayload::RestrictedToChosenType(..) => {
+                    ManaPayload::Restricted(..)
+                    | ManaPayload::RestrictedToChosenType(..)
+                    | ManaPayload::RestrictedToChosenTypePlain(..) => {
                         // One unwrap above already stripped the restriction;
                         // no card nests wrappers, so a doubly-wrapped payload
                         // is malformed — ignore it rather than panic.

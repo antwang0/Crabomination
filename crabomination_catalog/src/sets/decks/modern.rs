@@ -46930,3 +46930,477 @@ pub fn enduring_ideal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Modern staples batch (2026-06-11) ────────────────────────────────────────
+
+/// Mantis Rider — {U}{R}{W} 3/3 Human Monk. Flying, vigilance, haste.
+pub fn mantis_rider() -> CardDefinition {
+    CardDefinition {
+        name: "Mantis Rider",
+        cost: cost(&[u(), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Plague Stinger — {1}{B} 1/1 Phyrexian Insect Horror. Flying, infect.
+pub fn plague_stinger() -> CardDefinition {
+    CardDefinition {
+        name: "Plague Stinger",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Infect],
+        ..Default::default()
+    }
+}
+
+/// Blighted Agent — {1}{U} 1/1 Phyrexian Human Rogue. Infect; can't be blocked.
+pub fn blighted_agent() -> CardDefinition {
+    CardDefinition {
+        name: "Blighted Agent",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Infect, Keyword::Unblockable],
+        ..Default::default()
+    }
+}
+
+/// Slippery Bogle — {G/U} 1/1 Beast with hexproof.
+pub fn slippery_bogle() -> CardDefinition {
+    CardDefinition {
+        name: "Slippery Bogle",
+        cost: cost(&[crate::mana::hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Hexproof],
+        ..Default::default()
+    }
+}
+
+/// Absorb — {W}{U}{U} Instant. Counter target spell. You gain 3 life.
+pub fn absorb() -> CardDefinition {
+    CardDefinition {
+        name: "Absorb",
+        cost: cost(&[w(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            crate::effect::shortcut::counter_target_spell(),
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Render Silent — {W}{U}{U} Instant. Counter target spell; its controller
+/// can't cast spells this turn.
+pub fn render_silent() -> CardDefinition {
+    CardDefinition {
+        name: "Render Silent",
+        cost: cost(&[w(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SilencePlayersThisTurn {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+            },
+            crate::effect::shortcut::counter_target_spell(),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sphinx's Revelation — {X}{W}{U}{U} Instant. Gain X life and draw X cards.
+pub fn sphinxs_revelation() -> CardDefinition {
+    CardDefinition {
+        name: "Sphinx's Revelation",
+        cost: cost(&[x(), w(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+            Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cryptic Serpent — {5}{U}{U} 6/5 Serpent. Costs {1} less per instant or
+/// sorcery card in your graveyard.
+pub fn cryptic_serpent() -> CardDefinition {
+    CardDefinition {
+        name: "Cryptic Serpent",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        affinity_graveyard_filter: Some(
+            SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+        ),
+        ..Default::default()
+    }
+}
+
+/// Timely Reinforcements — {2}{W} Sorcery. If you have less life than an
+/// opponent, gain 6 life; if you control fewer creatures than an opponent,
+/// create three 1/1 white Soldiers.
+pub fn timely_reinforcements() -> CardDefinition {
+    let your_creatures = || Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    )));
+    let opp_creatures = Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+    )));
+    CardDefinition {
+        name: "Timely Reinforcements",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::ValueAtLeast(
+                    Value::LifeOf(PlayerRef::You),
+                    Value::HighestLifeTotal,
+                ))),
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(6) }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::ValueAtLeast(
+                    your_creatures(),
+                    opp_creatures,
+                ))),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: TokenDefinition {
+                        name: "Soldier".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Soldier],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dwynen's Elite — {1}{G} 2/2 Elf Warrior. ETB: if you control another
+/// Elf, create a 1/1 green Elf Warrior token.
+pub fn dwynens_elite() -> CardDefinition {
+    CardDefinition {
+        name: "Dwynen's Elite",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                )),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Elf Warrior".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cruel Ultimatum — {U}{U}{B}{B}{B}{R}{R} Sorcery. Target opponent
+/// sacrifices a creature, discards three, loses 5; you return a creature
+/// from your graveyard to hand, draw three, gain 5.
+pub fn cruel_ultimatum() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Ultimatum",
+        cost: cost(&[u(), u(), b(), b(), b(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
+                filter: SelectionRequirement::Creature,
+                count: Value::Const(1),
+            },
+            Effect::Discard { who: Selector::Target(0), amount: Value::Const(3), random: false },
+            Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(5) },
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Khalni Heart Expedition — {1}{G} Enchantment. Landfall: may add a quest
+/// counter. Remove three + sacrifice: fetch up to two basics tapped.
+pub fn khalni_heart_expedition() -> CardDefinition {
+    CardDefinition {
+        name: "Khalni Heart Expedition",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Put a quest counter on Khalni Heart Expedition?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Quest,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Quest, 3)),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Engineer — {1}{R} 1/2. ETB: may search an artifact into your
+/// graveyard. {R}, {T}, Sac an artifact: return target artifact MV ≤ 3
+/// from your graveyard to the battlefield.
+pub fn goblin_engineer() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Engineer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Search your library for an artifact card to put into your graveyard?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Artifact,
+                    to: ZoneDest::Graveyard,
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[r()]),
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::InGraveyard)
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kor Duelist — {W} 1/1 Kor Soldier. Double strike while equipped.
+pub fn kor_duelist() -> CardDefinition {
+    CardDefinition {
+        name: "Kor Duelist",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is equipped, it has double strike.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsEquipped,
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::DoubleStrike],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ancient Ziggurat — Land. {T}: Add one mana of any color; spend it only
+/// on creature spells.
+pub fn ancient_ziggurat() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Ziggurat",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
+                    crate::mana::SpendRestriction::CreatureOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unclaimed Territory — Land. ETB: choose a creature type. {T}: Add {C};
+/// or any color restricted to creature spells of the chosen type.
+pub fn unclaimed_territory() -> CardDefinition {
+    CardDefinition {
+        name: "Unclaimed Territory",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::NameCreatureType { what: Selector::This },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::RestrictedToChosenTypePlain(Box::new(
+                        ManaPayload::AnyOneColor(Value::Const(1)),
+                    )),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Castle Garenbrig — Land. Enters tapped unless you control a Forest.
+/// {T}: Add {G}. {2}{G}{G}, {T}: Add six {G} for creature spells/abilities.
+pub fn castle_garenbrig() -> CardDefinition {
+    CardDefinition {
+        name: "Castle Garenbrig",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(LandType::Forest)
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Green]),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), g(), g()]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::OfColor(Color::Green, Value::Const(6))),
+                        crate::mana::SpendRestriction::CreatureSpellsOrAbilities,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -873,6 +873,9 @@ pub enum SelectionRequirement {
     /// whose `attached_to` points at the candidate. Powers Kestia's
     /// "whenever an enchanted creature … you control attacks" trigger.
     IsEnchanted,
+    /// True when the candidate permanent has an Equipment attached
+    /// (CR 301.5 "equipped"). Battlefield-only. Kor Duelist.
+    IsEquipped,
     /// CR 700.9 — "modified": the permanent has one or more counters, is
     /// equipped, or is enchanted by an Aura its own controller controls.
     /// Battlefield-only. Kodama of the West Tree.
@@ -1909,6 +1912,8 @@ impl CardDefinition {
             },
             changeling: self.is_creature() && self.keywords.contains(&Keyword::Changeling),
             land_ability: false,
+            creature: self.is_creature(),
+            creature_ability: false,
         }
     }
 
@@ -1918,6 +1923,7 @@ impl CardDefinition {
         crate::mana::SpellKind {
             artifact: self.is_artifact(),
             land_ability: self.is_land(),
+            creature_ability: self.is_creature(),
             ..Default::default()
         }
     }

@@ -1119,6 +1119,10 @@ impl GameState {
                     R::IsEnchanted => self.battlefield.iter().any(|o| {
                         o.attached_to == Some(*cid) && o.definition.is_enchantment()
                     }),
+                    // CR 301.5 — "equipped" = an Equipment is attached.
+                    R::IsEquipped => self.battlefield.iter().any(|o| {
+                        o.attached_to == Some(*cid) && o.definition.is_equipment()
+                    }),
                     // CR 700.9 — counters, equipped, or enchanted by an Aura
                     // the permanent's own controller controls.
                     R::IsModified => {
@@ -1427,7 +1431,7 @@ impl GameState {
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::AttackedThisTurn | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn | R::IsEnchanted
-            | R::IsModified => false,
+            | R::IsEquipped | R::IsModified => false,
         }
     }
 }

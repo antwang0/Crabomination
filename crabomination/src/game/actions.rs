@@ -465,7 +465,8 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         ManaPayload::OfColor(_, _)
         | ManaPayload::Colorless(_)
         | ManaPayload::ChosenColorOfSource => false,
-        ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner) => {
+        ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
+                    | ManaPayload::RestrictedToChosenTypePlain(inner) => {
             payload_yields_multiple(inner)
         }
     }
@@ -842,7 +843,9 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             // pip could strand an otherwise-payable cast. The controller
             // activates them deliberately (or they float via a trigger),
             // and `pay_for_spell` consumes the floated mana.
-            ManaPayload::Restricted(_, _) | ManaPayload::RestrictedToChosenType(_) => false,
+            ManaPayload::Restricted(_, _)
+            | ManaPayload::RestrictedToChosenType(_)
+            | ManaPayload::RestrictedToChosenTypePlain(_) => false,
             // Instance-dependent (the chosen color isn't known at the
             // definition level), so it's not part of the static auto-tap
             // signature; the controller taps it deliberately.

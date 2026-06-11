@@ -699,8 +699,8 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   match uses it for the human seat, and the LAN lobby already carried it
   via `JoinMatch`. The log formatter (`GameEventWire::fmt_for_log`) takes
   a seat-name resolver, so log lines read "Alice drew…" instead of "P0
-  drew…". Remaining ⏳: persist the name in the config file (today it
-  resets to the OS username each launch).
+  drew…". The display name (plus join address and deck path) now persists
+  in the config file across launches.
 - ⏳ **Chat + emotes** (Arena's canned phrases; XMage free chat).
 - ⏳ **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
 - ⏳ **Friends / invites / ratings / leaderboards** (server-side).

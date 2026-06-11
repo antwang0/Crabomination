@@ -52022,3 +52022,356 @@ fn epic_copy_does_not_stack_additional_snapshots() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].epic_spells.len(), 1, "copy resolution doesn't re-arm Epic");
 }
+
+// ── Modern staples batch (2026-06-11) ───────────────────────────────────────
+
+/// Absorb counters the spell and gains 3 life.
+#[test]
+fn absorb_counters_and_gains_three() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    let absorb = g.add_card_to_hand(0, catalog::absorb());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: absorb, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "gained 3, took no bolt");
+}
+
+/// Render Silent locks the countered spell's controller out of casting.
+#[test]
+fn render_silent_counters_and_silences() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    let rs = g.add_card_to_hand(0, catalog::render_silent());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rs, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "bolt countered");
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect_err("silenced");
+    assert!(matches!(err, GameError::SilencedThisTurn), "got {err:?}");
+}
+
+/// Sphinx's Revelation gains X and draws X.
+#[test]
+fn sphinxs_revelation_gains_and_draws_x() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let rev = g.add_card_to_hand(0, catalog::sphinxs_revelation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23);
+    assert_eq!(g.players[0].hand.len(), 3);
+}
+
+/// Cryptic Serpent's cost shrinks by {1} per instant/sorcery in your graveyard.
+#[test]
+fn cryptic_serpent_graveyard_cost_reduction() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_graveyard(0, catalog::lightning_bolt()); }
+    let serp = g.add_card_to_hand(0, catalog::cryptic_serpent());
+    // {5}{U}{U} - 5 = {U}{U}
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: serp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("UU after 5 IS cards in the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(serp).is_some());
+}
+
+/// Timely Reinforcements: behind on life and creatures → 6 life + 3 Soldiers.
+#[test]
+fn timely_reinforcements_both_halves() {
+    let mut g = two_player_game();
+    g.players[0].life = 10;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tr = g.add_card_to_hand(0, catalog::timely_reinforcements());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 16, "gained 6");
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Soldier").count();
+    assert_eq!(soldiers, 3);
+}
+
+/// Timely Reinforcements: ahead on both → nothing happens.
+#[test]
+fn timely_reinforcements_ahead_does_nothing() {
+    let mut g = two_player_game();
+    g.players[0].life = 25;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tr = g.add_card_to_hand(0, catalog::timely_reinforcements());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 25);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Soldier"));
+}
+
+/// Dwynen's Elite makes its token only with another Elf around.
+#[test]
+fn dwynens_elite_token_needs_another_elf() {
+    let mut g = two_player_game();
+    // No other elf: no token.
+    let e1 = g.add_card_to_hand(0, catalog::dwynens_elite());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: e1, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Elf Warrior"));
+    // Second copy sees the first: token.
+    let e2 = g.add_card_to_hand(0, catalog::dwynens_elite());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: e2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Elf Warrior"));
+}
+
+/// Cruel Ultimatum: full six-part sequence.
+#[test]
+fn cruel_ultimatum_sequence() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_hand(1, catalog::island()); }
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let cu = g.add_card_to_hand(0, catalog::cruel_ultimatum());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cu, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_bear).is_none(), "opponent sacrificed");
+    assert_eq!(g.players[1].hand.len(), 1, "discarded three of four");
+    assert_eq!(g.players[1].life, 15);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned");
+    assert_eq!(g.players[0].hand.len(), 4, "creature + three draws");
+    assert_eq!(g.players[0].life, 25);
+}
+
+/// Khalni Heart Expedition charges on landfall and fetches two tapped basics.
+#[test]
+fn khalni_heart_expedition_quest_and_fetch() {
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(true), DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(f1)), DecisionAnswer::Search(Some(f2)),
+    ]));
+    let khe = g.add_card_to_battlefield(0, catalog::khalni_heart_expedition());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 {
+        let land = g.add_card_to_hand(0, catalog::mountain());
+        g.players[0].lands_played_this_turn = 0;
+        g.perform_action(GameAction::PlayLand(land)).unwrap();
+        drain_stack(&mut g);
+    }
+    assert_eq!(
+        g.battlefield_find(khe).unwrap().counter_count(crate::card::CounterType::Quest),
+        3
+    );
+    g.perform_action(GameAction::ActivateAbility { card_id: khe, ability_index: 0, target: None, x_value: None }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(khe).is_none(), "sacrificed");
+    let forests = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Forest").count();
+    assert_eq!(forests, 2, "two basics fetched");
+    assert!(g.battlefield.iter().filter(|c| c.definition.name == "Forest").all(|c| c.tapped));
+}
+
+/// Goblin Engineer tutors an artifact to the graveyard, then trades an
+/// artifact for it on the battlefield.
+#[test]
+fn goblin_engineer_entomb_and_reanimate() {
+    let mut g = two_player_game();
+    let clamp = g.add_card_to_library(0, catalog::skullclamp());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(clamp)),
+    ]));
+    let eng = g.add_card_to_hand(0, catalog::goblin_engineer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: eng, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == clamp), "clamp entombed");
+    // Activate: {R}, {T}, sac an artifact → return the clamp.
+    let fodder = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.battlefield_find_mut(eng).unwrap().summoning_sick = false;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eng, ability_index: 0, target: Some(Target::Permanent(clamp)), x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(clamp).is_some(), "clamp returned to battlefield");
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+}
+
+/// Kor Duelist has double strike only while equipped.
+#[test]
+fn kor_duelist_double_strike_while_equipped() {
+    let mut g = two_player_game();
+    let kor = g.add_card_to_battlefield(0, catalog::kor_duelist());
+    let computed = g.computed_permanent(kor).unwrap();
+    assert!(!computed.keywords.contains(&Keyword::DoubleStrike));
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: boner, target: kor }).unwrap();
+    let computed = g.computed_permanent(kor).unwrap();
+    assert!(computed.keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Ancient Ziggurat mana casts creatures but not other spells.
+#[test]
+fn ancient_ziggurat_creature_only_mana() {
+    let mut g = two_player_game();
+    let zig = g.add_card_to_battlefield(0, catalog::ancient_ziggurat());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility { card_id: zig, ability_index: 0, target: None, x_value: None }).unwrap();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "restricted mana can't fund a bolt"
+    );
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("creature spell funded by Ziggurat mana");
+}
+
+/// Unclaimed Territory's colored mana only casts creatures of the chosen type.
+#[test]
+fn unclaimed_territory_chosen_type_mana() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::CreatureType(crate::card::CreatureType::Elf),
+        DecisionAnswer::Color(Color::Green),
+    ]));
+    let land = g.add_card_to_hand(0, catalog::unclaimed_territory());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, x_value: None }).unwrap();
+    // Bear isn't an Elf — the restricted pip won't fund it.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).is_err()
+    );
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Elf funded by chosen-type mana");
+}
+
+/// Castle Garenbrig enters untapped with a Forest, taps for six restricted
+/// green that funds a creature spell.
+#[test]
+fn castle_garenbrig_six_green_for_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    let castle = g.add_card_to_hand(0, catalog::castle_garenbrig());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(castle)).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(castle).unwrap().tapped, "untapped with a Forest");
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::ActivateAbility { card_id: castle, ability_index: 1, target: None, x_value: None }).unwrap();
+    // Six green restricted to creature spells: cast a 6-drop creature.
+    let serp = g.add_card_to_hand(0, catalog::cryptic_serpent());
+    // (graveyard empty — full {5}{U}{U}); use a green fatty instead.
+    let _ = serp;
+    let wurm = g.add_card_to_hand(0, catalog::elder_gargaroth());
+    g.perform_action(GameAction::CastSpell {
+        card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("six restricted green funds a creature");
+}
+
+/// Castle Garenbrig enters tapped without a Forest.
+#[test]
+fn castle_garenbrig_tapped_without_forest() {
+    let mut g = two_player_game();
+    let castle = g.add_card_to_hand(0, catalog::castle_garenbrig());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(castle)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(castle).unwrap().tapped);
+}

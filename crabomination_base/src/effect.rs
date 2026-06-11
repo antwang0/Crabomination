@@ -1013,6 +1013,9 @@ pub enum ManaPayload {
     /// the source permanent at resolution; with none chosen the mana is
     /// added unrestricted.
     RestrictedToChosenType(Box<ManaPayload>),
+    /// Like `RestrictedToChosenType`, without Cavern's uncounterable rider
+    /// (Unclaimed Territory — "creature spell of the chosen type").
+    RestrictedToChosenTypePlain(Box<ManaPayload>),
     /// Add one mana of the color stamped on the source's `chosen_color`
     /// (Coldsteel Heart, choose-a-color rocks). Falls back to colorless when
     /// no color was chosen.
