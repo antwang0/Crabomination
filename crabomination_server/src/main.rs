@@ -18,6 +18,10 @@
 //! - `CRAB_MAX_CONNS_PER_IP` — concurrent connections from a single remote
 //!   IP (default 5). `0` = unlimited. Operates on the raw peer address, so
 //!   clients behind a NAT or load balancer share one counter.
+//! - `CRAB_ACTION_TIMEOUT_SECS` — per-action timeout (the "rope"). When set
+//!   (> 0) and a human seat holds the next action, the match actor waits at
+//!   most this long, then acts for them (AutoDecider answer for a pending
+//!   decision, else a priority pass). Unset / 0 = humans may think forever.
 //! - `CRAB_DECK` / `CRAB_BOT_DECK` — paths to Arena/MTGO-format decklists
 //!   for seat 0 / seat 1 of demo-format matches (Modern construction rules
 //!   enforced at boot). Unset seats keep the stock BRG / Goryo's decks.

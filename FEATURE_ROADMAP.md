@@ -714,7 +714,11 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   drew…". The display name (plus join address and deck path) now persists
   in the config file across launches.
 - ⏳ **Chat + emotes** (Arena's canned phrases; XMage free chat).
-- ⏳ **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
+- 🟡 **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
+  The per-action rope ships server-side (`CRAB_ACTION_TIMEOUT_SECS` →
+  `run_match_inner`'s `action_timeout`; on expiry the actor auto-answers
+  the pending decision via AutoDecider or passes priority, with a notice
+  to the seat). Remaining: per-game chess clock, client-side rope UI.
 - ⏳ **Friends / invites / ratings / leaderboards** (server-side).
 - ⏳ **Free-for-all politics** UI (deals, voting, monarch/initiative
   passing) for 3+ player tables.

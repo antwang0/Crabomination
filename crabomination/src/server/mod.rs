@@ -101,6 +101,20 @@ const DEADLOCK_DUMP_DIR: &str = "debug";
 /// end the instant their last human drops, exactly as before.
 const RECONNECT_GRACE: Duration = Duration::from_secs(60);
 
+/// Optional per-action timeout (the "rope"): when the seat expected to act
+/// is a human and `CRAB_ACTION_TIMEOUT_SECS` is set (> 0), the match actor
+/// waits at most this long for their action, then acts for them —
+/// AutoDecider's answer for a pending decision, or a priority pass.
+/// Unset / 0 / unparsable → disabled (the pre-rope behavior: humans may
+/// think forever).
+fn action_timeout_from_env() -> Option<Duration> {
+    std::env::var("CRAB_ACTION_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|&secs| secs > 0)
+        .map(Duration::from_secs)
+}
+
 /// Messages the match actor multiplexes onto its single inbound channel.
 /// Seat forwarders, the spectator drain, and (for reconnectable matches) the
 /// reattach drain all feed this enum so the actor can `recv` one stream.
@@ -346,7 +360,16 @@ pub fn run_match_reconnectable(
     snapshot_sink: Option<SnapshotSink>,
     reattach_rx: Option<mpsc::Receiver<(usize, SeatChannel)>>,
 ) -> MatchOutcome {
-    run_match_inner(state, occupants, spectators, snapshot_sink, reattach_rx, None, RECONNECT_GRACE)
+    run_match_inner(
+        state,
+        occupants,
+        spectators,
+        snapshot_sink,
+        reattach_rx,
+        None,
+        RECONNECT_GRACE,
+        action_timeout_from_env(),
+    )
 }
 
 /// Variant of [`run_match_reconnectable`] that also accepts spectators *after*
@@ -371,12 +394,14 @@ pub fn run_match_reconnectable_spectatable(
         reattach_rx,
         spectate_rx,
         RECONNECT_GRACE,
+        action_timeout_from_env(),
     )
 }
 
 /// Core match actor. Separated from [`run_match_reconnectable`] only so the
 /// reconnect grace window is injectable — tests drive it with a short grace
 /// instead of the production [`RECONNECT_GRACE`].
+#[allow(clippy::too_many_arguments)]
 fn run_match_inner(
     mut state: GameState,
     occupants: Vec<SeatOccupant>,
@@ -385,6 +410,7 @@ fn run_match_inner(
     reattach_rx: Option<mpsc::Receiver<(usize, SeatChannel)>>,
     spectate_rx: Option<mpsc::Receiver<SeatChannel>>,
     reconnect_grace: Duration,
+    action_timeout: Option<Duration>,
 ) -> MatchOutcome {
     let n = occupants.len();
     assert_eq!(n, state.players.len(), "occupant count must match player count");
@@ -513,6 +539,9 @@ fn run_match_inner(
     // while at least one human is connected (or always, when reconnection is
     // disabled — those matches end immediately on full disconnect instead).
     let mut disconnect_deadline: Option<Instant> = None;
+    // Rope: which human seat we're currently waiting on, and since when.
+    // Reset whenever the expected actor changes or any action is accepted.
+    let mut rope: Option<(usize, Instant)> = None;
 
     loop {
         if drive_bots(
@@ -559,9 +588,64 @@ fn run_match_inner(
                 Err(mpsc::RecvTimeoutError::Disconnected) => return capture_outcome(&state),
             }
         } else {
-            match merged_rx.recv() {
-                Ok(msg) => Some(msg),
-                Err(_) => return capture_outcome(&state),
+            // Optional rope: bound the wait when a human seat must act.
+            let rope_deadline = action_timeout.and_then(|t| {
+                let actor = expected_actor(&state, &GameAction::PassPriority);
+                if actor < n && bots[actor].is_none() {
+                    if rope.map(|(s, _)| s) != Some(actor) {
+                        rope = Some((actor, Instant::now()));
+                    }
+                    Some((actor, rope.expect("just set").1 + t))
+                } else {
+                    rope = None;
+                    None
+                }
+            });
+            match rope_deadline {
+                None => match merged_rx.recv() {
+                    Ok(msg) => Some(msg),
+                    Err(_) => return capture_outcome(&state),
+                },
+                Some((actor, deadline)) => {
+                    let now = Instant::now();
+                    if now >= deadline {
+                        // Rope expired — act for the seat: AutoDecider's
+                        // answer for a pending decision, else pass priority.
+                        let action = match state.pending_decision.as_ref() {
+                            Some(pd) => {
+                                use crate::decision::Decider;
+                                let answer =
+                                    crate::decision::AutoDecider.decide(&pd.decision);
+                                GameAction::SubmitDecision(answer)
+                            }
+                            None => GameAction::PassPriority,
+                        };
+                        report_error(
+                            actor,
+                            "action timeout — the server acted for you",
+                            &seat_tx,
+                        );
+                        let accepted =
+                            handle_action(&mut state, actor, action, &seat_tx, &spectator_tx);
+                        rope = None;
+                        if accepted {
+                            last_progress_at = Instant::now();
+                            publish_snapshot(&state, &snapshot_sink);
+                        }
+                        if state.is_game_over() {
+                            broadcast_match_over(&state, &seat_tx, &spectator_tx);
+                            return capture_outcome(&state);
+                        }
+                        continue;
+                    }
+                    match merged_rx.recv_timeout(deadline - now) {
+                        Ok(msg) => Some(msg),
+                        Err(mpsc::RecvTimeoutError::Timeout) => None, // loop re-checks
+                        Err(mpsc::RecvTimeoutError::Disconnected) => {
+                            return capture_outcome(&state)
+                        }
+                    }
+                }
             }
         };
         let Some(inbox) = next else { continue };
@@ -646,6 +730,7 @@ fn run_match_inner(
                 let accepted = handle_action(&mut state, seat, action, &seat_tx, &spectator_tx);
                 if accepted {
                     last_progress_at = Instant::now();
+                    rope = None;
                     publish_snapshot(&state, &snapshot_sink);
                 }
                 if state.is_game_over() {
@@ -1485,6 +1570,7 @@ mod tests {
                 // Short grace: seat 0 stays connected through the body, so the
                 // window only matters at teardown (keeps the test fast).
                 Duration::from_millis(200),
+                None,
             )
         });
 
@@ -1544,6 +1630,7 @@ mod tests {
                 Some(reattach_rx),
                 None,
                 Duration::from_millis(200),
+                None,
             );
             let _ = done_tx.send(());
             outcome
@@ -1580,6 +1667,7 @@ mod tests {
                 Some(reattach_rx),
                 None,
                 Duration::from_millis(400),
+                None,
             );
             let _ = done_tx.send(());
             outcome
@@ -1773,6 +1861,7 @@ mod tests {
                 Some(reattach_rx),
                 Some(spectate_rx),
                 Duration::from_millis(200),
+                None,
             );
             let _ = done_tx.send(());
             outcome
@@ -2085,6 +2174,53 @@ mod tests {
         // Don't care whether the match ends — just don't leak the
         // thread on a slow CI runner.
         let _ = done_rx.recv_timeout(Duration::from_secs(30));
+        let _ = handle.join();
+    }
+    /// With an action timeout set, a stalled human seat is auto-passed:
+    /// the turn advances without the client ever submitting an action.
+    #[test]
+    fn action_timeout_auto_passes_stalled_seat() {
+        let state = two_player_game();
+        let turn0 = state.turn_number;
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                None,
+                None,
+                RECONNECT_GRACE,
+                Some(Duration::from_millis(30)),
+            )
+        });
+        drain_initial(&c0);
+        drain_initial(&c1);
+        // Neither client acts; the rope should pass priority through whole
+        // turns. Wait for a view whose turn number advanced.
+        let deadline = Instant::now() + Duration::from_secs(20);
+        let mut advanced = false;
+        'outer: while Instant::now() < deadline {
+            for ch in [&c0, &c1] {
+                while let Ok(msg) = ch.rx.try_recv() {
+                    let view = match msg {
+                        ServerMsg::View(v) => Some(v),
+                        ServerMsg::Update { view, .. } => Some(view),
+                        _ => None,
+                    };
+                    if view.is_some_and(|v| v.turn > turn0) {
+                        advanced = true;
+                        break 'outer;
+                    }
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(advanced, "rope never advanced the turn");
+        drop(c0);
+        drop(c1);
         let _ = handle.join();
     }
 }
