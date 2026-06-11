@@ -27,8 +27,11 @@ use crabomination::game::TurnStep;
 use crate::net_plugin::CurrentView;
 use crate::systems::game_ui::PhaseStepLabel;
 
-/// Per-step auto-pass override. See module docs.
-#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+/// Per-step auto-pass override. See module docs. Serialized into
+/// `config.toml` (`gameplay.stops_my` / `stops_opp`) so stops survive
+/// restarts.
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum StopMode {
     #[default]
     Auto,

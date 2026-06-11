@@ -36,7 +36,7 @@ pub fn load() -> Config {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 #[derive(Default)]
 pub struct Config {
@@ -45,8 +45,31 @@ pub struct Config {
     pub gameplay: GameplayConfig,
 }
 
+/// The live, whole config kept as a resource so settings systems can
+/// mutate one section and rewrite the file without losing the others.
+/// Inserted before the menu/game plugins so `FromWorld`/seeding sees it.
+#[derive(Resource)]
+pub struct ConfigStore(pub Config);
+
+/// Rewrite the config file with `config`. Failures are logged, never
+/// fatal — losing a settings write shouldn't crash a running game.
+pub fn save(config: &Config) {
+    let path = config_path();
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    match toml::to_string_pretty(config) {
+        Ok(text) => {
+            if let Err(e) = fs::write(&path, text) {
+                eprintln!("config: write {} failed: {e}", path.display());
+            }
+        }
+        Err(e) => eprintln!("config: serialize failed: {e}"),
+    }
+}
+
 /// Gameplay-feel options.
-#[derive(Debug, Resource, Serialize, Deserialize)]
+#[derive(Debug, Clone, Resource, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GameplayConfig {
     /// Sort your hand client-side (lands first, then by mana value, then
@@ -59,6 +82,15 @@ pub struct GameplayConfig {
     pub join_addr: String,
     /// Last-used decklist path for "Play Deck vs Bot". Empty = default.
     pub deck_path: String,
+    /// Animation playback speed multiplier (the in-game `[` / `]` keys and
+    /// slider persist here). Default: 1.0.
+    pub animation_speed: f32,
+    /// Phase-chart stop overrides for the viewer's own turns
+    /// (step name → "always" / "skip"). Mirrors
+    /// `systems::phase_bar::StopConfig.my`.
+    pub stops_my: std::collections::HashMap<crabomination::game::TurnStep, crate::systems::phase_bar::StopMode>,
+    /// Stop overrides for opponents' turns (`StopConfig.opp`).
+    pub stops_opp: std::collections::HashMap<crabomination::game::TurnStep, crate::systems::phase_bar::StopMode>,
 }
 
 impl Default for GameplayConfig {
@@ -68,6 +100,9 @@ impl Default for GameplayConfig {
             player_name: String::new(),
             join_addr: String::new(),
             deck_path: String::new(),
+            animation_speed: 1.0,
+            stops_my: Default::default(),
+            stops_opp: Default::default(),
         }
     }
 }
@@ -92,7 +127,7 @@ pub fn update(f: impl FnOnce(&mut Config)) {
 }
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PathsConfig {
     /// Directory used as Bevy's asset root and card image cache.
@@ -145,7 +180,7 @@ fn asset_base_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
-#[derive(Debug, Resource, Serialize, Deserialize)]
+#[derive(Debug, Clone, Resource, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GraphicsConfig {
     /// Shadow map resolution (must be a power of two). Default: 8192.
@@ -195,5 +230,65 @@ impl SmaaPreset {
             Self::High   => B::High,
             Self::Ultra  => B::Ultra,
         }
+    }
+}
+
+
+// ── Persistence systems ───────────────────────────────────────────────────────
+
+use bevy::prelude::{DetectChanges, Res, ResMut};
+
+/// Mirror phase-chart stop changes into the config file. Skips the
+/// startup frame (`is_added`) and no-op writes.
+pub fn persist_stops(
+    stops: Res<crate::systems::phase_bar::StopConfig>,
+    mut store: ResMut<ConfigStore>,
+) {
+    if !stops.is_changed() || stops.is_added() {
+        return;
+    }
+    if store.0.gameplay.stops_my == stops.my && store.0.gameplay.stops_opp == stops.opp {
+        return;
+    }
+    store.0.gameplay.stops_my = stops.my.clone();
+    store.0.gameplay.stops_opp = stops.opp.clone();
+    save(&store.0);
+}
+
+/// Mirror animation-speed changes (the `[` / `]` keys and the settings
+/// slider) into the config file.
+pub fn persist_animation_speed(
+    speed: Res<crate::systems::animate::AnimationSpeed>,
+    mut store: ResMut<ConfigStore>,
+) {
+    if !speed.is_changed() || speed.is_added() {
+        return;
+    }
+    if (store.0.gameplay.animation_speed - speed.0).abs() < f32::EPSILON {
+        return;
+    }
+    store.0.gameplay.animation_speed = speed.0;
+    save(&store.0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gameplay_config_with_stops_roundtrips_through_toml() {
+        use crate::systems::phase_bar::StopMode;
+        use crabomination::game::TurnStep;
+        let mut cfg = Config::default();
+        cfg.gameplay.player_name = "Alice".into();
+        cfg.gameplay.animation_speed = 1.5;
+        cfg.gameplay.stops_my.insert(TurnStep::End, StopMode::Always);
+        cfg.gameplay.stops_opp.insert(TurnStep::Upkeep, StopMode::Skip);
+        let text = toml::to_string_pretty(&cfg).expect("serialize");
+        let back: Config = toml::from_str(&text).expect("deserialize");
+        assert_eq!(back.gameplay.player_name, "Alice");
+        assert_eq!(back.gameplay.stops_my.get(&TurnStep::End), Some(&StopMode::Always));
+        assert_eq!(back.gameplay.stops_opp.get(&TurnStep::Upkeep), Some(&StopMode::Skip));
+        assert!((back.gameplay.animation_speed - 1.5).abs() < f32::EPSILON);
     }
 }

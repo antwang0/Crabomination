@@ -63,7 +63,8 @@ use systems::game_ui::{
     position_log_below_opponents,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
-    update_phase_bar, update_player_stats_chips, update_stack_panel, update_turn_text,
+    update_phase_bar, update_player_stats_chips, update_stack_panel,
+    handle_stack_resolve_button, update_turn_text,
     ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
@@ -191,6 +192,19 @@ fn main() {
 
     let gfx = cfg.graphics;
     let gameplay = cfg.gameplay;
+    // Whole-config resource for the persistence systems (settings writes
+    // rewrite the file without losing other sections). Cloned before the
+    // sections move into their own resources below.
+    let cfg_store = config::ConfigStore(config::Config {
+        paths: cfg.paths.clone(),
+        graphics: gfx.clone(),
+        gameplay: gameplay.clone(),
+    });
+    let initial_stops = systems::phase_bar::StopConfig {
+        my: gameplay.stops_my.clone(),
+        opp: gameplay.stops_opp.clone(),
+    };
+    let initial_anim_speed = AnimationSpeed(gameplay.animation_speed.clamp(0.25, 4.0));
 
     // Custom Default asset source: it wraps the normal file reader and
     // synthesizes a white name-placeholder PNG for any missing card image,
@@ -259,6 +273,7 @@ fn main() {
                 }),
             MeshPickingPlugin,
         ))
+        .insert_resource(cfg_store)
         .add_plugins((
             SinglePlayerPlugin,
             MenuPlugin,
@@ -295,7 +310,7 @@ fn main() {
         .insert_resource(CardNames::default())
         .insert_resource(GraveyardBrowserState::default())
         .insert_resource(RevealPopupState::default())
-        .insert_resource(AnimationSpeed::default())
+        .insert_resource(initial_anim_speed)
         .insert_resource(ButtonState::default())
         .insert_resource(HandZoom::default())
         .insert_resource(systems::kb_cursor::KeyboardCursor::default())
@@ -310,7 +325,7 @@ fn main() {
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .init_resource::<systems::game_ui::SurrenderConfirm>()
-        .init_resource::<systems::phase_bar::StopConfig>()
+        .insert_resource(initial_stops)
         .insert_resource(menu::CliBootHint(load_state_arg))
         .insert_resource(menu::CliBootFormat(play_format_arg))
         .add_systems(Startup, setup)
@@ -337,6 +352,12 @@ fn main() {
             Update,
             systems::phase_bar::handle_phase_chart_clicks
                 .run_if(in_state(AppState::InGame)),
+        )
+        // Settings persistence: mirror stop/animation-speed changes into
+        // config.toml (each system early-outs on no change).
+        .add_systems(
+            Update,
+            (config::persist_stops, config::persist_animation_speed),
         )
         // Audit-mode card picker.
         .add_systems(OnEnter(AppState::Audit), audit::spawn_audit_picker)
@@ -446,6 +467,7 @@ fn main() {
                 update_hint,
                 update_phase_chart,
                 update_log_text,
+                handle_stack_resolve_button,
                 update_stack_panel,
                 update_combat_preview_panel,
                 update_pass_button,

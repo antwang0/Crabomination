@@ -3037,8 +3037,8 @@ absent at a glance. Same screen-space-overlay approach as the P/T
 overlay above would carry a "L: N" badge.
 
 ### Exile Zone Browser
-Similar to the graveyard browser, an exile browser would let players inspect
-exiled cards (Foretell staging area, Leyline victims, Imprint sources, etc.).
+✅ Shipped — `V` toggles a browser listing exiled cards with per-card
+source annotations (linked exile, cipher, foretell, …).
 
 ### Stun Counter Visualization
 Static Prison and Rapier Wit add stun counters.  No indicator currently shows
@@ -3109,6 +3109,60 @@ toward-camera (~5°), and a shadow boost — much more tactile. The
 
 ## Client — UX
 
+### UI backlog — competitor-parity sweep (2026-06-11)
+
+Prioritized ideas from a parity review against Arena / MTGO / Cockatrice /
+XMage, after the decision-coverage + stops + import session shipped.
+Cross-references the detailed entries below where one exists.
+
+**In-game, high impact**
+- ✅ **Stack as a visual zone** — `update_stack_panel` now renders
+  card-art tiles: the top item gets a large gold-framed tile with a
+  "resolves next" line, the rest smaller thumbnail rows, each with a
+  controller-colored edge strip (green = yours / orange = opponent's);
+  the footer offers a "Let resolve ▶" button while the viewer holds
+  priority (else "Waiting for <name>…"). Hidden items show the cardback.
+  Remaining ⏳: hover a tile → large preview, click → scroll the log.
+- ⏳ **Undo / mana-tap rollback** — see "Engine — Rollback / Undo system
+  (plan)"; the minimal client slice (un-tap floated mana before a cast
+  commits) is worth shipping ahead of the full plan.
+- ⏳ **Battlefield organization at scale** — stack identical tokens with a
+  ×N badge (see "Token stacking"), auto-tuck land stacks by name, draw a
+  visible aura/equipment → host link (today attachment info lives only in
+  tooltips).
+- ⏳ **Attention pings** — pulse the permanent whose trigger is waiting,
+  flash/pulse the Pass button on gained priority (urgency infra
+  `pulse_urgent_pass_button` exists), low-life vignette.
+- ⏳ **Cost-payment feedback** — during manual tapping show the remaining
+  cost ("{1}{U} to go") and pre-highlight which sources auto-tap would
+  take before committing (Arena-style misplay prevention).
+
+**Quick wins**
+- ✅ **Persist settings** — `config::ConfigStore` holds the live whole
+  config; `persist_stops` / `persist_animation_speed` /
+  `persist_player_name` mirror changes into `config.toml`
+  (`gameplay.{stops_my,stops_opp,animation_speed,player_name}`), and
+  startup seeds `StopConfig`, `AnimationSpeed`, and the menu name from it.
+- ⏳ **Clickable game log** — hover a log line → preview the named card;
+  click → flash the permanent on the board (names already resolve).
+- ⏳ **Finish the hover oracle panel** — `ui::hover_info_lines` shows type
+  line + keyword reminders; add triggered/activated-ability short text
+  (see "X-ray card inspector").
+- ⏳ **Game-over stats** — turns, damage dealt, cards drawn, from the
+  event stream; show on the game-over modal.
+
+**Bigger projects**
+- ⏳ **Settings screen with tabs** (gameplay / graphics / keybinds) — the
+  natural home for persistence + remappable keys; see "Settings Menu".
+- ⏳ **Deck library** — save imported decks, list them in the menu, pick
+  the opponent's deck, paste-from-clipboard import.
+- ⏳ **Bo3 + sideboarding UI** — Learn/Lessons sideboard plumbing exists
+  engine-side.
+- ⏳ **Replay viewer** — see "Replay scrubber" (Tier 3 below).
+- ⏳ **Accessibility pass** — colorblind-safe target rings (shape, not
+  only color), text scaling, reduced-motion toggle, finish keyboard-only
+  play; see "Theme variants".
+
 ### UI Roadmap (push claude/modern_decks — session-derived)
 
 Ordering layer over the detailed items below. Cross-references existing
@@ -3135,11 +3189,13 @@ indicator + click target. Slims the 2-D chip strip.
   render engine-truth rules text from `CardDefinition` plus current
   modifications (layer P/T, granted keywords, attachments, counter net,
   legal actions). Differentiator vs XMage/MTGO/Arena.
-- Stop settings + auto-pass ⏳ — see Per-Phase Auto-Stop + Auto-Pass
-  Toggle. Settings panel; persist via `config.rs`. Urgency infra
-  (`pulse_urgent_pass_button`) already exists.
-- Phase bar ⏳ — replace vertical `PHASE_CHART_STEPS` with horizontal
-  Arena-style strip; click a step to toggle a stop. Pairs with above.
+- Stop settings + auto-pass ✅ — per-step Auto/Stop/Skip overrides on
+  the clickable phase chart (`systems/phase_bar.rs::StopConfig`), wired
+  into `auto_advance_p0`; right-click = pass-until-step. Remaining:
+  persistence via `config.rs` (in progress).
+- Phase bar ✅ — kept the vertical chart (click = stop toggle,
+  right-click = pass-until) rather than a horizontal strip; revisit the
+  horizontal layout only if the left edge gets crowded.
 - Stack widget polish ⏳ — promote `update_stack_panel` to a permanent
   floating panel; hover for source-card preview; click to scroll log.
 
@@ -3182,9 +3238,9 @@ it can overlap the player panel.  Clamp its width to `min(420px, 40vw)` or
 reposition it to the right sidebar.
 
 ### Per-Phase Auto-Stop Flags
-Arena-style "stop at" checkboxes per phase (e.g., "always stop at opponent's
-end step").  Currently the only fast-forward controls are End Turn (E) and
-Next Turn (N).
+✅ Shipped as click-to-cycle Auto/Stop/Skip on the phase chart, scoped to
+your turns vs opponents' (`systems/phase_bar.rs`); right-click a step =
+pass-until. Remaining: persist the configuration (see backlog above).
 
 ### Deck Browser
 A pre-game or in-game panel listing the full deck composition (name + count
@@ -3192,13 +3248,10 @@ for each unique card) would help players understand the randomly-assembled cube
 deck they are playing.
 
 ### Game Log Scrollback + Event Color-Coding
-`GameLog::push` caps entries at 16 (`game.rs:13-19`) and the panel joins them
-with `\n` into a single `Text` widget. A real game produces hundreds of
-events. Switch to `VecDeque<LogEntry>`, raise the cap to ~200, wrap the
-panel in `Overflow::scroll_y()`, and color-code entries by `GameEventWire`
-variant (damage = red, mana = mana-color, step = dim gray, etc.). The
-`format_event` match in `game_ui.rs` already pattern-matches every variant,
-so adding a per-variant color is cheap.
+✅ Shipped: 200-entry scrollback, per-variant colors, color-blind glyphs,
+turn dividers, ×N coalescing, player names. Remaining ⏳: clickable log
+lines (hover-preview the named card — see backlog above) and event
+filtering.
 
 ### Button Hover + Pressed Feedback
 Action buttons (Pass / End Turn / Next Turn / Export plus modal buttons) have
