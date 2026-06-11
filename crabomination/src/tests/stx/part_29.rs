@@ -84,7 +84,7 @@ fn echoing_equation_copies_until_end_of_turn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 4, "two Sheoldred triggers — copy included");
     // Cleanup reverts the swap.
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Grizzly Bears",
         "copy reverted at end of turn");
 }

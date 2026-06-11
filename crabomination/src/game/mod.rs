@@ -6379,8 +6379,10 @@ impl GameState {
                     self.set_cleanup_discard_decision(player, excess);
                     return Ok(evs);
                 }
-                self.finish_cleanup();
-                return self.advance_step(evs);
+                return match self.finish_cleanup(&mut evs) {
+                    crate::game::stack::CleanupOutcome::TurnOver => self.advance_step(evs),
+                    _ => Ok(evs),
+                };
             }
             ResumeContext::CombatDamage { player: _, attacker, kind } => {
                 // CR 510.1c-d — cache the answered ordering/assignment choice,

@@ -184,11 +184,12 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   reassign `card.controller` (Gather Specimens) but
   `fire_self_etb_triggers(cid, p)` still passes the stale pre-replacement
   controller (CR 603.3d); the token funnel does it right (`mod.rs:2402`).
-- ⏳ **Cleanup priority is wrong both ways** (`stack.rs:284-294`,
-  `1421-1435`). An unconditional priority window every cleanup (CR 514.3
-  grants one only when SBAs/triggers happen), and when the cleanup discard
-  *does* fire triggers, `finish_cleanup` advances the turn anyway, stranding
-  them past the EOT wipe (CR 514.3a repeat loop unimplemented).
+- ✅ **Cleanup priority** — CR 514.3/514.3a wired: cleanup runs its
+  turn-based actions on step entry with no priority window; if the discard
+  fires triggers or SBAs act, players get priority in cleanup and another
+  cleanup round runs when they pass with an empty stack (`CleanupOutcome`,
+  `do_cleanup`/`finish_cleanup`/`end_turn`). Untap also auto-advances
+  without a phantom pass (CR 502.4). Tests `cr_514_3_*`.
 - ✅ **Batch-relative block validation** — Menace merges `block_map` like
   its sibling checks (CR 702.110b) and duplicate blockers (in-batch or
   re-blocking) are rejected. Test `duplicate_blocker_in_batch_rejected`.
@@ -2310,45 +2311,6 @@ picking an item up.
   cycle (Augusta + Plargg, Embrose + Valentin, Imbraham + Lisette,
   Lukka + Adrix) and the Battlebond legendaries can wire the partner
   half faithfully.
-
-- ⏳ **Multi-pick on cleanup-step discard** — CR 514.1 enforcement
-  landed in push (modern_decks) but the discard uses a deterministic
-  first-card pick. A future UI surfacing should ask the active player
-  which cards to discard via the existing `Decision::Discard` shape
-  (the bot's AutoDecider can fall back to "first N"; only real-player
-  seats need to surface the prompt). Cleanup is a turn-based action so
-  it can't directly suspend through the stack; the existing
-  `wants_ui` + `pending_decision` resume path may need extension to
-  cover turn-based-action prompts. Wire site: `do_cleanup` in
-  `game/stack.rs`.
-
-- ⏳ **Cleanup-step discard event emission** — push (modern_decks)'s
-  CR 514.1 wiring moves cards hand → graveyard but doesn't emit
-  `GameEvent::CardDiscarded` (cleanup runs in a priority-less window
-  per CR 514.3). Discard-payoff cards like the SOS Witherbloom
-  death-trigger cycle and Liliana of the Veil's per-discard payoff
-  may want this event. Per CR 419.1 the cards-go-to-graveyard count
-  as discards; the engine's per-turn discard tally (when added) +
-  every "if you discarded a card this turn" payoff would need to
-  fire from this event.
-
-- 🟡 **`StaticEffect::ConditionalPumpPT { condition, power, toughness,
-  keywords }` — generalized compute-time conditional anthem** — push
-  (modern_decks): consolidated the Honor Troll and Ulna Alley Shopkeep
-  hardcoded `if name == "..." && lifegain > 0` branches in
-  `GameState::compute_battlefield` into the helper-table
-  `lifegain_selfpump_for_name(name) -> Option<(p, t, &[Keyword])>` at
-  `game/mod.rs:1748` (mirroring the `tribal_anthem_for_name` precedent).
-  Adding a new "as long as you've gained life this turn, +P/+T [and
-  KW]" card now takes a single helper-table row instead of a new
-  hardcoded branch. The full generalized primitive
-  (`StaticEffect::ConditionalSelfPump { condition: Predicate, ... }`)
-  is still ⏳ — it requires threading `&GameState` into
-  `static_ability_to_effects` so predicates can read live game state.
-  Today's lifegain-only helper is name-keyed, so non-lifegain
-  conditions (e.g. "as long as you control a Wizard", "as long as
-  it's not your turn") still need their own helper tables or the full
-  primitive.
 
 - ⏳ **`PlayerRef::Opponent` (single-opponent helper)** — engine has
   `EachOpponent` (all opps) and `Target(_)` (cast-time targeting) but

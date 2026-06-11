@@ -57,7 +57,7 @@ fn extra_turn_then_taken_keeps_active_player() {
     // active player keeps the turn instead of passing.
     let mut g = cast_and_resolve(catalog::time_walk(), 1, 1);
     g.active_player_idx = 0;
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 0, "extra turn keeps the same player");
     assert_eq!(g.players[0].extra_turns, 0, "charge consumed");
 }

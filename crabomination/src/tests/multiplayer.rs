@@ -51,7 +51,7 @@ fn turn_rotates_through_all_four_seats() {
     let mut g = multi_player_game(4);
     let expected = [1usize, 2, 3, 0];
     for (i, want) in expected.iter().enumerate() {
-        g.do_cleanup();
+        g.do_cleanup(&mut Vec::new());
         assert_eq!(
             g.active_player_idx, *want,
             "after cleanup #{i}: expected active seat {want}, got {}",
@@ -67,11 +67,11 @@ fn eliminated_player_is_skipped_in_turn_rotation() {
     // Eliminate seat 2 mid-table.
     g.players[2].eliminated = true;
 
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 1, "0 → 1");
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 3, "1 → 3 (skip eliminated 2)");
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 0, "3 → 0");
 }
 

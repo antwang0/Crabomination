@@ -1151,8 +1151,9 @@ fn untap_step_clears_summoning_sickness() {
     g.perform_action(GameAction::PassPriority).unwrap();
     g.perform_action(GameAction::PassPriority).unwrap();
 
-    // We should now be in player 0's Untap step
-    assert_eq!(g.step, TurnStep::Untap);
+    // Player 0's turn began; Untap grants no priority (CR 502.4) so play
+    // rests in their Upkeep.
+    assert_eq!(g.step, TurnStep::Upkeep);
     assert_eq!(g.active_player_idx, 0);
     // Summoning sickness cleared for player 0's permanents
     assert!(!g.battlefield.iter().find(|c| c.id == bear_id).unwrap().summoning_sick);

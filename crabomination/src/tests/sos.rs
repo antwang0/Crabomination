@@ -2298,7 +2298,7 @@ fn wisdom_of_ages_lets_caster_keep_more_than_seven_cards() {
     }
     let hand_before = g.players[0].hand.len();
     g.step = TurnStep::Cleanup;
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     // No discards — hand size is unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before,
         "no cards discarded under the no-max-hand-size flag");
@@ -7785,15 +7785,15 @@ fn skip_turns_counter_decrements_on_turn_advance() {
     assert_eq!(g.active_player_idx, 0, "starts at P0");
 
     // Advance through cleanup (P0 → P1 normally; with skip, P0 → P0).
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 0, "P1's turn 1 skipped, lands back on P0");
     assert_eq!(g.players[1].skip_turns, 1, "skip counter decremented");
 
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 0, "P1's turn 2 skipped, still on P0");
     assert_eq!(g.players[1].skip_turns, 0, "all skip turns consumed");
 
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 1, "back to normal — P1's turn");
 }
 
@@ -11266,7 +11266,7 @@ fn granted_flashback_expires_at_end_of_turn() {
         .unwrap()
         .granted_flashback_eot = Some(catalog::lightning_bolt().cost);
 
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
 
     assert!(
         g.players[0]
@@ -11958,10 +11958,10 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
     // Burn through 2 cleanup steps (each `do_cleanup` advances the
     // turn). After cleanup #1 the permission persists; after #2 it
     // clears.
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert!(g.exile.iter().find(|c| c.id == pox_id).unwrap()
         .may_play_until.is_some(), "permission survives first cleanup");
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert!(g.exile.iter().find(|c| c.id == pox_id).unwrap()
         .may_play_until.is_none(), "permission expires after controllers next turn cleanup");
 }

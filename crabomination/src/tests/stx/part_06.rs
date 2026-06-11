@@ -2608,7 +2608,7 @@ fn granted_keyword_eot_clears_at_cleanup_per_batch_24() {
         "Computed view reports granted EOT keyword");
     // Cleanup: keyword should be cleared.
     g.step = crate::game::types::TurnStep::Cleanup;
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     let b = g.battlefield_find(bear).unwrap();
     assert!(b.granted_keywords_eot.is_empty(),
         "granted_keywords_eot bag empty after Cleanup");

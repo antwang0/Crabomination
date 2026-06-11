@@ -3136,7 +3136,7 @@ fn set_max_hand_size_effect_caps_cleanup_discard() {
         g.add_card_to_hand(0, catalog::island());
     }
     g.step = TurnStep::Cleanup;
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.players[0].hand.len(), 2, "cleanup discards down to the custom max");
 }
 

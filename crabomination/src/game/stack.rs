@@ -4,6 +4,21 @@ use crate::decision::{Decision, DecisionAnswer};
 use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::types::{DelayedKind, DelayedTrigger};
 
+/// How a CR 514 cleanup round ended, telling the caller how to continue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CleanupOutcome {
+    /// Suspended on a `wants_ui` discard-down decision (CR 514.1);
+    /// `submit_decision` resumes via `finish_cleanup`.
+    Suspended,
+    /// The cleanup actions fired triggers or SBAs acted — players receive
+    /// priority in the cleanup step (CR 514.3a); when they all pass with an
+    /// empty stack another cleanup round runs.
+    PriorityGranted,
+    /// Nothing happened: no priority window (CR 514.3), the turn is over and
+    /// `end_turn` already ran — advance to the next turn's untap.
+    TurnOver,
+}
+
 impl GameState {
     /// CR 700.2b — "The controller of a modal triggered ability chooses
     /// the mode(s) as part of putting that ability on the stack."
@@ -97,13 +112,17 @@ impl GameState {
             self.blockers_declared = true;
         }
 
-        let events = vec![];
+        let mut events = vec![];
 
-        if self.step == TurnStep::Cleanup && self.do_cleanup() {
-            // Suspended on the cleanup discard decision: a UI player must
-            // choose which cards to pitch. `submit_decision` resumes
-            // `finish_cleanup` + the step advance once it's answered.
-            return Ok(events);
+        if self.step == TurnStep::Cleanup {
+            // All players passed during a CR 514.3a cleanup priority round
+            // with an empty stack — another cleanup round happens. It may
+            // suspend (UI discard), grant priority again (more triggers), or
+            // finish the turn.
+            return match self.do_cleanup(&mut events) {
+                CleanupOutcome::Suspended | CleanupOutcome::PriorityGranted => Ok(events),
+                CleanupOutcome::TurnOver => self.advance_step(events),
+            };
         }
 
         self.advance_step(events)
@@ -200,8 +219,12 @@ impl GameState {
                     player: self.active_player_idx,
                     turn: self.turn_number,
                 });
-                // No priority in Untap — immediately advance to Upkeep.
+                // No priority in Untap (CR 502.4) — immediately advance to
+                // Upkeep. Seed the pass count so the single pass below counts
+                // as everyone passing rather than needing a phantom extra
+                // client pass.
                 self.priority.player_with_priority = self.active_player_idx;
+                self.priority.consecutive_passes = self.alive_count().saturating_sub(1);
                 let mut upkeep_events = self.pass_priority()?;
                 events.append(&mut upkeep_events);
                 return Ok(events);
@@ -312,7 +335,13 @@ impl GameState {
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
-                self.give_priority_to_active();
+                // CR 514.3 — no player receives priority during cleanup
+                // unless its turn-based actions fire triggers or SBAs act;
+                // run them immediately on entering the step.
+                match self.do_cleanup(&mut events) {
+                    CleanupOutcome::Suspended | CleanupOutcome::PriorityGranted => {}
+                    CleanupOutcome::TurnOver => return self.advance_step(events),
+                }
             }
             _ => {
                 self.give_priority_to_active();
@@ -1431,13 +1460,10 @@ impl GameState {
         }
     }
 
-    /// CR 514 cleanup step. Returns `true` if it suspended on a pending
-    /// decision (a `wants_ui` player choosing which cards to discard down to
-    /// maximum hand size) — in which case the caller must return early and
-    /// `submit_decision` will resume `finish_cleanup` + the step advance once
-    /// the discard is answered. Returns `false` when cleanup completed
-    /// synchronously.
-    pub(crate) fn do_cleanup(&mut self) -> bool {
+    /// CR 514 cleanup step turn-based actions (514.1 discard-down, 514.2
+    /// wear-off, 514.3 priority check). See `CleanupOutcome` for how callers
+    /// continue.
+    pub(crate) fn do_cleanup(&mut self, events: &mut Vec<GameEvent>) -> CleanupOutcome {
         // CR 514.1 — First, if the active player's hand contains more cards
         // than their maximum hand size (normally seven), they discard
         // enough cards to reduce their hand size to that number. This
@@ -1463,7 +1489,7 @@ impl GameState {
             if self.players[active].wants_ui {
                 let excess = (self.players[active].hand.len() - max) as u32;
                 self.set_cleanup_discard_decision(active, excess);
-                return true;
+                return CleanupOutcome::Suspended;
             }
             let mut cleanup_events = Vec::new();
             while self.players[active].hand.len() > max {
@@ -1473,12 +1499,13 @@ impl GameState {
                 self.discard_card(active, cid, &mut cleanup_events);
             }
             if !cleanup_events.is_empty() {
+                // Dispatched here only — the caller re-dispatches whatever it
+                // returns, so appending these would double-fire the triggers.
                 self.dispatch_triggers_for_events(&cleanup_events);
             }
         }
 
-        self.finish_cleanup();
-        false
+        self.finish_cleanup(events)
     }
 
     /// Pose the CR 514.1 cleanup discard-down as an interactive decision:
@@ -1496,10 +1523,30 @@ impl GameState {
     }
 
     /// CR 514.2 onward — the part of cleanup that runs after the discard-down
-    /// step (which may have suspended for a UI player). Clears "until end of
-    /// turn" state, removes marked damage, advances to the next player's turn,
-    /// and hands them priority.
-    pub(crate) fn finish_cleanup(&mut self) {
+    /// step (which may have suspended for a UI player): wear-off, then the
+    /// CR 514.3 priority check, then (if nothing is pending) the turn end.
+    pub(crate) fn finish_cleanup(&mut self, events: &mut Vec<GameEvent>) -> CleanupOutcome {
+        self.cleanup_wear_off();
+        // CR 514.3a — check state-based actions and triggered abilities. If
+        // anything is waiting, players receive priority in the cleanup step;
+        // once they all pass with an empty stack, another cleanup happens.
+        let mut sba = self.check_state_based_actions();
+        events.append(&mut sba);
+        if !self.stack.is_empty() || self.pending_decision.is_some() {
+            if self.pending_decision.is_none() {
+                self.give_priority_to_active();
+            }
+            return CleanupOutcome::PriorityGranted;
+        }
+        // CR 514.3 — normally no player receives priority during cleanup;
+        // the turn simply ends.
+        self.end_turn();
+        CleanupOutcome::TurnOver
+    }
+
+    /// CR 514.2 — the cleanup wear-off: clears "until end of turn" / "this
+    /// turn" state and removes marked damage.
+    fn cleanup_wear_off(&mut self) {
         // CR 514.2 — Second, the following actions happen simultaneously:
         // all damage marked on permanents is removed and all "until end of
         // turn" and "this turn" effects end.
@@ -1581,6 +1628,11 @@ impl GameState {
         for player in &mut self.players {
             player.mana_pool.empty();
         }
+    }
+
+    /// The end of the turn: consume extra turns / skip-turn debt, advance the
+    /// active player and turn number, and sweep expired play permissions.
+    fn end_turn(&mut self) {
         // CR 500.7 — extra turns. If the active player banked an extra
         // turn (Time Walk, Ral Zarek's -7 emblem), keep the turn instead
         // of passing: consume one charge and just bump the turn number.

@@ -1504,7 +1504,7 @@ fn cr_5141a_cleanup_discard_routes_through_madness() {
         g.add_card_to_hand(active, catalog::grizzly_bears());
     }
 
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == rw),
@@ -33740,8 +33740,11 @@ fn reliquary_tower_skips_cleanup_discard() {
         g.add_card_to_hand(0, catalog::forest());
     }
     assert_eq!(g.effective_max_hand_size(0), None, "Reliquary Tower removes the maximum");
-    let suspended = g.do_cleanup();
-    assert!(!suspended, "cleanup completes synchronously");
+    let outcome = g.do_cleanup(&mut Vec::new());
+    assert!(
+        !matches!(outcome, crate::game::stack::CleanupOutcome::Suspended),
+        "cleanup completes synchronously"
+    );
     assert_eq!(g.players[0].hand.len(), 10, "no cards discarded with no max hand size");
 }
 
@@ -33752,7 +33755,7 @@ fn no_reliquary_tower_discards_to_seven() {
     for _ in 0..10 {
         g.add_card_to_hand(0, catalog::forest());
     }
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.players[0].hand.len(), 7, "without the static, discard down to seven");
 }
 
@@ -40707,7 +40710,7 @@ fn thespians_stage_becomes_copy_of_target_land() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(stage).unwrap().definition.name, "Island");
     // Permanent duration: cleanup does not revert.
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.battlefield_find(stage).unwrap().definition.name, "Island");
 }
 
@@ -44643,7 +44646,7 @@ fn mirrorform_copies_your_nonland_permanents() {
     assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Colossal Dreadmaw");
     assert_eq!(g.battlefield_find(land).unwrap().definition.name, "Forest", "lands untouched");
     // Permanent duration: survives cleanup.
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Colossal Dreadmaw");
 }
 
@@ -44675,7 +44678,7 @@ fn shifting_woodland_delirium_copies_graveyard_permanent() {
     }).expect("delirium copy");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(wood).unwrap().definition.name, "Colossal Dreadmaw");
-    g.do_cleanup();
+    g.do_cleanup(&mut Vec::new());
     assert_eq!(g.battlefield_find(wood).unwrap().definition.name, "Shifting Woodland",
         "reverts at end of turn");
 }
@@ -46749,9 +46752,9 @@ fn chronatog_pumps_and_skips_your_next_turn() {
     assert_eq!(g.players[0].skip_turns, 1);
     // P0's turn ends; P1's turn comes; then P0's turn is skipped → P1 again.
     g.active_player_idx = 0;
-    let _ = g.do_cleanup();
+    let _ = g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 1);
-    let _ = g.do_cleanup();
+    let _ = g.do_cleanup(&mut Vec::new());
     assert_eq!(g.active_player_idx, 1, "P0's turn was skipped");
     assert_eq!(g.players[0].skip_turns, 0);
 }

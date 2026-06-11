@@ -638,7 +638,10 @@ fn cr_728_sundial_exiles_the_stack_and_skips_to_cleanup() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bolt), "bolt exiled off the stack (728.1a)");
     assert_eq!(g.players[1].life, 20, "bolt never resolved");
-    assert_eq!(g.step, TurnStep::Cleanup, "turn skipped to cleanup (728.1d)");
+    // CR 728.1d + 514.3 — the turn skips to cleanup, which grants no
+    // priority and ends the turn: play resumes in the opponent's upkeep.
+    assert_eq!(g.active_player_idx, 1, "turn ended (728.1d)");
+    assert_eq!(g.step, TurnStep::Upkeep, "no cleanup priority (514.3)");
 }
 
 /// Sundial's "activate only during your turn" gate rejects an off-turn use.
@@ -675,7 +678,7 @@ fn cr_728_days_undoing_wheels_then_ends_the_turn() {
     assert_eq!(g.players[1].hand.len(), 7, "opponent drew seven");
     assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
     assert!(g.exile.iter().any(|c| c.id == du), "Day's Undoing exiled, not in graveyard");
-    assert_eq!(g.step, TurnStep::Cleanup, "caster's turn ended");
+    assert_eq!(g.active_player_idx, 1, "caster's turn ended (728.1d + 514.3)");
 }
 
 // ── CR 615.7 — "a source of your choice" prevention ──────────────────────────
@@ -1437,4 +1440,57 @@ fn cr_613_7e_attach_restamps_equipment_grant() {
         g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
         "post-attach grant beats the earlier removal (CR 613.7e)"
     );
+}
+
+// ── CR 514.3 / 514.3a — cleanup priority only when something happens ─────────
+
+/// A quiet cleanup grants no priority: passing out of the end step lands in
+/// the next player's upkeep with the turn-based actions all done.
+#[test]
+fn cr_514_3_quiet_cleanup_grants_no_priority() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().damage = 1;
+    g.step = TurnStep::End;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(g.active_player_idx, 1, "turn ended without a cleanup window");
+    assert_eq!(g.step, TurnStep::Upkeep);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "damage wore off (514.2)");
+}
+
+/// A cleanup discard that fires a trigger grants priority in the cleanup
+/// step, and another cleanup round runs after the stack empties (514.3a).
+#[test]
+fn cr_514_3a_discard_trigger_grants_cleanup_priority_then_repeats() {
+    use crate::card::{CardDefinition, CardType, TriggeredAbility};
+    use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Discard Payoff",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    });
+    for _ in 0..8 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    g.step = TurnStep::End;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    // The discard-down trigger granted a cleanup priority window.
+    assert_eq!(g.step, TurnStep::Cleanup, "priority granted in cleanup (514.3a)");
+    assert_eq!(g.players[0].hand.len(), 7, "discarded down to maximum (514.1)");
+    assert!(!g.stack.is_empty(), "discard trigger on the stack");
+    // Resolve the trigger, then both players pass: a repeat cleanup runs
+    // quietly and the turn ends.
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(g.players[0].life, 21, "trigger resolved");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(g.active_player_idx, 1, "repeat cleanup ended the turn");
 }
