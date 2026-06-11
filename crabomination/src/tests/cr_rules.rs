@@ -196,6 +196,48 @@ fn cr_702_2_fight_with_deathtouch_kills_larger_creature() {
     assert!(g.battlefield_find(big).is_none(), "4/4 dies to 1 deathtouch damage");
 }
 
+// ── CR 601.2h-style combat-declaration atomicity ──────────────────────────────
+
+/// A rejected attack declaration leaves no partial state: the legal
+/// attacker in the batch is not tapped when a later one is illegal.
+#[test]
+fn rejected_attack_batch_taps_nothing() {
+    let mut g = two_player_game();
+    let ok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ok);
+    let sick = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // summoning-sick
+    g.step = TurnStep::DeclareAttackers;
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: ok, target: AttackTarget::Player(1) },
+        Attack { attacker: sick, target: AttackTarget::Player(1) },
+    ]));
+    assert!(err.is_err(), "sick attacker rejects the batch");
+    assert!(!g.battlefield_find(ok).unwrap().tapped, "legal attacker untouched");
+    assert!(g.attacking.is_empty(), "no attacker committed");
+}
+
+/// The same blocker twice in one batch is rejected (block_map is a single
+/// blocker→attacker mapping; a duplicate would un-block the first).
+#[test]
+fn duplicate_blocker_in_batch_rejected() {
+    let mut g = two_player_game();
+    let a1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a1);
+    g.clear_sickness(a2);
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a1, target: AttackTarget::Player(1) },
+        Attack { attacker: a2, target: AttackTarget::Player(1) },
+    ]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(b, a1), (b, a2)]));
+    assert!(err.is_err(), "one creature can't block two attackers");
+    assert!(g.block_map.is_empty(), "nothing committed");
+}
+
 // ── Mass exilers fire leaves-graveyard bookkeeping ────────────────────────────
 
 /// Rest in Peace's sweep counts as cards leaving each graveyard (the
