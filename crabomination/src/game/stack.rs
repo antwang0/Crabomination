@@ -854,11 +854,9 @@ impl GameState {
                     // end step. Grant haste on the entering instance and arm
                     // the delayed bounce.
                     if dashed
-                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && self.battlefield.iter().any(|c| c.id == card_id)
                     {
-                        if !c.granted_keywords_eot.contains(&Keyword::Haste) {
-                            c.granted_keywords_eot.push(Keyword::Haste);
-                        }
+                        self.grant_keyword_eot(card_id, Keyword::Haste);
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                             controller: caster,
                             source: card_id,
@@ -881,12 +879,8 @@ impl GameState {
                     // "When this creature dies, draw a card," and is sacrificed
                     // at the beginning of the next end step. Grant haste on the
                     // entering instance and arm the two delayed triggers.
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
-                        && c.blitzed
-                    {
-                        if !c.granted_keywords_eot.contains(&Keyword::Haste) {
-                            c.granted_keywords_eot.push(Keyword::Haste);
-                        }
+                    if self.battlefield.iter().any(|c| c.id == card_id && c.blitzed) {
+                        self.grant_keyword_eot(card_id, Keyword::Haste);
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                             controller: caster,
                             source: card_id,
@@ -917,9 +911,7 @@ impl GameState {
                         && c.cast_from_suspend
                     {
                         c.cast_from_suspend = false;
-                        if !c.granted_keywords_eot.contains(&Keyword::Haste) {
-                            c.granted_keywords_eot.push(Keyword::Haste);
-                        }
+                        self.grant_keyword_eot(card_id, Keyword::Haste);
                     }
 
                     // Push ETB triggers onto the stack — Elesh Norn

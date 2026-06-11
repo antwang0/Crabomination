@@ -6985,3 +6985,56 @@ fn frozen_layers_match_unfrozen_computation() {
     g.add_card_to_battlefield(0, catalog::glorious_anthem());
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
 }
+
+/// CR 613.7 — an EOT keyword grant resolved *after* a lose-all-abilities
+/// effect survives it; one granted *before* is stripped. (EOT grants used to
+/// pre-merge outside the layer walk and always lose.)
+#[test]
+fn cr_613_7_eot_grant_after_lose_all_abilities_survives() {
+    use crate::card::{CardType, Keyword};
+    use crate::effect::shortcut::target_filtered;
+    let lose_all = || crate::card::CardDefinition {
+        name: "Test Frogify",
+        card_types: vec![CardType::Instant],
+        effect: Effect::LoseAllAbilities {
+            what: target_filtered(crate::card::SelectionRequirement::Creature),
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    let grant_flying = || crate::card::CardDefinition {
+        name: "Test Jump",
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(crate::card::SelectionRequirement::Creature),
+            keyword: Keyword::Flying,
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+
+    // Grant after losing abilities → flying sticks.
+    let mut g = two_player_game();
+    let bird = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let a = g.add_card_to_hand(0, lose_all());
+    cast_at(&mut g, a, Target::Permanent(bird));
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(bird).unwrap().keywords.contains(&Keyword::Flying));
+    let b = g.add_card_to_hand(0, grant_flying());
+    cast_at(&mut g, b, Target::Permanent(bird));
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bird).unwrap().keywords.contains(&Keyword::Flying),
+        "later grant survives earlier ability loss");
+
+    // Grant before losing abilities → stripped.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_hand(0, grant_flying());
+    cast_at(&mut g, a, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let b = g.add_card_to_hand(0, lose_all());
+    cast_at(&mut g, b, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "earlier grant is stripped by later ability loss");
+}

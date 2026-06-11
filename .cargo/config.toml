@@ -13,3 +13,11 @@ linker = "rust-lld.exe"
 # Use `cargo dev` instead of `cargo run` for quicker re-links while
 # developing; release builds must NOT enable this feature.
 dev = "run -p crabomination_client --features dynamic_linking"
+
+[env]
+# Debug-build effect resolution recurses deeply (token-copy / trigger
+# chains — e.g. ocelot_pride_end_step_cat_and_blessing_copies), and debug
+# frames are large enough to brush the default 8 MiB thread stack. The
+# test harness runs each test on a spawned thread, which honors
+# RUST_MIN_STACK. Release builds use far smaller frames.
+RUST_MIN_STACK = "33554432"

@@ -3581,16 +3581,12 @@ impl GameState {
                     EffectDur::EndOfTurn | EffectDur::EndOfCombat
                 );
                 for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id()
-                        && let Some(c) = self.battlefield_find_mut(cid)
-                    {
+                    if let Some(cid) = ent.as_permanent_id() {
                         if is_eot {
-                            if !c.granted_keywords_eot.contains(keyword)
-                                && !c.definition.keywords.contains(keyword)
-                            {
-                                c.granted_keywords_eot.push(keyword.clone());
-                            }
-                        } else if !c.definition.keywords.contains(keyword) {
+                            self.grant_keyword_eot(cid, keyword.clone());
+                        } else if let Some(c) = self.battlefield_find_mut(cid)
+                            && !c.definition.keywords.contains(keyword)
+                        {
                             std::sync::Arc::make_mut(&mut c.definition)
                                 .keywords
                                 .push(keyword.clone());
@@ -3906,16 +3902,12 @@ impl GameState {
                     crate::effect::Duration::EndOfTurn | crate::effect::Duration::EndOfCombat
                 );
                 for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id()
-                        && let Some(c) = self.battlefield_find_mut(cid)
-                    {
+                    if let Some(cid) = ent.as_permanent_id() {
                         if is_eot {
-                            if !c.granted_keywords_eot.contains(&kw)
-                                && !c.definition.keywords.contains(&kw)
-                            {
-                                c.granted_keywords_eot.push(kw.clone());
-                            }
-                        } else if !c.definition.keywords.contains(&kw) {
+                            self.grant_keyword_eot(cid, kw.clone());
+                        } else if let Some(c) = self.battlefield_find_mut(cid)
+                            && !c.definition.keywords.contains(&kw)
+                        {
                             std::sync::Arc::make_mut(&mut c.definition).keywords.push(kw.clone());
                         }
                     }
@@ -5440,11 +5432,8 @@ impl GameState {
                     // Only move cards that are still in the hand and match.
                     if !self.players[p].hand.iter().any(|c| c.id == cid) { continue; }
                     self.move_card_to(cid, &dest, ctx, events);
-                    if *haste
-                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid)
-                        && !c.granted_keywords_eot.contains(&Keyword::Haste)
-                    {
-                        c.granted_keywords_eot.push(Keyword::Haste);
+                    if *haste {
+                        self.grant_keyword_eot(cid, Keyword::Haste);
                     }
                     if *sacrifice_eot {
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
@@ -9042,7 +9031,12 @@ impl GameState {
     pub(crate) fn resolve_selector(&self, sel: &Selector, ctx: &EffectContext) -> Vec<EntityRef> {
         // Multi-candidate selectors run layer-aware filters per permanent;
         // freeze the gather so the whole resolution shares one effect set.
-        self.with_frozen_layers(|g| g.resolve_selector_inner(sel, ctx))
+        // Hand-rolled (no closure/guard) — this sits inside the effect
+        // recursion, where debug-build frame size is at a premium.
+        self.freeze_layers_push();
+        let out = self.resolve_selector_inner(sel, ctx);
+        self.freeze_layers_pop();
+        out
     }
 
     fn resolve_selector_inner(&self, sel: &Selector, ctx: &EffectContext) -> Vec<EntityRef> {

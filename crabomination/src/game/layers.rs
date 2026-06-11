@@ -307,14 +307,26 @@ fn compute_permanent(
     }
     let mut colors = colors_from_card(card);
     let mut keywords = card.definition.keywords.clone();
-    // Merge in EOT-granted keywords so a computed view sees them just like
-    // the layered-effect ones. Cleared at Cleanup via
-    // `clear_end_of_turn_effects`.
-    for kw in &card.granted_keywords_eot {
-        if !keywords.contains(kw) {
-            keywords.push(kw.clone());
-        }
-    }
+    // EOT-granted keywords join the layer walk as synthetic L6 effects at
+    // their grant timestamps (CR 613.7), so a grant resolved *after* a
+    // RemoveAllAbilities / RemoveKeyword effect survives it while an
+    // earlier one is stripped. Untracked grants (tests, legacy snapshots)
+    // default to timestamp 0 — ordered first, like the old pre-merge.
+    // Cleared at Cleanup via `clear_end_of_turn_effects`.
+    let eot_grants: Vec<ContinuousEffect> = card
+        .granted_keywords_eot
+        .iter()
+        .enumerate()
+        .map(|(i, kw)| ContinuousEffect {
+            timestamp: card.granted_keywords_eot_ts.get(i).copied().unwrap_or(0),
+            source: card.id,
+            affected: AffectedPermanents::Source,
+            layer: Layer::L6Ability,
+            sublayer: None,
+            duration: EffectDuration::UntilEndOfTurn,
+            modification: Modification::AddKeyword(kw.clone()),
+        })
+        .collect();
     // CR 122.1b — keyword counters: each keyword counter type on the
     // permanent grants the named keyword while at least one counter of
     // that type is present. Applied as a layer-6 keyword addition.
@@ -350,6 +362,7 @@ fn compute_permanent(
     let mut sorted: Vec<&ContinuousEffect> = effects
         .iter()
         .filter(|e| affects(e, card))
+        .chain(eot_grants.iter())
         .collect();
     sorted.sort_by(|a, b| {
         a.layer.cmp(&b.layer)

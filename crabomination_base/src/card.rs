@@ -2396,6 +2396,13 @@ pub struct CardInstance {
     /// keywords aren't permanently mutated by an EOT pump (engine fix —
     /// push modern_decks batch 24). `has_keyword` checks both vectors.
     pub granted_keywords_eot: Vec<Keyword>,
+    /// Per-grant layer timestamps for `granted_keywords_eot` (same indices;
+    /// CR 613.7). Lets the layer walk order an EOT grant against
+    /// RemoveKeyword / RemoveAllAbilities effects instead of always
+    /// pre-merging it. Grants pushed without a timestamp (tests, legacy
+    /// snapshots) default to 0 — ordered before every tracked effect,
+    /// matching the old pre-merge behavior.
+    pub granted_keywords_eot_ts: Vec<u64>,
     /// Keywords removed until end of turn via `Effect::LoseKeywordThisTurn`
     /// (Shadowspear's "creatures your opponents control lose hexproof and
     /// indestructible until end of turn"). Removal beats printed/granted/
@@ -2600,6 +2607,7 @@ impl CardInstance {
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
             granted_keywords_eot: Vec::new(),
+            granted_keywords_eot_ts: Vec::new(),
             removed_keywords_eot: Vec::new(),
             keyword_counters: std::collections::HashMap::new(),
             may_play_until: None,
@@ -2831,6 +2839,7 @@ impl CardInstance {
         self.loyalty_uses_this_turn = 0;
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
+        self.granted_keywords_eot_ts.clear();
         self.removed_keywords_eot.clear();
         self.granted_flashback_eot = None;
         self.granted_alt_cast_cost_eot = None;
@@ -2976,6 +2985,10 @@ struct CardInstanceWire {
     /// consistent restore. `#[serde(default)]` for back-compat.
     #[serde(default)]
     granted_keywords_eot: Vec<Keyword>,
+    /// Grant timestamps for `granted_keywords_eot` (CR 613.7). Same
+    /// indices; `#[serde(default)]` for back-compat (missing = 0).
+    #[serde(default)]
+    granted_keywords_eot_ts: Vec<u64>,
     /// Until-end-of-turn keyword removals (Shadowspear). Shares
     /// `granted_keywords_eot`'s lifetime. `#[serde(default)]` for back-compat.
     #[serde(default)]
@@ -3111,6 +3124,7 @@ impl serde::Serialize for CardInstance {
                 .map(|(k, v)| (k.clone(), *v))
                 .collect(),
             granted_keywords_eot: self.granted_keywords_eot.clone(),
+            granted_keywords_eot_ts: self.granted_keywords_eot_ts.clone(),
             removed_keywords_eot: self.removed_keywords_eot.clone(),
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
@@ -3201,6 +3215,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.may_play_until = wire.may_play_until;
         c.keyword_counters = wire.keyword_counters.into_iter().collect();
         c.granted_keywords_eot = wire.granted_keywords_eot;
+        c.granted_keywords_eot_ts = wire.granted_keywords_eot_ts;
         c.removed_keywords_eot = wire.removed_keywords_eot;
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;

@@ -131,15 +131,18 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   under-assignment (CR 510.1d; test
   `cr_510_1d_non_trample_under_assignment_falls_back_to_default`) —
   row closed.
-- 🟡 **Layer timestamps** — `CardInstance.battlefield_timestamp` is now
+- ✅ **Layer timestamps** — `CardInstance.battlefield_timestamp` is
   stamped from the shared `next_effect_timestamp` counter on battlefield
   entry (CR 613.7d), attach (613.7e), turn-face-up (613.7f), and transform
   (613.7g); static-ability effects order by `object_timestamp()` so
   static-vs-spell cross-comparison is coherent (tests `cr_613_7_*`).
-  Remaining: `granted_keywords_eot` merges *before* the layer walk so a
-  later "gains flying" loses to an earlier `RemoveAllAbilities`
-  (`layers.rs` — needs the EOT grants to become real L6 continuous
-  effects; ~59 call sites).
+  EOT keyword grants now join the layer walk as synthetic L6 effects at
+  their grant timestamps (`granted_keywords_eot_ts`, stamped by
+  `grant_keyword_eot`), so a later "gains flying" survives an earlier
+  `RemoveAllAbilities` and vice versa (test
+  `cr_613_7_eot_grant_after_lose_all_abilities_survives`). Untracked
+  grants (tests/legacy snapshots) default to timestamp 0 — the old
+  pre-merge ordering.
 - ✅ **Step triggers skip APNAP** (`stack.rs:309-485`). `fire_step_triggers`
   queues in battlefield-`Vec` order despite the comment claiming
   "APNAP-ordered" (CR 603.3b) and bypasses the same-controller
@@ -1680,7 +1683,7 @@ picking an item up.
   copies from every non-stack zone; test
   `cr_704_5e_countered_spell_copy_ceases_to_exist`). Battle / Role / Dungeon
   / Speed SBAs remain; multi-SBA "collapse into one replacement" (704.7).
-- 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3); EOT keyword grants still merge outside the layer walk (see audit P1 row).
+- 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed.)
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. ⚠️ Audit 2026-06-11: the replacements apply inside `adjust_life` but callers still emit `LifeGained` with the pre-replacement amount (triggers fire on suppressed gains), and `SetLifeTotal`/`ExchangeLifeTotals` bypass `adjust_life` entirely — see audit P1.
 - 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded). Remaining: choose-to-draw (121.3); mid-cast face-down draw (121.8); reveal-on-draw (121.9).

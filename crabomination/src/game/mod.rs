@@ -3011,6 +3011,23 @@ impl GameState {
         f(self)
     }
 
+    /// Enter a freeze scope without a closure — pair with
+    /// [`freeze_layers_pop`](Self::freeze_layers_pop). Prefer
+    /// [`with_frozen_layers`](Self::with_frozen_layers) (panic-safe) except
+    /// on recursion-hot paths where the closure+guard frame cost matters.
+    pub(crate) fn freeze_layers_push(&self) {
+        self.layer_freeze.lock().depth += 1;
+    }
+
+    /// Exit a freeze scope opened by [`freeze_layers_push`](Self::freeze_layers_push).
+    pub(crate) fn freeze_layers_pop(&self) {
+        let mut st = self.layer_freeze.lock();
+        st.depth -= 1;
+        if st.depth == 0 {
+            st.memo = None;
+        }
+    }
+
     /// The memoized continuous-effect set when inside a
     /// [`with_frozen_layers`](Self::with_frozen_layers) scope (gathering and
     /// caching it on first use), else `None`.
@@ -3922,6 +3939,20 @@ impl GameState {
     }
 
     /// Allocate a new monotonically-increasing timestamp.
+    /// Grant `kw` to a battlefield permanent until end of turn, stamping
+    /// the grant's layer timestamp (CR 613.7) so it orders correctly
+    /// against RemoveKeyword / RemoveAllAbilities effects. Always records —
+    /// re-granting a keyword the permanent already carries matters when an
+    /// ability-loss effect sits between the two timestamps (Snakeform, then
+    /// Jump: the later grant must survive). The layer walk dedups.
+    pub(crate) fn grant_keyword_eot(&mut self, cid: CardId, kw: crate::card::Keyword) {
+        let ts = self.next_timestamp();
+        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+            c.granted_keywords_eot.push(kw);
+            c.granted_keywords_eot_ts.push(ts);
+        }
+    }
+
     pub(crate) fn next_timestamp(&mut self) -> u64 {
         let ts = self.next_effect_timestamp;
         self.next_effect_timestamp += 1;
