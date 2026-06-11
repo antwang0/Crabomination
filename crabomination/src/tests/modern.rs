@@ -51485,3 +51485,65 @@ fn karplusan_minotaur_upkeep_flips_ping() {
     assert!(g.battlefield_find(minotaur).is_some(), "flip cost always payable");
     assert_eq!(g.players[1].life, 19, "won flip pings for 1");
 }
+
+/// Consuming Aberration's cast trigger mills each opponent through their
+/// first land (faithful reveal-until-land, not the old flat mill 3).
+#[test]
+fn consuming_aberration_mills_until_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::consuming_aberration());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    crate::game::cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.players[1].graveyard.len(), 3, "two bolts revealed, stops at the island");
+}
+
+/// Underworld Breach grants graveyard nonlands escape for their mana cost
+/// plus exiling three other cards.
+#[test]
+fn underworld_breach_grants_escape() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::underworld_breach());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let f1 = g.add_card_to_graveyard(0, catalog::forest());
+    let f2 = g.add_card_to_graveyard(0, catalog::forest());
+    let f3 = g.add_card_to_graveyard(0, catalog::forest());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastEscape {
+        card_id: bolt, exile_cards: vec![f1, f2, f3],
+        target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "bolt escaped");
+    // The three forests are exiled; the resolved bolt returns to the yard.
+    assert_eq!(g.exile.len(), 3, "fuel exiled");
+    assert_eq!(g.players[0].graveyard.len(), 1, "just the resolved bolt");
+}
+
+/// Six grants retrace to graveyard nonland permanents during your turn only.
+#[test]
+fn six_grants_retrace_during_your_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::six());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    // Not your turn → no retrace.
+    let bear_card = g.players[0].graveyard.iter().find(|c| c.id == bear).unwrap().clone();
+    assert!(!g.effective_retrace(&bear_card, 0));
+    g.active_player_idx = 0;
+    assert!(g.effective_retrace(&bear_card, 0));
+    let _ = land;
+    g.perform_action(GameAction::CastRetrace {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bear retraced onto the battlefield");
+}

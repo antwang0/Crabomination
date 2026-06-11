@@ -1839,6 +1839,8 @@ static DECKS: &[Factory] = &[
     super::decks::sphinxs_tutelage,
     super::decks::processor_assault,
     super::decks::karplusan_minotaur,
+    super::decks::underworld_breach,
+    super::decks::six,
     super::decks::spikefield_hazard,
     super::decks::malakir_rebirth,
     super::decks::bala_ged_recovery,

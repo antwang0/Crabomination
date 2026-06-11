@@ -46361,3 +46361,59 @@ pub fn karplusan_minotaur() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Underworld Breach — {1}{R} Enchantment. Each nonland card in your
+/// graveyard has escape: its mana cost plus exile three other cards.
+/// (The printed end-of-turn sacrifice is kept.)
+pub fn underworld_breach() -> CardDefinition {
+    CardDefinition {
+        name: "Underworld Breach",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Each nonland card in your graveyard has escape. The escape cost is equal to the card's mana cost plus exile three other cards from your graveyard.",
+            effect: StaticEffect::GraveyardCardsHaveEscape { exile_count: 3 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::SacrificeSource,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Six — {2}{G} Legendary 2/4 Treefolk. Reach. Attacks: mill three, you may
+/// put a milled land into your hand. During your turn, nonland permanent
+/// cards in your graveyard have retrace.
+pub fn six() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Six",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![on_attack(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: true,
+            pick_filter: Some(SelectionRequirement::Land),
+            take: None,
+            to_battlefield: false,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, nonland permanent cards in your graveyard have retrace.",
+            effect: StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn,
+        }],
+        ..Default::default()
+    }
+}

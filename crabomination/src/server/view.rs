@@ -58,7 +58,7 @@ fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), known_library_top(state, i, viewer_seat))
+                project_player(state, p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), known_library_top(state, i, viewer_seat))
             })
             .collect(),
         battlefield: {
@@ -368,6 +368,7 @@ fn known_library_top(
 
 #[allow(clippy::too_many_arguments)]
 fn project_player(
+    state: &GameState,
     player: &Player,
     player_seat: usize,
     viewer_seat: usize,
@@ -395,7 +396,11 @@ fn project_player(
             size: player.library.len(),
             known_top,
         },
-        graveyard: player.graveyard.iter().map(graveyard_entry).collect(),
+        graveyard: player
+            .graveyard
+            .iter()
+            .map(|c| graveyard_entry(c, state, player_seat))
+            .collect(),
         hand: player
             .hand
             .iter()
@@ -530,7 +535,11 @@ fn format_mana_cost_for_label(c: &crate::mana::ManaCost) -> String {
     c.summary()
 }
 
-fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {
+fn graveyard_entry(
+    card: &CardInstance,
+    state: &GameState,
+    seat: usize,
+) -> GraveyardCardView {
     GraveyardCardView {
         id: card.id,
         name: card.definition.name.to_string(),
@@ -546,8 +555,8 @@ fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {
                 .contains(&crate::card::Keyword::JumpStart)
                 .then(|| card.definition.cost.clone())
         }),
-        retrace: card.definition.has_retrace(),
-        escape: card.definition.has_escape().map(|(c, n)| (c.clone(), n)),
+        retrace: state.effective_retrace(card, seat),
+        escape: state.effective_escape(card, seat),
         bestow_cost: card.definition.has_bestow().cloned(),
         buyback_cost: card.definition.has_buyback().cloned(),
         disturb_cost: card.definition.keywords.iter().find_map(|k| match k {

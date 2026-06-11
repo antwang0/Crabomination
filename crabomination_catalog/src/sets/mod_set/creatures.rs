@@ -9181,11 +9181,10 @@ pub fn consuming_aberration() -> CardDefinition {
         dynamic_pt: Some(DynamicPt::BasePlusOpponentGraveyards { base: 0, creatures_only: false }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
-            // Reveal-until-land approximated as mill 3 (the printed average);
-            // a reveal-until-type mill primitive is tracked in TODO.md.
-            effect: Effect::Mill {
+            // Each opponent reveals until a land card and mills the lot.
+            effect: Effect::MillUntilLands {
                 who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
+                lands: Value::Const(1),
             },
         }],
         ..Default::default()

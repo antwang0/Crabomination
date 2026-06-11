@@ -383,6 +383,12 @@ pub enum StaticEffect {
     /// battlefield, and players can't cast noncreature spells from
     /// graveyards or exile.
     GraveyardExileLockdown,
+    /// Underworld Breach: each nonland card in the controller's graveyard
+    /// has escape — its own mana cost plus exile `exile_count` other cards.
+    GraveyardCardsHaveEscape { exile_count: u32 },
+    /// Six: during the controller's turn, nonland permanent cards in their
+    /// graveyard have retrace (CR 702.55).
+    GraveyardPermanentsHaveRetraceDuringYourTurn,
     /// CR 614.10 — skip-step replacement: "[players/you] skip [their/your]
     /// <step> step(s)." The skipped step never occurs — no turn-based
     /// actions, step triggers, or priority (a skipped untap also skips

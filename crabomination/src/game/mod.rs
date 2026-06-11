@@ -2453,6 +2453,56 @@ impl GameState {
                 && self.graveyard_exile_locked())
     }
 
+    /// The escape cost `card` can be cast for from `p`'s graveyard: its
+    /// printed Escape, else an Underworld-Breach grant (own mana cost +
+    /// exile N) while `p` controls one.
+    pub(crate) fn effective_escape(
+        &self,
+        card: &crate::card::CardInstance,
+        p: usize,
+    ) -> Option<(crate::mana::ManaCost, u32)> {
+        use crate::effect::StaticEffect;
+        if let Some((c, n)) = card.definition.has_escape() {
+            return Some((c.clone(), n));
+        }
+        if card.definition.is_land() {
+            return None;
+        }
+        self.battlefield.iter().find_map(|c| {
+            if c.controller != p {
+                return None;
+            }
+            c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                StaticEffect::GraveyardCardsHaveEscape { exile_count } => {
+                    Some((card.definition.cost.clone(), exile_count))
+                }
+                _ => None,
+            })
+        })
+    }
+
+    /// True when `card` can be retraced from `p`'s graveyard: printed
+    /// Retrace, else Six's "during your turn, nonland permanent cards in
+    /// your graveyard have retrace" grant.
+    pub(crate) fn effective_retrace(&self, card: &crate::card::CardInstance, p: usize) -> bool {
+        use crate::effect::StaticEffect;
+        if card.definition.has_retrace() {
+            return true;
+        }
+        self.active_player_idx == p
+            && !card.definition.is_land()
+            && card.definition.is_permanent()
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
+                        )
+                    })
+            })
+    }
+
     /// True when a static forbids casting `def` from `zone` (Cage: any
     /// spell from graveyards/libraries; Jailer: noncreature spells from
     /// graveyards or exile).
@@ -8306,6 +8356,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::GraveyardLibraryLockdown
             | StaticEffect::GraveyardExileLockdown
+            | StaticEffect::GraveyardCardsHaveEscape { .. }
+            | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             // SkipStep — consulted by `advance_step` (CR 614.10); no layer.
             | StaticEffect::SkipStep { .. }
             // AttackPowerCapByControllerHand — consulted in declare_attackers.

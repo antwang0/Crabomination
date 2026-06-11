@@ -4161,7 +4161,7 @@ impl GameState {
         if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
         }
-        if !card.definition.has_retrace() {
+        if !self.effective_retrace(&card, p) {
             return Err(GameError::SorcerySpeedOnly);
         }
         // Sigarda's Aid — a battlefield static can grant flash timing to
@@ -4250,10 +4250,8 @@ impl GameState {
             .position(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
-        let (escape_cost, exile_count) = card
-            .definition
-            .has_escape()
-            .map(|(c, n)| (c.clone(), n))
+        let (escape_cost, exile_count) = self
+            .effective_escape(&card, p)
             .ok_or(GameError::SorcerySpeedOnly)?;
         // Sigarda's Aid — a battlefield static can grant flash timing to
         // matching spells (Auras + Equipment).
