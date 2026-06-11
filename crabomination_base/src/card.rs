@@ -97,6 +97,8 @@ pub enum CreatureType {
     Rabbit, Raccoon, Mouse, Wolverine, Mole,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
+    // Ravnica Weird (Turn // Burn's 0/1).
+    Weird,
     // Artifact-creature token subtypes (Hangarback Walker's Thopters,
     // Kaladesh Fabricate Servos).
     Thopter,

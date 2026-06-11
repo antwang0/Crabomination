@@ -52982,3 +52982,107 @@ fn steel_of_the_godhead_stacks_both_clauses_on_wu_host() {
     assert!(c.keywords.contains(&Keyword::Lifelink));
     assert!(c.keywords.contains(&Keyword::Unblockable));
 }
+
+// ── Split batch 2: Dusk//Dawn, Never//Return, Turn//Burn, Hide//Seek ────────
+
+/// Dusk sweeps power-3+ creatures; Dawn (aftermath, from the graveyard)
+/// returns the small dead to hand.
+#[test]
+fn dusk_sweeps_big_dawn_returns_small() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::cryptic_serpent());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::dusk_dawn());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dusk");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "power 3+ destroyed");
+    assert!(g.battlefield_find(bear).is_some(), "power 2 survives");
+    // Dawn from the graveyard: the bear (now killed) comes back to hand.
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(&Effect::Destroy { what: crate::card::Selector::EachPermanent(
+        crate::card::SelectionRequirement::Creature) }, &ctx).unwrap();
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dawn from graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bear back to hand");
+    assert!(g.exile.iter().any(|c| c.id == id), "aftermath card exiled");
+}
+
+/// Never destroys a planeswalker; Return (aftermath) exiles a graveyard card
+/// and mints a 2/2 Zombie.
+#[test]
+fn never_kills_planeswalker_return_exiles_and_mints_zombie() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_hero_of_dominaria());
+    let id = g.add_card_to_hand(0, catalog::never_return());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(pw));
+    assert!(g.battlefield_find(pw).is_none(), "planeswalker destroyed");
+    // Return from the graveyard, exiling the dead planeswalker card.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let bf = g.battlefield.len();
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: Some(Target::Permanent(pw)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Return from graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == pw), "graveyard card exiled");
+    assert_eq!(g.battlefield.len(), bf + 1, "Zombie minted");
+}
+
+/// Turn resets the target to a red 0/1 Weird with no abilities until end of
+/// turn.
+#[test]
+fn turn_resets_creature_to_red_0_1_weird() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::mantis_rider());
+    let id = g.add_card_to_hand(0, catalog::turn_burn());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(flyer));
+    let c = g.computed_permanent(flyer).unwrap();
+    assert_eq!((c.power, c.toughness), (0, 1), "base 0/1");
+    assert!(!c.keywords.contains(&Keyword::Flying), "abilities lost");
+    assert_eq!(c.colors, vec![Color::Red], "became red");
+    assert!(c.subtypes.creature_types.contains(&crate::card::CreatureType::Weird));
+}
+
+/// Hide bottoms an artifact; Seek (right half) exiles a card from the
+/// opponent's library and gains its mana value in life.
+#[test]
+fn hide_bottoms_artifact_seek_exiles_and_gains_mv() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::hide_seek());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, id, Target::Permanent(rock));
+    assert!(g.battlefield_find(rock).is_none(), "artifact off the battlefield");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(rock), "on the bottom");
+
+    let seek = g.add_card_to_hand(0, catalog::hide_seek());
+    let fatty = g.add_card_to_library(1, catalog::cryptic_serpent()); // MV 7 printed {5}{U}{U}
+    let mv = catalog::cryptic_serpent().cost.cmc() as i32;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(fatty))]));
+    let before = g.players[0].life;
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: seek, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Seek at the opponent");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fatty), "library card exiled");
+    assert_eq!(g.players[0].life, before + mv, "gained MV life");
+}

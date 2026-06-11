@@ -48161,3 +48161,154 @@ pub fn steel_of_the_godhead() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Split-card batch 2 (CR 709 / 702.102 Fuse / 702.127 Aftermath) ───────────
+
+/// Dusk // Dawn — {2}{W}{W} // {3}{W}{W} Sorcery, Aftermath. Dusk destroys
+/// all power-3+ creatures; Dawn returns all power-≤2 creature cards from
+/// your graveyard to your hand.
+pub fn dusk_dawn() -> CardDefinition {
+    CardDefinition {
+        name: "Dusk // Dawn",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(3)),
+            ),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), w(), w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Move {
+                    what: Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::PowerAtMost(2)),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Never // Return — {1}{B}{B} // {3}{B} Sorcery, Aftermath. Never destroys a
+/// creature or planeswalker; Return exiles a graveyard card and makes a 2/2
+/// black Zombie.
+pub fn never_return() -> CardDefinition {
+    let zombie = zombie_2_2_black_token();
+    CardDefinition {
+        name: "Never // Return",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Any),
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: zombie,
+                    },
+                ]),
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Turn // Burn — {2}{U} // {1}{R} Instant, Fuse. Turn: target creature
+/// becomes a red 0/1 Weird losing all abilities EOT; Burn: 2 damage to any
+/// target.
+pub fn turn_burn() -> CardDefinition {
+    CardDefinition {
+        name: "Turn // Burn",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ResetCreature {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(0),
+                toughness: Value::Const(1),
+                creature_types: vec![CreatureType::Weird],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeColor {
+                what: target_filtered(SelectionRequirement::Creature),
+                colors: vec![Color::Red],
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), r()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Any),
+                    amount: Value::Const(2),
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Hide // Seek — {R}{W} // {W}{B} Instant. Hide bottoms an artifact or
+/// enchantment; Seek exiles a card from a target opponent's library, gaining
+/// life equal to its mana value (the searched player's decider answers the
+/// pick).
+pub fn hide_seek() -> CardDefinition {
+    CardDefinition {
+        name: "Hide // Seek",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: crate::effect::LibraryPosition::Bottom,
+            },
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[w(), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::Search {
+                        who: PlayerRef::Target(0),
+                        filter: SelectionRequirement::Any,
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::ManaValueOf(Box::new(Selector::LastMoved)),
+                    },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
