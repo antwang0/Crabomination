@@ -738,6 +738,9 @@ pub enum CumulativeUpkeepCost {
     Mana(crate::mana::ManaCost),
     Life(u32),
     Sacrifice(Box<SelectionRequirement>),
+    /// "Cumulative upkeep—Flip a coin." Always payable; each flip fires the
+    /// controller's win/lose-a-flip triggers (Karplusan Minotaur).
+    FlipCoin,
 }
 
 impl CumulativeUpkeepCost {
@@ -748,6 +751,7 @@ impl CumulativeUpkeepCost {
             CumulativeUpkeepCost::Mana(c) => c.summary(),
             CumulativeUpkeepCost::Life(n) => format!("Pay {n} life"),
             CumulativeUpkeepCost::Sacrifice(_) => "Sacrifice".into(),
+            CumulativeUpkeepCost::FlipCoin => "Flip a coin".into(),
         }
     }
 }
@@ -757,6 +761,9 @@ impl CumulativeUpkeepCost {
 pub enum SelectionRequirement {
     Any,
     Player,
+    /// A player who is an opponent of the effect's controller ("target
+    /// opponent").
+    OpponentPlayer,
     Creature,
     Artifact,
     Enchantment,
@@ -1116,6 +1123,7 @@ impl SelectionRequirement {
 fn controller_suffix(r: &SelectionRequirement) -> Option<String> {
     match r {
         SelectionRequirement::ControlledByYou => Some("you control".to_string()),
+        SelectionRequirement::OpponentPlayer => Some("opponent".to_string()),
         SelectionRequirement::ControlledByOpponent => Some("an opponent controls".to_string()),
         _ => None,
     }
@@ -1555,6 +1563,10 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         pay: u32,
     },
+    /// "As an additional cost to cast this spell, put a card an opponent
+    /// owns from exile into that player's graveyard." (Process — Processor
+    /// Assault.)
+    ProcessExile,
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.
@@ -1872,13 +1884,18 @@ impl CardDefinition {
                 Vec::new()
             },
             changeling: self.is_creature() && self.keywords.contains(&Keyword::Changeling),
+            land_ability: false,
         }
     }
 
     /// Spend-restriction context for activating an ability of this card
     /// ("… or activate abilities of artifacts" — Power Depot).
     pub fn ability_spend_kind(&self) -> crate::mana::SpellKind {
-        crate::mana::SpellKind { artifact: self.is_artifact(), ..Default::default() }
+        crate::mana::SpellKind {
+            artifact: self.is_artifact(),
+            land_ability: self.is_land(),
+            ..Default::default()
+        }
     }
 
     // Vehicles (CR 301.7) carry printed P/T even though they aren't

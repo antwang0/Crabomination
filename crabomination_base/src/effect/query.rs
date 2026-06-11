@@ -199,6 +199,7 @@ impl Effect {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
             Effect::ExchangeControl { a, b } => sel_has_target(a) || sel_has_target(b),
+            Effect::ExchangeControlChoosing { with, .. } => sel_has_target(with),
             Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
@@ -218,9 +219,11 @@ impl Effect {
             }
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount }
+            | Effect::MillUntilLands { who, lands: amount }
             | Effect::ExileTopOfLibrary { who, amount, .. } => {
                 sel_has_target(who) || value_has_target(amount)
             }
+            Effect::MillTwoRepeatSharedColor { who } => sel_has_target(who),
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who } => sel_has_target(who),
@@ -506,6 +509,7 @@ impl Effect {
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
             Effect::ExchangeControl { a, .. } => sel_filter(a),
+            Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
             | Effect::MillHalf { who, .. }
@@ -573,6 +577,8 @@ impl Effect {
             | Effect::SetMaxHandSize { who, .. }
             | Effect::Draw { who, .. }
             | Effect::Mill { who, .. }
+            | Effect::MillUntilLands { who, .. }
+            | Effect::MillTwoRepeatSharedColor { who }
             | Effect::ExileTopOfLibrary { who, .. } => sel_filter(who),
             Effect::Drain { to, .. } => sel_filter(to),
             Effect::AddPoison { who, .. } => sel_filter(who),
@@ -848,7 +854,9 @@ impl Effect {
                 "counter target spell".into()
             }
             Effect::Fight { .. } => "fight".into(),
-            Effect::ExchangeControl { .. } => "exchange control".into(),
+            Effect::ExchangeControl { .. } | Effect::ExchangeControlChoosing { .. } => {
+                "exchange control".into()
+            }
             Effect::CreateToken { count, definition, .. } => {
                 let n = match count {
                     Value::Const(n) => *n,
@@ -912,6 +920,8 @@ impl Effect {
                 Value::Const(n) => format!("mill {n}"),
                 _ => "mill".into(),
             },
+            Effect::MillUntilLands { .. } => "mill until lands".into(),
+            Effect::MillTwoRepeatSharedColor { .. } => "mill two, maybe repeat".into(),
             Effect::ExileTopOfLibrary { amount, .. } => match amount {
                 Value::Const(n) => format!("exile top {n} of library"),
                 _ => "exile top of library".into(),
@@ -983,6 +993,8 @@ impl Effect {
             | Effect::SetMaxHandSize { .. }
             | Effect::Draw { .. }
             | Effect::Mill { .. }
+            | Effect::MillUntilLands { .. }
+            | Effect::MillTwoRepeatSharedColor { .. }
             | Effect::ExileTopOfLibrary { .. }
             | Effect::MillHalf { .. }
             | Effect::DiscardHalf { .. }
@@ -1031,6 +1043,7 @@ impl Effect {
             | Effect::BecomeBasicLand { .. }
             | Effect::Attach { .. }
             | Effect::ExchangeControl { .. }
+            | Effect::ExchangeControlChoosing { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
@@ -1241,6 +1254,7 @@ impl Effect {
                 Effect::ExchangeControl { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
+                Effect::ExchangeControlChoosing { with, .. } => sel_find(with, slot),
                 Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_find(who, slot),
                 Effect::LoseHalfLife { who, .. }
                 | Effect::MillHalf { who, .. }
@@ -1250,6 +1264,8 @@ impl Effect {
                 Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
                 Effect::Draw { who, .. }
                 | Effect::Mill { who, .. }
+                | Effect::MillUntilLands { who, .. }
+                | Effect::MillTwoRepeatSharedColor { who }
                 | Effect::ExileTopOfLibrary { who, .. } => sel_find(who, slot),
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),

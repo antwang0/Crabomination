@@ -51307,3 +51307,181 @@ fn silundi_vision_digs_for_instant() {
         "found the instant"
     );
 }
+
+// ── Follow-ups batch A: lockdowns, land swaps, processors, mill engines ──────
+
+/// Sunken Citadel's second ability adds two restricted mana that fund land
+/// abilities but not spells.
+#[test]
+fn sunken_citadel_restricted_mana_is_land_abilities_only() {
+    use crate::mana::{ManaCost, SpellKind};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::sunken_citadel());
+    g.battlefield_find_mut(land).unwrap().chosen_color = Some(crate::mana::Color::Red);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, x_value: None,
+    }).unwrap();
+    let pool = &mut g.players[0].mana_pool;
+    assert_eq!(pool.restricted_total(), 2, "two restricted red");
+    let cost = ManaCost::new(vec![crate::mana::generic(2).clone()]);
+    assert!(pool.pay_for_spell(&cost, &SpellKind::default()).is_err(), "can't fund a spell");
+    let land_kind = SpellKind { land_ability: true, ..Default::default() };
+    assert!(pool.pay_for_spell(&cost, &land_kind).is_ok(), "funds a land ability");
+}
+
+/// Soulless Jailer blocks permanent reanimation from graveyards and
+/// noncreature casts from graveyards/exile, but not creature flashback-style
+/// casts of creatures or hand casts.
+#[test]
+fn soulless_jailer_locks_graveyard_entries_and_noncreature_recasts() {
+    use crate::effect::{Effect, ZoneDest};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::soulless_jailer());
+    // A permanent card can't enter from the graveyard…
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(
+        &Effect::Move {
+            what: crate::effect::Selector::Target(0),
+            to: ZoneDest::Battlefield { controller: crate::effect::PlayerRef::You, tapped: false },
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "reanimation blocked");
+    // …and a noncreature flashback cast is refused.
+    let dart = g.add_card_to_graveyard(0, catalog::lava_dart());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.add_card_to_battlefield(0, catalog::mountain());
+    assert!(
+        g.perform_action(GameAction::CastFlashback {
+            card_id: dart, target: Some(Target::Player(1)), additional_targets: vec![],
+            mode: None, x_value: None,
+        })
+        .is_err(),
+        "noncreature graveyard cast blocked"
+    );
+}
+
+/// Vedalken Plotter's ETB swaps control of your land and an opponent's.
+#[test]
+fn vedalken_plotter_swaps_land_control() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::mountain());
+    let theirs = g.add_card_to_battlefield(1, catalog::island());
+    let plotter = g.add_card_to_hand(0, catalog::vedalken_plotter());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    crate::game::cast_at(&mut g, plotter, Target::Permanent(theirs));
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1, "my land handed over");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "their land taken");
+}
+
+/// Oblivion Sower's cast trigger exiles four and takes the opponent's lands
+/// from exile.
+#[test]
+fn oblivion_sower_takes_exiled_lands() {
+    let mut g = two_player_game();
+    // Top four of opponent's library: two lands, two spells.
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    let sower = g.add_card_to_hand(0, catalog::oblivion_sower());
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    crate::game::cast(&mut g, sower);
+    let my_lands = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land() && c.owner == 1)
+        .count();
+    assert_eq!(my_lands, 2, "both exiled lands stolen");
+    assert!(g.battlefield_find(sower).is_some(), "Sower resolved to the battlefield");
+}
+
+/// Mind Grind mills each opponent down to X lands revealed.
+#[test]
+fn mind_grind_mills_until_x_lands() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::lightning_bolt());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let grind = g.add_card_to_hand(0, catalog::mind_grind());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: grind, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).unwrap();
+    drain_stack(&mut g);
+    // bolt, island, bolt, island — stops at the second land.
+    assert_eq!(g.players[1].graveyard.len(), 4, "milled through the second land");
+}
+
+/// Sphinx's Tutelage repeats while the two milled nonlands share a color.
+#[test]
+fn sphinxs_tutelage_repeats_on_shared_color() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sphinxs_tutelage());
+    // Opponent's top: two red spells (shared color → repeat), then a land
+    // pair (no nonland pair → stop).
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::lightning_bolt());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 4, "two bolts, repeat, two islands, stop");
+}
+
+/// Processor Assault wants an opponent-owned exile card as fuel.
+#[test]
+fn processor_assault_processes_exile_card() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let assault = g.add_card_to_hand(0, catalog::processor_assault());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    // No opponent card in exile → cast is rejected.
+    assert!(g
+        .perform_action(GameAction::CastSpell {
+            card_id: assault, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err());
+    // Exile an opponent-owned card; the cast processes it and burns for 5.
+    let mut fuel = crate::card::CardInstance::new(g.next_id(), catalog::island(), 1);
+    fuel.owner = 1;
+    let fuel_id = fuel.id;
+    g.exile.push(fuel);
+    crate::game::cast_at(&mut g, assault, Target::Permanent(bear));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == fuel_id), "processed to gy");
+    assert!(g.battlefield_find(bear).is_none(), "Serra Angel burned for 5");
+}
+
+/// Karplusan Minotaur's cumulative upkeep flips coins; each win/loss pings.
+#[test]
+fn karplusan_minotaur_upkeep_flips_ping() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let minotaur = g.add_card_to_battlefield(0, catalog::karplusan_minotaur());
+    // One age counter → one flip; script a win, then aim the ping.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+    ]));
+    let events = g.process_cumulative_upkeep();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(minotaur).is_some(), "flip cost always payable");
+    assert_eq!(g.players[1].life, 19, "won flip pings for 1");
+}

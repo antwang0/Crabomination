@@ -349,6 +349,9 @@ pub enum SpendRestriction {
     /// per-type restriction without Cavern's uncounterable rider
     /// (Eldrazi Temple).
     CreatureOfType(crate::card::CreatureType),
+    /// "Spend this mana only to activate abilities of land sources."
+    /// (Sunken Citadel.)
+    LandAbilitiesOnly,
 }
 
 impl SpendRestriction {
@@ -357,6 +360,7 @@ impl SpendRestriction {
         match self {
             SpendRestriction::InstantSorceryOnly => kind.instant_or_sorcery,
             SpendRestriction::ArtifactOnly => kind.artifact,
+            SpendRestriction::LandAbilitiesOnly => kind.land_ability,
             SpendRestriction::CreatureOfTypeUncounterable(t)
             | SpendRestriction::CreatureOfType(t) => {
                 kind.changeling || kind.creature_types.contains(&t)
@@ -381,6 +385,8 @@ pub struct SpellKind {
     pub creature_types: Vec<crate::card::CreatureType>,
     /// The spell is a Changeling (every creature type, CR 702.73).
     pub changeling: bool,
+    /// Activating an ability of a land source (Sunken Citadel).
+    pub land_ability: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

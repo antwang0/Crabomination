@@ -1534,6 +1534,11 @@ pub enum Effect {
     /// Aura Thief, Switcheroo). If either selector resolves to no permanent
     /// the effect no-ops. Both permanents change controller simultaneously.
     ExchangeControl { a: Selector, b: Selector },
+    /// CR 701.12 — exchange control of a permanent you control matching
+    /// `filter` (chosen at resolution: `Decision::ChooseCards` for a
+    /// `wants_ui` controller, lowest CardId otherwise) and the permanent
+    /// `with` resolves to. Vedalken Plotter's ETB land swap.
+    ExchangeControlChoosing { filter: SelectionRequirement, with: Selector },
     GainLife  { who: Selector, amount: Value },
     LoseLife  { who: Selector, amount: Value },
     /// CR 701.10d — "double a player's life total." Each player the selector
@@ -1649,6 +1654,14 @@ pub enum Effect {
     /// `size`.
     SetMaxHandSize { who: Selector, size: Value },
     Mill    { who: Selector, amount: Value },
+    /// Reveal cards from the top of each resolved player's library until
+    /// `lands` land cards are revealed, then put all revealed cards into
+    /// that player's graveyard (Mind Grind, Consuming Aberration's trigger).
+    MillUntilLands { who: Selector, lands: Value },
+    /// CR 701.13 with a repeat rider — the resolved player mills two cards;
+    /// if two nonland cards sharing a color were milled this way, repeat
+    /// (Sphinx's Tutelage).
+    MillTwoRepeatSharedColor { who: Selector },
     /// Each player the selector resolves to exiles the top `amount` cards of
     /// their own library (CR 702.115 Ingest, processed-card exile, etc.).
     /// Mirrors `Mill` but routes to the exile zone instead of the graveyard.

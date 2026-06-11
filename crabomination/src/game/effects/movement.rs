@@ -387,18 +387,22 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) {
-        // Grafdigger's Cage — creature cards in graveyards and libraries
-        // can't enter the battlefield.
-        if matches!(dest, ZoneDest::Battlefield { .. })
-            && self.graveyard_library_locked()
-            && self.players.iter().any(|pl| {
+        // Grafdigger's Cage / Soulless Jailer — locked cards in graveyards
+        // and libraries can't enter the battlefield.
+        if matches!(dest, ZoneDest::Battlefield { .. }) {
+            use crate::card::Zone;
+            let blocked = self.players.iter().any(|pl| {
                 pl.graveyard
                     .iter()
-                    .chain(pl.library.iter())
-                    .any(|c| c.id == cid && c.definition.is_creature())
-            })
-        {
-            return;
+                    .map(|c| (c, Zone::Graveyard))
+                    .chain(pl.library.iter().map(|c| (c, Zone::Library)))
+                    .any(|(c, zone)| {
+                        c.id == cid && self.battlefield_entry_from_zone_blocked(&c.definition, zone)
+                    })
+            });
+            if blocked {
+                return;
+            }
         }
         // Resolve any selector-based player refs in the destination *now*,
         // while the card is still findable in its source zone — otherwise

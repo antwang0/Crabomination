@@ -1966,6 +1966,61 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MillUntilLands { who, lands } => {
+                // Reveal from the top until `lands` land cards, then put all
+                // revealed cards into the graveyard (Mind Grind).
+                let want = self.evaluate_value(lands, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        let mut found = 0usize;
+                        while found < want && !self.players[p].library.is_empty() {
+                            let card = self.players[p].library.remove(0);
+                            if card.definition.is_land() {
+                                found += 1;
+                            }
+                            let cid = card.id;
+                            if !self.route_to_graveyard(card, events) {
+                                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            }
+                            self.last_moved_cards.push(cid);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::MillTwoRepeatSharedColor { who } => {
+                // Mill two; repeat while two nonland milled cards share a
+                // color (Sphinx's Tutelage). Capped at the library size so a
+                // degenerate loop always terminates.
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        loop {
+                            let mut milled_colors: Vec<Vec<crate::mana::Color>> = Vec::new();
+                            for _ in 0..2 {
+                                if self.players[p].library.is_empty() {
+                                    break;
+                                }
+                                let card = self.players[p].library.remove(0);
+                                if !card.definition.is_land() {
+                                    milled_colors.push(card.definition.cost.colors());
+                                }
+                                let cid = card.id;
+                                if !self.route_to_graveyard(card, events) {
+                                    events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                                }
+                            }
+                            let repeat = milled_colors.len() == 2
+                                && milled_colors[0].iter().any(|c| milled_colors[1].contains(c));
+                            if !repeat || self.players[p].library.is_empty() {
+                                break;
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileTopOfLibrary { who, amount, link_to_source, face_down } => {
                 // CR 702.115 Ingest etc. — like Mill but routes to exile.
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
@@ -4293,6 +4348,70 @@ impl GameState {
                             c.controller = ctrl_a;
                             c.summoning_sick = true;
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExchangeControlChoosing { filter, with } => {
+                // CR 701.12 — the controller picks one of their own matching
+                // permanents, then swaps controllers with the resolved
+                // target (Vedalken Plotter).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(target) = self
+                    .resolve_selector(with, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let mine = crate::effect::Selector::EachPermanent(
+                    filter.clone().and(crate::card::SelectionRequirement::ControlledByYou),
+                );
+                let candidates: Vec<CardId> = self
+                    .resolve_selector(&mine, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|&id| id != target)
+                    .collect();
+                let Some(first) = candidates.first().copied() else { return Ok(()) };
+                let chosen = if candidates.len() > 1 {
+                    let cands = candidates
+                        .iter()
+                        .filter_map(|&id| {
+                            self.battlefield_find(id)
+                                .map(|c| (id, c.definition.name.to_string()))
+                        })
+                        .collect();
+                    match self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Exchange control of which permanent?".into(),
+                        candidates: cands,
+                        min: 1,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(ids) => {
+                            ids.into_iter().find(|id| candidates.contains(id)).unwrap_or(first)
+                        }
+                        _ => first,
+                    }
+                } else {
+                    first
+                };
+                // CR 701.12 / 302.6 — simultaneous swap; both sides pick up
+                // summoning sickness under their new controller.
+                let ctrl_a = self.battlefield_find(chosen).map(|c| c.controller);
+                let ctrl_b = self.battlefield_find(target).map(|c| c.controller);
+                if let (Some(ctrl_a), Some(ctrl_b)) = (ctrl_a, ctrl_b)
+                    && ctrl_a != ctrl_b
+                {
+                    if let Some(c) = self.battlefield_find_mut(chosen) {
+                        c.controller = ctrl_b;
+                        c.summoning_sick = true;
+                    }
+                    if let Some(c) = self.battlefield_find_mut(target) {
+                        c.controller = ctrl_a;
+                        c.summoning_sick = true;
                     }
                 }
                 Ok(())

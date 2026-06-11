@@ -951,6 +951,9 @@ impl GameState {
         match req {
             R::Any => true,
             R::Player => matches!(target, Target::Player(_)),
+            R::OpponentPlayer => {
+                matches!(target, Target::Player(p) if !self.same_team(*p, controller))
+            }
             R::And(a, b) => self.evaluate_requirement_static(a, target, controller, source)
                 && self.evaluate_requirement_static(b, target, controller, source),
             R::Or(a, b) => self.evaluate_requirement_static(a, target, controller, source)
@@ -1255,7 +1258,7 @@ impl GameState {
         use SelectionRequirement as R;
         match req {
             R::Any => true,
-            R::Player => false,
+            R::Player | R::OpponentPlayer => false,
             R::And(a, b) => {
                 self.evaluate_requirement_on_card(a, card, controller)
                     && self.evaluate_requirement_on_card(b, card, controller)

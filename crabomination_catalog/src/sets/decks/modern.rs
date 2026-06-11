@@ -46144,3 +46144,220 @@ pub fn skyclave_cleric() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: follow-ups batch A (audit "Noticed" list) ──────────────────
+
+/// Sunken Citadel — Land — Cave. Enters tapped; as it enters, choose a color.
+/// {T}: add one of that color. {T}: add two of that color, spend only to
+/// activate abilities of land sources.
+pub fn sunken_citadel() -> CardDefinition {
+    use crate::mana::SpendRestriction;
+    let chosen = || Effect::AddMana {
+        who: PlayerRef::You,
+        pool: ManaPayload::Restricted(
+            Box::new(ManaPayload::ChosenColorOfSource),
+            SpendRestriction::LandAbilitiesOnly,
+        ),
+    };
+    CardDefinition {
+        name: "Sunken Citadel",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::ChosenColorOfSource,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![chosen(), chosen()]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Soulless Jailer — {2} 0/4 Phyrexian Golem. Permanent cards in graveyards
+/// can't enter the battlefield; players can't cast noncreature spells from
+/// graveyards or exile.
+pub fn soulless_jailer() -> CardDefinition {
+    CardDefinition {
+        name: "Soulless Jailer",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Permanent cards in graveyards can't enter the battlefield. Players can't cast noncreature spells from graveyards or exile.",
+            effect: StaticEffect::GraveyardExileLockdown,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vedalken Plotter — {2}{U} 1/1 Vedalken Wizard. ETB: exchange control of
+/// target land you control and target land an opponent controls.
+pub fn vedalken_plotter() -> CardDefinition {
+    CardDefinition {
+        name: "Vedalken Plotter",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::ExchangeControlChoosing {
+            filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            with: target_filtered(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Oblivion Sower — {6} 5/8 Eldrazi. Cast: target opponent exiles the top
+/// four cards of their library, then you may put any number of land cards
+/// that player owns from exile onto the battlefield under your control.
+pub fn oblivion_sower() -> CardDefinition {
+    CardDefinition {
+        name: "Oblivion Sower",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 8,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ExileTopOfLibrary {
+                    who: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::OpponentPlayer,
+                    },
+                    amount: Value::Const(4),
+                    link_to_source: false,
+                    face_down: false,
+                },
+                Effect::Move {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::Target(0),
+                        zone: crate::card::Zone::Exile,
+                        filter: SelectionRequirement::Land,
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mind Grind — {X}{U}{B} Sorcery. Each opponent reveals cards from the top
+/// of their library until they reveal X land cards, then mills them all.
+pub fn mind_grind() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Grind",
+        cost: cost(&[x(), u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::MillUntilLands {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            lands: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Sphinx's Tutelage — {2}{U} Enchantment. Whenever you draw a card, target
+/// opponent mills two; repeat while two milled nonland cards share a color.
+/// {5}{U}: Draw a card, then discard a card.
+pub fn sphinxs_tutelage() -> CardDefinition {
+    CardDefinition {
+        name: "Sphinx's Tutelage",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::MillTwoRepeatSharedColor {
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u()]),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Processor Assault — {1}{R} Sorcery. Devoid. Additional cost: put a card
+/// an opponent owns from exile into their graveyard. 5 damage to target
+/// creature.
+pub fn processor_assault() -> CardDefinition {
+    CardDefinition {
+        name: "Processor Assault",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Devoid],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::ProcessExile],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}
+
+/// Karplusan Minotaur — {2}{R}{R} 3/3. Cumulative upkeep—flip a coin. Win a
+/// flip: 1 damage to any target; lose a flip: 1 damage to a target chosen
+/// by an opponent (engine: the controller picks both).
+pub fn karplusan_minotaur() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Karplusan Minotaur",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::CumulativeUpkeep(
+            crate::card::CumulativeUpkeepCost::FlipCoin,
+        )],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::WonCoinFlip, EventScope::YourControl),
+                effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LostCoinFlip, EventScope::YourControl),
+                effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}

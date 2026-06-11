@@ -1254,7 +1254,10 @@ impl GameState {
         // consumed permanent type on success.
         let p = self.priority.player_with_priority;
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
-            && !self.graveyard_library_locked()
+            && !self.players[p].graveyard.iter().any(|c| {
+                c.id == card_id
+                    && self.cast_from_zone_blocked(&c.definition, crate::card::Zone::Graveyard)
+            })
             && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
         {
             let pos = self.players[p].graveyard.iter().position(|c| c.id == card_id).unwrap();
@@ -1283,7 +1286,9 @@ impl GameState {
         // static covers the card (Mystic Forge). Hop the card into hand for
         // the normal cast pipeline; restore it to the top on failure.
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
-            && !self.graveyard_library_locked()
+            && !self.players[p].library.first().is_some_and(|c| {
+                self.cast_from_zone_blocked(&c.definition, crate::card::Zone::Library)
+            })
             && self.library_top_playable(p, card_id)
         {
             let card = self.players[p].library.remove(0);
@@ -3241,6 +3246,10 @@ impl GameState {
             // in hand the pay half is folded into the spell's cost
             // (`extra_cost_for_spell`) and mana payment enforces it.
             A::RevealFromHandOrPay { .. } => true,
+            A::ProcessExile => self
+                .exile
+                .iter()
+                .any(|c| !self.same_team(c.owner, p)),
         })
     }
 
@@ -3418,6 +3427,22 @@ impl GameState {
                 // Knowledge-only when a matching card is in hand; the pay
                 // half was already folded into the cost.
                 A::RevealFromHandOrPay { .. } => {}
+                A::ProcessExile => {
+                    // Auto-pick the lowest-MV opponent-owned exile card and
+                    // process it into its owner's graveyard.
+                    let pick = self
+                        .exile
+                        .iter()
+                        .filter(|c| !self.same_team(c.owner, p))
+                        .min_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                    if let Some(id) = pick
+                        && let Some(pos) = self.exile.iter().position(|c| c.id == id)
+                    {
+                        let card = self.exile.remove(pos);
+                        self.route_to_graveyard(card, &mut events);
+                    }
+                }
             }
         }
         (events, sac_power)
@@ -3848,15 +3873,16 @@ impl GameState {
         card_id: CardId,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        if self.graveyard_library_locked() {
-            return Err(GameError::CardNotInHand(card_id));
-        }
         let graveyard_pos = self.players[p]
             .graveyard
             .iter()
             .position(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
+        // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
+        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         let disturb_cost = card
             .definition
             .keywords
@@ -3918,10 +3944,6 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        // Grafdigger's Cage — no casting from graveyards.
-        if self.graveyard_library_locked() {
-            return Err(GameError::CardNotInHand(card_id));
-        }
         // CR 601.2g float-spend choice (None until answered).
         let spend_float = self.pending_cast_spend_float.take();
 
@@ -3933,6 +3955,10 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
 
         let card = self.players[p].graveyard[graveyard_pos].clone();
+        // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
+        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
 
         // The card must have Flashback — printed, or granted until end of
         // turn (the SOS "Flashback" instant) — or Jump-start (CR 702.103:
@@ -4125,16 +4151,16 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        // Grafdigger's Cage — no casting from graveyards.
-        if self.graveyard_library_locked() {
-            return Err(GameError::CardNotInHand(card_id));
-        }
         let graveyard_pos = self.players[p]
             .graveyard
             .iter()
             .position(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
+        // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
+        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         if !card.definition.has_retrace() {
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -4422,12 +4448,22 @@ impl GameState {
         exile_after: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Zone;
-        // Grafdigger's Cage — no casting from graveyards or libraries
-        // (free-cast paths included).
-        if matches!(source_zone, Zone::Graveyard | Zone::Library)
-            && self.graveyard_library_locked()
-        {
-            return Err(GameError::CardNotInHand(card_id));
+        // Grafdigger's Cage / Soulless Jailer — no casting from locked
+        // zones (free-cast paths included).
+        if matches!(source_zone, Zone::Graveyard | Zone::Library | Zone::Exile) {
+            let blocked = match source_zone {
+                Zone::Exile => self.exile.iter().find(|c| c.id == card_id),
+                _ => self.players.iter().find_map(|pl| {
+                    pl.graveyard
+                        .iter()
+                        .chain(pl.library.iter())
+                        .find(|c| c.id == card_id)
+                }),
+            }
+            .is_some_and(|c| self.cast_from_zone_blocked(&c.definition, source_zone));
+            if blocked {
+                return Err(GameError::CardNotInHand(card_id));
+            }
         }
         // Lift the card out of the named zone. Owner-based zones
         // (graveyard, hand, library) walk all players to locate it.

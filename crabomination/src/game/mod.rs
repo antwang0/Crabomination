@@ -1967,6 +1967,19 @@ impl GameState {
                         false
                     }
                 }
+                CumulativeUpkeepCost::FlipCoin => {
+                    // Always payable — one flip per age counter; each fires
+                    // the controller's win/lose-a-flip triggers (CR 705.1).
+                    // Events are returned for the caller's single dispatch.
+                    for _ in 0..n {
+                        if self.flip_one_coin(active) {
+                            events.push(crate::game::GameEvent::CoinFlipWon { player: active });
+                        } else {
+                            events.push(crate::game::GameEvent::CoinFlipLost { player: active });
+                        }
+                    }
+                    true
+                }
                 CumulativeUpkeepCost::Sacrifice(filter) => {
                     // Need N matching permanents (other than the source) to pay.
                     let cands = self.sacrifice_candidates(active, filter, Some(id));
@@ -2409,6 +2422,50 @@ impl GameState {
                 .iter()
                 .any(|sa| matches!(sa.effect, StaticEffect::GraveyardLibraryLockdown))
         })
+    }
+
+    /// Soulless Jailer — true while any battlefield permanent locks
+    /// graveyard entries and graveyard/exile noncreature casts.
+    pub(crate) fn graveyard_exile_locked(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::GraveyardExileLockdown))
+        })
+    }
+
+    /// True when a static forbids `def` entering the battlefield from
+    /// `zone` (Cage: creature cards from graveyards/libraries; Jailer:
+    /// permanent cards from graveyards).
+    pub(crate) fn battlefield_entry_from_zone_blocked(
+        &self,
+        def: &crate::card::CardDefinition,
+        zone: crate::card::Zone,
+    ) -> bool {
+        use crate::card::Zone;
+        (def.is_creature()
+            && matches!(zone, Zone::Graveyard | Zone::Library)
+            && self.graveyard_library_locked())
+            || (def.is_permanent()
+                && zone == Zone::Graveyard
+                && self.graveyard_exile_locked())
+    }
+
+    /// True when a static forbids casting `def` from `zone` (Cage: any
+    /// spell from graveyards/libraries; Jailer: noncreature spells from
+    /// graveyards or exile).
+    pub(crate) fn cast_from_zone_blocked(
+        &self,
+        def: &crate::card::CardDefinition,
+        zone: crate::card::Zone,
+    ) -> bool {
+        use crate::card::Zone;
+        (matches!(zone, Zone::Graveyard | Zone::Library) && self.graveyard_library_locked())
+            || (!def.is_creature()
+                && matches!(zone, Zone::Graveyard | Zone::Exile)
+                && self.graveyard_exile_locked())
     }
 
     /// CR 614 (Gather Specimens): if a creature would enter the battlefield
@@ -6708,11 +6765,13 @@ impl GameState {
                 if let Some(card_id) = chosen_id
                     && eligible.as_ref().is_none_or(|e| e.contains(card_id))
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == *card_id) {
-                    // Grafdigger's Cage — a creature card can't leave the
+                    // Grafdigger's Cage — a locked card can't leave the
                     // library for the battlefield while the lockdown is up.
                     let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
-                        && self.graveyard_library_locked()
-                        && self.players[player].library[pos].definition.is_creature();
+                        && self.battlefield_entry_from_zone_blocked(
+                            &self.players[player].library[pos].definition,
+                            crate::card::Zone::Library,
+                        );
                     if !blocked {
                         let card = self.players[player].library.remove(pos);
                         self.place_card_in_dest(card, player, &to, &mut events);
@@ -6996,11 +7055,14 @@ impl GameState {
                         self.players[player].hand.iter().position(|c| c.id == *cid);
                     let from_gy =
                         self.players[player].graveyard.iter().position(|c| c.id == *cid);
-                    // Grafdigger's Cage — creature cards in graveyards can't
-                    // enter the battlefield (hand picks are unaffected).
+                    // Grafdigger's Cage / Soulless Jailer — locked graveyard
+                    // cards can't enter the battlefield (hand picks are
+                    // unaffected).
                     let gy_blocked = |g: &Self, pos: usize| {
-                        g.graveyard_library_locked()
-                            && g.players[player].graveyard[pos].definition.is_creature()
+                        g.battlefield_entry_from_zone_blocked(
+                            &g.players[player].graveyard[pos].definition,
+                            crate::card::Zone::Graveyard,
+                        )
                     };
                     let card = match (from_hand, from_gy) {
                         (Some(pos), _) => Some(self.players[player].hand.remove(pos)),
@@ -8243,6 +8305,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::GraveyardLibraryLockdown
+            | StaticEffect::GraveyardExileLockdown
             // SkipStep — consulted by `advance_step` (CR 614.10); no layer.
             | StaticEffect::SkipStep { .. }
             // AttackPowerCapByControllerHand — consulted in declare_attackers.
