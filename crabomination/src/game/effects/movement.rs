@@ -9,10 +9,6 @@ use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
 use crate::game::{GameEvent, GameState};
 
 impl GameState {
-    pub(super) fn deal_damage_to(&mut self, ent: EntityRef, amount: u32, events: &mut Vec<GameEvent>) {
-        self.deal_damage_to_from(ent, amount, None, events);
-    }
-
     /// CR 614.9 — if damage aimed at `ent` (a player, or a permanent that
     /// player controls) is covered by a `RedirectDamageToSelf` static
     /// (Palisade Giant), return the redirecting permanent. The redirector

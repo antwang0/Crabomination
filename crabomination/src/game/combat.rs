@@ -1111,6 +1111,12 @@ impl GameState {
             // A trample-over leftover requires every blocker to be at lethal.
             return self.default_damage_split(total_power, lethals, has_trample);
         }
+        // CR 510.1d — all of the attacker's power must be assigned; without
+        // trample there is no player to soak the leftover, so an
+        // under-assignment (even with every blocker at lethal) is illegal.
+        if !has_trample && assigned < total_power {
+            return self.default_damage_split(total_power, lethals, has_trample);
+        }
         lethals.iter().map(|&(id, _)| id).zip(amounts).collect()
     }
 

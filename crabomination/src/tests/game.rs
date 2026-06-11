@@ -6287,6 +6287,37 @@ fn cr_510_1c_invalid_over_assignment_falls_back_to_default() {
 }
 
 #[test]
+fn cr_510_1d_non_trample_under_assignment_falls_back_to_default() {
+    // Without trample all 5 power must be assigned: a 2/2-each answer (under
+    // by 1, every blocker at lethal) is illegal and the default split runs —
+    // the excess lands on the last blocker, never evaporates.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || vanilla_body("Brute 5/5", 5, 5, vec![]));
+    let b1 = setup_attacker(&mut g, 1, || vanilla_body("Wall A", 2, 2, vec![]));
+    let b2 = setup_attacker(&mut g, 1, || vanilla_body("Wall B", 2, 4, vec![]));
+
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DamageOrder(vec![]),
+        DecisionAnswer::CombatDamageAssignment(vec![(b1, 2), (b2, 2)]),
+    ]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)]))
+        .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    // Default split: lethal 2 to A, the remaining 3 to B (2+3 = all 5).
+    assert!(!g.battlefield.iter().any(|c| c.id == b1), "blocker A dies to lethal 2");
+    let b2_inst = g.battlefield.iter().find(|c| c.id == b2).expect("B survives at 4 toughness");
+    assert_eq!(b2_inst.damage, 3, "all 5 power assigned — 3 marked on blocker B");
+}
+
+#[test]
 fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
     use crate::effect::Predicate;
     use crate::game::effects::EffectContext;
