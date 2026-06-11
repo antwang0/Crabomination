@@ -4200,6 +4200,14 @@ impl GameState {
         {
             return Err(GameError::SilencedThisTurn);
         }
+        // CR 702.50b — a player can't cast spells once an epic spell they
+        // control resolves (the per-upkeep copies are put on the stack by
+        // the epic ability itself, not cast).
+        if action.is_cast()
+            && !self.players[self.priority.player_with_priority].epic_spells.is_empty()
+        {
+            return Err(GameError::EpicLocked);
+        }
         // Rule of Law-style one-spell-per-turn lock — gated here so every
         // Cast* variant is covered at once.
         if action.is_cast()
@@ -7582,6 +7590,18 @@ impl GameState {
                 },
             });
             return Ok(events);
+        }
+        // CR 702.50 — Epic: on resolution the caster snapshots the spell
+        // (copied at each of their upkeeps) and can't cast spells for the
+        // rest of the game. Copies don't carry the epic ability (702.50a).
+        if !card.is_token && card.definition.keywords.contains(&crate::card::Keyword::Epic) {
+            self.players[caster].epic_spells.push(crate::player::EpicSpell {
+                name: card.definition.name.to_string(),
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: Some(mode),
+                x_value,
+            });
         }
         // Rebound: if this card has Keyword::Rebound and was cast from
         // hand, exile it instead of sending it to the graveyard, and

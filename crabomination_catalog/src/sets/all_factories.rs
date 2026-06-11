@@ -825,6 +825,7 @@ static DECKS: &[Factory] = &[
     super::decks::bonesplitter,
     super::decks::shuko,
     super::decks::skullclamp,
+    super::decks::enduring_ideal,
     super::decks::lavaspur_boots,
     super::decks::the_mightstone_and_weakstone,
     super::decks::urza_lord_protector,

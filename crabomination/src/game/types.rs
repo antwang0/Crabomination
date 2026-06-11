@@ -1434,6 +1434,8 @@ pub enum GameError {
     CantCastPermanentSpells,
     #[error("You can't cast spells or activate loyalty abilities this turn")]
     SilencedThisTurn,
+    #[error("You can't cast spells — an epic spell you control has resolved")]
+    EpicLocked,
     /// A one-spell-per-turn lock (Rule of Law, CR 601) bars this cast.
     #[error("A one-spell-per-turn effect bars casting more spells this turn")]
     SpellLimitReached,

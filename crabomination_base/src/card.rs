@@ -479,6 +479,10 @@ pub enum Keyword {
     Improvise,
     Delve,
     Cascade,
+    /// CR 702.50 — Epic. On resolution: the controller can't cast spells
+    /// for the rest of the game, and the spell is copied at each of their
+    /// upkeeps (Enduring Ideal).
+    Epic,
     Cycling(crate::mana::ManaCost),
     /// CR 702.29 — Cycling whose cost is a life payment instead of mana
     /// ("Cycling—Pay 2 life", Street Wraith).

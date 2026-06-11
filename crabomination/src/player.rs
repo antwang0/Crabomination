@@ -27,6 +27,18 @@ pub struct Emblem {
     pub triggered: Vec<crate::effect::TriggeredAbility>,
 }
 
+/// CR 702.50 — a resolved Epic spell, snapshotted for the per-upkeep copy.
+/// The copy re-resolves the named card's effect with these cast choices
+/// (targets may be re-chosen per 702.50a; the AutoDecider keeps them).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EpicSpell {
+    pub name: String,
+    pub target: Option<crate::game::Target>,
+    pub additional_targets: Vec<crate::game::Target>,
+    pub mode: Option<usize>,
+    pub x_value: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub id: PlayerId,
@@ -286,6 +298,11 @@ pub struct Player {
     /// -7 coin-flip emblem). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub extra_turns: u32,
+    /// CR 702.50 — resolved Epic spells this player controls. Each entry is
+    /// copied onto the stack at the beginning of this player's upkeep for
+    /// the rest of the game; while non-empty the player can't cast spells.
+    #[serde(default)]
+    pub epic_spells: Vec<EpicSpell>,
     /// CR 114 — emblems this player owns. Each carries a name (for
     /// display) and a set of triggered abilities that fire from the
     /// command zone; emblems never leave once created. The trigger
@@ -413,6 +430,7 @@ impl Player {
             eliminated: false,
             skip_turns: 0,
             extra_turns: 0,
+            epic_spells: Vec::new(),
             emblems: Vec::new(),
             cannot_gain_life: false,
             wants_ui: false,

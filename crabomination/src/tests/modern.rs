@@ -51939,3 +51939,86 @@ fn landscape_and_verge_cycle_completion() {
     }).expect("gated {G} with a Forest in play");
     assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 1);
 }
+
+// ── Epic (CR 702.50) ─────────────────────────────────────────────────────────
+
+/// Enduring Ideal resolves: fetches an enchantment to the battlefield, locks
+/// the caster out of casting spells, and copies itself each upkeep.
+#[test]
+fn enduring_ideal_epic_locks_casting_and_copies_each_upkeep() {
+    let mut g = two_player_game();
+    // Library: two trigger-free enchantments to fetch.
+    let e1 = g.add_card_to_library(0, catalog::rest_in_peace());
+    let e2 = g.add_card_to_library(0, catalog::rest_in_peace());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(e1)),
+        DecisionAnswer::Search(Some(e2)),
+    ]));
+    let ideal = g.add_card_to_hand(0, catalog::enduring_ideal());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ideal, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Enduring Ideal");
+    drain_stack(&mut g);
+    let enchantments_on_bf = |g: &crate::game::GameState| {
+        g.battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == 0
+                    && c.definition.card_types.contains(&crate::card::CardType::Enchantment)
+            })
+            .count()
+    };
+    assert_eq!(enchantments_on_bf(&g), 1, "fetched an enchantment");
+    assert_eq!(g.players[0].epic_spells.len(), 1, "epic snapshot stored");
+
+    // CR 702.50b — the caster can't cast spells anymore.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    let err = g
+        .perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect_err("epic lock");
+    assert!(matches!(err, GameError::EpicLocked), "got {err:?}");
+
+    // CR 702.50a — at the controller's upkeep the spell is copied.
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    let _ = g.process_epic();
+    assert!(!g.stack.is_empty(), "epic copy on the stack");
+    drain_stack(&mut g);
+    assert_eq!(enchantments_on_bf(&g), 2, "copy fetched another enchantment");
+}
+
+/// The epic copy is itself uncounterable and doesn't re-arm Epic (one
+/// snapshot, not one per upkeep).
+#[test]
+fn epic_copy_does_not_stack_additional_snapshots() {
+    let mut g = two_player_game();
+    let e1 = g.add_card_to_library(0, catalog::rest_in_peace());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(e1)),
+        DecisionAnswer::Search(None),
+    ]));
+    let ideal = g.add_card_to_hand(0, catalog::enduring_ideal());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ideal, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    let _ = g.process_epic();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].epic_spells.len(), 1, "copy resolution doesn't re-arm Epic");
+}

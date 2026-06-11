@@ -262,6 +262,9 @@ impl GameState {
                 // CR 702.24 — cumulative upkeep: age counter + pay-or-sacrifice.
                 let mut cu = self.process_cumulative_upkeep();
                 events.append(&mut cu);
+                // CR 702.50a — Epic spells copy at the controller's upkeep.
+                let mut epic = self.process_epic();
+                events.append(&mut epic);
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
@@ -1132,6 +1135,53 @@ impl GameState {
     }
 
     // ── Automatic step effects ────────────────────────────────────────────────
+
+    /// CR 702.50a — copy each of the active player's resolved Epic spells
+    /// onto the stack at the beginning of their upkeep. The copy keeps the
+    /// original targets while they're legal, else auto-picks fresh ones
+    /// ("you may choose new targets"; AutoDecider keeps/repairs).
+    pub(crate) fn process_epic(&mut self) -> Vec<GameEvent> {
+        let p = self.active_player_idx;
+        let mut events = Vec::new();
+        if self.players[p].epic_spells.is_empty() {
+            return events;
+        }
+        let epics = self.players[p].epic_spells.clone();
+        for e in epics {
+            let Some(def) = crate::catalog::lookup_by_name(&e.name) else { continue };
+            let new_id = self.next_id();
+            let mut copy = crate::card::CardInstance::new(new_id, def.clone(), p);
+            // CR 707.10a — a copy of a spell ceases to exist off the stack.
+            copy.is_token = true;
+            let target = match &e.target {
+                Some(t @ Target::Permanent(tid)) => {
+                    let still_legal = self.battlefield_find(*tid).is_some()
+                        && self
+                            .check_target_legality_with_source(t, p, Some(new_id))
+                            .is_ok();
+                    if still_legal {
+                        e.target.clone()
+                    } else {
+                        self.auto_target_for_effect(&def.effect, p)
+                    }
+                }
+                other => other.clone(),
+            };
+            self.stack.push(StackItem::Spell {
+                card: Box::new(copy),
+                caster: p,
+                target,
+                additional_targets: e.additional_targets.clone(),
+                mode: e.mode,
+                x_value: e.x_value,
+                converged_value: 0,
+                mana_spent: 0,
+                uncounterable: true, // copies can't be countered
+            });
+            events.push(GameEvent::SpellsCopied { original: new_id, count: 1 });
+        }
+        events
+    }
 
     /// CR 728.2 / 122.1i — rad-counter turn-based action. As the active
     /// player begins their precombat main phase, if they have any rad

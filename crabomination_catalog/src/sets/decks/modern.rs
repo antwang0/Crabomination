@@ -46911,3 +46911,22 @@ pub fn deceptive_landscape() -> CardDefinition {
     landscape("Deceptive Landscape", [LandType::Plains, LandType::Swamp, LandType::Forest],
         [Color::White, Color::Black, Color::Green])
 }
+
+// ── Epic (CR 702.50) ─────────────────────────────────────────────────────────
+
+/// Enduring Ideal — {5}{W}{W} Sorcery. Search your library for an enchantment
+/// card, put it onto the battlefield, then shuffle. Epic.
+pub fn enduring_ideal() -> CardDefinition {
+    CardDefinition {
+        name: "Enduring Ideal",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Epic],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Enchantment,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
