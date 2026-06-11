@@ -584,6 +584,12 @@ fn main() {
             crate::systems::pt_label::sync_pt_labels
                 .run_if(in_state(AppState::InGame)),
         )
+        // "×N" count chip over each cascaded token pile.
+        .add_systems(
+            Update,
+            crate::systems::token_badge::sync_token_pile_badges
+                .run_if(in_state(AppState::InGame)),
+        )
         // Floating keyword-flag strip ("Fly DT LL") over creatures.
         .add_systems(
             Update,

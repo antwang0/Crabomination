@@ -41,7 +41,8 @@ use crate::card::{
     PlayCardAnimation, PlayerTargetZone, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
     card_back_face_material, card_front_material, deck_position, graveyard_position,
-    hand_card_transform, land_card_transform, spawn_single_card, stack_card_transform,
+    creature_card_transform, hand_card_transform, land_card_transform, spawn_single_card,
+    stack_card_transform,
 };
 use crate::game::{AbilityMenuState, BlockingState, GameLog, TargetingState};
 use crate::net_plugin::{CurrentView, LatestServerEvents, NetOutbox};
@@ -2374,8 +2375,8 @@ pub fn sync_game_visuals(
                 land_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0)
                     .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
             } else {
-                let slot = bf_row_slot(&cv.battlefield, viewer, game_id.0, false).unwrap_or(0);
-                bf_card_transform(viewer, viewer, n_seats, slot, creature_count(viewer), false, false)
+                creature_card_transform(&cv.battlefield, viewer, viewer, n_seats, game_id.0, false)
+                    .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, false, false))
             };
             // Flipped MDFC played as its back face: the engine swapped
             // the card's definition to the back face, so the bf card's
@@ -2635,8 +2636,8 @@ pub fn sync_game_visuals(
                 land_card_transform(&cv.battlefield, seat, viewer, n_seats, card_id)
                     .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, true, false))
             } else {
-                let slot = bf_row_slot(&cv.battlefield, seat, card_id, false).unwrap_or(0);
-                bf_card_transform(seat, viewer, n_seats, slot, creature_count(seat), false, false)
+                creature_card_transform(&cv.battlefield, seat, viewer, n_seats, card_id, false)
+                    .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, false, false))
             };
             let _ = tapped; // tap state applied on the next sync pass.
 
@@ -2767,8 +2768,8 @@ pub fn sync_game_visuals(
             land_card_transform(&cv.battlefield, seat, viewer, n_seats, game_id.0)
                 .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, true, false))
         } else {
-            let slot = bf_row_slot(&cv.battlefield, seat, game_id.0, false).unwrap_or(0);
-            bf_card_transform(seat, viewer, n_seats, slot, creature_count(seat), false, bf_card.tapped)
+            creature_card_transform(&cv.battlefield, seat, viewer, n_seats, game_id.0, bf_card.tapped)
+                .unwrap_or_else(|| bf_card_transform(seat, viewer, n_seats, 0, 1, false, bf_card.tapped))
         };
         commands.entity(entity)
             .remove::<StackCard>()
@@ -2942,8 +2943,8 @@ pub fn sync_game_visuals(
             land_card_transform(&cv.battlefield, viewer, viewer, n_seats, card_id)
                 .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, true, false))
         } else {
-            let slot = bf_row_slot(&cv.battlefield, viewer, card_id, false).unwrap_or(0);
-            bf_card_transform(viewer, viewer, n_seats, slot, creature_count(viewer), false, false)
+            creature_card_transform(&cv.battlefield, viewer, viewer, n_seats, card_id, false)
+                .unwrap_or_else(|| bf_card_transform(viewer, viewer, n_seats, 0, 1, false, false))
         };
         let _ = tapped;
         let front_mat = card_front_material(&card_name, &mut materials, &asset_server);

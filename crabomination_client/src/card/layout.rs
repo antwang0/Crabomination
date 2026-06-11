@@ -506,6 +506,76 @@ pub fn land_group_info_from_view(
     Some((group_slot, index_in_group, names.len()))
 }
 
+/// Grouping for the creature row: identical tokens (same name, computed
+/// P/T, and tapped state) collapse into one cascaded pile; every nontoken
+/// permanent is its own group. Returns `(group_slot, index_in_group,
+/// total_groups)` for `card_id`, in first-appearance order — the same
+/// shape `land_group_info_from_view` returns for the land row.
+pub fn creature_group_info_from_view(
+    battlefield: &[crabomination::net::PermanentView],
+    owner: usize,
+    card_id: CardId,
+) -> Option<(usize, usize, usize)> {
+    // A pile key: tokens group by visual identity, nontokens by id (so
+    // two Grizzly Bears cards still sit apart — only tokens pile up).
+    #[derive(PartialEq)]
+    enum Key<'a> {
+        Token { name: &'a str, power: i32, toughness: i32, tapped: bool },
+        Single(CardId),
+    }
+    let mut groups: Vec<(Key<'_>, usize)> = Vec::new();
+    let mut found: Option<(usize, usize)> = None;
+    for c in battlefield.iter().filter(|c| c.owner == owner && !c.is_land()) {
+        let k = if c.is_token {
+            Key::Token { name: c.name.as_str(), power: c.power, toughness: c.toughness, tapped: c.tapped }
+        } else {
+            Key::Single(c.id)
+        };
+        let gi = match groups.iter().position(|(gk, _)| *gk == k) {
+            Some(i) => {
+                groups[i].1 += 1;
+                i
+            }
+            None => {
+                groups.push((k, 1));
+                groups.len() - 1
+            }
+        };
+        if c.id == card_id {
+            found = Some((gi, groups[gi].1 - 1));
+        }
+    }
+    found.map(|(slot, index)| (slot, index, groups.len()))
+}
+
+/// World transform for a creature-row permanent: identical tokens cascade
+/// into one pile (same stagger as the land stacks, so the board reads
+/// consistently), nontokens get their own slot exactly as before.
+pub fn creature_card_transform(
+    battlefield: &[crabomination::net::PermanentView],
+    owner: usize,
+    viewer: usize,
+    n_seats: usize,
+    card_id: CardId,
+    tapped: bool,
+) -> Option<Transform> {
+    let (group_slot, index, total_groups) =
+        creature_group_info_from_view(battlefield, owner, card_id)?;
+    let base =
+        bf_card_transform(owner, viewer, n_seats, group_slot, total_groups, false, tapped);
+    let sign = seat_spot(owner, viewer, n_seats).z_sign;
+    let stagger = Vec3::new(
+        index as f32 * LAND_STACK_OFFSET_X * sign,
+        index as f32 * CARD_THICKNESS * 1.5,
+        index as f32 * LAND_STACK_OFFSET_Z * sign,
+    );
+    Some(Transform {
+        translation: base.translation + stagger,
+        rotation: base.rotation,
+        scale: base.scale,
+    })
+}
+
 // ── Stack cards ──────────────────────────────────────────────────────────────
 
 /// World transform for a card occupying slot `idx` of a stack of `total`
