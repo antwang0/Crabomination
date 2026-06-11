@@ -193,12 +193,12 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ✅ **Batch-relative block validation** — Menace merges `block_map` like
   its sibling checks (CR 702.110b) and duplicate blockers (in-batch or
   re-blocking) are rejected. Test `duplicate_blocker_in_batch_rejected`.
-- 🟡 **Counter handling inconsistencies** — fixed this run: `Monstrosity`
+- ✅ **Counter handling inconsistencies** — fixed this run: `Monstrosity`
   applies doublers, `RemoveAllCounters` clears `keyword_counters`
   (CR 122.1b), shield-counter depletion removes the 0-count entry
   (CR 700.9), `AddKeywordCounter` marks `permanents_gained_counter_this_turn`.
-  `Explore` now applies doublers. Remaining: a `CounterAdded`-equivalent
-  event for keyword counters.
+  `Explore` now applies doublers. `GameEvent::KeywordCounterAdded` (+ wire
+  + log line) now surfaces keyword-counter grants — row closed.
 - ✅ **Soulshift fetches from any graveyard**
   (`crabomination_base/src/effect/shortcut.rs:2048-2062`). The desugar's
   `InGraveyard` matches all players and routes to the card's owner's hand —

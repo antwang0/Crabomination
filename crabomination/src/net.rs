@@ -1529,6 +1529,8 @@ pub enum GameEventWire {
     PermanentSacrificed { card_id: CardId, who: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
+    #[serde(rename = "kw_counter_added")]
+    KeywordCounterAdded { card_id: CardId, keyword: String, count: u32 },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
@@ -1672,6 +1674,13 @@ impl From<&GameEvent> for GameEventWire {
                 GameEventWire::CounterAdded {
                     card_id: *card_id,
                     counter_type: *counter_type,
+                    count: *count,
+                }
+            }
+            GameEvent::KeywordCounterAdded { card_id, keyword, count } => {
+                GameEventWire::KeywordCounterAdded {
+                    card_id: *card_id,
+                    keyword: format!("{keyword:?}"),
                     count: *count,
                 }
             }
@@ -1881,6 +1890,11 @@ impl GameEventWire {
                 counter_type,
                 count,
             } => format!("+{count} {counter_type:?} on {}", name(*card_id)),
+            E::KeywordCounterAdded {
+                card_id,
+                keyword,
+                count,
+            } => format!("+{count} {keyword} counter on {}", name(*card_id)),
             E::CounterRemoved {
                 card_id,
                 counter_type,

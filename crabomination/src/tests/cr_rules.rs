@@ -1586,3 +1586,55 @@ fn cr_119_3c_phyrexian_life_payment_fires_loss_trigger() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 1, "life-loss trigger drew a card");
 }
+
+/// CR 608.2b — an Aura spell whose enchant target dies in response is
+/// countered on resolution: it never enters the battlefield.
+#[test]
+fn cr_608_2b_aura_fizzles_when_enchant_target_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::pacifism());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Pacifism on the bear");
+    // The bear dies in response.
+    g.remove_to_graveyard_with_triggers(bear);
+    drain_stack(&mut g);
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == aura),
+        "fizzled Aura never enters the battlefield"
+    );
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == aura),
+        "fizzled Aura is countered into its owner's graveyard"
+    );
+}
+
+/// CR 608.2b — an Aura still resolves and attaches when its target is legal.
+#[test]
+fn cr_608_2b_aura_attaches_to_legal_target() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::pacifism());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Pacifism");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(aura).and_then(|c| c.attached_to),
+        Some(bear),
+        "Aura attached to its target"
+    );
+}

@@ -608,6 +608,37 @@ impl GameState {
                 // creature card type.
                 let is_noncreature = card.adventuring || !card.definition.is_creature();
 
+                // CR 608.2b — an Aura spell re-checks its enchant target as
+                // it tries to resolve; if the target is illegal (gone,
+                // filter mismatch, granted Hexproof/Shroud) the spell
+                // doesn't resolve — countered into its owner's graveyard,
+                // never entering the battlefield (no ETB). Bestowed casts
+                // are exempt: CR 702.103e resolves them as the creature.
+                if card.definition.is_aura()
+                    && !card.bestowed
+                    && !card.adventuring
+                    && let Some(t) = &target
+                {
+                    let gone = matches!(t, Target::Permanent(tid)
+                        if self.battlefield_find(*tid).is_none());
+                    let filter_fail = card
+                        .definition
+                        .effect
+                        .target_filter_for_slot_in_mode_kicked(0, mode, card.kicked)
+                        .is_some_and(|f| {
+                            !self.evaluate_requirement_static(f, t, caster, Some(card.id))
+                        });
+                    let untargetable = self
+                        .check_target_legality_with_source(t, caster, Some(card.id))
+                        .is_err();
+                    if gone || filter_fail || untargetable {
+                        if !card.is_token {
+                            self.route_to_graveyard(card, &mut events);
+                        }
+                        return Ok(events);
+                    }
+                }
+
                 if card.definition.is_permanent() && !card.adventuring {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the

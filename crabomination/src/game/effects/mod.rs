@@ -4099,6 +4099,11 @@ impl GameState {
                             // "This permanent gained a counter this turn"
                             // payoffs count keyword counters too (CR 122.1b).
                             self.permanents_gained_counter_this_turn.insert(cid);
+                            events.push(GameEvent::KeywordCounterAdded {
+                                card_id: cid,
+                                keyword: keyword.clone(),
+                                count: n,
+                            });
                         }
                     }
                 }

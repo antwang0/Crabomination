@@ -1133,6 +1133,9 @@ pub enum GameEvent {
     PermanentSacrificed { card_id: CardId, who: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
+    /// CR 122.1b — keyword counters are counters; surfaced so the log /
+    /// client see the grant (no `EventKind` listener yet).
+    KeywordCounterAdded { card_id: CardId, keyword: crate::card::Keyword, count: u32 },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
