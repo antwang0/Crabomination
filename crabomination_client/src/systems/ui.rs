@@ -748,7 +748,99 @@ fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
             None => lines.push((label, true)),
         }
     }
+    // Oracle-ish ability text (roadmap Tier 8): statics carry printed
+    // descriptions; triggered/activated/loyalty abilities are phrased from
+    // their event + effect shapes. Empty phrasings are skipped.
+    for sa in &def.static_abilities {
+        if !sa.description.is_empty() {
+            lines.push((sa.description.to_string(), true));
+        }
+    }
+    for ta in &def.triggered_abilities {
+        let body = ta.effect.effect_short_text();
+        if body.is_empty() {
+            continue;
+        }
+        lines.push((format!("{} {body}.", event_phrase(&ta.event)), true));
+    }
+    for aa in &def.activated_abilities {
+        let body = aa.effect.effect_short_text();
+        if body.is_empty() {
+            continue;
+        }
+        let mut cost = Vec::new();
+        let mana = aa.mana_cost.summary();
+        if !mana.is_empty() {
+            cost.push(mana);
+        }
+        if aa.tap_cost {
+            cost.push("{T}".into());
+        }
+        if aa.life_cost > 0 {
+            cost.push(format!("Pay {} life", aa.life_cost));
+        }
+        if aa.sac_cost {
+            cost.push("Sacrifice this".into());
+        }
+        if cost.is_empty() {
+            cost.push("{0}".into());
+        }
+        lines.push((format!("{}: {body}.", cost.join(", ")), true));
+    }
+    for la in &def.loyalty_abilities {
+        let body = la.effect.effect_short_text();
+        if body.is_empty() {
+            continue;
+        }
+        let cost = if la.x_cost {
+            "−X".to_string()
+        } else {
+            format!("{:+}", la.loyalty_cost)
+        };
+        lines.push((format!("[{cost}]: {body}."), true));
+    }
+    if !def.is_permanent() {
+        let body = def.effect.effect_short_text();
+        if !body.is_empty() {
+            lines.push((first_upper(&body), true));
+        }
+    }
     lines
+}
+
+/// Phrase a trigger's firing condition ("When this enters," …). Covers the
+/// common event kinds; falls back to a generic "Triggered ability:".
+fn event_phrase(spec: &crabomination::card::EventSpec) -> String {
+    use crabomination::effect::{EventKind as K, EventScope as S};
+    let self_src = matches!(spec.scope, S::SelfSource);
+    match &spec.kind {
+        K::EntersBattlefield if self_src => "When this enters,".into(),
+        K::EntersBattlefield => "Whenever a permanent enters,".into(),
+        K::CreatureDied if self_src => "When this dies,".into(),
+        K::CreatureDied => "Whenever a creature dies,".into(),
+        K::Attacks if self_src => "Whenever this attacks,".into(),
+        K::Attacks => "Whenever a creature attacks,".into(),
+        K::Blocks => "Whenever this blocks,".into(),
+        K::DealsCombatDamageToPlayer => "Whenever this deals combat damage to a player,".into(),
+        K::SpellCast if self_src => "When you cast this spell,".into(),
+        K::SpellCast => "Whenever a spell is cast,".into(),
+        K::CardDrawn => "Whenever a card is drawn,".into(),
+        K::LandPlayed => "Whenever a land enters,".into(),
+        K::LifeGained => "Whenever life is gained,".into(),
+        K::StepBegins(step) => format!("At the beginning of {step:?},").to_lowercase().replacen("at", "At", 1),
+        K::TurnedFaceUp => "When this is turned face up,".into(),
+        K::Transformed => "When this transforms,".into(),
+        _ => "Triggered ability:".into(),
+    }
+}
+
+/// Uppercase the first character (effect phrasings are lowercase fragments).
+fn first_upper(s: &str) -> String {
+    let mut cs = s.chars();
+    match cs.next() {
+        Some(c) => c.to_uppercase().collect::<String>() + cs.as_str(),
+        None => String::new(),
+    }
 }
 
 /// Arena-style automatic card-zoom preview: while a card is hovered (and Alt

@@ -671,12 +671,14 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 - ✅ **Squad / Replicate pay-N-times stepper** — right-click modal feeding
   `CastSpellSquad`/`CastSpellReplicate`; impending countdown badge; NameCard
   picker modal with engine-ranked suggestions.
-- 🟡 **Reminder text & rules tooltips** — the hover preview now carries an
+- ✅ **Reminder text & rules tooltips** — the hover preview carries an
   info panel resolved from the catalog by name (`ui::hover_info_lines`):
-  type line, P/T, and each printed keyword with CR reminder text, reusing
-  the Alt-peek's `keyword_reminder` table (~60 keywords). Battlefield
-  Alt-peek already showed computed-keyword reminders. Remaining ⏳: a full
-  oracle-text panel (triggered/activated ability text).
+  type line, P/T, each printed keyword with CR reminder text, **and an
+  oracle-ish ability panel** — static-ability descriptions plus
+  triggered/activated/loyalty abilities phrased from their event + effect
+  shapes (`event_phrase` + `Effect::effect_short_text`), and the spell
+  effect line for instants/sorceries. Phrasings the engine can't render
+  are skipped rather than shown raw.
 - 🟡 **Hotkey legend / help overlay** ✅ (F1 / `?` toggles a two-column
   shortcut reference — `systems::ui`); remappable keys ⏳.
 - 🟡 **Highlight legal plays** (castable cards, legal attackers/blockers,
