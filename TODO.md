@@ -258,10 +258,15 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   Bare `Box::leak` with no dedup table, called once per token mint —
   including bot dry-run simulations — despite the module doc claiming the
   leak is bounded by unique names. Add the `HashSet<&'static str>` table.
-- ⏳ **Affordance probing clones the world per candidate**
-  (`affordances.rs:871`). ~22 categories × hand size template clones +
-  `perform_action` dry-runs per view broadcast; share one template clone
-  per category and pre-filter categories with no matching hand cards.
+- 🟡 **Affordance probing clones the world per candidate**
+  (`affordances.rs`). `compute_hand_affordances` now builds **one**
+  library-stripped template per sweep and threads it through every
+  category's `_on` variant; keyword-gated categories (buyback / dash /
+  blitz / …) pre-filter to matching hand cards before any dry-run.
+  Remaining: each candidate still pays one `template.clone()` +
+  `perform_action` dry-run — a non-mutating `validate_action` path would
+  eliminate the per-candidate clone entirely (large refactor; only worth
+  it if profiles show view projection hot).
 
 ### P3 — structural root causes (fix once, prevent the class)
 
@@ -278,14 +283,14 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `DiscardChosen` / `ManaClash` holes; ChooseN gets a cast-time fallback
   filter). Remaining: the two `evaluate_requirement` evaluators and
   printed-vs-computed combat checks still lack guards.
-- 🟡 **Card-name-keyed hack tables inside a ~720-line god function**
-  (`gather_continuous_effects_inner`). Four of the five tables are retired —
-  Werebear / Elvish Reclaimer / Honor Troll / Tenured Concocter / Ulna Alley
-  Shopkeep ride `PumpSelfIf`, Thornfist Striker / Comforting Counsel ride
-  `PumpTeamIf` (which now carries conditional keyword grants) — so copies of
-  these cards keep their statics. Remaining: `graveyard_anthem_for_name`
-  (the Judgment Incarnation cycle — genuinely zone-special: statics active
-  from the graveyard) and `dynamic_pt_for_name` CDA rows.
+- ✅ **Card-name-keyed hack tables inside a ~720-line god function**
+  (`gather_continuous_effects_inner`) — all retired. Werebear / Elvish
+  Reclaimer / Honor Troll / Tenured Concocter / Ulna Alley Shopkeep ride
+  `PumpSelfIf`, Thornfist Striker / Comforting Counsel ride `PumpTeamIf`,
+  and the Judgment Incarnation cycle now prints
+  `StaticEffect::GraveyardAnthem { land_type, keyword }` (zone-special:
+  gathered from graveyards), so copies of every one keep their statics.
+  CDA P/T rows were already the typed `DynamicPt` enum.
 - ✅ **`StackItem::Trigger` literal push sites** — `TriggerPush` builder
   (`types.rs`) replaces all 26 hand-written 11-field literals; rider
   fields default and are set only where the site has a value.

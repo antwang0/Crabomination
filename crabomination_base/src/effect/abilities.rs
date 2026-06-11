@@ -610,6 +610,11 @@ pub enum StaticEffect {
     /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
     /// the step/phase pool-empty sites.
     UnspentManaBecomesColorless,
+    /// "As long as this card is in your graveyard and you control a
+    /// [land subtype], creatures you control have [keyword]" — the Judgment
+    /// Incarnation cycle (Anger, Wonder, Brawn, Valor, Filth). Zone-special:
+    /// gathered from graveyards, not the battlefield.
+    GraveyardAnthem { land_type: crate::card::LandType, keyword: Keyword },
     /// CR 614.x — "If a nontoken creature would enter the battlefield and it
     /// wasn't cast, exile it instead." Containment Priest. A global ETB
     /// replacement read off the battlefield in `place_card_in_dest`'s

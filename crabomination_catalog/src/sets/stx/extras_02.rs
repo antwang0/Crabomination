@@ -1151,6 +1151,13 @@ pub fn anger() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Haste, Keyword::Landwalk(LandType::Mountain)],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this card is in your graveyard and you control a Mountain, creatures you control have this keyword.",
+            effect: StaticEffect::GraveyardAnthem {
+                land_type: LandType::Mountain,
+                keyword: Keyword::Haste,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -1338,11 +1345,19 @@ pub fn filth() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Landwalk(LandType::Swamp)],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this card is in your graveyard and you control a Swamp, creatures you control have this keyword.",
+            effect: StaticEffect::GraveyardAnthem {
+                land_type: LandType::Swamp,
+                keyword: Keyword::Landwalk(LandType::Swamp),
+            },
+        }],
         ..Default::default()
     }
 }
 
 pub fn wonder() -> CardDefinition {
+    use crate::card::LandType;
     CardDefinition {
         name: "Wonder",
         cost: cost(&[generic(3), u()]),
@@ -1354,6 +1369,13 @@ pub fn wonder() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this card is in your graveyard and you control a Island, creatures you control have this keyword.",
+            effect: StaticEffect::GraveyardAnthem {
+                land_type: LandType::Island,
+                keyword: Keyword::Flying,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -1374,6 +1396,7 @@ pub fn wonder() -> CardDefinition {
 /// trampler on a 3-mana frame — a respectable mid-curve attacker even
 /// before its gy-resident anthem kicks in.
 pub fn brawn() -> CardDefinition {
+    use crate::card::LandType;
     CardDefinition {
         name: "Brawn",
         cost: cost(&[generic(3), g()]),
@@ -1385,6 +1408,13 @@ pub fn brawn() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this card is in your graveyard and you control a Forest, creatures you control have this keyword.",
+            effect: StaticEffect::GraveyardAnthem {
+                land_type: LandType::Forest,
+                keyword: Keyword::Trample,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -1551,6 +1581,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
 /// strong on its own; the graveyard anthem makes every friendly
 /// attacker hit first.
 pub fn valor() -> CardDefinition {
+    use crate::card::LandType;
     CardDefinition {
         name: "Valor",
         cost: cost(&[generic(3), w()]),
@@ -1562,6 +1593,13 @@ pub fn valor() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this card is in your graveyard and you control a Plains, creatures you control have this keyword.",
+            effect: StaticEffect::GraveyardAnthem {
+                land_type: LandType::Plains,
+                keyword: Keyword::FirstStrike,
+            },
+        }],
         ..Default::default()
     }
 }

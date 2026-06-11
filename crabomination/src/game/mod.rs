@@ -3791,23 +3791,22 @@ impl GameState {
                 }
             }
         }
-        // Graveyard-resident static-ability injection — covers Anger / Wonder /
-        // Filth-style Incarnations from STA whose printed Oracle reads "As
-        // long as [this card] is in your graveyard and you control a [Land
-        // subtype], creatures you control have [keyword]." Walks each
-        // player's graveyard for entries in the `graveyard_anthem_for_name`
-        // helper table; each match emits a continuous `AddKeyword` effect
-        // affecting `AffectedPermanents::All` keyed on the gy-resident
-        // card's owner — gated on the owner controlling at least one land
-        // of the required subtype on the battlefield. The effect's
-        // `source` is the gy card's id, so removing the gy card (zone
-        // shuffles, exile, etc.) causes the effect to fall out via
-        // `remove_effects_from_source` calls elsewhere.
+        // Graveyard-resident static-ability injection — the Incarnation
+        // cycle's `StaticEffect::GraveyardAnthem` ("As long as this card is
+        // in your graveyard and you control a [Land subtype], creatures you
+        // control have [keyword]"). Zone-special: read off graveyard cards'
+        // printed statics, gated on the owner controlling a land of the
+        // required subtype. The effect's `source` is the gy card's id, so
+        // removing the gy card causes the effect to fall out.
         for player in &self.players {
             for card in &player.graveyard {
-                if let Some((land_subtype, kw)) =
-                    graveyard_anthem_for_name(card.definition.name)
-                {
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::GraveyardAnthem { land_type, keyword } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let (land_subtype, kw) = (*land_type, keyword.clone());
                     let controller_has_land = self.battlefield.iter().any(|c| {
                         c.controller == card.owner
                             && c.definition.subtypes.land_types.iter().any(|lt| lt == &land_subtype)
@@ -3822,12 +3821,12 @@ impl GameState {
                                 exclude_source: false,
                                 color: None,
                                 token: None,
-                        colorless: false,
+                                colorless: false,
                             },
                             layer: Layer::L6Ability,
                             sublayer: None,
                             duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification: Modification::AddKeyword(kw.clone()),
+                            modification: Modification::AddKeyword(kw),
                         });
                     }
                 }
@@ -8394,20 +8393,6 @@ fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
 /// - Wonder (STA reprint, Judgment): controls Island → Flying anthem
 /// - Brawn (STA reprint, Judgment): controls Forest → Trample anthem
 /// - Valor (STA reprint, Judgment): controls Plains → First Strike anthem
-fn graveyard_anthem_for_name(
-    name: &'static str,
-) -> Option<(crate::card::LandType, crate::card::Keyword)> {
-    use crate::card::{Keyword, LandType};
-    match name {
-        "Anger" => Some((LandType::Mountain, Keyword::Haste)),
-        "Wonder" => Some((LandType::Island, Keyword::Flying)),
-        "Brawn" => Some((LandType::Forest, Keyword::Trample)),
-        "Valor" => Some((LandType::Plains, Keyword::FirstStrike)),
-        "Filth" => Some((LandType::Swamp, Keyword::Landwalk(LandType::Swamp))),
-        _ => None,
-    }
-}
-
 // ── Static ability conversion ─────────────────────────────────────────────────
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
@@ -8788,6 +8773,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::UnspentManaBecomesColorless
+            // GraveyardAnthem is zone-special: gathered from graveyards in
+            // `gather_continuous_effects_inner`, never from the battlefield.
+            | StaticEffect::GraveyardAnthem { .. }
             | StaticEffect::MinusCounterReduction
             | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })
