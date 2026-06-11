@@ -1398,6 +1398,7 @@ mod tests {
     use super::*;
     use crate::catalog;
     use crate::game::GameState;
+    use crate::game::TriggerPush;
     use crate::net::HandCardView;
     use crate::player::Player;
 
@@ -1415,8 +1416,8 @@ mod tests {
         let mut g = two_player_game();
         let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        g.remove_from_battlefield_to_graveyard(a);
-        g.remove_from_battlefield_to_graveyard(b);
+        g.remove_from_battlefield_to_graveyard_raw(a);
+        g.remove_from_battlefield_to_graveyard_raw(b);
         let view = project(&g, 0);
         assert_eq!(view.permanents_to_graveyard_this_turn, 2);
     }
@@ -1648,19 +1649,7 @@ mod tests {
             mana_spent: 0,
             uncounterable: false,
         });
-        g.stack.push(StackItem::Trigger {
-            source: bolt_id,
-            controller: 0,
-            effect: Box::new(Effect::Noop),
-            target: None,
-            mode: None,
-            x_value: 0,
-            converged_value: 0,
-        trigger_source: None,
-            mana_spent: 0,
-            event_amount: 0,
-            intervening_if: None,
-        });
+        g.stack.push(TriggerPush::new(bolt_id, 0, Effect::Noop).build());
         let v = project(&g, 0);
         assert_eq!(v.stack.len(), 2);
         match &v.stack[0] {
@@ -1752,7 +1741,7 @@ mod tests {
         assert_eq!(project(&state, 0).battlefield.iter()
             .find(|p| p.id == a).unwrap().soulbond_partner, Some(b));
         // A stale link to an off-battlefield card is suppressed.
-        state.remove_from_battlefield_to_graveyard(b);
+        state.remove_from_battlefield_to_graveyard_raw(b);
         assert_eq!(project(&state, 0).battlefield.iter()
             .find(|p| p.id == a).unwrap().soulbond_partner, None);
     }

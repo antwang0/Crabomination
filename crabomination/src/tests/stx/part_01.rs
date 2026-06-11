@@ -587,7 +587,7 @@ fn tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play() {
         assert_eq!(buffed.power, 4, "Buffed Inkling = 4 power");
     }
     // Now exile/destroy Inkcaster.
-    g.remove_from_battlefield_to_graveyard(tic);
+    g.remove_from_battlefield_to_graveyard_raw(tic);
     let after = g.compute_battlefield().into_iter()
         .find(|c| c.id == inkling).expect("Inkling");
     assert_eq!(after.power, 2,

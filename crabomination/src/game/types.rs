@@ -1333,6 +1333,90 @@ pub enum StackItem {
     },
 }
 
+/// Builder for `StackItem::Trigger`. The variant has 11 fields and ~25
+/// push sites; hand-written literals kept drifting (several passed
+/// `event_amount: 0` where an amount was available — audit P3). Defaults
+/// every rider field; chain setters for the ones the site actually has.
+#[derive(Debug, Clone)]
+pub struct TriggerPush {
+    source: CardId,
+    controller: usize,
+    effect: Effect,
+    target: Option<Target>,
+    mode: Option<usize>,
+    x_value: u32,
+    converged_value: u32,
+    trigger_source: Option<crate::game::effects::EntityRef>,
+    mana_spent: u32,
+    event_amount: u32,
+    intervening_if: Option<crate::card::Predicate>,
+}
+
+impl TriggerPush {
+    pub fn new(source: CardId, controller: usize, effect: Effect) -> Self {
+        Self {
+            source,
+            controller,
+            effect,
+            target: None,
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+            trigger_source: None,
+            mana_spent: 0,
+            event_amount: 0,
+            intervening_if: None,
+        }
+    }
+    pub fn target(mut self, t: Option<Target>) -> Self {
+        self.target = t;
+        self
+    }
+    pub fn mode(mut self, m: Option<usize>) -> Self {
+        self.mode = m;
+        self
+    }
+    pub fn x_value(mut self, x: u32) -> Self {
+        self.x_value = x;
+        self
+    }
+    pub fn converged_value(mut self, v: u32) -> Self {
+        self.converged_value = v;
+        self
+    }
+    pub fn trigger_source(mut self, ts: Option<crate::game::effects::EntityRef>) -> Self {
+        self.trigger_source = ts;
+        self
+    }
+    pub fn mana_spent(mut self, m: u32) -> Self {
+        self.mana_spent = m;
+        self
+    }
+    pub fn event_amount(mut self, a: u32) -> Self {
+        self.event_amount = a;
+        self
+    }
+    pub fn intervening_if(mut self, p: Option<crate::card::Predicate>) -> Self {
+        self.intervening_if = p;
+        self
+    }
+    pub fn build(self) -> StackItem {
+        StackItem::Trigger {
+            source: self.source,
+            controller: self.controller,
+            effect: Box::new(self.effect),
+            target: self.target,
+            mode: self.mode,
+            x_value: self.x_value,
+            converged_value: self.converged_value,
+            trigger_source: self.trigger_source,
+            mana_spent: self.mana_spent,
+            event_amount: self.event_amount,
+            intervening_if: self.intervening_if,
+        }
+    }
+}
+
 // ── Errors ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

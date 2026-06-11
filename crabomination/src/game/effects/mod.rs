@@ -2767,7 +2767,7 @@ impl GameState {
 
             Effect::ExileIfWouldDieThisTurn { what } => {
                 // Install an until-end-of-turn death replacement on each
-                // resolved permanent. `remove_from_battlefield_to_graveyard`
+                // resolved permanent. `remove_from_battlefield_to_graveyard_raw`
                 // consults `dies_to_exile_eot` and redirects to exile — the
                 // same path the finality counter uses; the set is cleared at
                 // cleanup.

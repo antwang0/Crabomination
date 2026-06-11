@@ -752,7 +752,7 @@ pub struct GameState {
         std::collections::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
     /// Permanents whose death is replaced by exile for the rest of the
     /// turn — "if that creature would die this turn, exile it instead"
-    /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard`
+    /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard_raw`
     /// alongside the Finality-counter redirect; cleared at cleanup. The
     /// redirect lasts the whole turn, so it also catches deaths from later
     /// combat / removal, not just the spell's own damage. `#[serde(default)]`
@@ -1599,7 +1599,7 @@ impl GameState {
     ) -> crate::card::Zone {
         use crate::replacement::{ReplacementSource, MAX_REPLACEMENT_ITERATIONS};
         // Note: CR 122.1h finality counter redirect is applied at the
-        // call site (`remove_from_battlefield_to_graveyard`) because by
+        // call site (`remove_from_battlefield_to_graveyard_raw`) because by
         // the time we reach this resolver the card has already been
         // removed from the battlefield. The call site passes
         // `Zone::Exile` instead of `Zone::Graveyard` when finality is
@@ -5399,19 +5399,12 @@ impl GameState {
                 // Expose the dead creature as the trigger's source so bodies
                 // can reference it (e.g. "exile it") via `Selector::This` /
                 // `TriggerSource`; `target` still carries its controller.
-                self.stack.push(crate::game::types::StackItem::Trigger {
-                    source: dt.source,
-                    controller: dt.controller,
-                    effect: Box::new(dt.effect),
-                    target: dt.target,
-                    mode: None,
-                    x_value: 0,
-                    converged_value: 0,
-                    trigger_source: Some(crate::game::effects::EntityRef::Card(cid)),
-                    mana_spent: 0,
-                    event_amount: 0,
-                    intervening_if: None,
-                });
+                self.stack.push(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect)
+                        .target(dt.target)
+                        .trigger_source(Some(crate::game::effects::EntityRef::Card(cid)))
+                        .build(),
+                );
             }
         }
         // "Whenever a creature attacks you or a planeswalker you control"
@@ -5440,21 +5433,13 @@ impl GameState {
                         .attack_for(atk_id)
                         .and_then(|a| self.defender_for(a.target));
                     if defender == Some(dt.controller) {
-                        self.stack.push(crate::game::types::StackItem::Trigger {
-                            source: dt.source,
-                            controller: dt.controller,
-                            effect: Box::new(dt.effect.clone()),
-                            target: None,
-                            mode: None,
-                            x_value: 0,
-                            converged_value: 0,
-                            trigger_source: Some(
-                                crate::game::effects::EntityRef::Permanent(atk_id),
-                            ),
-                            mana_spent: 0,
-                            event_amount: 0,
-                            intervening_if: None,
-                        });
+                        self.stack.push(
+                            TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                                .trigger_source(Some(
+                            crate::game::effects::EntityRef::Permanent(atk_id),
+                        ))
+                                .build(),
+                        );
                     }
                 }
             }
@@ -5489,19 +5474,11 @@ impl GameState {
                     if dt.controller != *controller {
                         continue;
                     }
-                    self.stack.push(crate::game::types::StackItem::Trigger {
-                        source: dt.source,
-                        controller: dt.controller,
-                        effect: Box::new(dt.effect.clone()),
-                        target: None,
-                        mode: None,
-                        x_value: 0,
-                        converged_value: 0,
-                        trigger_source: Some(crate::game::effects::EntityRef::Permanent(*cid)),
-                        mana_spent: 0,
-                        event_amount: 0,
-                        intervening_if: None,
-                    });
+                    self.stack.push(
+                        TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                            .trigger_source(Some(crate::game::effects::EntityRef::Permanent(*cid)))
+                            .build(),
+                    );
                 }
             }
         }
@@ -6172,19 +6149,15 @@ impl GameState {
         if let Some(snap) = self.died_card_snapshots.get(&source) {
             self.leaves_bf_lki.insert(source, snap.clone());
         }
-        self.stack.push(StackItem::Trigger {
-            source,
-            controller,
-            effect: Box::new(effect),
-            target,
-            mode,
-            x_value: 0,
-            converged_value: 0,
-            trigger_source: subject,
-            mana_spent: 0,
-            event_amount,
-            intervening_if,
-        });
+        self.stack.push(
+            TriggerPush::new(source, controller, effect)
+                .target(target)
+                .mode(mode)
+                .trigger_source(subject)
+                .event_amount(event_amount)
+                .intervening_if(intervening_if)
+                .build(),
+        );
     }
 
 
@@ -6293,19 +6266,12 @@ impl GameState {
         ];
 
         // Push ability effects onto the stack.
-        self.stack.push(StackItem::Trigger {
-            source: card_id,
-            controller: p,
-            effect: Box::new(ability.effect),
-            target,
-            mode: None,
-            x_value: x,
-            converged_value: 0,
-        trigger_source: None,
-            mana_spent: 0,
-            event_amount: 0,
-            intervening_if: None,
-        });
+        self.stack.push(
+            TriggerPush::new(card_id, p, ability.effect)
+                .target(target)
+                .x_value(x)
+                .build(),
+        );
         self.give_priority_to_active();
 
         let mut sba = self.check_state_based_actions();
@@ -8542,7 +8508,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAllYoursEachUntapStep
             // ExileDyingOpponentCreatures (Valentin) — consulted in
-            // `remove_from_battlefield_to_graveyard`; no layer effect.
+            // `remove_from_battlefield_to_graveyard_raw`; no layer effect.
             | StaticEffect::ExileDyingOpponentCreatures { .. }
             // YourInstantSorcerySpellsHaveLifelink (Radiant Scrollwielder) —
             // consulted in the non-combat damage path; no layer effect.

@@ -1991,7 +1991,7 @@ fn isolation_zone_exiles_until_it_leaves() {
     }).expect("cast Isolation Zone");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == victim), "creature exiled");
-    g.remove_from_battlefield_to_graveyard(zone);
+    g.remove_from_battlefield_to_graveyard_raw(zone);
     assert!(g.battlefield.iter().any(|c| c.id == victim), "creature returns when zone leaves");
 }
 

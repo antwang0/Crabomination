@@ -104,7 +104,7 @@ fn temporary_copy_reverts_when_leaving_battlefield() {
     g.priority.player_with_priority = 0;
     crate::game::cast_at(&mut g, id, Target::Permanent(big));
     assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Colossal Dreadmaw");
-    g.remove_from_battlefield_to_graveyard(small);
+    g.remove_from_battlefield_to_graveyard_raw(small);
     let dead = g.players[0].graveyard.iter().find(|c| c.id == small).unwrap();
     assert_eq!(dead.definition.name, "Grizzly Bears", "printed card in the graveyard");
     assert!(g.temporary_copies.is_empty(), "revert entry consumed");

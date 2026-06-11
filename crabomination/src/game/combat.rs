@@ -374,19 +374,11 @@ impl GameState {
                     })
                     .collect();
                 for (src, effect) in listeners {
-                    self.stack.push(StackItem::Trigger {
-                        source: src,
-                        controller: defender,
-                        effect: Box::new(effect),
-                        target: Some(Target::Player(p)),
-                        mode: None,
-                        x_value: 0,
-                        converged_value: 0,
-                        trigger_source: None,
-                        mana_spent: 0,
-                        event_amount: 0,
-                        intervening_if: None,
-                    });
+                    self.stack.push(
+                        TriggerPush::new(src, defender, effect)
+                            .target(Some(Target::Player(p)))
+                            .build(),
+                    );
                 }
             }
         }
@@ -426,19 +418,11 @@ impl GameState {
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
-            self.stack.push(StackItem::Trigger {
-                source,
-                controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-                trigger_source: None,
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(source, controller, effect)
+                    .target(auto_target)
+                    .build(),
+            );
         }
 
         self.give_priority_to_active();
@@ -2051,22 +2035,14 @@ impl GameState {
             } else {
                 Some(default_target.clone())
             };
-            self.stack.push(StackItem::Trigger {
-                source: trig_source,
-                controller,
-                effect: Box::new(effect),
-                target,
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-                trigger_source: None,
-                mana_spent: 0,
-                // CR 119.3 — the damage dealt, so `Value::TriggerEventAmount`
-                // riders (Visions of Brutality's "controller loses that much
-                // life") scale by the hit.
-                event_amount: damage_amount,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(trig_source, controller, effect)
+                    .target(target)
+                    // CR 119.3 — the damage dealt, so Value::TriggerEventAmount
+                    // riders scale by the hit (Visions of Brutality).
+                    .event_amount(damage_amount)
+                    .build(),
+            );
         }
     }
 }

@@ -257,12 +257,12 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ### P3 — structural root causes (fix once, prevent the class)
 
-- ⏳ **Three battlefield→graveyard exits with divergent semantics**
-  (`remove_to_graveyard_with_triggers` / bare
-  `remove_from_battlefield_to_graveyard` / `move_card_to`→
-  `route_to_graveyard`), chosen ad hoc per effect arm — the direct cause of
-  the P1 death-funnel family. Make the bare helper private to the rich one
-  so new arms can't pick wrong.
+- ✅ **Three battlefield→graveyard exits with divergent semantics** — the
+  bare helper is now `remove_from_battlefield_to_graveyard_raw` with a
+  doc warning (zone change only; use `remove_to_graveyard_with_triggers` /
+  `sacrifice_one`). Strict Proctor's unpaid-tax sacrifice routes through
+  `sacrifice_one`; the rich funnel also collects Equipment-granted dies
+  triggers (CR 702.6e — Skullclamp via Destroy/sacrifice, not just SBA).
 - ⏳ **Parallel hand-maintained walkers with no exhaustiveness guard**:
   `eff_find` vs `requires_target` vs `primary_target_filter` (the P0
   targeting hole), the two `evaluate_requirement` evaluators (the hybrid
@@ -275,10 +275,9 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   engine's own copy machinery and duplicate what
   `StaticEffect::PumpSelfIf`/`PumpTeamIf` already express; same applies to
   `dynamic_pt_for_name` (already flagged below in the Eldrazi notes).
-- ⏳ **`StackItem::Trigger` is an 11-field literal at ~12 push sites**
-  (`stack.rs:2025`, `2322`, `2560`, …) — field-drift bugs (several sites
-  pass `event_amount: 0` where an amount is available). Add a
-  `TriggerPush` builder.
+- ✅ **`StackItem::Trigger` literal push sites** — `TriggerPush` builder
+  (`types.rs`) replaces all 26 hand-written 11-field literals; rider
+  fields default and are set only where the site has a value.
 
 ## Follow-ups noticed (not yet done)
 

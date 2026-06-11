@@ -515,7 +515,7 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
 mod tests {
     use super::*;
     use crate::catalog;
-    use crate::game::{GameAction, two_player_game};
+    use crate::game::{GameAction, TriggerPush, two_player_game};
 
     #[test]
     fn snapshot_round_trips_basic_fields() {
@@ -934,19 +934,7 @@ mod tests {
             mana_spent: 0,
             uncounterable: false,
         });
-        g.stack.push(StackItem::Trigger {
-            source: bolt_id,
-            controller: 0,
-            effect: Box::new(Effect::Noop),
-            target: None,
-            mode: None,
-            x_value: 0,
-            converged_value: 0,
-        trigger_source: None,
-            mana_spent: 0,
-            event_amount: 0,
-            intervening_if: None,
-        });
+        g.stack.push(TriggerPush::new(bolt_id, 0, Effect::Noop).build());
 
         let snap = GameSnapshot::capture(&g);
         assert_eq!(snap.dropped_triggers, 1);
@@ -963,19 +951,11 @@ mod tests {
         let mut g = two_player_game();
         g.players[0].life = 13;
         g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        g.stack.push(StackItem::Trigger {
-            source: CardId(99),
-            controller: 0,
-            effect: Box::new(Effect::Noop),
-            target: None,
-            mode: None,
-            x_value: 7,
-            converged_value: 0,
-        trigger_source: None,
-            mana_spent: 0,
-            event_amount: 0,
-            intervening_if: None,
-        });
+        g.stack.push(
+            TriggerPush::new(CardId(99), 0, Effect::Noop)
+                .x_value(7)
+                .build(),
+        );
 
         let json = serde_json::to_string(&g).expect("serialize GameState");
         let restored: GameState = serde_json::from_str(&json).expect("deserialize GameState");

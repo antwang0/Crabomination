@@ -1001,7 +1001,7 @@ fn two_headed_giant_poison_is_per_player_not_shared() {
 
 /// Baseline: with no replacement registered, a destroyed creature
 /// lands in its owner's graveyard. Just confirms the test scaffolding
-/// (`remove_from_battlefield_to_graveyard` is the engine entry point
+/// (`remove_from_battlefield_to_graveyard_raw` is the engine entry point
 /// destroy / lethal-damage SBA / Effect::Destroy all funnel through).
 #[test]
 fn replacement_baseline_destroyed_creature_hits_graveyard() {
@@ -1016,7 +1016,7 @@ fn replacement_baseline_destroyed_creature_hits_graveyard() {
         Zone::Graveyard,
     );
 
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
     assert!(g.exile.iter().all(|c| c.id != bear));
 }
@@ -1024,7 +1024,7 @@ fn replacement_baseline_destroyed_creature_hits_graveyard() {
 /// A registered "would go to graveyard → exile instead" replacement
 /// for a specific CardId reroutes the destroyed creature. Verifies
 /// the wiring end-to-end through
-/// `remove_from_battlefield_to_graveyard` → resolver →
+/// `remove_from_battlefield_to_graveyard_raw` → resolver →
 /// `place_card_at_resolved_zone`.
 #[test]
 fn replacement_redirects_graveyard_to_exile() {
@@ -1044,7 +1044,7 @@ fn replacement_redirects_graveyard_to_exile() {
         optional: false,
     });
 
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     assert!(
         g.exile.iter().any(|c| c.id == bear),
         "replacement should redirect the destroyed bear to exile",
@@ -1076,8 +1076,8 @@ fn replacement_scoped_to_specific_card_id() {
         optional: false,
     });
 
-    g.remove_from_battlefield_to_graveyard(target);
-    g.remove_from_battlefield_to_graveyard(bystander);
+    g.remove_from_battlefield_to_graveyard_raw(target);
+    g.remove_from_battlefield_to_graveyard_raw(bystander);
 
     assert!(g.exile.iter().any(|c| c.id == target));
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bystander));
@@ -1125,7 +1125,7 @@ fn replacement_does_not_apply_same_effect_twice() {
         Zone::Graveyard,
     );
 
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
     assert!(g.exile.iter().all(|c| c.id != bear));
 }
@@ -1153,7 +1153,7 @@ fn replacement_from_filter_gates_origin_zone() {
         optional: false,
     });
 
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
     assert!(g.exile.iter().all(|c| c.id != bear));
 }
@@ -1184,7 +1184,7 @@ fn replacement_unregister_drops_effect() {
         Zone::Graveyard,
     );
 
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
 }
 
@@ -1249,7 +1249,7 @@ fn seat_commanders_sets_up_command_zone_and_replacement() {
 /// End-to-end Phase H + I + J: a Commander on the battlefield, when
 /// destroyed, lands in the command zone — not the graveyard. The
 /// graveyard `Effect::Destroy` / lethal-damage SBA path funnels
-/// through `remove_from_battlefield_to_graveyard`, which Phase H
+/// through `remove_from_battlefield_to_graveyard_raw`, which Phase H
 /// wired through the replacement resolver, which Phase J registered
 /// the redirect for, which Phase I made land in
 /// `Player.command`. All four phases active simultaneously.
@@ -1265,7 +1265,7 @@ fn destroyed_commander_returns_to_command_zone() {
     card.controller = 0;
     g.battlefield.push(card);
 
-    g.remove_from_battlefield_to_graveyard(cmd);
+    g.remove_from_battlefield_to_graveyard_raw(cmd);
 
     assert!(
         g.players[0].command.iter().any(|c| c.id == cmd),
@@ -1334,7 +1334,7 @@ fn commander_cast_tax_blocks_unpaid_recast() {
     assert!(g.battlefield.iter().any(|c| c.id == cmd));
 
     // Destroy it — Phase J replacement bounces back to command zone.
-    g.remove_from_battlefield_to_graveyard(cmd);
+    g.remove_from_battlefield_to_graveyard_raw(cmd);
     assert!(g.players[0].command.iter().any(|c| c.id == cmd));
 
     // Reset priority/step (drain_stack may have advanced).
@@ -1588,7 +1588,7 @@ fn commander_redirect_can_be_declined() {
     let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
     let card = g.players[0].command.remove(pos);
     g.battlefield.push(card);
-    g.remove_from_battlefield_to_graveyard(cmd);
+    g.remove_from_battlefield_to_graveyard_raw(cmd);
 
     assert!(
         g.players[0].graveyard.iter().any(|c| c.id == cmd),

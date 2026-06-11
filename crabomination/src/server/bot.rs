@@ -2258,6 +2258,7 @@ mod tests {
     use super::*;
     use crate::catalog;
     use crate::game::GameState;
+    use crate::game::TriggerPush;
     use crate::player::Player;
 
     fn two_player_game() -> GameState {
@@ -3128,19 +3129,7 @@ mod tests {
         g.step = TurnStep::PreCombatMain;
         let tracker = g.add_card_to_battlefield(0, catalog::tireless_tracker());
         g.clear_sickness(tracker);
-        g.stack.push(StackItem::Trigger {
-            source: tracker,
-            controller: 0,
-            effect: Box::new(Effect::Noop),
-            target: None,
-            mode: None,
-            x_value: 0,
-            converged_value: 0,
-        trigger_source: None,
-            mana_spent: 0,
-            event_amount: 0,
-            intervening_if: None,
-        });
+        g.stack.push(TriggerPush::new(tracker, 0, Effect::Noop).build());
         g.add_card_to_hand(0, catalog::tireless_tracker());
         g.add_card_to_hand(0, catalog::lightning_bolt());
         g.players[0].mana_pool.add(crate::mana::Color::Green, 5);
@@ -3190,19 +3179,7 @@ mod tests {
         let tracker = g.add_card_to_battlefield(0, catalog::tireless_tracker());
         g.clear_sickness(tracker);
         // Stack: Tireless Tracker trigger (Clue creation), no target.
-        g.stack.push(StackItem::Trigger {
-            source: tracker,
-            controller: 0,
-            effect: Box::new(Effect::Noop), // exact effect doesn't matter here
-            target: None,
-            mode: None,
-            x_value: 0,
-            converged_value: 0,
-        trigger_source: None,
-            mana_spent: 0,
-            event_amount: 0,
-            intervening_if: None,
-        });
+        g.stack.push(TriggerPush::new(tracker, 0, Effect::Noop).build());
         // Hand: a mix of sorcery- and instant-speed castables. Pyrokinesis
         // (instant) is the only legal cast right now.
         g.add_card_to_hand(0, catalog::tireless_tracker());

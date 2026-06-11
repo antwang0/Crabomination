@@ -104,7 +104,7 @@ fn angel_of_sanctions_exiles_until_it_leaves() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear exiled by Angel ETB");
     // Angel leaves → bear returns.
-    g.remove_from_battlefield_to_graveyard(angel);
+    g.remove_from_battlefield_to_graveyard_raw(angel);
     g.check_state_based_actions();
     assert!(g.battlefield.iter().any(|c| c.id == bear), "bear returns when Angel leaves");
 }

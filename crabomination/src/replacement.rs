@@ -8,7 +8,7 @@
 //!
 //! Replacements are registered on [`crate::game::GameState`] via
 //! `register_replacement` and consulted by zone-change paths
-//! (`place_card_in_dest`, `remove_from_battlefield_to_graveyard`,
+//! (`place_card_in_dest`, `remove_from_battlefield_to_graveyard_raw`,
 //! `remove_from_battlefield_to_exile`). The engine walks the registry
 //! at the moment of placement, swaps the destination if a match
 //! fires, and re-consults — capped by [`MAX_REPLACEMENT_ITERATIONS`]

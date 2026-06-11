@@ -3224,7 +3224,7 @@ fn banishing_light_exiles_then_returns_on_leave() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "ETB exiled the opponent's creature");
     // Destroy the enchantment → the exiled card returns to the battlefield.
-    g.remove_from_battlefield_to_graveyard(bl);
+    g.remove_from_battlefield_to_graveyard_raw(bl);
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_some(), "linked exile returned on leave");
 }
@@ -3909,7 +3909,7 @@ fn mesmeric_fiend_exiles_a_card_until_it_leaves() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == stolen), "the chosen card is exiled");
     // When the Fiend leaves, the card returns to its owner's hand.
-    g.remove_from_battlefield_to_graveyard(fiend);
+    g.remove_from_battlefield_to_graveyard_raw(fiend);
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == stolen), "card returns when the Fiend leaves");
 }
@@ -9054,7 +9054,7 @@ fn tidehollow_sculler_etb_takes_an_opponent_card() {
     assert!(g.exile.iter().any(|c| c.id == bolt),
         "Bolt exiled until the Sculler leaves");
     // Sculler dies → Bolt returns to its owner's hand.
-    g.remove_from_battlefield_to_graveyard(sculler);
+    g.remove_from_battlefield_to_graveyard_raw(sculler);
     assert!(g.players[1].hand.iter().any(|c| c.id == bolt),
         "Bolt returns to owner's hand when the Sculler leaves");
 }
@@ -15435,7 +15435,7 @@ fn brain_maggot_etb_exiles_until_it_leaves_then_returns_to_hand() {
         "Land stays in opponent's hand (Nonland filter)");
 
     // Brain Maggot dies → the exiled card returns to its owner's hand.
-    g.remove_from_battlefield_to_graveyard(id);
+    g.remove_from_battlefield_to_graveyard_raw(id);
     assert!(g.players[1].hand.iter().any(|c| c.id == target_card),
         "exiled card returns to owner's hand when Brain Maggot leaves");
     assert!(!g.exile.iter().any(|c| c.id == target_card), "no longer in exile");
@@ -15456,7 +15456,7 @@ fn banisher_priest_exiles_creature_until_it_leaves() {
     assert!(g.battlefield_find(bear).is_none(), "bear off battlefield");
 
     // Priest dies → the bear returns to the battlefield under its owner.
-    g.remove_from_battlefield_to_graveyard(id);
+    g.remove_from_battlefield_to_graveyard_raw(id);
     let returned = g.battlefield_find(bear).expect("bear back on battlefield");
     assert_eq!(returned.controller, 1, "returns under its owner's control");
     assert!(!g.exile.iter().any(|c| c.id == bear), "no longer exiled");
@@ -15491,7 +15491,7 @@ fn oblivion_ring_exiles_nonland_permanent_and_returns_it() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "opp permanent exiled");
     // O-Ring leaves → exiled permanent returns to battlefield.
-    g.remove_from_battlefield_to_graveyard(id);
+    g.remove_from_battlefield_to_graveyard_raw(id);
     assert!(g.battlefield_find(bear).is_some(), "exiled permanent returns");
 }
 
@@ -21779,7 +21779,7 @@ fn fiend_hunter_exiles_opponent_creature() {
     assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(), "bear should be exiled");
     assert!(g.exile.iter().any(|c| c.id == bear), "bear in exile linked to Fiend Hunter");
     // Fiend Hunter leaves → the exiled creature returns to the battlefield.
-    g.remove_from_battlefield_to_graveyard(id);
+    g.remove_from_battlefield_to_graveyard_raw(id);
     assert!(g.battlefield_find(bear).is_some(), "bear returns when Fiend Hunter leaves");
 }
 
@@ -23278,6 +23278,24 @@ fn skullclamp_draws_two_when_equipped_creature_dies() {
     assert_eq!(g.players[0].hand.len(), hand_before + 2, "Skullclamp drew two");
 }
 
+/// The equip-granted dies trigger also fires through the Destroy/sacrifice
+/// funnel, not just the SBA lethal-damage path (CR 702.6e).
+#[test]
+fn skullclamp_draws_two_when_equipped_creature_destroyed() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let clamp = g.add_card_to_battlefield(0, catalog::skullclamp());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: clamp, target: bear })
+        .expect("equip {1}");
+    let hand_before = g.players[0].hand.len();
+    g.remove_to_graveyard_with_triggers(bear);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "Skullclamp drew two");
+}
+
 /// Equip rejects a creature you don't control (CR 702.6c).
 #[test]
 fn equip_rejects_creature_you_dont_control() {
@@ -23316,7 +23334,7 @@ fn equip_bonus_falls_off_when_creature_dies() {
         .expect("equip ok");
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
     // Kill the bear (move to graveyard) and run SBAs.
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     g.check_state_based_actions();
     let eq = g.battlefield.iter().find(|c| c.id == boner).unwrap();
     assert_eq!(eq.attached_to, None, "stale link cleared by SBA");
@@ -31877,7 +31895,7 @@ fn soulshift_hundred_talon_kami_returns_spirit() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // accept Soulshift
     // A cheap (MV-2) Spirit in the graveyard for Soulshift 4 to retrieve.
     let spirit = g.add_card_to_battlefield(0, catalog::mistwalker());
-    g.remove_from_battlefield_to_graveyard(spirit);
+    g.remove_from_battlefield_to_graveyard_raw(spirit);
     let kami = g.add_card_to_battlefield(0, catalog::hundred_talon_kami());
     g.battlefield_find_mut(kami).unwrap().damage = 99; // lethal → dies → Soulshift 4
     g.check_state_based_actions();
@@ -31929,8 +31947,8 @@ fn gravestorm_ominous_harvest_copies_per_dead_permanent() {
     // resolutions, each "target player draws 1, loses 1".
     let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.remove_from_battlefield_to_graveyard(a);
-    g.remove_from_battlefield_to_graveyard(b);
+    g.remove_from_battlefield_to_graveyard_raw(a);
+    g.remove_from_battlefield_to_graveyard_raw(b);
     assert_eq!(g.permanents_to_graveyard_this_turn, 2);
     for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
     let harvest = g.add_card_to_hand(0, catalog::ominous_harvest());
@@ -32279,7 +32297,7 @@ fn kitesail_freebooter_exiles_noncreature_until_it_leaves() {
     assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "noncreature card exiled from hand");
     // When Kitesail leaves, the card returns.
     let kite_id = g.battlefield.iter().find(|c| c.definition.name == "Kitesail Freebooter").unwrap().id;
-    g.remove_from_battlefield_to_graveyard(kite_id);
+    g.remove_from_battlefield_to_graveyard_raw(kite_id);
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "card returns when Kitesail leaves");
 }
@@ -32326,7 +32344,7 @@ fn narnam_renegade_revolt_enters_bigger_after_a_permanent_left() {
     assert_eq!(n1.counter_count(CounterType::PlusOnePlusOne), 0, "no Revolt → no counter");
     // Sacrifice a permanent → Revolt active for the rest of the turn.
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.remove_from_battlefield_to_graveyard(fodder);
+    g.remove_from_battlefield_to_graveyard_raw(fodder);
     assert!(g.players[0].permanent_left_battlefield_this_turn);
     let revolt = g.add_card_to_hand(0, catalog::narnam_renegade());
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -32341,7 +32359,7 @@ fn narnam_renegade_revolt_enters_bigger_after_a_permanent_left() {
 fn hidden_herbalists_revolt_adds_green_mana() {
     let mut g = two_player_game();
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.remove_from_battlefield_to_graveyard(fodder); // Revolt on
+    g.remove_from_battlefield_to_graveyard_raw(fodder); // Revolt on
     let herb = g.add_card_to_hand(0, catalog::hidden_herbalists());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
@@ -32395,7 +32413,7 @@ fn solemn_recruit_grows_on_revolt_end_step() {
     assert_eq!(g.battlefield_find(rec).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
     // Trigger Revolt, then the end step grows it.
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.remove_from_battlefield_to_graveyard(fodder);
+    g.remove_from_battlefield_to_graveyard_raw(fodder);
     g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(rec).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
@@ -32427,7 +32445,7 @@ fn fairgrounds_warden_exiles_until_it_leaves() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "victim exiled");
     let wid = g.battlefield.iter().find(|c| c.definition.name == "Fairgrounds Warden").unwrap().id;
-    g.remove_from_battlefield_to_graveyard(wid);
+    g.remove_from_battlefield_to_graveyard_raw(wid);
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == victim), "victim returns when Warden leaves");
 }
@@ -34872,7 +34890,7 @@ fn rest_in_peace_exiles_dying_creature() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::rest_in_peace());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     assert!(g.players[0].graveyard.is_empty(), "creature did not reach the graveyard");
     assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled instead");
 }
@@ -36781,7 +36799,7 @@ fn leyline_binding_domain_reduction_and_exile() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "victim exiled");
     // When the Binding leaves, the exiled permanent returns.
-    g.remove_from_battlefield_to_graveyard(id);
+    g.remove_from_battlefield_to_graveyard_raw(id);
     assert!(g.battlefield.iter().any(|c| c.id == victim), "victim returns when Binding leaves");
 }
 
@@ -40969,7 +40987,7 @@ fn journey_to_nowhere_exiles_until_it_leaves() {
     }).expect("Journey castable");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled");
-    g.remove_from_battlefield_to_graveyard(journey);
+    g.remove_from_battlefield_to_graveyard_raw(journey);
     assert!(g.battlefield_find(bear).is_some(), "creature returns when Journey leaves");
 }
 
@@ -42862,7 +42880,7 @@ fn face_down_creature_dies_as_real_card() {
     let ctx = crate::game::effects::EffectContext::for_ability(top, 0, None);
     let mut events = vec![];
     g.manifest_card(top, 0, &ctx, &mut events);
-    g.remove_from_battlefield_to_graveyard(top);
+    g.remove_from_battlefield_to_graveyard_raw(top);
     let gy = g.players[0].graveyard.iter().find(|c| c.id == top).expect("in graveyard");
     assert_eq!(gy.definition.name, "Elder Gargaroth", "restored to real card in graveyard");
     assert!(!gy.face_down);
@@ -44908,7 +44926,7 @@ fn skyclave_apparition_exiles_and_leaves_an_illusion() {
     crate::game::cast_at(&mut g, sky, Target::Permanent(target));
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == target), "oven exiled");
-    g.remove_from_battlefield_to_graveyard(sky);
+    g.remove_from_battlefield_to_graveyard_raw(sky);
     assert!(g.exile.iter().any(|c| c.id == target), "card stays in exile");
     let illusion = g.battlefield.iter()
         .find(|c| c.controller == 1 && c.definition.name == "Illusion")
@@ -45749,7 +45767,7 @@ fn sanctifier_en_vec_exiles_black_and_red_cards() {
     assert!(g.exile.iter().any(|c| c.id == bolt), "resolved red spell exiled (614.6)");
     // A green creature dying still goes to the graveyard.
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.remove_from_battlefield_to_graveyard(bear);
+    g.remove_from_battlefield_to_graveyard_raw(bear);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "green death unaffected");
 }
 
@@ -47481,7 +47499,7 @@ fn melded_permanent_dies_as_both_cards() {
     drain_stack(&mut g);
     let pw = g.battlefield.iter().find(|c| c.definition.name == "Urza, Planeswalker")
         .unwrap().id;
-    g.remove_from_battlefield_to_graveyard(pw);
+    g.remove_from_battlefield_to_graveyard_raw(pw);
     let names: Vec<&str> = g.players[0].graveyard.iter()
         .map(|c| c.definition.name).collect();
     assert!(names.contains(&"Urza, Lord Protector"));
@@ -47651,7 +47669,7 @@ fn disturb_back_face_exiles_instead_of_dying() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastDisturb { card_id: id }).expect("disturb");
     drain_stack(&mut g);
-    g.remove_from_battlefield_to_graveyard(id);
+    g.remove_from_battlefield_to_graveyard_raw(id);
     assert!(g.exile.iter().any(|c| c.id == id), "exiled instead");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == id));
 }

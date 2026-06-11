@@ -6,7 +6,7 @@
 use super::{EffectContext, EntityRef};
 use crate::card::{CardId, CardInstance, CounterType};
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
-use crate::game::{GameEvent, GameState};
+use crate::game::{GameEvent, GameState, TriggerPush};
 
 impl GameState {
     /// CR 614.9 — if damage aimed at `ent` (a player, or a permanent that
@@ -818,19 +818,12 @@ impl GameState {
             }
         });
         for dt in fire {
-            self.stack.push(crate::game::types::StackItem::Trigger {
-                source: dt.source,
-                controller: dt.controller,
-                effect: Box::new(dt.effect),
-                target: dt.target,
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-                trigger_source: Some(super::EntityRef::Card(id)),
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect)
+                    .target(dt.target)
+                    .trigger_source(Some(super::EntityRef::Card(id)))
+                    .build(),
+            );
         }
     }
 

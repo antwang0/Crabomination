@@ -1928,7 +1928,7 @@ fn glorious_anthem_pumps_your_creatures() {
     assert_eq!(bear.toughness, 3); // 2 + 1
 
     // Remove anthem — power should return to base.
-    g.remove_from_battlefield_to_graveyard(anthem_id);
+    g.remove_from_battlefield_to_graveyard_raw(anthem_id);
     let bear = g.computed_permanent(bear_id).unwrap();
     assert_eq!(bear.power, 2);
     assert_eq!(bear.toughness, 2);

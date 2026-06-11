@@ -799,22 +799,13 @@ impl GameState {
                     // AFTER the ETB triggers (so the ETB exile happens first,
                     // then the creature sacrifices itself).
                     if evoked {
-                        self.stack.push(StackItem::Trigger {
-                            source: card_id,
-                            controller: caster,
-                            effect: Box::new(Effect::Move {
-                                what: crate::effect::Selector::This,
-                                to: crate::effect::ZoneDest::Graveyard,
-                            }),
-                            target: None,
-                            mode: None,
-                            x_value: 0,
-                            converged_value: 0,
-                            trigger_source: None,
-                            mana_spent: 0,
-                            event_amount: 0,
-                            intervening_if: None,
-                        });
+                        self.stack.push(
+                        TriggerPush::new(card_id, caster, Effect::Move {
+                            what: crate::effect::Selector::This,
+                            to: crate::effect::ZoneDest::Graveyard,
+                        })
+                        .build(),
+                        );
                     }
 
                     // Dash (CR 702.110): the dashed creature gains haste and
@@ -929,21 +920,18 @@ impl GameState {
                             if let Some(Target::Permanent(tid)) = &auto_target {
                                 avoid.push(*tid);
                             }
-                            self.stack.push(StackItem::Trigger {
-                                source: card_id,
-                                controller: caster,
-                                effect: Box::new(effect.clone()),
-                                target: auto_target.clone(),
-                                mode,
-                                x_value,
-                                converged_value,
-                                trigger_source: Some(
-                                    crate::game::effects::EntityRef::Permanent(card_id),
-                                ),
-                                mana_spent,
-                                event_amount: 0,
-                                intervening_if: None,
-                            });
+                            self.stack.push(
+                                TriggerPush::new(card_id, caster, effect.clone())
+                                    .target(auto_target.clone())
+                                    .mode(mode)
+                                    .x_value(x_value)
+                                    .converged_value(converged_value)
+                                    .trigger_source(Some(
+                                crate::game::effects::EntityRef::Permanent(card_id),
+                            ))
+                                    .mana_spent(mana_spent)
+                                    .build(),
+                            );
                         }
                     }
 
@@ -1859,7 +1847,7 @@ impl GameState {
                 }
                 self.died_card_snapshots.insert(id, c.clone());
             }
-            self.remove_from_battlefield_to_graveyard(id);
+            self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
         // World rule (CR 704.5k): if two or more permanents have the World
@@ -1885,7 +1873,7 @@ impl GameState {
             if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
                 self.died_card_snapshots.insert(id, c.clone());
             }
-            self.remove_from_battlefield_to_graveyard(id);
+            self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
         // Saga rule (CR 714.4 / 704.5x): a Saga whose lore counters have
@@ -1917,7 +1905,7 @@ impl GameState {
                 card_id: id,
                 who: self.battlefield.iter().find(|c| c.id == id).map(|c| c.controller).unwrap_or(0),
             });
-            self.remove_from_battlefield_to_graveyard(id);
+            self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
         // Collect dead creatures using layer-computed toughness.
@@ -2107,7 +2095,7 @@ impl GameState {
                 .iter()
                 .find(|c| c.id == id)
                 .is_some_and(|c| c.definition.is_land());
-            self.remove_from_battlefield_to_graveyard(id);
+            self.remove_from_battlefield_to_graveyard_raw(id);
             // CR 700 — emit the graveyard-arrival event (only when the card
             // actually landed there; Finality / RIP redirects don't count).
             // Emrakul-style "put into a graveyard from anywhere" triggers
@@ -2123,19 +2111,11 @@ impl GameState {
             for (source, effect, controller) in die_triggers {
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
-                self.stack.push(StackItem::Trigger {
-                    source,
-                    controller,
-                    effect: Box::new(effect),
-                    target: auto_target,
-                    mode: None,
-                    x_value: 0,
-                    converged_value: 0,
-                trigger_source: None,
-                    mana_spent: 0,
-                    event_amount: 0,
-                    intervening_if: None,
-                });
+                self.stack.push(
+                    TriggerPush::new(source, controller, effect)
+                        .target(auto_target)
+                        .build(),
+                );
             }
             // Persist / Undying return (CR 702.79 / 702.92), shared with the
             // destroy / sacrifice funnels via `return_persist_undying`.
@@ -2157,7 +2137,7 @@ impl GameState {
             .collect();
         for id in pw_dead {
             events.push(GameEvent::PlaneswalkerDied { card_id: id });
-            self.remove_from_battlefield_to_graveyard(id);
+            self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
         // CR 702.103e — a bestowed permanent whose enchanted creature has
@@ -2341,7 +2321,7 @@ impl GameState {
 
     /// CR 506.4 — A permanent is removed from combat if it leaves the
     /// battlefield. Called by every battlefield-removal path
-    /// (`move_card_to`, `remove_from_battlefield_to_graveyard`,
+    /// (`move_card_to`, `remove_from_battlefield_to_graveyard_raw`,
     /// `remove_from_battlefield_to_exile`, etc.) so the post-removal
     /// combat state stays consistent. Prunes `self.attacking` (the
     /// attacker slot) and `self.block_map` (both blocker keys and
@@ -2352,7 +2332,12 @@ impl GameState {
             .retain(|blocker, attacker| *blocker != id && *attacker != id);
     }
 
-    pub(crate) fn remove_from_battlefield_to_graveyard(&mut self, id: CardId) {
+    /// **Raw** battlefield→graveyard move: zone change + replacements only.
+    /// Fires NO dies/LTB triggers, no Persist/Undying, no sacrifice events —
+    /// callers must handle those themselves (the SBA paths do). New effect
+    /// arms should use `remove_to_graveyard_with_triggers` or
+    /// `sacrifice_one` instead (audit P3: death-funnel bypass family).
+    pub(crate) fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
             let card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
@@ -2421,19 +2406,11 @@ impl GameState {
             if let Some((controller, Some(effect))) = valentin_redirect {
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&effect, controller, None);
-                self.stack.push(StackItem::Trigger {
-                    source: id,
-                    controller,
-                    effect: Box::new(effect),
-                    target: auto_target,
-                    mode: None,
-                    x_value: 0,
-                    converged_value: 0,
-                    trigger_source: None,
-                    mana_spent: 0,
-                    event_amount: 0,
-                    intervening_if: None,
-                });
+                self.stack.push(
+                    TriggerPush::new(id, controller, effect)
+                        .target(auto_target)
+                        .build(),
+                );
             }
         }
     }
@@ -2577,6 +2554,26 @@ impl GameState {
                 (triggers, creature_controller)
             })
             .unwrap_or_default();
+        // CR 702.6e — Equipment-granted "dies" triggers fire as though
+        // printed on the equipped creature (Skullclamp). The SBA lethal
+        // path collects these too; without this the Destroy / sacrifice
+        // funnels dropped them.
+        let mut leave_triggers = leave_triggers;
+        if let Some(controller) = dying_creature_controller
+            && !dies_suppressed
+        {
+            for eq in &self.battlefield {
+                if eq.attached_to != Some(id) {
+                    continue;
+                }
+                let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                for ta in &bonus.triggered_abilities {
+                    if ta.event.kind == EventKind::CreatureDied {
+                        leave_triggers.push((id, ta.effect.clone(), controller));
+                    }
+                }
+            }
+        }
         // Capture Persist/Undying info before the card leaves the battlefield.
         let (persist_has, undying_has, persist_minus, persist_plus, persist_owner) = self
             .battlefield
@@ -2650,7 +2647,7 @@ impl GameState {
             .iter()
             .find(|c| c.id == id)
             .map(|c| (c.owner, c.definition.card_types.contains(&crate::card::CardType::Land)));
-        self.remove_from_battlefield_to_graveyard(id);
+        self.remove_from_battlefield_to_graveyard_raw(id);
         let mut out = Vec::new();
         if let Some((owner, is_land)) = gy_info
             && self.players[owner].graveyard.iter().any(|c| c.id == id)
@@ -2660,19 +2657,11 @@ impl GameState {
         for (source, effect, controller) in leave_triggers {
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
-            self.stack.push(StackItem::Trigger {
-                source,
-                controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-            trigger_source: None,
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(source, controller, effect)
+                    .target(auto_target)
+                    .build(),
+            );
         }
         // CR 702.79 / 702.92 — Persist / Undying apply on *any* death, not
         // just lethal-damage SBA. The destroy / sacrifice funnels route

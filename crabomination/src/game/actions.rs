@@ -614,11 +614,13 @@ pub(crate) fn apply_etb_trigger_tax(
         }
         // Couldn't actually afford the tax — fall through and sacrifice.
     }
-    // Sacrifice the trigger source. Only sacrifice if it's still on
-    // the battlefield (it may have already left between push and
-    // resolution for fast self-die effects).
+    // Sacrifice the trigger source through the sacrifice funnel (CR 701.16
+    // — fires sacrifice/dies events). Only if it's still on the battlefield
+    // (it may have already left between push and resolution).
     if state.battlefield.iter().any(|c| c.id == trigger_source) {
-        state.remove_from_battlefield_to_graveyard(trigger_source);
+        let mut evs = Vec::new();
+        state.sacrifice_one(trigger_source, trigger_controller, &mut evs);
+        state.dispatch_triggers_for_events(&evs);
     }
     false
 }
@@ -1161,19 +1163,12 @@ impl GameState {
             // CR 700.2b — modal ETB trigger mode pick at push-time.
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             for _ in 0..multiplier {
-                self.stack.push(StackItem::Trigger {
-                    source: card_id,
-                    controller,
-                    effect: Box::new(effect.clone()),
-                    target: auto_target.clone(),
-                    mode,
-                    x_value: 0,
-                    converged_value: 0,
-                trigger_source: None,
-                    mana_spent: 0,
-                    event_amount: 0,
-                    intervening_if: None,
-                });
+                self.stack.push(
+                    TriggerPush::new(card_id, controller, effect.clone())
+                        .target(auto_target.clone())
+                        .mode(mode)
+                        .build(),
+                );
             }
         }
     }
@@ -1881,19 +1876,11 @@ impl GameState {
             .unwrap_or_default();
         for effect in unlock_triggers {
             let auto_target = self.auto_target_for_effect(&effect, controller);
-            self.stack.push(crate::game::types::StackItem::Trigger {
-                source: card_id,
-                controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-                trigger_source: None,
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(card_id, controller, effect)
+                    .target(auto_target)
+                    .build(),
+            );
         }
     }
 
@@ -3773,19 +3760,11 @@ impl GameState {
                 what: Selector::Target(0),
                 cost: ward_cost,
             };
-            self.stack.push(StackItem::Trigger {
-                source: perm_id,
-                controller: ward_controller,
-                effect: Box::new(effect),
-                target: Some(Target::Permanent(target_for_trigger)),
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-                trigger_source: None,
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(perm_id, ward_controller, effect)
+                    .target(Some(Target::Permanent(target_for_trigger)))
+                    .build(),
+            );
         }
     }
 
@@ -3845,22 +3824,14 @@ impl GameState {
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
-            self.stack.push(StackItem::Trigger {
-                source,
-                controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-                // Self-cast trigger fires from the cast card itself —
-                // carry its CardId as the trigger source so
-                // Effect::CopySpell can find it on the stack.
-                trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(source, controller, effect)
+                    .target(auto_target)
+                    // Self-cast trigger: carry the cast card's id so
+                    // Effect::CopySpell can find it on the stack.
+                    .trigger_source(Some(crate::game::effects::EntityRef::Card(source)))
+                    .build(),
+            );
         }
     }
 
@@ -5400,19 +5371,11 @@ impl GameState {
             });
         self.delayed_triggers = rest;
         for dt in next_cast {
-            self.stack.push(StackItem::Trigger {
-                source: dt.source,
-                controller: dt.controller,
-                effect: Box::new(dt.effect.clone()),
-                target: None,
-                mode: None,
-                x_value: 0,
-                converged_value: 0,
-                trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                    .build(),
+            );
             // Repeating watchers ("whenever you cast a spell this turn",
             // Rediscover the Way III) survive until cleanup clears them.
             if !dt.fires_once {
@@ -5513,29 +5476,20 @@ impl GameState {
             // AutoDecider picks mode 0 (Scry); ScriptedDecider::new([Mode(1)])
             // exercises the pump branch.
             let mode = self.pick_trigger_mode(&effect, source, listener_controller);
-            self.stack.push(StackItem::Trigger {
-                source,
-                controller: listener_controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode,
-                x_value: 0,
-                // Thread the just-cast spell's converged_value onto the trigger
-                // so per-cast `Value::ConvergedValue` reads the iterated spell's
-                // color count (Magmablood Archaic's "+1/+0 for each color spent
-                // to cast that spell" pump, Wildgrowth Archaic's "X additional
-                // counters where X = colors spent on the iterated creature
-                // spell"). Previously hard-coded to 0 → triggers reading
-                // ConvergedValue would silently no-op for converge fan-out.
-                converged_value,
-                // The trigger fires on a spell cast — preserve the cast
-                // spell's CardId so resolving effects (Effect::CopySpell,
-                // Selector::CastSpellTarget) can find it on the stack.
-                trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
-                mana_spent,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(source, listener_controller, effect)
+                    .target(auto_target)
+                    .mode(mode)
+                    // The cast spell's converge count, so per-cast
+                    // `Value::ConvergedValue` reads the iterated spell
+                    // (Magmablood / Wildgrowth Archaic).
+                    .converged_value(converged_value)
+                    // Preserve the cast spell's id for Effect::CopySpell /
+                    // Selector::CastSpellTarget.
+                    .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                    .mana_spent(mana_spent)
+                    .build(),
+            );
         }
     }
 
@@ -7462,19 +7416,13 @@ impl GameState {
             // CR 601.2b — a modal activated ability's mode is chosen as part
             // of the activation (Shifting Ceratops's reach/trample/haste).
             let mode = self.pick_trigger_mode(&queued_effect, card_id, p);
-            self.stack.push(StackItem::Trigger {
-                source: card_id,
-                controller: p,
-                effect: Box::new(queued_effect),
-                target,
-                mode,
-                x_value: activated_x,
-                converged_value: 0,
-                trigger_source: None,
-                mana_spent: 0,
-                event_amount: 0,
-                intervening_if: None,
-            });
+            self.stack.push(
+                TriggerPush::new(card_id, p, queued_effect)
+                    .target(target)
+                    .mode(mode)
+                    .x_value(activated_x)
+                    .build(),
+            );
             // CR 702.21: Ward also fires on activated abilities targeting
             // an opp's Ward permanent (the "or ability" half of 702.21a).
             // Push Ward triggers above the just-queued ability so they

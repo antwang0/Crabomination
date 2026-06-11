@@ -1337,7 +1337,7 @@ fn cr_502_3_prevent_untap_releases_after_static_leaves() {
     g.do_untap();
     assert!(g.battlefield_find(land).unwrap().tapped);
     // Remove the glyph (simulate destroy).
-    g.remove_from_battlefield_to_graveyard(glyph);
+    g.remove_from_battlefield_to_graveyard_raw(glyph);
     // Untap step #2 — land should untap.
     g.do_untap();
     assert!(!g.battlefield_find(land).unwrap().tapped,
