@@ -5512,6 +5512,96 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchSplitOpponentChooses {
+                opponent, count, opponent_picks, chosen_to, rest_to,
+            } => {
+                use crate::decision::Decision;
+                let p = ctx.controller;
+                let opp = self
+                    .resolve_selector(opponent, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Player(o) => Some(o),
+                        _ => None,
+                    })
+                    .or_else(|| self.opponents_of(p).into_iter().next());
+                let Some(opp) = opp else { return Ok(()) };
+                // CR 701.19 — the searcher picks up to `count` cards with
+                // different names.
+                let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Search for up to {count} cards with different names"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: *count,
+                });
+                let mut picked: Vec<crate::card::CardId> = Vec::new();
+                let mut seen_names: Vec<String> = Vec::new();
+                if let crate::decision::DecisionAnswer::Cards(ids) = answer {
+                    for id in ids {
+                        let Some((_, name)) = candidates.iter().find(|(c, _)| *c == id) else {
+                            continue;
+                        };
+                        if seen_names.contains(name) || picked.len() >= *count as usize {
+                            continue;
+                        }
+                        seen_names.push(name.clone());
+                        picked.push(id);
+                    }
+                }
+                self.players[p].searched_library_this_turn = true;
+                if picked.is_empty() {
+                    use rand::seq::SliceRandom;
+                    self.players[p].library.shuffle(&mut rand::rng());
+                    return Ok(());
+                }
+                // The opponent splits the revealed pile.
+                let n_chosen = (*opponent_picks as usize).min(picked.len());
+                let revealed: Vec<(crate::card::CardId, String)> = picked
+                    .iter()
+                    .map(|id| {
+                        (*id, candidates.iter().find(|(c, _)| c == id).unwrap().1.clone())
+                    })
+                    .collect();
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Opponent: choose {n_chosen} to put into the graveyard"),
+                    candidates: revealed,
+                    min: n_chosen as u32,
+                    max: n_chosen as u32,
+                });
+                let mut chosen: Vec<crate::card::CardId> = match answer {
+                    crate::decision::DecisionAnswer::Cards(ids) => ids
+                        .into_iter()
+                        .filter(|id| picked.contains(id))
+                        .take(n_chosen)
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                let _ = opp; // opponent's choice rides the shared decider
+                while chosen.len() < n_chosen {
+                    let next = picked.iter().find(|id| !chosen.contains(id)).copied();
+                    match next {
+                        Some(id) => chosen.push(id),
+                        None => break,
+                    }
+                }
+                for id in picked {
+                    let dest = if chosen.contains(&id) { chosen_to } else { rest_to };
+                    self.move_card_to(id, dest, ctx, events);
+                }
+                {
+                    use rand::seq::SliceRandom;
+                    self.players[p].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
             Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

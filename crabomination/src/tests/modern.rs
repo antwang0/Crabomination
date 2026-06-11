@@ -52728,3 +52728,90 @@ fn fractured_identity_exiles_and_copies() {
     assert_eq!(copy.controller, 0, "the other player (you) got the copy");
     assert!(copy.is_token);
 }
+
+/// Gifts Ungiven: opponent splits the four — two to graveyard, two to hand.
+#[test]
+fn gifts_ungiven_opponent_splits() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::lightning_bolt());
+    let b = g.add_card_to_library(0, catalog::grizzly_bears());
+    let c = g.add_card_to_library(0, catalog::island());
+    let d = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![a, b, c, d]),
+        DecisionAnswer::Cards(vec![a, b]), // opponent's picks → graveyard
+    ]));
+    let gifts = g.add_card_to_hand(0, catalog::gifts_ungiven());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: gifts, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == a), "bolt to graveyard");
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == b), "bears to graveyard");
+    assert!(g.players[0].hand.iter().any(|x| x.id == c), "island to hand");
+    assert!(g.players[0].hand.iter().any(|x| x.id == d), "forest to hand");
+}
+
+/// Gifts Ungiven rejects duplicate names in the searcher's pile.
+#[test]
+fn gifts_ungiven_distinct_names_enforced() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::lightning_bolt());
+    let b = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![a, b]),
+        DecisionAnswer::Cards(vec![a]),
+    ]));
+    let gifts = g.add_card_to_hand(0, catalog::gifts_ungiven());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: gifts, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    // Only the first bolt was picked (same name); a lone pick goes to the
+    // graveyard (the opponent "chooses" all of an undersized pile).
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == a));
+    assert!(g.players[0].library.iter().any(|x| x.id == b), "duplicate stayed");
+}
+
+/// Open the Armory tutors an Aura or Equipment to hand.
+#[test]
+fn open_the_armory_tutors() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let umbra = g.add_card_to_library(0, catalog::hyena_umbra());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(umbra))]));
+    let ota = g.add_card_to_hand(0, catalog::open_the_armory());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ota, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == umbra));
+}
+
+/// Scuttling Doom Engine: small creatures can't block it; dies-trigger burns.
+#[test]
+fn scuttling_doom_engine_block_gate_and_death_burn() {
+    let mut g = two_player_game();
+    let engine = g.add_card_to_battlefield(0, catalog::scuttling_doom_engine());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    assert!(!g.blocker_can_block_attacker(bear, engine), "power 2 can't block");
+    assert!(g.blocker_can_block_attacker(angel, engine), "power 4 can");
+    g.remove_to_graveyard_with_triggers(engine);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "6 damage on death");
+}

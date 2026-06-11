@@ -1926,6 +1926,16 @@ pub enum Effect {
     ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s library (CR 103.2c). Mind's Desire's pre-exile shuffle.
     ShuffleLibrary { who: PlayerRef },
+    /// Gifts Ungiven — search up to `count` library cards with different
+    /// names and reveal them; the targeted opponent chooses `opponent_picks`
+    /// of them, which go to `chosen_to`; the rest go to `rest_to`; shuffle.
+    SearchSplitOpponentChooses {
+        opponent: Selector,
+        count: u32,
+        opponent_picks: u32,
+        chosen_to: ZoneDest,
+        rest_to: ZoneDest,
+    },
     /// Move the resolving spell (`ctx.source`) from the stack into its
     /// owner's library, then shuffle. The Beacon cycle's "Shuffle this card
     /// into its owner's library" recursion rider (Beacon of Immortality,

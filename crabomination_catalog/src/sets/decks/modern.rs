@@ -47857,3 +47857,63 @@ pub fn fractured_identity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gifts Ungiven — {3}{U} Instant. Search up to four cards with different
+/// names and reveal them; target opponent picks two for your graveyard, the
+/// rest go to your hand; shuffle.
+pub fn gifts_ungiven() -> CardDefinition {
+    CardDefinition {
+        name: "Gifts Ungiven",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SearchSplitOpponentChooses {
+            opponent: target_filtered(SelectionRequirement::OpponentPlayer),
+            count: 4,
+            opponent_picks: 2,
+            chosen_to: ZoneDest::Graveyard,
+            rest_to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Open the Armory — {1}{W} Sorcery. Tutor an Aura or Equipment to hand.
+pub fn open_the_armory() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EnchantmentSubtype};
+    CardDefinition {
+        name: "Open the Armory",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Scuttling Doom Engine — {6} 6/6 Construct. Can't be blocked by power ≤ 2;
+/// dies: 6 damage to target opponent.
+pub fn scuttling_doom_engine() -> CardDefinition {
+    CardDefinition {
+        name: "Scuttling Doom Engine",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(
+            SelectionRequirement::PowerAtMost(2),
+        ))],
+        triggered_abilities: vec![on_dies(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::OpponentPlayer),
+            amount: Value::Const(6),
+        })],
+        ..Default::default()
+    }
+}
