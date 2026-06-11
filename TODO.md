@@ -284,6 +284,27 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (modern_decks batches 4-6):**
+  - **Nadu, Winged Wisdom** — wants a granted "becomes the target of a
+    spell/ability" trigger with a twice-per-turn-per-creature cap.
+  - **Six** — wants a "nonland permanent cards in your graveyard have
+    retrace during your turn" static grant over graveyard cards.
+  - **Ajani, Nacatl Pariah's −4** — "each opponent keeps one of each
+    permanent type, sacrifices the rest" (Cataclysm family primitive).
+  - **Kozilek, the Broken Reality** — manifest-from-HAND (Manifest reads
+    the library today).
+  - **Ulamog, the Defiler** — Ward—sacrifice two permanents (WardCost is
+    single-sacrifice), exile-top-half-of-library Value, counters-scaled
+    Annihilator X.
+  - **Springheart Nantuko** — landfall MayPay token-copy-of-host needs an
+    attached-host selector + a "didn't create this way" else-branch.
+  - **Not Dead After All / Role tokens** — token Auras (Wicked Role)
+    aren't modeled.
+  - **Indomitable Creativity** — X-target destroy with per-destroyed
+    reveal-until (multi-target X spells unsupported).
+  - **Clash** (CR 701.30 ✅ this run) is synchronous-decider only; a
+    `wants_ui` seat should get the bottom-or-keep prompt.
+
 - ⏳ **Noticed this run (staples expansion / audit):**
   - **The Ozolith** — wants a "creature you control leaves with counters →
     move them here" trigger reading the leaver's full counter map from LKI
@@ -1472,6 +1493,14 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 701.30 — Clash** — `Effect::ClashWithOpponent` (both reveal top,
+  may bottom via the synchronous decider, higher MV wins → `on_win`).
+  Recross the Paths. Test `cr_701_30_recross_the_paths_clash_win_returns_to_hand`.
+- ✅ **CR 702.80a / 702.90e / 702.2c — wither / infect / deathtouch on
+  NON-combat damage** — the `deal_damage_to_from` funnel lands -1/-1
+  counters and flags deathtouch; `Effect::Fight` carries per-half sources.
+- ✅ **CR 510.1d — full damage assignment** — non-trample under-assignment
+  rejected; excess to the last blocker.
 - ✅ **CR 701.37 / 712.16 — Meld** — `Effect::Meld` (exile both own+controlled
   components → mint the melded card; `CardInstance.meld_parts` makes every
   leave-battlefield funnel unmeld it back into both cards). Urza, Lord
@@ -1739,8 +1768,12 @@ picking an item up.
   life), Promising Duskmage (death-draw if +1/+1 counter).
   Bayou Groff's drop is the missing **"sacrifice X or pay {N}" OR additional
   cost** — an `AdditionalCastCost` variant worth adding for a faithful version.
-- ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is near-complete (a
-  `set:stx` diff shows ~23 unimplemented, mostly MDFCs). This run added the
+- ✅ **Remaining real STX (Strixhaven 2021) cards — complete.** A Scryfall
+  `set:stx` diff vs the registered catalog now shows 0 unimplemented
+  non-Arena cards (the last 13 — Deans, Culling Ritual, Professor Onyx,
+  Zimone, … — existed but weren't registered; the crate-wide generated
+  factory list closed that, and Zimone's fabricated body was rewritten
+  faithful). Historical note: this run previously added the
   single-faced **Efreet Flamepainter** (`CastWithoutPayingImmediate` from gy on
   combat damage), **Thunderous Orator** (conditional keyword-share via
   `If` + `Predicate::SelectorExists`), **Venerable Warsinger** (combat-damage
