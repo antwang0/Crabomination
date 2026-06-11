@@ -485,3 +485,15 @@ pub fn urzas_saga() -> CardDefinition {
         ..Default::default()
     }
 }
+
+pub fn sunbillow_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Sunbillow Verge", Color::White, Color::Red, LandType::Mountain, LandType::Plains,
+    )
+}
+
+pub fn willowrush_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Willowrush Verge", Color::Blue, Color::Green, LandType::Forest, LandType::Island,
+    )
+}

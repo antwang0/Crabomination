@@ -46880,3 +46880,34 @@ pub fn indomitable_creativity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── MH3 Landscape cycle completion + the last two Verges ─────────────────────
+
+pub fn foreboding_landscape() -> CardDefinition {
+    landscape("Foreboding Landscape", [LandType::Swamp, LandType::Forest, LandType::Island],
+        [Color::Black, Color::Green, Color::Blue])
+}
+pub fn tranquil_landscape() -> CardDefinition {
+    landscape("Tranquil Landscape", [LandType::Forest, LandType::Plains, LandType::Island],
+        [Color::Green, Color::White, Color::Blue])
+}
+pub fn seething_landscape() -> CardDefinition {
+    landscape("Seething Landscape", [LandType::Island, LandType::Swamp, LandType::Mountain],
+        [Color::Blue, Color::Black, Color::Red])
+}
+pub fn contaminated_landscape() -> CardDefinition {
+    landscape("Contaminated Landscape", [LandType::Plains, LandType::Island, LandType::Swamp],
+        [Color::White, Color::Blue, Color::Black])
+}
+pub fn perilous_landscape() -> CardDefinition {
+    landscape("Perilous Landscape", [LandType::Island, LandType::Mountain, LandType::Plains],
+        [Color::Blue, Color::Red, Color::White])
+}
+pub fn shattered_landscape() -> CardDefinition {
+    landscape("Shattered Landscape", [LandType::Mountain, LandType::Plains, LandType::Swamp],
+        [Color::Red, Color::White, Color::Black])
+}
+pub fn deceptive_landscape() -> CardDefinition {
+    landscape("Deceptive Landscape", [LandType::Plains, LandType::Swamp, LandType::Forest],
+        [Color::White, Color::Black, Color::Green])
+}

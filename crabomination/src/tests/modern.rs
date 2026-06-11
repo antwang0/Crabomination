@@ -51888,3 +51888,36 @@ fn indomitable_creativity_polymorphs_destroyed_targets() {
         "their bear became the rock"
     );
 }
+
+/// The completed Landscape cycle fetches one of its three basic types
+/// tapped; the new Verges gate their second color on the named land types.
+#[test]
+fn landscape_and_verge_cycle_completion() {
+    let mut g = two_player_game();
+    // Landscape: sac-fetch a basic Swamp/Forest/Island tapped.
+    let scape = g.add_card_to_battlefield(0, catalog::foreboding_landscape());
+    g.clear_sickness(scape);
+    g.players[0].library.clear();
+    let swamp = g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        DecisionAnswer::Search(Some(swamp)),
+    ]));
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scape, ability_index: 1, target: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let fetched = g.battlefield_find(swamp).expect("Swamp fetched");
+    assert!(fetched.tapped);
+    assert!(g.battlefield_find(scape).is_none(), "Landscape sacrificed");
+    // Verge: the gated color needs a Forest or Island in play.
+    let verge = g.add_card_to_battlefield(0, catalog::willowrush_verge());
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: verge, ability_index: 1, target: None, x_value: None,
+    }).is_err(), "no Forest/Island yet");
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: verge, ability_index: 1, target: None, x_value: None,
+    }).expect("gated {G} with a Forest in play");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 1);
+}
