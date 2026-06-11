@@ -675,3 +675,146 @@ pub fn keranos_god_of_storms() -> CardDefinition {
         ..god2("Keranos, God of Storms", cost(&[generic(3), u(), r()]), vec![Color::Blue, Color::Red], 6, 5)
     }
 }
+
+/// Thassa, Deep-Dwelling — {3}{U} 6/5. End-step flicker of up to one other
+/// creature you control; {3}{U}: tap another target creature.
+pub fn thassa_deep_dwelling() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Exile another creature you control, then return it?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Exile {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::OtherThanSource),
+                        ),
+                    },
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: crate::effect::ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                ])),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..god("Thassa, Deep-Dwelling", cost(&[generic(3), u()]), vec![Color::Blue], 6, 5)
+    }
+}
+
+/// Erebos, Bleak-Hearted — {3}{B} 5/6. Another creature you control dies →
+/// may pay 2 life to draw; {1}{B}, sac another creature: target gets -2/-1.
+pub fn erebos_bleak_hearted() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::MayDo {
+                description: "Pay 2 life to draw a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..god("Erebos, Bleak-Hearted", cost(&[generic(3), b()]), vec![Color::Black], 5, 6)
+    }
+}
+
+/// Purphoros, Bronze-Blooded — {4}{R} 7/6. Other creatures you control have
+/// haste; {2}{R}: sneak a red or artifact creature from hand (sac at end step).
+pub fn purphoros_bronze_blooded() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as your devotion to red is less than five, Purphoros isn't a creature.",
+                effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                    colors: vec![Color::Red],
+                    threshold: 5,
+                },
+            },
+            StaticAbility {
+                description: "Other creatures you control have haste.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Haste,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature.and(
+                    SelectionRequirement::HasColor(Color::Red).or(SelectionRequirement::Artifact),
+                ),
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: true,
+            },
+            ..Default::default()
+        }],
+        ..god("Purphoros, Bronze-Blooded", cost(&[generic(4), r()]), vec![Color::Red], 7, 6)
+    }
+}
+
+/// Nylea, Keen-Eyed — {3}{G} 5/6. Creature spells cost {1} less; {2}{G}:
+/// reveal the top card, take it if it's a creature.
+pub fn nylea_keen_eyed() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as your devotion to green is less than five, Nylea isn't a creature.",
+                effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                    colors: vec![Color::Green],
+                    threshold: 5,
+                },
+            },
+            StaticAbility {
+                description: "Creature spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::Creature,
+                    amount: 1,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::RevealTopAndDrawIf {
+                who: PlayerRef::You,
+                reveal_filter: SelectionRequirement::Creature,
+            },
+            ..Default::default()
+        }],
+        ..god("Nylea, Keen-Eyed", cost(&[generic(3), g()]), vec![Color::Green], 5, 6)
+    }
+}

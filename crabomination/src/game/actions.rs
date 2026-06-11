@@ -7083,6 +7083,26 @@ impl GameState {
                 effective_mana_cost.reduce_generic(count);
             }
         }
+        // "Costs {1} less for each [filter] you control" (channel lands).
+        if let Some(filter) = &ability.cost_reduction_per {
+            let count = self.with_frozen_layers(|g| {
+                g.battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && g.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                Some(card_id),
+                            )
+                    })
+                    .count() as u32
+            });
+            if count > 0 {
+                effective_mana_cost.reduce_generic(count);
+            }
+        }
         // Zirda — non-mana activated abilities cost {N} less (generic only),
         // floored at one mana of the printed cost.
         if !is_mana_ability(&ability.effect) && !effective_mana_cost.symbols.is_empty() {

@@ -48751,3 +48751,40 @@ pub fn ash_barrens() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cast-lock instants ───────────────────────────────────────────────────────
+
+/// Silence — {W} Instant: your opponents can't cast spells this turn.
+pub fn silence() -> CardDefinition {
+    CardDefinition {
+        name: "Silence",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SilencePlayersThisTurn { who: PlayerRef::EachOpponent },
+        ..Default::default()
+    }
+}
+
+/// Orim's Chant — {W} Instant, Kicker {W}: target player can't cast spells
+/// this turn; if kicked, creatures can't attack this turn.
+pub fn orims_chant() -> CardDefinition {
+    CardDefinition {
+        name: "Orim's Chant",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[w()]))],
+        effect: Effect::Seq(vec![
+            Effect::SilencePlayersThisTurn { who: PlayerRef::Target(0) },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::EachPermanent(SelectionRequirement::Creature),
+                    keyword: Keyword::CantAttack,
+                    duration: crate::effect::Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

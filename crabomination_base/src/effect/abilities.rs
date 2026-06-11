@@ -860,6 +860,12 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub self_counter_cost_reduction: Option<crate::card::CounterType>,
+    /// "This ability costs {1} less to activate for each [filter] you
+    /// control" — generic-only reduction counted off the activator's
+    /// battlefield at payment time (the Kamigawa channel lands' legendary
+    /// discount). Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub cost_reduction_per: Option<SelectionRequirement>,
     /// Optional cost: sacrifice a *different* permanent the activator
     /// controls matching this filter. Mirrors `exile_other_filter` but
     /// for sacrifice rather than exile. Used by activated abilities

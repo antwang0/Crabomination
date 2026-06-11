@@ -53807,3 +53807,153 @@ fn keranos_first_draw_branches() {
     assert_eq!(g.players[0].hand.len(), hand + 2, "land reveal draws another");
     assert_eq!(g.players[1].life, 17, "the second (non-first) draw doesn't retrigger");
 }
+
+// ── Cast locks + channel discount + THB gods ─────────────────────────────────
+
+/// Silence stops opponents (but not you) from casting this turn.
+#[test]
+fn silence_locks_opponents_only() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_hand(0, catalog::silence());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, s);
+    drain_stack(&mut g);
+    let opp = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: opp, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap_err();
+    assert_eq!(err, GameError::SilencedThisTurn);
+    let own = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, own, Target::Player(1));
+}
+
+/// Kicked Orim's Chant also stops creatures from attacking this turn.
+#[test]
+fn orims_chant_kicked_stops_attacks() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let chant = g.add_card_to_hand(0, catalog::orims_chant());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: chant, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked chant");
+    drain_stack(&mut g);
+    assert!(g.players[1].silenced_this_turn);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(0),
+    }]));
+    assert!(err.is_err(), "creatures can't attack under kicked Chant");
+}
+
+/// Channel abilities cost {1} less per legendary creature you control.
+#[test]
+fn channel_land_legendary_discount() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Two legendary creatures: Otawara's {3}{U} channel becomes {1}{U}.
+    // (A devotion-gated god wouldn't count — it isn't a creature yet.)
+    g.add_card_to_battlefield(0, catalog::ragavan_nimble_pilferer());
+    g.add_card_to_battlefield(0, catalog::cao_cao_lord_of_wei());
+    let ota = g.add_card_to_hand(0, catalog::otawara_soaring_city());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ota, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("discounted channel");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced");
+}
+
+/// Thassa, Deep-Dwelling flickers another creature at your end step.
+#[test]
+fn thassa_deep_dwelling_end_step_flicker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thassa_deep_dwelling());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().damage = 1;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).expect("returned");
+    assert_eq!(b.damage, 0, "fresh object after the flicker");
+}
+
+/// Erebos, Bleak-Hearted converts dying creatures into cards for 2 life.
+#[test]
+fn erebos_bleak_hearted_pays_life_to_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::erebos_bleak_hearted());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew");
+}
+
+/// Purphoros, Bronze-Blooded hastes the team and sneaks in a red creature.
+#[test]
+fn purphoros_bronze_blooded_sneak() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let pur = g.add_card_to_battlefield(0, catalog::purphoros_bronze_blooded());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![dragon]),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pur, ability_index: 0, target: None, x_value: None,
+    }).expect("sneak");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_some(), "dragon snuck in");
+}
+
+/// Nylea, Keen-Eyed discounts creatures and digs for them.
+#[test]
+fn nylea_keen_eyed_discount_and_dig() {
+    let mut g = two_player_game();
+    let nyl = g.add_card_to_battlefield(0, catalog::nylea_keen_eyed());
+    // Discount: Grizzly Bears for just {G}.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, bear);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "cast for {{G}} with the discount");
+    // Dig: reveal a creature on top → to hand.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nyl, ability_index: 0, target: None, x_value: None,
+    }).expect("dig");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "creature revealed → hand");
+}

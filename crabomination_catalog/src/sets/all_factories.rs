@@ -1934,6 +1934,8 @@ static DECKS: &[Factory] = &[
     super::decks::lorien_revealed,
     super::decks::eagles_of_the_north,
     super::decks::ash_barrens,
+    super::decks::silence,
+    super::decks::orims_chant,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,
@@ -7412,6 +7414,10 @@ static THS: &[Factory] = &[
     super::ths::kruphix_god_of_horizons,
     super::ths::ephara_god_of_the_polis,
     super::ths::keranos_god_of_storms,
+    super::ths::thassa_deep_dwelling,
+    super::ths::erebos_bleak_hearted,
+    super::ths::purphoros_bronze_blooded,
+    super::ths::nylea_keen_eyed,
     super::ths::nykthos_shrine_to_nyx,
 ];
 static TMP: &[Factory] = &[
