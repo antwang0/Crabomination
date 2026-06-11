@@ -3661,10 +3661,8 @@ impl GameState {
             let who = self.battlefield_find(id).map(|c| c.controller).unwrap_or(0);
             match kind {
                 AttackingTokenCleanup::SacrificeAtEndOfCombat => {
-                    events.push(GameEvent::CreatureSacrificed { card_id: id, who });
-                    events.push(GameEvent::CreatureDied { card_id: id });
-                    events.push(GameEvent::PermanentSacrificed { card_id: id, who });
-                    events.append(&mut self.remove_to_graveyard_with_triggers(id));
+                    // Shared sacrifice funnel — die snapshot included.
+                    self.sacrifice_one(id, who, &mut events);
                 }
                 AttackingTokenCleanup::ExileAtEndOfCombat => {
                     self.remove_from_battlefield_to_exile(id);

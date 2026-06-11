@@ -3340,6 +3340,56 @@ fn inquisition_suspends_for_caster_ui_and_applies_chosen_discard() {
         "Other matching card stays in hand — Inquisition only takes one");
 }
 
+/// "Each player discards" must not stop at the first `wants_ui` seat: the
+/// suspend's continuation re-runs the discard for the remaining players.
+#[test]
+fn symmetric_discard_reaches_every_ui_seat() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let c0 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let c1 = g.add_card_to_hand(1, catalog::counterspell());
+    g.add_card_to_hand(1, catalog::island());
+    for p in 0..2 {
+        g.add_card_to_battlefield(p, catalog::grizzly_bears());
+        g.add_card_to_battlefield(p, catalog::forest());
+    }
+    let pox = g.add_card_to_hand(0, catalog::smallpox());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pox, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Smallpox castable");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // P0's discard suspends first.
+    let pd = g.pending_decision.as_ref().expect("suspends for P0's discard");
+    let crate::decision::Decision::Discard { player, .. } = &pd.decision else {
+        panic!("expected Decision::Discard, got {:?}", pd.decision);
+    };
+    assert_eq!(*player, 0);
+    g.submit_decision(DecisionAnswer::Discard(vec![c0])).expect("P0 answer");
+
+    // Continuation reaches P1 — previously the loop dropped them.
+    let pd = g.pending_decision.as_ref().expect("suspends for P1's discard");
+    let crate::decision::Decision::Discard { player, .. } = &pd.decision else {
+        panic!("expected Decision::Discard, got {:?}", pd.decision);
+    };
+    assert_eq!(*player, 1);
+    g.submit_decision(DecisionAnswer::Discard(vec![c1])).expect("P1 answer");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == c0));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == c1));
+    // The Seq's trailing sacrifices still ran for both players.
+    for p in 0..2 {
+        assert!(
+            !g.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature()),
+            "P{p} creature sacrificed"
+        );
+    }
+}
+
 #[test]
 fn chancellor_of_the_annex_taxes_opponents_first_spell() {
     // Stock Chancellor in P0's opening hand. Start-of-game pass queues a

@@ -32,6 +32,19 @@ use crate::effect::{
 use crate::game::layers::EffectDuration;
 use crate::mana::Color;
 
+/// Continuation for per-player decision loops that suspend mid-iteration:
+/// re-runs `make(seat)` for each not-yet-processed seat once the suspended
+/// seat's answer resolves, so a symmetric effect ("each player discards…")
+/// doesn't silently stop at the first `wants_ui` player.
+pub(crate) fn per_seat_continuation(rest: &[usize], make: impl Fn(usize) -> Effect) -> Effect {
+    let mut effs: Vec<Effect> = rest.iter().map(|&q| make(q)).collect();
+    match effs.len() {
+        0 => Effect::Noop,
+        1 => effs.pop().unwrap(),
+        _ => Effect::Seq(effs),
+    }
+}
+
 /// Translate the cast-site `effect::Duration` into the runtime
 /// `layers::EffectDuration` used by the continuous-effect layer system.
 ///
@@ -1863,8 +1876,15 @@ impl GameState {
                 use crate::decision::Decision;
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, p) in seats.iter().copied().enumerate() {
                     // Tamiyo: opponents' spells/abilities can't make you discard.
                     if !self.same_team(p, ctx.controller)
                         && self.player_cant_be_made_to_discard(p)
@@ -1906,7 +1926,15 @@ impl GameState {
                     };
                     let pending = PendingEffectState::DiscardChosenPending { target_player: p };
                     if self.players[p].wants_ui {
-                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        // Suspend for this seat; the continuation re-runs
+                        // the discard for every seat not yet processed so a
+                        // symmetric discard doesn't stop at the first human.
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::Discard {
+                            who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            amount: crate::effect::Value::Const(n as i32),
+                            random: *random,
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -1986,8 +2014,15 @@ impl GameState {
 
             Effect::DiscardAnyNumber { who } => {
                 use crate::decision::Decision;
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, p) in seats.iter().copied().enumerate() {
                     if self.players[p].hand.is_empty() { continue; }
                     let candidates: Vec<(crate::card::CardId, String)> = self
                         .players[p]
@@ -2015,7 +2050,12 @@ impl GameState {
                     };
                     let pending = PendingEffectState::DiscardChosenPending { target_player: p };
                     if self.players[p].wants_ui {
-                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| {
+                            Effect::DiscardAnyNumber {
+                                who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            }
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -4778,7 +4818,9 @@ impl GameState {
                             })
                             .map(|c| c.id);
                         if let Some(sac_id) = pick {
-                            let _ = self.remove_to_graveyard_with_triggers(sac_id);
+                            // Real sacrifice (CR 701.16): dies/sac events
+                            // and the die snapshot, not a bare removal.
+                            self.sacrifice_one(sac_id, affected_controller, events);
                             true
                         } else {
                             false
@@ -4920,9 +4962,10 @@ impl GameState {
                 // sacrifice uses the in-scene `ChooseTarget` cursor, a
                 // multi-sacrifice uses the `ChooseCards` modal. Bots and the
                 // "no real choice" case keep the auto-pick (cheapest/weakest
-                // non-source). Auto-pick players are resolved first so a
-                // deferred UI suspend doesn't strand them.
-                let players: Vec<usize> = self
+                // non-source). The suspend's continuation re-runs the
+                // sacrifice for every seat not yet processed, so a symmetric
+                // edict completes for all players in APNAP order.
+                let seats: Vec<usize> = self
                     .resolve_selector(who, ctx)
                     .into_iter()
                     .filter_map(|e| match e {
@@ -4930,8 +4973,7 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
-                let mut deferred_ui: Option<usize> = None;
-                for p in players {
+                for (i, p) in seats.iter().copied().enumerate() {
                     // Sigarda / Tamiyo — "spells and abilities your opponents
                     // control can't cause you to sacrifice." Skip a player the
                     // opponent-controlled effect would force.
@@ -4942,43 +4984,40 @@ impl GameState {
                     if candidates.is_empty() {
                         continue;
                     }
-                    if candidates.len() > n
-                        && self.players[p].wants_ui
-                        && deferred_ui.is_none()
-                    {
-                        deferred_ui = Some(p);
-                        continue;
+                    if candidates.len() > n && self.players[p].wants_ui {
+                        let source = source_id.unwrap_or(crate::card::CardId(0));
+                        let decision = if n == 1 {
+                            crate::decision::Decision::ChooseTarget {
+                                source,
+                                legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                                source_name: ctx.source_name.unwrap_or("").to_string(),
+                                description: "choose a permanent to sacrifice".into(),
+                            }
+                        } else {
+                            crate::decision::Decision::ChooseCards {
+                                source,
+                                prompt: format!("Choose {n} permanents to sacrifice"),
+                                candidates: self.card_id_names(&candidates),
+                                min: n as u32,
+                                max: n as u32,
+                            }
+                        };
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::Sacrifice {
+                            who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            count: crate::effect::Value::Const(n as i32),
+                            filter: filter.clone(),
+                        });
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::SacrificePending { player: p },
+                            rest,
+                        ));
+                        return Ok(());
                     }
                     let ids = self.auto_pick_sacrifices(&candidates, n, source_id, false, false);
                     for id in ids {
                         self.sacrifice_one(id, p, events);
                     }
-                }
-                if let Some(p) = deferred_ui {
-                    let candidates = self.sacrifice_candidates(p, filter, source_id);
-                    let source = source_id.unwrap_or(crate::card::CardId(0));
-                    let decision = if n == 1 {
-                        crate::decision::Decision::ChooseTarget {
-                            source,
-                            legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
-                            source_name: ctx.source_name.unwrap_or("").to_string(),
-                            description: "choose a permanent to sacrifice".into(),
-                        }
-                    } else {
-                        crate::decision::Decision::ChooseCards {
-                            source,
-                            prompt: format!("Choose {n} permanents to sacrifice"),
-                            candidates: self.card_id_names(&candidates),
-                            min: n as u32,
-                            max: n as u32,
-                        }
-                    };
-                    self.suspend_signal = Some((
-                        decision,
-                        PendingEffectState::SacrificePending { player: p },
-                        Effect::Noop,
-                    ));
-                    return Ok(());
                 }
                 Ok(())
             }
@@ -6097,8 +6136,15 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
                 let picker = ctx.controller;
-                for ent in self.resolve_selector(from, ctx) {
-                    let EntityRef::Player(target_player) = ent else { continue };
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
                     let candidates: Vec<(crate::card::CardId, String)> = self.players[target_player]
                         .hand
                         .iter()
@@ -6112,7 +6158,15 @@ impl GameState {
                         extra_cost: *extra_cost,
                     };
                     if self.players[picker].wants_ui {
-                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| {
+                            Effect::ExileFromHandTaxed {
+                                from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                                count: crate::effect::Value::Const(n as i32),
+                                filter: filter.clone(),
+                                extra_cost: *extra_cost,
+                            }
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -6360,8 +6414,15 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
                 let picker = ctx.controller;
-                for ent in self.resolve_selector(from, ctx) {
-                    let EntityRef::Player(target_player) = ent else { continue };
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
                     let candidates: Vec<(crate::card::CardId, String)> = self
                         .players[target_player]
                         .hand
@@ -6380,7 +6441,12 @@ impl GameState {
                     let pending = PendingEffectState::DiscardChosenPending { target_player };
 
                     if self.players[picker].wants_ui {
-                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::DiscardChosen {
+                            from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            count: crate::effect::Value::Const(n as i32),
+                            filter: filter.clone(),
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -6399,8 +6465,15 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
                 let picker = ctx.controller;
-                for ent in self.resolve_selector(from, ctx) {
-                    let EntityRef::Player(target_player) = ent else { continue };
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
                     let candidates: Vec<(crate::card::CardId, String)> = self
                         .players[target_player]
                         .hand
@@ -6420,7 +6493,13 @@ impl GameState {
                         return_to: *return_to,
                     };
                     if self.players[picker].wants_ui {
-                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::ExileChosenUntilSourceLeaves {
+                            from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            count: crate::effect::Value::Const(n as i32),
+                            filter: filter.clone(),
+                            return_to: *return_to,
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -6437,8 +6516,15 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
                 let picker = ctx.controller;
-                for ent in self.resolve_selector(from, ctx) {
-                    let EntityRef::Player(target_player) = ent else { continue };
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
                     let candidates: Vec<(crate::card::CardId, String)> = self
                         .players[target_player]
                         .hand
@@ -6454,7 +6540,12 @@ impl GameState {
                     };
                     let pending = PendingEffectState::ExileChosenFromHandPending { target_player };
                     if self.players[picker].wants_ui {
-                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::ExileChosenFromHand {
+                            from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            count: crate::effect::Value::Const(n as i32),
+                            filter: filter.clone(),
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
