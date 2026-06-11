@@ -176,9 +176,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `squad_count`, `bargained`, `encoded_on`, `granted_activated_abilities`,
   `cast_target_was_battlefield`. Snapshots with spells on the stack restore
   them zeroed (Everflowing Chalice enters with 0 counters; Urza's Saga
-  grants vanish; the 608.2b fizzle flag clears). Still ⏳:
-  `TokenDefinition.static_abilities` is `#[serde(skip)]` with no rebuild
-  path (`card.rs:1127`) — Karn's Construct deserializes vanilla.
+  grants vanish; the 608.2b fizzle flag clears).
+  `TokenDefinition.static_abilities` now round-trips too — the
+  `static_str_serde::StaticStr` alias keeps serde's derive from pinning
+  `StaticAbility` / `CardDefinition` / `Adventure` to `Deserialize<'static>`
+  (test `token_static_abilities_survive_serde`).
 - ✅ **ETB control replacement fires triggers for the wrong controller**
   (`effects/movement.rs:649-742`). `apply_etb_control_replacement` may
   reassign `card.controller` (Gather Specimens) but
@@ -348,8 +350,9 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **Madcap Experiment** bills its reveal count as life loss rather than
     damage (`RevealUntilFind.life_per_revealed`); a damage rider would be
     more faithful vs prevention effects.
-  - **`resolve_damage_assignment`** still accepts under-assignment when all
-    blockers are at lethal (CR 510.1d) — the default split now assigns fully.
+  - ✅ **`resolve_damage_assignment`** rejects non-trample under-assignment
+    even with every blocker at lethal (CR 510.1d; test
+    `cr_510_1d_non_trample_under_assignment_falls_back_to_default`).
 
 - ⏳ **Noticed this run (multikicker / mill batch):**
   - **MayDo wants_ui suspend** ✅ — `Effect::MayDo` now suspends for a

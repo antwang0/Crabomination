@@ -25,6 +25,13 @@ use serde::{Deserializer, Serializer};
 use std::collections::HashSet;
 use std::sync::Mutex;
 
+/// Alias for `&'static str` serde fields. Serde's derive scans field types
+/// *syntactically* for lifetimes and pins the whole struct to
+/// `Deserialize<'static>` when it sees `&'static str` — even under a
+/// `#[serde(with)]` adapter. The alias hides the lifetime from that scan,
+/// keeping the containing struct deserializable for any `'de`.
+pub type StaticStr = &'static str;
+
 pub fn serialize<S: Serializer>(s: &&'static str, ser: S) -> Result<S::Ok, S::Error> {
     ser.serialize_str(s)
 }

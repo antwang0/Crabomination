@@ -15,11 +15,12 @@ use crate::card::{CounterType, Keyword, SelectionRequirement};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StaticAbility {
     // Widen the `&'static str` description to an owned `String` on the wire
-    // (and re-intern on load) so `StaticAbility: Deserialize<'de>` holds for
-    // any `'de` — required now that `TokenDefinition` (a non-`'static`-bound
-    // serde type embedded in `Effect`) carries a `Vec<StaticAbility>`.
+    // (and re-intern on load). The `StaticStr` alias keeps serde's derive
+    // from pinning `StaticAbility: Deserialize<'static>` — required now that
+    // `TokenDefinition` (a non-`'static`-bound serde type embedded in
+    // `Effect`) carries a `Vec<StaticAbility>`.
     #[serde(with = "crate::static_str_serde")]
-    pub description: &'static str,
+    pub description: crate::static_str_serde::StaticStr,
     pub effect: StaticEffect,
 }
 

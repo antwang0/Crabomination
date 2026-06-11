@@ -1226,7 +1226,7 @@ pub struct TokenDefinition {
     /// `StaticEffect::PumpSelfByControlledPermanents`, and any future "the
     /// token has [static]" rider. Copied into the resulting `CardDefinition`
     /// by `token_to_card_definition`.
-    #[serde(skip)]
+    #[serde(default)]
     pub static_abilities: Vec<StaticAbility>,
     /// Equip bonus for Equipment tokens (CR 301 — Mabel's Cragflame,
     /// Kellan's Boots, etc.). When `Some`, the resulting token carries
@@ -1252,7 +1252,7 @@ pub struct TokenDefinition {
 #[serde(bound = "")]
 pub struct CardDefinition {
     #[serde(with = "crate::static_str_serde")]
-    pub name: &'static str,
+    pub name: crate::static_str_serde::StaticStr,
     pub cost: ManaCost,
     pub supertypes: Vec<Supertype>,
     pub card_types: Vec<CardType>,
@@ -1487,9 +1487,9 @@ pub struct RoomDoor {
     pub cost: ManaCost,
     pub triggered_abilities: Vec<TriggeredAbility>,
     pub activated_abilities: Vec<ActivatedAbility>,
-    // Skipped on the wire like `TokenDefinition.static_abilities` — a Room
-    // instance round-trips by card name + `unlocked_doors`, and the live
-    // definition is rebuilt from the catalog factory on load.
+    // Skipped on the wire — a Room instance round-trips by card name +
+    // `unlocked_doors`, and the live definition is rebuilt from the
+    // catalog factory on load.
     #[serde(skip)]
     pub static_abilities: Vec<StaticAbility>,
 }
@@ -1536,7 +1536,7 @@ impl SplitHalf {
 #[serde(bound = "")]
 pub struct Adventure {
     #[serde(with = "crate::static_str_serde")]
-    pub name: &'static str,
+    pub name: crate::static_str_serde::StaticStr,
     pub cost: ManaCost,
     /// Instant or Sorcery (governs cast timing).
     pub card_types: Vec<CardType>,

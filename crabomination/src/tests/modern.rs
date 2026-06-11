@@ -53422,3 +53422,21 @@ fn cao_cao_discards_two_precombat_only() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 1, "opponent discarded two");
 }
+
+/// `TokenDefinition.static_abilities` survives serde — a snapshotted Voice
+/// of Resurgence still mints its CDA-scaled Elemental after restore.
+#[test]
+fn token_static_abilities_survive_serde() {
+    use crate::effect::Effect;
+    let def = catalog::voice_of_resurgence();
+    let json = serde_json::to_string(&def).unwrap();
+    let restored: crate::card::CardDefinition = serde_json::from_str(&json).unwrap();
+    let token_static = |d: &crate::card::CardDefinition| {
+        d.triggered_abilities.iter().any(|t| match &t.effect {
+            Effect::CreateToken { definition, .. } => !definition.static_abilities.is_empty(),
+            _ => false,
+        })
+    };
+    assert!(token_static(&def), "factory carries the token static");
+    assert!(token_static(&restored), "token static survives the wire");
+}
