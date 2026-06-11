@@ -49629,8 +49629,10 @@ fn consuming_aberration_scales_and_mills_on_cast() {
     g.add_card_to_library(0, catalog::forest());
     cast(&mut g, opt);
     drain_stack(&mut g);
+    // The cast trigger reveals down to the first land: the opponent's
+    // library is all forests, so exactly one card is milled (1 + 1 + 1).
     let cp = g.compute_battlefield();
-    assert_eq!(cp.iter().find(|c| c.id == ab).map(|c| c.power), Some(4), "1 + 3 milled");
+    assert_eq!(cp.iter().find(|c| c.id == ab).map(|c| c.power), Some(2), "1 in gy + 1 milled");
 }
 
 /// Luminarch Ascension quests up on the opponent's end step (no life lost)
