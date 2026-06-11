@@ -662,6 +662,8 @@ impl GameState {
                 card.damage = 0;
                 card.power_bonus = 0;
                 card.toughness_bonus = 0;
+                card.perm_power_bonus = 0;
+                card.perm_toughness_bonus = 0;
                 card.attached_to = None;
                 // CR 122.2 — counters cease to exist when a permanent leaves
                 // the battlefield; the new object enters with none. Re-seed a
@@ -755,6 +757,17 @@ impl GameState {
         if let Some(c) = self.find_card_anywhere_mut(id) {
             c.granted_activated_abilities.clear();
         }
+        // CR 611.2c — continuous effects aimed at this specific permanent
+        // end with it (don't re-attach if the same card re-enters).
+        for e in self.continuous_effects.iter_mut() {
+            if let crate::game::layers::AffectedPermanents::Specific(ids) = &mut e.affected {
+                ids.retain(|cid| *cid != id);
+            }
+        }
+        self.continuous_effects.retain(|e| {
+            !matches!(&e.affected,
+                crate::game::layers::AffectedPermanents::Specific(ids) if ids.is_empty())
+        });
         use crate::game::types::DelayedKind;
         let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
         self.delayed_triggers.retain(|dt| {

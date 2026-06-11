@@ -2090,6 +2090,12 @@ pub struct CardInstance {
     pub summoning_sick: bool,
     pub power_bonus: i32,
     pub toughness_bonus: i32,
+    /// Permanent-duration P/T deltas (`Effect::PumpPT { duration: Permanent }`,
+    /// e.g. Wall of Roots's -0/-1). Unlike `power_bonus`/`toughness_bonus`,
+    /// these survive Cleanup and clear only when the permanent leaves the
+    /// battlefield (new object, CR 400.7).
+    pub perm_power_bonus: i32,
+    pub perm_toughness_bonus: i32,
     pub counters: HashMap<CounterType, u32>,
     pub attached_to: Option<CardId>,
     /// CR 702.95 — the creature this one is Soulbond-paired with, if any.
@@ -2382,6 +2388,8 @@ impl CardInstance {
             summoning_sick,
             power_bonus: 0,
             toughness_bonus: 0,
+            perm_power_bonus: 0,
+            perm_toughness_bonus: 0,
             counters,
             attached_to: None,
             soulbond_partner: None,
@@ -2452,14 +2460,18 @@ impl CardInstance {
         let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_one_zero = self.counter_count(CounterType::MinusOneMinusZero) as i32;
-        self.definition.base_power() + self.power_bonus + plus - minus - minus_one_zero
+        self.definition.base_power() + self.power_bonus + self.perm_power_bonus + plus
+            - minus
+            - minus_one_zero
     }
 
     pub fn toughness(&self) -> i32 {
         let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_zero_one = self.counter_count(CounterType::MinusZeroMinusOne) as i32;
-        self.definition.base_toughness() + self.toughness_bonus + plus - minus - minus_zero_one
+        self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus + plus
+            - minus
+            - minus_zero_one
     }
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {
@@ -2657,6 +2669,11 @@ struct CardInstanceWire {
     summoning_sick: bool,
     power_bonus: i32,
     toughness_bonus: i32,
+    /// Permanent-duration pump deltas. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    perm_power_bonus: i32,
+    #[serde(default)]
+    perm_toughness_bonus: i32,
     counters: Vec<(CounterType, u32)>,
     attached_to: Option<CardId>,
     /// CR 702.95 Soulbond partner. `#[serde(default)]` so older snapshots load
@@ -2664,6 +2681,28 @@ struct CardInstanceWire {
     #[serde(default)]
     soulbond_partner: Option<CardId>,
     kicked: bool,
+    /// CR 702.33c multikicker count (Everflowing Chalice's ETB counters).
+    /// `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    kick_count: u32,
+    /// CR 702.157 squad-payment count. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    squad_count: u32,
+    /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    bargained: bool,
+    /// CR 702.46 — creature this card is ciphered onto. `#[serde(default)]`
+    /// for back-compat.
+    #[serde(default)]
+    encoded_on: Option<CardId>,
+    /// CR 608.2b fizzle bookkeeping — primary target was a battlefield
+    /// permanent at cast time. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    cast_target_was_battlefield: bool,
+    /// `Effect::GainActivatedAbility` grants (Urza's Saga). `#[serde(default)]`
+    /// for back-compat.
+    #[serde(default)]
+    granted_activated_abilities: Vec<ActivatedAbility>,
     /// CR 702.27 buyback flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -2825,10 +2864,18 @@ impl serde::Serialize for CardInstance {
             summoning_sick: self.summoning_sick,
             power_bonus: self.power_bonus,
             toughness_bonus: self.toughness_bonus,
+            perm_power_bonus: self.perm_power_bonus,
+            perm_toughness_bonus: self.perm_toughness_bonus,
             counters: self.counters.iter().map(|(k, v)| (*k, *v)).collect(),
             attached_to: self.attached_to,
             soulbond_partner: self.soulbond_partner,
             kicked: self.kicked,
+            kick_count: self.kick_count,
+            squad_count: self.squad_count,
+            bargained: self.bargained,
+            encoded_on: self.encoded_on,
+            cast_target_was_battlefield: self.cast_target_was_battlefield,
+            granted_activated_abilities: self.granted_activated_abilities.clone(),
             bought_back: self.bought_back,
             entwined: self.entwined,
             bestowed: self.bestowed,
@@ -2892,10 +2939,18 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.summoning_sick = wire.summoning_sick;
         c.power_bonus = wire.power_bonus;
         c.toughness_bonus = wire.toughness_bonus;
+        c.perm_power_bonus = wire.perm_power_bonus;
+        c.perm_toughness_bonus = wire.perm_toughness_bonus;
         c.counters = wire.counters.into_iter().collect();
         c.attached_to = wire.attached_to;
         c.soulbond_partner = wire.soulbond_partner;
         c.kicked = wire.kicked;
+        c.kick_count = wire.kick_count;
+        c.squad_count = wire.squad_count;
+        c.bargained = wire.bargained;
+        c.encoded_on = wire.encoded_on;
+        c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
+        c.granted_activated_abilities = wire.granted_activated_abilities;
         c.bought_back = wire.bought_back;
         c.entwined = wire.entwined;
         c.bestowed = wire.bestowed;

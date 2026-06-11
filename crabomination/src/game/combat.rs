@@ -820,6 +820,11 @@ impl GameState {
         let mut events = vec![];
         for (blocker_id, attacker_id) in assignments {
             self.block_map.insert(blocker_id, attacker_id);
+            // CR 510.1c — once blocked, the attacker stays blocked for this
+            // combat even if every blocker later leaves combat.
+            if !self.blocked_attackers.contains(&attacker_id) {
+                self.blocked_attackers.push(attacker_id);
+            }
             events.push(GameEvent::BlockerDeclared {
                 blocker: blocker_id,
                 attacker: attacker_id,
@@ -910,6 +915,7 @@ impl GameState {
 
         self.attacking.clear();
         self.block_map.clear();
+        self.blocked_attackers.clear();
         self.clear_combat_damage_plan();
         self.blockers_declared = false;
         // CR 702.39 — provoke's "block this combat" requirement ends here.
@@ -1348,6 +1354,14 @@ impl GameState {
             }
 
             if blocker_ids.is_empty() {
+                // CR 510.1c — an attacker that became blocked stays blocked
+                // even if all its blockers left combat (died to first-strike
+                // damage or removal). Without trample it assigns no combat
+                // damage; with trample everything goes to the defending
+                // player (CR 702.19g).
+                if self.blocked_attackers.contains(&atk.id) && !atk.has_trample {
+                    continue;
+                }
                 let raw = if prevent_combat_damage {
                     0
                 } else {

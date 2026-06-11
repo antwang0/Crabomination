@@ -625,6 +625,12 @@ pub struct GameState {
     /// in this set. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
+    /// CR 510.1c — attackers that became blocked this combat. An attacker
+    /// stays blocked even if all its blockers leave combat (double-strike
+    /// step-one kills, post-block removal): without trample it assigns no
+    /// combat damage. Cleared when combat ends.
+    #[serde(default)]
+    pub(crate) blocked_attackers: Vec<CardId>,
     /// CR 614.13-style ETB-control replacement (Gather Specimens): seats
     /// whose opponents' creatures enter under their control instead this
     /// turn. Cleared at cleanup.
@@ -929,6 +935,7 @@ impl Clone for GameState {
             additional_combat_phases: self.additional_combat_phases,
             additional_post_main_combats: self.additional_post_main_combats,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
+            blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
@@ -1050,6 +1057,7 @@ impl GameState {
             additional_combat_phases: 0,
             additional_post_main_combats: 0,
             combat_damage_prevented_creatures: Vec::new(),
+            blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
             damage_prevented_sources: Vec::new(),
@@ -4952,7 +4960,11 @@ impl GameState {
         if returning_controller != Some(p) {
             return Err(GameError::NotYourPriority);
         }
-        if self.block_map.values().any(|&a| a == returning) {
+        // CR 702.49a — "unblocked attacker": once blocked it stays blocked
+        // for the combat even if its blockers have since left (CR 510.1c).
+        if self.block_map.values().any(|&a| a == returning)
+            || self.blocked_attackers.contains(&returning)
+        {
             return Err(GameError::InvalidTarget); // blocked — illegal
         }
         // The ninja must be in `p`'s hand and carry Ninjutsu; clone its cost.

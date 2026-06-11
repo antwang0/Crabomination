@@ -442,8 +442,8 @@ fn compute_permanent(
     } else {
         (base_power, base_toughness)
     };
-    power += mod_power + card.power_bonus;
-    toughness += mod_toughness + card.toughness_bonus;
+    power += mod_power + card.power_bonus + card.perm_power_bonus;
+    toughness += mod_toughness + card.toughness_bonus + card.perm_toughness_bonus;
     // Counters applied after 7c (CR 613.7f).
     power += counter_power_delta;
     toughness += counter_toughness_delta;

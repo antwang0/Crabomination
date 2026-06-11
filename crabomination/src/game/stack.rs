@@ -1053,6 +1053,7 @@ impl GameState {
         // CR 728.1b — remove all attackers and blockers from combat.
         self.attacking.clear();
         self.block_map.clear();
+        self.blocked_attackers.clear();
         self.blockers_declared = false;
         // CR 728.1d — the turn skips straight to the cleanup step.
         self.step = TurnStep::End;

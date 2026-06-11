@@ -621,3 +621,166 @@ fn cr_702_126_improvise_rejects_nonartifact_helpers() {
         convoke_creatures: vec![bear],
     }).is_err(), "a creature can't improvise");
 }
+
+// ── CR 611.2c / 613.7c — PumpPT durations ─────────────────────────────────────
+
+/// A `Duration::Permanent` pump (Wall of Roots's -0/-1) must survive the
+/// Cleanup step's EOT-bonus wipe.
+#[test]
+fn cr_611_2c_permanent_pump_survives_cleanup() {
+    use crate::effect::{Duration, Selector, Value};
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(0, catalog::wall_of_roots());
+    let eff = Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(0),
+        toughness: Value::Const(-1),
+        duration: Duration::Permanent,
+    };
+    let ctx = EffectContext::for_ability(wall, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(wall).unwrap().toughness(), 4, "-0/-1 applied");
+    for card in g.battlefield.iter_mut() {
+        card.clear_end_of_turn_effects();
+    }
+    g.expire_end_of_turn_effects();
+    assert_eq!(
+        g.battlefield_find(wall).unwrap().toughness(),
+        4,
+        "permanent pump persists past cleanup"
+    );
+}
+
+/// An `EndOfCombat` pump expires when the combat phase ends, not at Cleanup.
+#[test]
+fn cr_611_2c_end_of_combat_pump_expires_at_combat_end() {
+    use crate::effect::{Duration, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eff = Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(2),
+        toughness: Value::Const(2),
+        duration: Duration::EndOfCombat,
+    };
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let computed = g.computed_permanent(bear).expect("computed");
+    assert_eq!((computed.power, computed.toughness), (4, 4), "pump active");
+    g.expire_end_of_combat_effects();
+    let computed = g.computed_permanent(bear).expect("computed");
+    assert_eq!((computed.power, computed.toughness), (2, 2), "pump expired with combat");
+}
+
+/// A mid-duration pump aimed at a specific permanent ends when that permanent
+/// leaves the battlefield and must not re-attach if it re-enters (CR 611.2c).
+#[test]
+fn cr_611_2c_specific_pump_does_not_follow_object_across_zones() {
+    use crate::effect::{Duration, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eff = Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(3),
+        toughness: Value::Const(3),
+        duration: Duration::UntilNextTurn,
+    };
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    // Bounce and replay: the new object must be a plain 2/2.
+    let mut events = Vec::new();
+    g.move_card_to(bear, &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::You), &ctx, &mut events);
+    let hand_pos = g.players[0].hand.iter().position(|c| c.id == bear).unwrap();
+    let card = g.players[0].hand.remove(hand_pos);
+    g.battlefield.push(card);
+    let computed = g.computed_permanent(bear).expect("computed");
+    assert_eq!((computed.power, computed.toughness), (2, 2), "pump ended on zone change");
+}
+
+// ── CR 510.1c — a blocked attacker remains blocked ────────────────────────────
+
+/// Test-only fixture: a 3/3 double striker, optionally with trample.
+fn double_striker(trample: bool) -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    let mut keywords = vec![Keyword::DoubleStrike];
+    if trample {
+        keywords.push(Keyword::Trample);
+    }
+    CardDefinition {
+        name: "Test Double Striker",
+        cost: crate::mana::cost(&[crate::mana::generic(2), crate::mana::r()]),
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        keywords,
+        ..Default::default()
+    }
+}
+
+/// A double striker whose blocker dies to first-strike damage stays blocked:
+/// without trample, its regular-step damage hits nothing (CR 510.1c).
+#[test]
+fn cr_510_1c_blocked_attacker_stays_blocked_when_blocker_dies() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, double_striker(false));
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(blocker);
+    let life_before = g.players[1].life;
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .unwrap();
+
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().unwrap();
+    assert!(!g.battlefield.iter().any(|c| c.id == blocker), "blocker dies to FS damage");
+
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(
+        g.players[1].life, life_before,
+        "regular-step damage of a still-blocked attacker hits no one"
+    );
+}
+
+/// With trample the same line assigns the regular-step damage to the
+/// defending player (CR 702.19g).
+#[test]
+fn cr_702_19g_trample_attacker_hits_player_after_blocker_dies() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, double_striker(true));
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(blocker);
+    let life_before = g.players[1].life;
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .unwrap();
+
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().unwrap();
+    // FS step: 1 lethal to the 2/2 blocker, 1 tramples over.
+    assert_eq!(g.players[1].life, life_before - 1, "trample overflow in the FS step");
+
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(
+        g.players[1].life,
+        life_before - 1 - 3,
+        "all regular-step damage tramples through once the blocker is gone"
+    );
+}

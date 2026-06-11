@@ -26,7 +26,7 @@ use crate::card::{
     Keyword, SelectionRequirement, Zone,
 };
 use crate::effect::{
-    AttackingTokenCleanup, Effect, ManaPayload, PlayerRef,
+    AttackingTokenCleanup, Duration, Effect, ManaPayload, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
 use crate::game::layers::EffectDuration;
@@ -3114,16 +3114,51 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PumpPT { what, power, toughness, duration: _ } => {
+            Effect::PumpPT { what, power, toughness, duration } => {
                 let p = self.evaluate_value(power, ctx);
                 let t = self.evaluate_value(toughness, ctx);
                 for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id()
-                        && let Some(c) = self.battlefield_find_mut(cid) {
-                            c.power_bonus += p;
-                            c.toughness_bonus += t;
-                            events.push(GameEvent::PumpApplied { card_id: cid, power: p, toughness: t });
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if self.battlefield_find(cid).is_none() {
+                        continue;
+                    }
+                    match duration {
+                        // Fast path: the EOT fields are wiped at Cleanup.
+                        Duration::EndOfTurn => {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.power_bonus += p;
+                                c.toughness_bonus += t;
+                            }
                         }
+                        // Permanent pumps survive Cleanup (Wall of Roots).
+                        Duration::Permanent => {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.perm_power_bonus += p;
+                                c.perm_toughness_bonus += t;
+                            }
+                        }
+                        // Mid durations ride the layer system, which knows
+                        // how to expire EndOfCombat / UntilNextTurn effects.
+                        _ => {
+                            use crate::game::layers::{
+                                AffectedPermanents, ContinuousEffect, Layer, Modification,
+                                PtSublayer,
+                            };
+                            let duration_kind = map_effect_duration(*duration);
+                            let source = ctx.source.unwrap_or(CardId(0));
+                            let ts = self.next_timestamp();
+                            self.add_continuous_effect(ContinuousEffect {
+                                timestamp: ts,
+                                source,
+                                affected: AffectedPermanents::Specific(vec![cid]),
+                                layer: Layer::L7PowerTough,
+                                sublayer: Some(PtSublayer::Modify),
+                                duration: duration_kind,
+                                modification: Modification::ModifyPowerToughness(p, t),
+                            });
+                        }
+                    }
+                    events.push(GameEvent::PumpApplied { card_id: cid, power: p, toughness: t });
                 }
                 Ok(())
             }
