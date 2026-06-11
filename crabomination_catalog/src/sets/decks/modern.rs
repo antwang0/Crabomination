@@ -47917,3 +47917,27 @@ pub fn scuttling_doom_engine() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Spellskite — {2} 0/4 Phyrexian Horror. {U/P}: Change a target of target
+/// spell to this creature.
+pub fn spellskite() -> CardDefinition {
+    CardDefinition {
+        name: "Spellskite",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::phyrexian(Color::Blue)]),
+            effect: Effect::RedirectSpellTargetToSelf {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

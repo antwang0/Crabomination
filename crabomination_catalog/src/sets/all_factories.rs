@@ -863,6 +863,7 @@ static DECKS: &[Factory] = &[
     super::decks::gifts_ungiven,
     super::decks::open_the_armory,
     super::decks::scuttling_doom_engine,
+    super::decks::spellskite,
     super::decks::lavaspur_boots,
     super::decks::the_mightstone_and_weakstone,
     super::decks::urza_lord_protector,

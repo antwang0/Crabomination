@@ -5512,6 +5512,60 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RedirectSpellTargetToSelf { what } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                // Locate the targeted spell on the stack.
+                let spell_id = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Card(cid) | EntityRef::Permanent(cid) => Some(cid),
+                        _ => None,
+                    });
+                let Some(spell_id) = spell_id else { return Ok(()) };
+                let Some(idx) = self.stack.iter().rposition(|si| {
+                    matches!(si, StackItem::Spell { card, .. } if card.id == spell_id)
+                }) else {
+                    return Ok(());
+                };
+                // CR 115.7 — the new target must be legal for that spell.
+                let (legal, caster) = if let StackItem::Spell { card, caster, .. } = &self.stack[idx] {
+                    let filter_ok = card
+                        .definition
+                        .effect
+                        .target_filter_for_slot_in_mode_kicked(0, None, card.kicked)
+                        .is_none_or(|f| {
+                            self.evaluate_requirement_static(
+                                f,
+                                &Target::Permanent(src),
+                                *caster,
+                                Some(card.id),
+                            )
+                        });
+                    (
+                        filter_ok
+                            && self
+                                .check_target_legality_with_source(
+                                    &Target::Permanent(src),
+                                    *caster,
+                                    Some(card.id),
+                                )
+                                .is_ok(),
+                        *caster,
+                    )
+                } else {
+                    return Ok(());
+                };
+                let _ = caster;
+                if legal
+                    && let StackItem::Spell { target, .. } = &mut self.stack[idx]
+                    && target.is_some()
+                {
+                    *target = Some(Target::Permanent(src));
+                }
+                Ok(())
+            }
+
             Effect::SearchSplitOpponentChooses {
                 opponent, count, opponent_picks, chosen_to, rest_to,
             } => {

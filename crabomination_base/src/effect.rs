@@ -1926,6 +1926,9 @@ pub enum Effect {
     ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s library (CR 103.2c). Mind's Desire's pre-exile shuffle.
     ShuffleLibrary { who: PlayerRef },
+    /// Spellskite — change the primary target of the selected stack spell
+    /// to this permanent, if it's a legal target for that spell (CR 115.7).
+    RedirectSpellTargetToSelf { what: Selector },
     /// Gifts Ungiven — search up to `count` library cards with different
     /// names and reveal them; the targeted opponent chooses `opponent_picks`
     /// of them, which go to `chosen_to`; the rest go to `rest_to`; shuffle.

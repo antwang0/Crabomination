@@ -272,6 +272,7 @@ impl Effect {
             Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
+            Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
                     ManaPayload::Colorless(v)
@@ -595,6 +596,7 @@ impl Effect {
             Effect::AddPoison { who, .. } => sel_filter(who),
             Effect::DiscardChosen { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
+            Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
             Effect::ManaClash { opponent } => sel_filter(opponent),
             // Edict-class effects: "target player sacrifices a permanent."
             // The `who` selector usually carries a `target_filtered(Player)`
@@ -1294,6 +1296,7 @@ impl Effect {
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
                 Effect::DiscardChosen { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
+                Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),

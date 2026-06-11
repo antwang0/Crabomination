@@ -52815,3 +52815,31 @@ fn scuttling_doom_engine_block_gate_and_death_burn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 14, "6 damage on death");
 }
+
+/// Spellskite redirects a spell's target to itself (paying {U/P} with life).
+#[test]
+fn spellskite_redirects_spell_target() {
+    let mut g = two_player_game();
+    let skite = g.add_card_to_battlefield(0, catalog::spellskite());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    // Respond: no blue mana — the Phyrexian pip is paid with 2 life.
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skite, ability_index: 0,
+        target: Some(Target::Permanent(bolt)), x_value: None,
+    }).expect("activate Spellskite");
+    assert_eq!(g.players[0].life, 18, "paid 2 life for {{U/P}}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bear untouched");
+    let skite_card = g.battlefield_find(skite).expect("0/4 survives the bolt");
+    assert_eq!(skite_card.damage, 3, "bolt redirected to Spellskite");
+}

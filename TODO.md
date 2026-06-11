@@ -292,8 +292,8 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     gate (`ManaValueAtMost(ConvergedValue)` filter doesn't exist).
   - **Ad Nauseam** — repeat-any-number-of-times reveal loop with a
     per-iteration stop decision.
-  - **Spellskite** — change a target of target spell/ability to this
-    ({U/P} activation; needs a redirect-target effect).
+  - ✅ **Spellskite** shipped (`Effect::RedirectSpellTargetToSelf`, {U/P}
+    activation; CR 115.7 legality re-check). Ability-on-stack targets ⏳.
   - **Kataki, War's Wage** — "all artifacts have [upkeep sac tax]" needs
     the granted-triggered-ability static framework (same gap as Nadu).
   - **Porphyry Nodes** — "destroy the creature with the least power" wants
