@@ -2307,6 +2307,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DiscardUnlessKind { who, count, instead } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let pick = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(instead, c, p))
+                    .min_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                if let Some(id) = pick {
+                    self.discard_card(p, id, events);
+                    return Ok(());
+                }
+                self.run_effect(
+                    &Effect::Discard {
+                        who: Selector::Player(who.clone()),
+                        amount: count.clone(),
+                        random: false,
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::RevealTopToHandLoseLifeRepeat => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                while let Some(top) = self.players[p].library.first() {
+                    let (name, mv) = (top.definition.name, top.definition.cost.cmc() as i32);
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source,
+                        description: format!("Reveal the top card ({name}, lose {mv} life)?"),
+                    });
+                    if !matches!(answer, DecisionAnswer::Bool(true)) {
+                        break;
+                    }
+                    let card = self.players[p].library.remove(0);
+                    self.players[p].hand.push(card);
+                    if mv > 0 {
+                        let applied = self.adjust_life_applied(p, -mv);
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Provoke { what } => {
                 // CR 702.39 — untap the target creature and force it to block
                 // the source attacker this combat if able.
@@ -4922,6 +4970,8 @@ impl GameState {
                             false
                         }
                     }
+                    // Not a printed ward cost (UnlessPlayerPays-only).
+                    WardCost::GenericSourcePower => false,
                 };
 
                 if !paid {
@@ -4970,6 +5020,26 @@ impl GameState {
                                 true
                             } else {
                                 false
+                            }
+                        }
+                        // "{X} where X is this creature's power" (Esper
+                        // Sentinel). Read the source's computed power and
+                        // auto-tap-pay that much generic.
+                        WardCost::GenericSourcePower => {
+                            let x = ctx
+                                .source
+                                .and_then(|sid| self.computed_permanent(sid))
+                                .map(|c| c.power.max(0) as u32)
+                                .unwrap_or(0);
+                            if x == 0 {
+                                true
+                            } else {
+                                let mc = crate::mana::cost(&[crate::mana::generic(x)]);
+                                let saved = self.priority.player_with_priority;
+                                self.priority.player_with_priority = payer;
+                                let ok = self.try_pay_with_auto_tap(payer, &mc).is_ok();
+                                self.priority.player_with_priority = saved;
+                                ok
                             }
                         }
                         // Discard / sacrifice costs aren't used by the

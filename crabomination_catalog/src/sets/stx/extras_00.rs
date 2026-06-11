@@ -871,10 +871,9 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
 
 
 /// Confront the Past — {X}{B} Sorcery — Lesson. Choose one — return target
-/// planeswalker card from your graveyard to the battlefield; or remove twice X
-/// loyalty counters from target planeswalker an opponent controls. (The "mana
-/// value X or less" gate on the reanimation target is dropped — no X-aware MV
-/// target filter yet; since you set X, it's rarely binding.)
+/// planeswalker card with mana value X or less from your graveyard to the
+/// battlefield; or remove twice X loyalty counters from target planeswalker
+/// an opponent controls.
 pub fn confront_the_past() -> CardDefinition {
     CardDefinition {
         name: "Confront the Past",
@@ -884,7 +883,9 @@ pub fn confront_the_past() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Planeswalker.and(SelectionRequirement::InGraveyard),
+                    SelectionRequirement::Planeswalker
+                        .and(SelectionRequirement::InGraveyard)
+                        .and(SelectionRequirement::ManaValueAtMostXFromCost),
                 ),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },

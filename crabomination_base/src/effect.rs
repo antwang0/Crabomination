@@ -1667,6 +1667,16 @@ pub enum Effect {
     Learn   { who: PlayerRef },
     /// Discard `amount` cards. If `random`, chosen randomly; else by `who`.
     Discard { who: Selector, amount: Value, random: bool },
+    /// "`who` discards `count` cards unless they discard a card matching
+    /// `instead`" (Wrench Mind). With a match in hand the discarder keeps
+    /// the small side automatically (lowest-MV match); otherwise the full
+    /// `count` is discarded via the regular Discard path.
+    DiscardUnlessKind { who: PlayerRef, count: Value, instead: SelectionRequirement },
+    /// Ad Nauseam — repeatedly offer "reveal the top card of your library
+    /// and put it into your hand, losing life equal to its mana value?"
+    /// until the controller declines or the library empties. AutoDecider
+    /// declines immediately; scripted/UI deciders drive the loop.
+    RevealTopToHandLoseLifeRepeat,
     /// Discard any number of cards (0 to hand-size, player's choice). Used by
     /// "discard any number of cards, then draw that many cards plus one"
     /// effects (Colossus of the Blood Age, Mind Roots-style "any number"

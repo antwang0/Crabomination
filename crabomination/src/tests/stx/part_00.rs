@@ -2842,7 +2842,7 @@ fn confront_the_past_mode_0_reanimates_planeswalker_from_graveyard() {
         target: Some(Target::Permanent(pw)),
         additional_targets: vec![],
         mode: Some(0),
-        x_value: Some(0),
+        x_value: Some(10),
     }).expect("Confront the Past castable for {X}{B}");
     drain_stack(&mut g);
 

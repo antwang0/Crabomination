@@ -16,6 +16,8 @@ fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Discard(n) => *n == 0,
         WardCost::SacrificeCreature => false,
         WardCost::SacrificePermanents(n) => *n == 0,
+        // Dynamic — the source's power can change before payment.
+        WardCost::GenericSourcePower => false,
     }
 }
 
@@ -2912,7 +2914,8 @@ impl GameState {
                 .definition
                 .effect
                 .target_filter_for_slot_in_mode_kicked(0, mode, kicked)
-            && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+            && !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
         {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
@@ -2923,7 +2926,8 @@ impl GameState {
                 .definition
                 .effect
                 .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
-                && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                && !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
             {
                 self.players[p].hand.push(card);
                 return Err(GameError::SelectionRequirementViolated);

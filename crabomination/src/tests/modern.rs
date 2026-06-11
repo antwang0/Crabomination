@@ -53086,3 +53086,146 @@ fn hide_bottoms_artifact_seek_exiles_and_gains_mv() {
     assert!(g.exile.iter().any(|c| c.id == fatty), "library card exiled");
     assert_eq!(g.players[0].life, before + mv, "gained MV life");
 }
+
+// ── Rhystic riders, Ad Nauseam, faithful Wrench Mind, MV≤X targeting ────────
+
+/// Esper Sentinel: an opponent's first noncreature spell each turn draws you
+/// a card unless they pay {X} = its power.
+#[test]
+fn esper_sentinel_taxes_first_noncreature_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::esper_sentinel());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("opponent casts Bolt");
+    drain_stack(&mut g);
+    // AutoDecider declines to pay → controller draws.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew off the rhystic tax");
+}
+
+/// The opponent paying the {X} tax denies the draw.
+#[test]
+fn esper_sentinel_paid_tax_denies_the_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::esper_sentinel());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    let mtn = g.add_card_to_battlefield(1, catalog::mountain());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("opponent casts Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "paid one generic — no draw");
+    assert!(g.battlefield_find(mtn).unwrap().tapped, "auto-tapped the Mountain");
+}
+
+/// Mystic Remora draws off every opponent noncreature spell ({4} unpaid).
+#[test]
+fn mystic_remora_draws_off_noncreature_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mystic_remora());
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add(Color::Green, 2);
+    let before = g.players[0].hand.len();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("creature spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before, "creature spell — no Remora draw");
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("noncreature spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "noncreature spell — Remora draw");
+}
+
+/// Ad Nauseam keeps revealing while the caster says yes, charging MV in life.
+#[test]
+fn ad_nauseam_reveals_until_stopped() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // MV 1, deeper
+    let id = g.add_card_to_hand(0, catalog::ad_nauseam());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    // Yes (bears), yes (bolt is now top? order: add_to_library puts at ...)
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ad Nauseam");
+    drain_stack(&mut g);
+    let took = [bears, bolt].iter().filter(|c| g.players[0].hand.iter().any(|h| h.id == **c)).count();
+    assert_eq!(took, 1, "took exactly one card before stopping");
+    let mv = if g.players[0].hand.iter().any(|h| h.id == bears) { 2 } else { 1 };
+    assert_eq!(g.players[0].life, life - mv, "lost the card's mana value in life");
+}
+
+/// Wrench Mind discards the artifact when the target has one; two cards
+/// otherwise.
+#[test]
+fn wrench_mind_artifact_escape_hatch() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_hand(1, catalog::mind_stone());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::wrench_mind());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].hand.len(), 2, "only the artifact was discarded");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == rock));
+
+    let id2 = g.add_card_to_hand(0, catalog::wrench_mind());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast_at(&mut g, id2, Target::Player(1));
+    assert_eq!(g.players[1].hand.len(), 0, "no artifact → discards two");
+}
+
+/// Confront the Past mode 0 rejects a graveyard planeswalker with MV > X.
+#[test]
+fn confront_the_past_enforces_mv_at_most_x() {
+    let mut g = two_player_game();
+    let pw_id = {
+        let id = g.add_card_to_hand(0, catalog::teferi_hero_of_dominaria()); // MV 5
+        let card = g.players[0].remove_from_hand(id).unwrap();
+        g.players[0].graveyard.push(card);
+        id
+    };
+    let id = g.add_card_to_hand(0, catalog::confront_the_past());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(pw_id)), additional_targets: vec![],
+        mode: Some(0), x_value: Some(3),
+    }).is_err(), "MV 5 walker is not a legal X=3 target");
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(pw_id)), additional_targets: vec![],
+        mode: Some(0), x_value: Some(5),
+    }).expect("X=5 covers the MV-5 walker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pw_id).is_some(), "reanimated");
+}

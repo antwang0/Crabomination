@@ -648,6 +648,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::SacrificePermanents(n) => {
                 format!("Ward—Sacrifice {n} permanents")
             }
+            crabomination::card::WardCost::GenericSourcePower => {
+                "Pay {X}, X = its power".into()
+            }
         },
         // Protection rolls up the color name in lowercase to match
         // printed Oracle ("protection from white", not "from White").

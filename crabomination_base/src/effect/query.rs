@@ -24,6 +24,13 @@ fn implicit_player_for_slot(what: &Selector, slot: u8) -> Option<&'static Select
         .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
+/// `Some(&Player)` when a bare `PlayerRef::Target(n)` fills `slot` — effects
+/// that target a player directly through a `PlayerRef` field
+/// (`ExilePlayerGraveyard`, `ExileHand`, `DiscardUnlessKind`).
+fn implicit_player_for_ref_slot(who: &PlayerRef, slot: u8) -> Option<&'static SelectionRequirement> {
+    matches!(who, PlayerRef::Target(n) if *n == slot).then_some(&IMPLICIT_PLAYER_TARGET)
+}
+
 /// `Some(&Creature)` when `what` is any bare numbered target (slot-agnostic —
 /// used for the "primary" target filter).
 fn implicit_creature_if_bare_target(what: &Selector) -> Option<&'static SelectionRequirement> {
@@ -127,6 +134,10 @@ impl Effect {
             Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::ExileHand { who } => player_has_target(who),
+            Effect::DiscardUnlessKind { who, count, .. } => {
+                player_has_target(who) || value_has_target(count)
+            }
+            Effect::RevealTopToHandLoseLifeRepeat => false,
             Effect::Demonstrate => false,
             Effect::Cipher => false,
             Effect::Myriad => false,
@@ -1315,6 +1326,9 @@ impl Effect {
                 | Effect::Suspect { what }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
+                Effect::ExilePlayerGraveyard { who }
+                | Effect::ExileHand { who }
+                | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
                 Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }

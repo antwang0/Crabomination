@@ -7550,7 +7550,10 @@ impl GameState {
             let filter_fails = |g: &Self| {
                 effect
                     .target_filter_for_slot_in_mode_kicked(0, Some(mode), card.kicked)
-                    .is_some_and(|f| !g.evaluate_requirement_static(f, t, caster, Some(card.id)))
+                    .is_some_and(|f| {
+                        let f = f.resolve_x(x_value);
+                        !g.evaluate_requirement_static(&f, t, caster, Some(card.id))
+                    })
             };
             let fizzled = if card.cast_target_was_battlefield
                 && let Target::Permanent(tid) = t
@@ -7590,7 +7593,10 @@ impl GameState {
                     if g.battlefield_find(*tid).is_none());
                 let filter_fail = effect
                     .target_filter_for_slot_in_mode_kicked(slot, Some(mode), card.kicked)
-                    .is_some_and(|f| !g.evaluate_requirement_static(f, t, caster, Some(card.id)));
+                    .is_some_and(|f| {
+                        let f = f.resolve_x(x_value);
+                        !g.evaluate_requirement_static(&f, t, caster, Some(card.id))
+                    });
                 gone
                     || filter_fail
                     || g.check_target_legality_with_source(t, caster, Some(card.id)).is_err()

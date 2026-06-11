@@ -315,6 +315,10 @@ pub enum WardCost {
     SacrificeCreature,
     /// "Ward—Sacrifice N permanents." (Ulamog, the Defiler.)
     SacrificePermanents(u32),
+    /// "{X}, where X is this creature's power" — a dynamic generic cost read
+    /// off the source's computed power at payment time (Esper Sentinel's
+    /// rhystic tax).
+    GenericSourcePower,
 }
 
 impl WardCost {
