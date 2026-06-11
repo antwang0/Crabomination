@@ -1638,3 +1638,81 @@ fn cr_608_2b_aura_attaches_to_legal_target() {
         "Aura attached to its target"
     );
 }
+
+// ── CR 700.4 — exile-instead replacements mean the creature never dies ──────
+
+/// Under Rest in Peace a destroyed creature is exiled instead of dying:
+/// "whenever a creature dies" watchers don't fire and Persist doesn't return.
+#[test]
+fn cr_700_4_exiled_instead_creatures_do_not_die() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rest_in_peace());
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let (you, opp) = (g.players[0].life, g.players[1].life);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Permanent(victim));
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled instead of the graveyard");
+    assert_eq!(g.players[0].life, you, "Blood Artist saw no death — no gain");
+    assert_eq!(g.players[1].life, opp, "…and no drain");
+}
+
+/// Persist can't return a creature whose death-placement went to exile.
+#[test]
+fn cr_700_4_persist_does_not_return_from_exile_redirect() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rest_in_peace());
+    let persister = g.add_card_to_battlefield(1, catalog::kitchen_finks());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::Destroy { what: crate::card::Selector::EachPermanent(
+        crate::card::SelectionRequirement::Creature) }, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == persister), "in exile");
+    assert!(g.battlefield_find(persister).is_none(), "did not persist back");
+}
+
+// ── CR 704.5e — a spell copy off the stack ceases to exist ──────────────────
+
+/// Memory Lapse on a spell COPY doesn't shuffle a phantom card into the
+/// library — the copy ceases to exist once off the stack.
+#[test]
+fn cr_704_5e_countered_spell_copy_ceases_to_exist() {
+    let mut g = two_player_game();
+    // Opponent casts a Bolt; we Reverberate it, then Memory Lapse the copy.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("opponent bolt");
+    let fork = g.add_card_to_hand(0, catalog::reverberate());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fork, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Reverberate the bolt");
+    // Resolve Reverberate only — the copy is now on the stack.
+    g.resolve_top_of_stack().expect("fork resolves");
+    let copy_id = match g.stack.last() {
+        Some(crate::game::StackItem::Spell { card, .. }) if card.is_token => card.id,
+        other => panic!("expected the copy on top, got {other:?}"),
+    };
+    let lapse = g.add_card_to_hand(0, catalog::memory_lapse());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lapse, target: Some(Target::Permanent(copy_id)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Lapse the copy");
+    let lib_before = g.players[1].library.len();
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert_eq!(g.players[1].library.len(), lib_before, "no phantom card in the library");
+    assert!(!g.players[1].library.iter().any(|c| c.id == copy_id));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt) || g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "the real Bolt resolved/died normally");
+}

@@ -2619,6 +2619,18 @@ impl GameState {
         // Hushbringer (CR 614): creature-death triggers are suppressed while
         // a `SuppressCreatureEtbTriggers { also_dies }` static is in play.
         let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
+        // CR 700.4 — "dies" means put into a graveyard from the battlefield.
+        // Under a graveyard→exile replacement (Rest in Peace, Leyline of the
+        // Void, void counters) the card never dies, so its own dies triggers,
+        // equipment-granted dies triggers, and the died tally are suppressed
+        // (Persist/Undying already no-op — the card never reaches the
+        // graveyard to be returned from).
+        let exiled_instead = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .is_some_and(|c| self.graveyard_exiled_for(c) || c.disturb_back_exiles());
+        let dies_suppressed = dies_suppressed || exiled_instead;
         let (leave_triggers, dying_creature_controller): (Vec<(CardId, Effect, usize)>, Option<usize>) = self
             .battlefield
             .iter()
@@ -2692,6 +2704,7 @@ impl GameState {
         // bump so all destroy paths agree.
         if let Some(controller_idx) = dying_creature_controller
             && controller_idx < self.players.len()
+            && !exiled_instead
         {
             self.players[controller_idx].creatures_died_this_turn =
                 self.players[controller_idx].creatures_died_this_turn.saturating_add(1);

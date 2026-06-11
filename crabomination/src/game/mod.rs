@@ -5763,6 +5763,16 @@ impl GameState {
                     if dies_suppressed && matches!(ev, GameEvent::CreatureDied { .. }) {
                         continue;
                     }
+                    // CR 700.4 — a creature whose death-placement was
+                    // redirected to exile (Rest in Peace, void counters,
+                    // Kalitas) never died; "whenever a creature dies"
+                    // watchers don't fire. The redirected card sits in
+                    // exile at dispatch time.
+                    if let GameEvent::CreatureDied { card_id } = ev
+                        && self.exile.iter().any(|c| c.id == *card_id)
+                    {
+                        continue;
+                    }
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                         let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
                         // Per-subject cap ("triggers only twice each turn"
