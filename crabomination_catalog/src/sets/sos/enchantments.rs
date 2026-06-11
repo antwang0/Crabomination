@@ -11,7 +11,7 @@ use crate::card::{
     Predicate, SelectionRequirement, TriggeredAbility,
 };
 use crate::effect::shortcut::{repartee, target_filtered};
-use crate::effect::{Duration, PlayerRef, Selector, Value};
+use crate::effect::{Duration, PlayerRef, Selector, StaticAbility, StaticEffect, Value};
 use crate::mana::{cost, g, generic, r, w};
 
 /// Graduation Day — {W} Enchantment.
@@ -98,13 +98,8 @@ pub fn living_history() -> CardDefinition {
 /// As long as there are five or more growth counters on this
 /// enchantment, creatures you control get +3/+3."
 ///
-/// Approximation: the lifegain-driven growth-counter accrual is wired
-/// faithfully via a `LifeGained / YourControl` trigger. The static
-/// `+3/+3` anthem-while-≥5-counters is **omitted** — the engine has no
-/// `StaticEffect` whose toggle is gated on the source's own counter
-/// count. Tracked in TODO.md under "Self-Counter-Scaled Cost Reduction"
-/// (the same shape applies). Once the gate primitive lands, restoring
-/// the anthem is a one-line `static_abilities` push.
+/// Lifegain accrues Growth counters; at five or more, creatures you
+/// control get +3/+3 (`PumpTeamIf` on the source's counter pool).
 pub fn comforting_counsel() -> CardDefinition {
     CardDefinition {
         name: "Comforting Counsel",
@@ -116,6 +111,22 @@ pub fn comforting_counsel() -> CardDefinition {
                 what: Selector::This,
                 kind: CounterType::Growth,
                 amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "While this has five or more growth counters, creatures you control get +3/+3.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Growth,
+                    },
+                    Value::Const(5),
+                ),
+                applies_to: crate::effect::shortcut::each_your_creature(),
+                power: 3,
+                toughness: 3,
+                keywords: vec![],
             },
         }],
         ..Default::default()

@@ -81,6 +81,10 @@ pub enum StaticEffect {
         applies_to: Selector,
         power: i32,
         toughness: i32,
+        /// Keywords granted while the condition holds (Thornfist Striker's
+        /// Infusion trample).
+        #[serde(default)]
+        keywords: Vec<Keyword>,
     },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },

@@ -247,6 +247,7 @@ pub fn beastmaster_ascension() -> CardDefinition {
                 ),
                 power: 5,
                 toughness: 5,
+                keywords: vec![],
             },
         }],
         ..Default::default()

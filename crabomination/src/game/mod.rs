@@ -3402,6 +3402,7 @@ impl GameState {
                     applies_to,
                     power,
                     toughness,
+                    keywords,
                 } = &sa.effect
                 else {
                     continue;
@@ -3415,15 +3416,28 @@ impl GameState {
                     continue;
                 }
                 if let Some(affected) = selector_to_affected(applies_to, card) {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected,
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(*power, *toughness),
-                    });
+                    if *power != 0 || *toughness != 0 {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: affected.clone(),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(*power, *toughness),
+                        });
+                    }
+                    for kw in keywords {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: affected.clone(),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
                 }
             }
         }
@@ -3631,129 +3645,6 @@ impl GameState {
             }
         }
         for card in &self.battlefield {
-            let name = card.definition.name;
-            // "As long as you've gained life this turn, +P/+T [and KW]"
-            // self-pump consolidation: name lookup table at
-            // `lifegain_selfpump_for_name`. Adds one helper-table row per
-            // card instead of a new `if name == "..."` branch. Gate
-            // evaluation happens every layer recompute, so mid-turn life
-            // gain flips the pump on for the remainder of that turn and
-            // the body snaps back at the next untap step.
-            if let Some((p, t, kws)) = lifegain_selfpump_for_name(name)
-                && self.players[card.controller].life_gained_this_turn > 0
-            {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(p, t),
-                });
-                for kw in kws {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Source,
-                        layer: Layer::L6Ability,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddKeyword(kw.clone()),
-                    });
-                }
-            }
-            // "As long as there are N+ cards in your graveyard, this gets
-            // +P/+T" self-pump (Elvish Reclaimer's Threshold rider). Lookup
-            // table at `graveyard_threshold_selfpump_for_name`; gate is the
-            // controller's graveyard size, re-evaluated every recompute.
-            if let Some((threshold, p, t)) = graveyard_threshold_selfpump_for_name(name)
-                && self.players[card.controller].graveyard.len() >= threshold
-            {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(p, t),
-                });
-            }
-            // "Infusion — Creatures you control get +P/+T [and gain
-            // keyword] as long as you gained life this turn." anthem
-            // table: lookup at `lifegain_anthem_for_name`. Applies to
-            // every creature the controller has on the battlefield
-            // (including the source — printed "creatures you control"
-            // is inclusive). Same recompute gate as the selfpump table.
-            if let Some((p, t, kws)) = lifegain_anthem_for_name(name)
-                && self.players[card.controller].life_gained_this_turn > 0
-            {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::All {
-                        controller: Some(card.controller),
-                        card_types: vec![CardType::Creature],
-                        exclude_source: false,
-                        color: None,
-                        token: None,
-                        colorless: false,
-                    },
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(p, t),
-                });
-                for kw in kws {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::All {
-                            controller: Some(card.controller),
-                            card_types: vec![CardType::Creature],
-                            exclude_source: false,
-                            color: None,
-                            token: None,
-                        colorless: false,
-                        },
-                        layer: Layer::L6Ability,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddKeyword(kw.clone()),
-                    });
-                }
-            }
-            // "As long as this permanent has ≥ K [counter] counters on
-            // it, [your] creatures get +P/+T" anthem consolidation. The
-            // gate evaluates the source's own counter pool every layer
-            // recompute, so a freshly added/removed counter flips the
-            // anthem on/off immediately. Lookup table at
-            // `self_counter_anthem_for_name`; adds one row per card
-            // instead of new `if name == "..."` branches.
-            if let Some((threshold, counter, p, t)) =
-                self_counter_anthem_for_name(name)
-            {
-                let actual = card.counters.get(&counter).copied().unwrap_or(0);
-                if actual >= threshold {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::All {
-                            controller: Some(card.controller),
-                            card_types: vec![CardType::Creature],
-                            exclude_source: false,
-                            color: None,
-                            token: None,
-                        colorless: false,
-                        },
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(p, t),
-                    });
-                }
-            }
             // CR 702.98 — Unleash's second static: a creature with the
             // Unleash keyword can't block while it has a +1/+1 counter.
             // Injected as a computed `CantBlock` so the existing block-
@@ -8287,34 +8178,6 @@ fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
 /// - Ulna Alley Shopkeep (SOS Infusion): +2/+0 (no keyword)
 /// Threshold-style self-pump table: cards reading "As long as there are N
 /// or more cards in your graveyard, this creature gets +P/+T." Returns
-/// `(graveyard_size_threshold, +power, +toughness)`. The gate is the
-/// controller's graveyard size, re-evaluated every `compute_battlefield`.
-///
-/// Current entries:
-/// - Elvish Reclaimer (MH1): +2/+2 (→ 3/4) with seven or more cards in
-///   your graveyard.
-fn graveyard_threshold_selfpump_for_name(name: &'static str) -> Option<(usize, i32, i32)> {
-    match name {
-        "Elvish Reclaimer" => Some((7, 2, 2)),
-        "Werebear" => Some((7, 3, 3)),
-        _ => None,
-    }
-}
-
-fn lifegain_selfpump_for_name(
-    name: &'static str,
-) -> Option<(i32, i32, &'static [crate::card::Keyword])> {
-    use crate::card::Keyword;
-    static HONOR_TROLL_KWS: &[Keyword] = &[Keyword::Lifelink];
-    static NO_KWS: &[Keyword] = &[];
-    match name {
-        "Honor Troll" => Some((2, 0, HONOR_TROLL_KWS)),
-        "Ulna Alley Shopkeep" => Some((2, 0, NO_KWS)),
-        "Tenured Concocter" => Some((2, 0, NO_KWS)),
-        _ => None,
-    }
-}
-
 /// Graveyard-resident static-ability table: cards whose printed
 /// Oracle is "As long as [this card] is in your graveyard and you
 /// control a [Land subtype], creatures you control have [keyword]."
@@ -8342,53 +8205,6 @@ fn graveyard_anthem_for_name(
         "Brawn" => Some((LandType::Forest, Keyword::Trample)),
         "Valor" => Some((LandType::Plains, Keyword::FirstStrike)),
         "Filth" => Some((LandType::Swamp, Keyword::Landwalk(LandType::Swamp))),
-        _ => None,
-    }
-}
-
-/// Compute-time conditional "Infusion anthem" table: cards whose
-/// printed Oracle is "Infusion — Creatures you control get +P/+T
-/// [and gain keyword(s)] as long as you've gained life this turn."
-/// Different from `lifegain_selfpump_for_name` in that the pump
-/// applies to every creature the controller has on the battlefield
-/// (including the source — matching the printed "creatures you
-/// control" wording, which is inclusive). The gate evaluates the
-/// controller's `life_gained_this_turn` tally every layer recompute.
-///
-/// Current entries:
-/// - Thornfist Striker (SOS): +1/+0 and Trample
-fn lifegain_anthem_for_name(
-    name: &'static str,
-) -> Option<(i32, i32, &'static [crate::card::Keyword])> {
-    use crate::card::Keyword;
-    static TRAMPLE_KWS: &[Keyword] = &[Keyword::Trample];
-    match name {
-        "Thornfist Striker" => Some((1, 0, TRAMPLE_KWS)),
-        _ => None,
-    }
-}
-
-/// Compute-time conditional self-counter anthem table: cards whose
-/// printed Oracle is "As long as this permanent has [N] or more
-/// [counter] counters on it, creatures you control get +P/+T."
-/// The anthem is emitted as a short-lived continuous effect (P/T at
-/// layer 7b, affecting `AffectedPermanents::All { controller: Some
-/// (source.controller), card_types: [Creature], exclude_source: false
-/// }`) every `compute_battlefield` pass when the source's own
-/// counter pool meets the threshold. Adding a new such card requires
-/// appending one row here instead of a new `if name == "..."` branch.
-///
-/// Returns `Some((threshold, counter_kind, power_bump, toughness_bump))`
-/// if `name` matches a known counter-gated anthem card, else `None`.
-///
-/// Current entries:
-/// - Comforting Counsel (SOS): ≥5 Growth → +3/+3 to your creatures
-fn self_counter_anthem_for_name(
-    name: &'static str,
-) -> Option<(u32, crate::card::CounterType, i32, i32)> {
-    use crate::card::CounterType;
-    match name {
-        "Comforting Counsel" => Some((5, CounterType::Growth, 3, 3)),
         _ => None,
     }
 }

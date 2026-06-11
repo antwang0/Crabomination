@@ -5175,8 +5175,7 @@ pub fn sakura_tribe_elder() -> CardDefinition {
 }
 
 /// Werebear — {1}{G} Creature — Human Bear Druid 1/1. `{T}: Add {G}`.
-/// Threshold — gets +3/+3 with seven or more cards in your graveyard (rides
-/// `graveyard_threshold_selfpump_for_name`).
+/// Threshold — gets +3/+3 with seven or more cards in your graveyard.
 pub fn werebear() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -5193,6 +5192,18 @@ pub fn werebear() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::Const(1)) },
             ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — +3/+3 with seven or more cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                    Value::Const(7),
+                ),
+                power: 3,
+                toughness: 3,
+                keywords: vec![],
+            },
         }],
         ..Default::default()
     }
@@ -7656,8 +7667,8 @@ pub fn chaos_warp() -> CardDefinition {
 /// Land-tutor activated ability. The "Sacrifice a land" cost is a proper
 /// pre-resolution activation cost (`sac_other_filter: Some((Land, 1))`),
 /// with the body `Search(Land → BF)`; activation is rejected with no land
-/// to sacrifice. The Threshold rider (gets +2/+2 → 3/4 with seven or more
-/// cards in your graveyard) rides `graveyard_threshold_selfpump_for_name`.
+/// to sacrifice. Threshold: +2/+2 (→ 3/4) with seven or more cards in your
+/// graveyard.
 pub fn elvish_reclaimer() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -7695,6 +7706,18 @@ pub fn elvish_reclaimer() -> CardDefinition {
             sac_other_filter: Some((SelectionRequirement::Land, 1)),
             tap_other_filter: None, from_hand: false,
             ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — +2/+2 with seven or more cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                    Value::Const(7),
+                ),
+                power: 2,
+                toughness: 2,
+                keywords: vec![],
+            },
         }],
         ..Default::default()
     }
@@ -35884,6 +35907,7 @@ pub fn sylvan_advocate() -> CardDefinition {
                     ),
                     power: 2,
                     toughness: 2,
+                    keywords: vec![],
                 },
             },
         ],

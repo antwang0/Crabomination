@@ -5,7 +5,7 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::etb_gain_life;
-use crate::effect::{Duration, PlayerRef, Selector, Value};
+use crate::effect::{Duration, PlayerRef, Predicate, Selector, StaticAbility, StaticEffect, Value};
 use crate::mana::{Color, ManaCost, b, cost, generic, w};
 
 // ── Strixhaven token helpers ────────────────────────────────────────────────
@@ -1559,9 +1559,8 @@ pub fn slumbering_trudge() -> CardDefinition {
 /// caster (caster must be an opponent). Effect wraps `Draw 1` in
 /// `Effect::MayDo` so the printed "you may" optionality is honored —
 /// AutoDecider declines (skips the draw); `ScriptedDecider` can flip
-/// to "yes". The Infusion +2/+0 lives in the
-/// `lifegain_selfpump_for_name` helper table (compute-time injection
-/// while you gained life this turn). All three printed clauses ship.
+/// to "yes". Infusion: +2/+0 while you've gained life this turn
+/// (`PumpSelfIf`). All three printed clauses ship.
 pub fn tenured_concocter() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
@@ -1583,6 +1582,18 @@ pub fn tenured_concocter() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 }),
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Infusion — +2/+0 as long as you've gained life this turn.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
             },
         }],
         ..Default::default()
@@ -1894,10 +1905,9 @@ pub fn fractal_tender() -> CardDefinition {
 /// "Ward {1}. Infusion — Creatures you control get +1/+0 and have
 /// trample as long as you gained life this turn."
 ///
-/// Fully wired: `Ward {1}` plus the Infusion static (+1/+0 and trample to
-/// your creatures while you've gained life this turn), emitted each layer
-/// recompute via the `lifegain_anthem_for_name` table (gated on
-/// `Player.life_gained_this_turn > 0`). 3/3 Elf Druid body.
+/// Fully wired: `Ward {1}` plus the Infusion team static (+1/+0 and
+/// trample to your creatures while you've gained life this turn —
+/// `PumpTeamIf`). 3/3 Elf Druid body.
 pub fn thornfist_striker() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
@@ -1911,6 +1921,19 @@ pub fn thornfist_striker() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1))],
+        static_abilities: vec![StaticAbility {
+            description: "Infusion — creatures you control get +1/+0 and have trample as long as you've gained life this turn.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                applies_to: crate::effect::shortcut::each_your_creature(),
+                power: 1,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
         ..Default::default()
     }
 }
@@ -2935,12 +2958,8 @@ pub fn hydro_channeler() -> CardDefinition {
 ///
 /// ✅ Menace keyworded on the body; the conditional Infusion `+2/+0`
 /// rider is wired via a compute-time injection in
-/// `GameState::compute_battlefield` (same pattern as Honor Troll):
-/// when `Player.life_gained_this_turn > 0`, layer 7b adds
-/// `ModifyPowerToughness(+2, +0)` targeting the source. The gate
-/// re-evaluates every recompute, so a mid-turn lifegain flips it on
-/// (Shopkeep goes 2/3 → 4/3) and `do_untap` resets the tally at the
-/// next untap step, dropping back to 2/3.
+/// Infusion — +2/+0 while you've gained life this turn (`PumpSelfIf`;
+/// the tally resets at the next untap step).
 pub fn ulna_alley_shopkeep() -> CardDefinition {
     CardDefinition {
         name: "Ulna Alley Shopkeep",
@@ -2953,6 +2972,18 @@ pub fn ulna_alley_shopkeep() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "Infusion — +2/+0 as long as you've gained life this turn.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
         ..Default::default()
     }
 }
