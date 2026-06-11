@@ -682,6 +682,15 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::CastSpellWasKicked => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => card.kicked,
+                    _ => false,
+                })
+            }
             Predicate::CastSpellHasX => {
                 // Locate the just-cast spell via the trigger source and
                 // peek at its printed mana cost. Used by "whenever you

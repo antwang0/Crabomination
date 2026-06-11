@@ -415,6 +415,13 @@ pub enum Keyword {
     /// CR 702.16 — "protection from spells" (Emrakul, the World Anew):
     /// can't be targeted by any spell. Cast-time targeting gate.
     ProtectionFromSpells,
+    /// CR 702.16 — "protection from creatures" (Spirit Mantle): can't be
+    /// blocked, and all damage from creature sources is prevented.
+    ProtectionFromCreatures,
+    /// CR 702.89 — Umbra armor (on an Aura): if the enchanted creature
+    /// would be destroyed, instead remove all damage from it and destroy
+    /// this Aura (Hyena Umbra, Spider Umbra).
+    UmbraArmor,
     Hexproof,
     Shroud,
     CantBeCountered,
@@ -1719,6 +1726,12 @@ pub enum DynamicPt {
     /// Imprint CDA (CR 604.3): P/T of the creature card exiled with this
     /// permanent; printed base when nothing is exiled. Duplicant.
     ExiledWithSourcePt { base_p: i32, base_t: i32 },
+    /// P/T = base + `per` for each Aura attached to this permanent.
+    /// Kor Spiritdancer (0/2, +2/+2 per Aura).
+    BasePlusPerAttachedAura { base_p: i32, base_t: i32, per: i32 },
+    /// P/T = base − the highest life total among players (Scourge of the
+    /// Skyclaves: 20 − highest life).
+    BaseMinusHighestLife { base_p: i32, base_t: i32 },
     /// Power = toughness = base + cards in opponents' graveyards, optionally
     /// creature cards only. Consuming Aberration (base 0, all cards), Wight
     /// of Precinct Six (base 1, creatures only).

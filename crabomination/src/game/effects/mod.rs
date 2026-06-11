@@ -2745,6 +2745,10 @@ impl GameState {
                             self.apply_regeneration(cid);
                             continue;
                         }
+                        // CR 702.89 — umbra armor replaces destruction.
+                        if self.apply_umbra_armor(cid, events) {
+                            continue;
+                        }
                         let is_creature = self.battlefield_find(cid)
                             .map(|c| c.definition.is_creature())
                             .unwrap_or(false);
@@ -9173,6 +9177,19 @@ impl GameState {
                     .filter(|i| self.players[*i].is_alive())
                     .collect(),
             ),
+            PlayerRef::EachPlayerExceptControllerOf(sel) => {
+                let excl = self.resolve_selector(sel, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.battlefield_find(cid).map(|c| c.controller)
+                    }
+                    EntityRef::Player(p) => Some(p),
+                });
+                self.apnap_sort(
+                    (0..self.players.len())
+                        .filter(|i| self.players[*i].is_alive() && Some(*i) != excl)
+                        .collect(),
+                )
+            }
             _ => self.resolve_player(pref, ctx).into_iter().collect(),
         }
     }
@@ -9247,6 +9264,9 @@ impl GameState {
                     .find(|i| self.players[*i].is_alive())
             }
             PlayerRef::EachPlayer => (0..self.players.len()).find(|i| self.players[*i].is_alive()),
+            PlayerRef::EachPlayerExceptControllerOf(_) => {
+                self.resolve_players(pref, ctx).into_iter().next()
+            }
             PlayerRef::DefendingPlayer => ctx
                 .source
                 .and_then(|src| self.attack_for(src).map(|a| a.target))

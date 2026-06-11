@@ -47404,3 +47404,456 @@ pub fn castle_garenbrig() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Build a simple Aura with umbra-style bonuses. `aura_keywords` sit on the
+/// Aura itself (Umbra armor); `granted` flow to the enchanted creature.
+fn aura_with(
+    name: &'static str,
+    mana: ManaCost,
+    enchant: SelectionRequirement,
+    power: i32,
+    toughness: i32,
+    granted: Vec<Keyword>,
+    aura_keywords: Vec<Keyword>,
+) -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: aura_keywords,
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: enchant },
+        },
+        equipped_bonus: Some(EquipBonus {
+            power,
+            toughness,
+            keywords: granted,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Hyena Umbra — {W} Aura. +1/+1, first strike, umbra armor (CR 702.89).
+pub fn hyena_umbra() -> CardDefinition {
+    aura_with("Hyena Umbra", cost(&[w()]), SelectionRequirement::Creature,
+        1, 1, vec![Keyword::FirstStrike], vec![Keyword::UmbraArmor])
+}
+
+/// Spider Umbra — {G} Aura. +1/+1, reach, umbra armor (CR 702.89).
+pub fn spider_umbra() -> CardDefinition {
+    aura_with("Spider Umbra", cost(&[g()]), SelectionRequirement::Creature,
+        1, 1, vec![Keyword::Reach], vec![Keyword::UmbraArmor])
+}
+
+/// Spirit Mantle — {1}{W} Aura. +1/+1 and protection from creatures.
+pub fn spirit_mantle() -> CardDefinition {
+    aura_with("Spirit Mantle", cost(&[generic(1), w()]), SelectionRequirement::Creature,
+        1, 1, vec![Keyword::ProtectionFromCreatures], vec![])
+}
+
+/// Daybreak Coronet — {W}{W} Aura. Enchant creature with another Aura
+/// attached; +3/+3, first strike, vigilance, lifelink.
+pub fn daybreak_coronet() -> CardDefinition {
+    aura_with(
+        "Daybreak Coronet",
+        cost(&[w(), w()]),
+        SelectionRequirement::Creature.and(SelectionRequirement::IsEnchanted),
+        3, 3,
+        vec![Keyword::FirstStrike, Keyword::Vigilance, Keyword::Lifelink],
+        vec![],
+    )
+}
+
+/// Kor Spiritdancer — {1}{W} 0/2. +2/+2 per Aura attached; draw on Aura cast.
+pub fn kor_spiritdancer() -> CardDefinition {
+    use crate::card::{DynamicPt, EnchantmentSubtype};
+    CardDefinition {
+        name: "Kor Spiritdancer",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        dynamic_pt: Some(DynamicPt::BasePlusPerAttachedAura { base_p: 0, base_t: 2, per: 2 }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(
+                    SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+                )),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Counterbalance — {U}{U} Enchantment. When an opponent casts a spell, you
+/// may reveal your library top; counter the spell if the mana values match.
+pub fn counterbalance() -> CardDefinition {
+    CardDefinition {
+        name: "Counterbalance",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "Reveal the top card of your library?".into(),
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueEquals(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::ManaValueOf(Box::new(Selector::TopOfLibrary {
+                            who: PlayerRef::You,
+                            count: Value::Const(1),
+                        })),
+                    ),
+                    then: Box::new(Effect::CounterSpell { what: Selector::TriggerSource }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lantern of Insight — {1} Artifact. All library tops are revealed.
+/// {T}, Sacrifice: target player shuffles.
+pub fn lantern_of_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Lantern of Insight",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Players play with the top card of their libraries revealed.",
+            effect: StaticEffect::AllLibraryTopsRevealed,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::ShuffleLibrary { who: PlayerRef::Target(0) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Whir of Invention — {X}{U}{U}{U} Instant. Improvise. Search your library
+/// for an artifact with mana value ≤ X onto the battlefield, then shuffle.
+pub fn whir_of_invention() -> CardDefinition {
+    CardDefinition {
+        name: "Whir of Invention",
+        cost: cost(&[x(), u(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Improvise],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Artifact
+                .and(SelectionRequirement::ManaValueAtMostXFromCost),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Nettle Sentinel — {G} 2/2 Elf Warrior. Doesn't untap in your untap step;
+/// may untap whenever you cast a green spell.
+pub fn nettle_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Nettle Sentinel",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::HasColor(
+                    Color::Green,
+                ))),
+            effect: Effect::MayDo {
+                description: "Untap Nettle Sentinel?".into(),
+                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Inventors' Fair — Legendary Land. Upkeep: gain 1 life with three or more
+/// artifacts. {T}: Add {C}. {4}, {T}, Sac (3+ artifacts): tutor an artifact.
+pub fn inventors_fair() -> CardDefinition {
+    let three_artifacts = || Predicate::ValueAtLeast(
+        Value::CountOf(Box::new(Selector::EachPermanent(
+            SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+        ))),
+        Value::Const(3),
+    );
+    CardDefinition {
+        name: "Inventors' Fair",
+        card_types: vec![CardType::Land],
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(three_artifacts()),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                condition: Some(three_artifacts()),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Artifact,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Scourge of the Skyclaves — {1}{B} Demon, P/T = 20 − highest life total.
+/// Kicker {4}{B}; when cast kicked, each player loses half their life.
+pub fn scourge_of_the_skyclaves() -> CardDefinition {
+    use crate::card::DynamicPt;
+    CardDefinition {
+        name: "Scourge of the Skyclaves",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Kicker(cost(&[generic(4), b()]))],
+        dynamic_pt: Some(DynamicPt::BaseMinusHighestLife { base_p: 20, base_t: 20 }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource)
+                .with_filter(Predicate::CastSpellWasKicked),
+            effect: Effect::LoseHalfLife { who: Selector::Player(PlayerRef::EachPlayer), rounded_up: true },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Voice of Resurgence — {G}{W} 2/2 Elemental. Token (P/T = creatures you
+/// control) when an opponent casts on your turn, and when this dies.
+pub fn voice_of_resurgence() -> CardDefinition {
+    fn voice_token() -> TokenDefinition {
+        TokenDefinition {
+            name: "Elemental".into(),
+            power: 0,
+            toughness: 0,
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::Green, Color::White],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Elemental],
+                ..Default::default()
+            },
+            static_abilities: vec![StaticAbility {
+                description: "Power/toughness each equal the number of creatures you control.",
+                effect: StaticEffect::PumpSelfByControlledPermanents {
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                    per_power: 1,
+                    per_toughness: 1,
+                },
+            }],
+            ..Default::default()
+        }
+    }
+    let mint = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: voice_token(),
+    };
+    CardDefinition {
+        name: "Voice of Resurgence",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                    .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+                effect: mint(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: mint(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Meddling Mage — {W}{U} 2/2. ETB: name a nonland card; spells with the
+/// chosen name can't be cast.
+pub fn meddling_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Meddling Mage",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::NameCard { what: Selector::This },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Spells with the chosen name can't be cast.",
+            effect: StaticEffect::NamedSpellCantBeCast,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dress Down — {1}{U} Enchantment. Flash; ETB draw; creatures lose all
+/// abilities; sacrificed at the beginning of the end step.
+pub fn dress_down() -> CardDefinition {
+    CardDefinition {
+        name: "Dress Down",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::End),
+                    EventScope::AnyPlayer,
+                ),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: crate::effect::ZoneDest::Graveyard,
+                },
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures lose all abilities.",
+            effect: StaticEffect::CreaturesLoseAllAbilities,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ox of Agonas — {3}{R}{R} 4/2. ETB: discard your hand, draw three.
+/// Escape — {R}{R}, exile eight other cards; escapes with a +1/+1 counter.
+pub fn ox_of_agonas() -> CardDefinition {
+    CardDefinition {
+        name: "Ox of Agonas",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ox],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Escape(cost(&[r(), r()]), 8)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                    random: false,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                // CR 702.139e rider — escapes with a +1/+1 counter.
+                Effect::If {
+                    cond: Predicate::SourceCastFromEscape,
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Witchbane Orb — {4} Artifact. You have hexproof. (The destroy-Curses ETB
+/// is dropped — player-attached Curses aren't modeled.)
+pub fn witchbane_orb() -> CardDefinition {
+    CardDefinition {
+        name: "Witchbane Orb",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You have hexproof.",
+            effect: StaticEffect::ControllerHasHexproof,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fractured Identity — {3}{W}{U} Sorcery. Exile target nonland permanent;
+/// each other player creates a token copy of it.
+pub fn fractured_identity() -> CardDefinition {
+    CardDefinition {
+        name: "Fractured Identity",
+        cost: cost(&[generic(3), w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateTokenCopyOf {
+                who: PlayerRef::EachPlayerExceptControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                source: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                extra_creature_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+            },
+            Effect::Exile { what: Selector::Target(0) },
+        ]),
+        ..Default::default()
+    }
+}

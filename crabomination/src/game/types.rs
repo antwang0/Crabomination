@@ -1436,6 +1436,8 @@ pub enum GameError {
     SilencedThisTurn,
     #[error("You can't cast spells — an epic spell you control has resolved")]
     EpicLocked,
+    #[error("A permanent names this spell — it can't be cast")]
+    SpellNameLocked,
     /// A one-spell-per-turn lock (Rule of Law, CR 601) bars this cast.
     #[error("A one-spell-per-turn effect bars casting more spells this turn")]
     SpellLimitReached,

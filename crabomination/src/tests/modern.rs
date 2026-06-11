@@ -52375,3 +52375,356 @@ fn castle_garenbrig_tapped_without_forest() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(castle).unwrap().tapped);
 }
+
+/// CR 702.89 — umbra armor replaces destruction: the Aura dies instead and
+/// the creature's damage is removed.
+#[test]
+fn umbra_armor_saves_enchanted_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let umbra = g.add_card_to_battlefield(0, catalog::hyena_umbra());
+    g.battlefield_find_mut(umbra).unwrap().attached_to = Some(bear);
+    // Lethal damage (3 ≥ 2+1 toughness with the +1/+1 bonus).
+    g.battlefield_find_mut(bear).unwrap().damage = 3;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_some(), "creature saved");
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "damage removed");
+    assert!(g.battlefield_find(umbra).is_none(), "umbra destroyed instead");
+}
+
+/// Umbra armor also replaces Effect::Destroy.
+#[test]
+fn umbra_armor_replaces_destroy_effect() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let umbra = g.add_card_to_battlefield(1, catalog::spider_umbra());
+    g.battlefield_find_mut(umbra).unwrap().attached_to = Some(bear);
+    let blade = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: blade, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "creature saved");
+    assert!(g.battlefield_find(umbra).is_none(), "umbra destroyed instead");
+}
+
+/// Spirit Mantle: protection from creatures — unblockable + no combat damage.
+#[test]
+fn spirit_mantle_protection_from_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mantle = g.add_card_to_battlefield(0, catalog::spirit_mantle());
+    g.battlefield_find_mut(mantle).unwrap().attached_to = Some(bear);
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // The mantled bear can't be blocked.
+    assert!(
+        !g.blocker_can_block_attacker(opp, bear),
+        "pro-creatures attacker can't be blocked"
+    );
+    // Damage from a creature source is prevented.
+    assert!(g.damage_prevented_by_protection(opp, bear));
+    // Non-creature damage still lands.
+    let blade = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    assert!(!g.damage_prevented_by_protection(blade, bear));
+}
+
+/// Daybreak Coronet needs an already-enchanted creature at cast time.
+#[test]
+fn daybreak_coronet_requires_enchanted_target() {
+    let mut g = two_player_game();
+    let bare = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let coronet = g.add_card_to_hand(0, catalog::daybreak_coronet());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: coronet, target: Some(Target::Permanent(bare)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "unenchanted creature is an illegal target"
+    );
+    // Enchant the bear first, then the Coronet sticks.
+    let umbra = g.add_card_to_battlefield(0, catalog::hyena_umbra());
+    g.battlefield_find_mut(umbra).unwrap().attached_to = Some(bare);
+    g.perform_action(GameAction::CastSpell {
+        card_id: coronet, target: Some(Target::Permanent(bare)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("now-enchanted creature is legal");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(coronet).unwrap().attached_to, Some(bare));
+}
+
+/// Kor Spiritdancer grows +2/+2 per attached Aura and draws on Aura casts.
+#[test]
+fn kor_spiritdancer_scales_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let dancer = g.add_card_to_battlefield(0, catalog::kor_spiritdancer());
+    let cp = g.computed_permanent(dancer).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 2));
+    let umbra = g.add_card_to_hand(0, catalog::hyena_umbra());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: umbra, target: Some(Target::Permanent(dancer)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "cast the Aura, drew a card");
+    let cp = g.computed_permanent(dancer).unwrap();
+    // +2/+2 for the Aura itself, +1/+1 from Hyena Umbra's bonus.
+    assert_eq!((cp.power, cp.toughness), (3, 5));
+}
+
+/// Counterbalance counters a spell whose MV matches the library top.
+#[test]
+fn counterbalance_counters_matching_mv() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::counterbalance());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Top of library: a 1-MV card.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "bolt countered by matching MV");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// Counterbalance whiffs on a mismatched mana value.
+#[test]
+fn counterbalance_misses_wrong_mv() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::counterbalance());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 on top
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "bolt resolved");
+}
+
+/// Whir of Invention fetches an artifact with MV ≤ X onto the battlefield.
+#[test]
+fn whir_of_invention_fetches_artifact() {
+    let mut g = two_player_game();
+    let clamp = g.add_card_to_library(0, catalog::skullclamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(clamp))]));
+    let whir = g.add_card_to_hand(0, catalog::whir_of_invention());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: whir, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(clamp).is_some(), "artifact onto the battlefield");
+}
+
+/// Nettle Sentinel skips its untap step but untaps on a green cast.
+#[test]
+fn nettle_sentinel_untap_cycle() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let sentinel = g.add_card_to_battlefield(0, catalog::nettle_sentinel());
+    g.battlefield_find_mut(sentinel).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(sentinel).unwrap().tapped, "skipped untap step");
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(sentinel).unwrap().tapped, "untapped on green cast");
+}
+
+/// Inventors' Fair tutors only with three artifacts on board.
+#[test]
+fn inventors_fair_metalcraft_gate() {
+    let mut g = two_player_game();
+    let fair = g.add_card_to_battlefield(0, catalog::inventors_fair());
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: fair, ability_index: 1, target: None, x_value: None,
+        }).is_err(),
+        "needs three artifacts"
+    );
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::bonesplitter()); }
+    let clamp = g.add_card_to_library(0, catalog::skullclamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(clamp))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fair, ability_index: 1, target: None, x_value: None,
+    }).expect("metalcraft satisfied");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == clamp), "artifact tutored to hand");
+    assert!(g.battlefield_find(fair).is_none(), "Fair sacrificed");
+}
+
+/// Scourge of the Skyclaves: kicked cast halves each player's life; its
+/// P/T track 20 minus the highest life total.
+#[test]
+fn scourge_of_the_skyclaves_kicked() {
+    let mut g = two_player_game();
+    let scourge = g.add_card_to_hand(0, catalog::scourge_of_the_skyclaves());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: scourge, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 10, "halved");
+    assert_eq!(g.players[1].life, 10, "halved");
+    let cp = g.computed_permanent(scourge).unwrap();
+    assert_eq!((cp.power, cp.toughness), (10, 10), "20 − highest life (10)");
+}
+
+/// Voice of Resurgence mints its scaling token when it dies.
+#[test]
+fn voice_of_resurgence_dies_token() {
+    let mut g = two_player_game();
+    let voice = g.add_card_to_battlefield(0, catalog::voice_of_resurgence());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_to_graveyard_with_triggers(voice);
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Elemental")
+        .expect("token minted");
+    let cp = g.computed_permanent(token.id).unwrap();
+    // Bear + the token itself = 2 creatures.
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+}
+
+/// Voice of Resurgence triggers when an opponent casts during your turn.
+#[test]
+fn voice_of_resurgence_opponent_cast_on_your_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::voice_of_resurgence());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0; // your turn
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Elemental"));
+}
+
+/// Meddling Mage locks the named spell out of being cast.
+#[test]
+fn meddling_mage_locks_named_spell() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::meddling_mage());
+    g.battlefield_find_mut(mage).unwrap().named_card = Some("Lightning Bolt".into());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect_err("named spell locked");
+    assert!(matches!(err, GameError::SpellNameLocked), "got {err:?}");
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("other spells still castable");
+}
+
+/// Dress Down strips creature abilities while it's on the battlefield.
+#[test]
+fn dress_down_strips_abilities() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying));
+    let dd = g.add_card_to_battlefield(0, catalog::dress_down());
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(!cp.keywords.contains(&Keyword::Flying), "abilities stripped");
+    g.remove_to_graveyard_with_triggers(dd);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "restored after Dress Down leaves");
+}
+
+/// Ox of Agonas: ETB dumps the hand and draws three; escaping adds a counter.
+#[test]
+fn ox_of_agonas_etb_and_escape_counter() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..2 { g.add_card_to_hand(0, catalog::island()); }
+    // Escape it from the graveyard: 8 other cards to exile.
+    let ox = g.add_card_to_graveyard(0, catalog::ox_of_agonas());
+    let fodder: Vec<_> = (0..8)
+        .map(|_| g.add_card_to_graveyard(0, catalog::mountain()))
+        .collect();
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastEscape {
+        card_id: ox, exile_cards: fodder, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape");
+    drain_stack(&mut g);
+    let ox_bf = g.battlefield_find(ox).expect("Ox escaped onto the battlefield");
+    assert_eq!(ox_bf.counter_count(crate::card::CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), 3, "hand replaced with three fresh cards");
+}
+
+/// Fractured Identity exiles the permanent and gives each opponent a copy.
+#[test]
+fn fractured_identity_exiles_and_copies() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let fi = g.add_card_to_hand(0, catalog::fractured_identity());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fi, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "original exiled");
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Serra Angel")
+        .expect("token copy");
+    assert_eq!(copy.controller, 0, "the other player (you) got the copy");
+    assert!(copy.is_token);
+}

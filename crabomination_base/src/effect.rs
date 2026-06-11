@@ -45,6 +45,9 @@ pub enum PlayerRef {
     OwnerOfMoved,
     /// The controller of a selected entity.
     ControllerOf(Box<Selector>),
+    /// Every player except the controller of the selected entity, in APNAP
+    /// order ("each player other than its controller" — Fractured Identity).
+    EachPlayerExceptControllerOf(Box<Selector>),
     /// The player who triggered the event (for triggered abilities).
     Triggerer,
     /// A specific seat index. Used internally to flatten selector-based
@@ -739,6 +742,11 @@ pub enum Predicate {
     /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
     /// against the topmost matching `StackItem::Spell`'s card definition.
     CastSpellMatches(SelectionRequirement),
+    /// True if the just-cast spell (via `ctx.trigger_source`) was kicked —
+    /// read off the stack instance's `kicked` flag, so cast triggers
+    /// ("when you cast this spell, if it was kicked" — Scourge of the
+    /// Skyclaves) see the kicker state before resolution.
+    CastSpellWasKicked,
     /// True if the spell pointed to by `ctx.trigger_source` (the just-cast
     /// spell driving a `SpellCast` trigger) has at least one `{X}` symbol
     /// in its mana cost. Used by Quandrix's "whenever you cast a spell

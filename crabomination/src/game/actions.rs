@@ -2556,6 +2556,23 @@ impl GameState {
             return Err(GameError::CardNotInHand(card_id));
         }
 
+        // Meddling Mage — spells with the chosen name can't be cast.
+        let spell_name = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.name);
+        if let Some(name) = spell_name
+            && self.battlefield.iter().any(|c| {
+                c.named_card.as_deref() == Some(name)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::NamedSpellCantBeCast)
+                    })
+            })
+        {
+            return Err(GameError::SpellNameLocked);
+        }
+
         // CR 601.2b — interactive additional-cost choices for a `wants_ui`
         // caster on the plain cast path: which permanent to sacrifice
         // ("sacrifice a …" — Crop Rotation, Reckless Abandon) or which card to

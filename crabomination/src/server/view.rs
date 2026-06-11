@@ -356,7 +356,16 @@ fn known_library_top(
                 && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
         })
     };
-    let revealed_to_all = has_static(&|e| matches!(e, StaticEffect::TopOfLibraryRevealed));
+    // Lantern of Insight — any permanent with the all-players static
+    // reveals every library top, regardless of controller.
+    let lantern = state.battlefield.iter().any(|c| {
+        c.definition
+            .static_abilities
+            .iter()
+            .any(|sa| matches!(sa.effect, StaticEffect::AllLibraryTopsRevealed))
+    });
+    let revealed_to_all =
+        lantern || has_static(&|e| matches!(e, StaticEffect::TopOfLibraryRevealed));
     let owner_may_look = viewer_seat == player_seat
         && has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }));
     if revealed_to_all || owner_may_look {

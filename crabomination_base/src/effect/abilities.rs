@@ -595,6 +595,14 @@ pub enum StaticEffect {
     /// source's `named_card` (stamped at ETB via `Effect::NameCard`).
     /// Disruptor Flute. Folded into `extra_cost_for_spell`.
     NamedSpellTax { amount: u32 },
+    /// Meddling Mage — spells with the source's `named_card` can't be cast.
+    NamedSpellCantBeCast,
+    /// Dress Down / Humility-lite — all creatures lose all abilities
+    /// (layer 6 `RemoveAllAbilities`).
+    CreaturesLoseAllAbilities,
+    /// Lantern of Insight — every player plays with their library top
+    /// revealed (the all-players sibling of `TopOfLibraryRevealed`).
+    AllLibraryTopsRevealed,
     /// "Each opponent's maximum hand size is reduced by N" (Jin-Gitaxias,
     /// Core Augur). Folded into `effective_max_hand_size` for every seat
     /// not on the source controller's team.

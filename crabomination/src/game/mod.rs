@@ -3447,6 +3447,20 @@ impl GameState {
                     .find(|c| c.exiled_with == Some(card.id) && c.definition.is_creature())
                     .map(|c| (c.definition.base_power(), c.definition.base_toughness()))
                     .unwrap_or((base_p, base_t)),
+                crate::card::DynamicPt::BasePlusPerAttachedAura { base_p, base_t, per } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.attached_to == Some(card.id) && c.definition.is_aura()
+                    }).count() as i32;
+                    (base_p + n * per, base_t + n * per)
+                }
+                crate::card::DynamicPt::BaseMinusHighestLife { base_p, base_t } => {
+                    let hi = self.players.iter()
+                        .filter(|p| !p.eliminated)
+                        .map(|p| p.life)
+                        .max()
+                        .unwrap_or(0);
+                    (base_p - hi, base_t - hi)
+                }
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.object_timestamp(),
@@ -3770,9 +3784,45 @@ impl GameState {
                     .map(|c| c.definition.cost.colors())
                     .unwrap_or_default()
             });
+        // CR 702.16 — protection from creatures prevents all damage from a
+        // creature source (Spirit Mantle).
+        let src_is_creature = self
+            .computed_permanent(source)
+            .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+            .unwrap_or_else(|| {
+                self.battlefield_find(source)
+                    .map(|c| c.definition.is_creature())
+                    .unwrap_or(false)
+            });
+        if src_is_creature && tgt.keywords.contains(&Keyword::ProtectionFromCreatures) {
+            return true;
+        }
         tgt.keywords.iter().any(|kw| {
             matches!(kw, Keyword::Protection(color) if src_colors.contains(color))
         })
+    }
+
+    /// CR 702.89 — Umbra armor: if the creature would be destroyed, instead
+    /// remove all damage from it and destroy one umbra-armor Aura attached
+    /// to it. Returns true when the destruction was replaced.
+    pub(crate) fn apply_umbra_armor(
+        &mut self,
+        id: CardId,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let Some(aura_id) = self.battlefield.iter().find_map(|c| {
+            (c.attached_to == Some(id)
+                && c.definition.keywords.contains(&Keyword::UmbraArmor))
+            .then_some(c.id)
+        }) else {
+            return false;
+        };
+        if let Some(c) = self.battlefield_find_mut(id) {
+            c.damage = 0;
+        }
+        let mut evs = self.remove_to_graveyard_with_triggers(aura_id);
+        events.append(&mut evs);
+        true
     }
 
     /// Add a transient continuous effect (from a spell/ability resolution).
@@ -8342,6 +8392,23 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                     None => vec![],
                 }
             }
+            // Dress Down — every creature loses all abilities (layer 6).
+            StaticEffect::CreaturesLoseAllAbilities => vec![ContinuousEffect {
+                timestamp,
+                source,
+                affected: AffectedPermanents::All {
+                    controller: None,
+                    card_types: vec![crate::card::CardType::Creature],
+                    exclude_source: false,
+                    color: None,
+                    token: None,
+                    colorless: false,
+                },
+                layer: Layer::L6Ability,
+                sublayer: None,
+                duration: EffectDuration::WhileSourceOnBattlefield,
+                modification: Modification::RemoveAllAbilities,
+            }],
             StaticEffect::LandTypeChanger { applies_to, land_type, replace } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => {
@@ -8422,6 +8489,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // cast paths and the view projection; no layer effect.
             | StaticEffect::PlayFromLibraryTop { .. }
             | StaticEffect::TopOfLibraryRevealed
+            | StaticEffect::AllLibraryTopsRevealed
+            // NamedSpellCantBeCast — consulted in cast_spell_with_convoke
+            // (Meddling Mage); no layer effect.
+            | StaticEffect::NamedSpellCantBeCast
             // SpellsYouCastHaveDelve (Teval) — read at cast time by
             // `controller_grants_spells_delve`; no layer effect.
             | StaticEffect::SpellsYouCastHaveDelve
@@ -8808,6 +8879,10 @@ pub(crate) fn can_block_attacker_computed(
         if let Keyword::Protection(color) = kw
             && blocker_computed.colors.contains(color)
         {
+            return false;
+        }
+        // CR 702.16b — protection from creatures: can't be blocked at all.
+        if matches!(kw, Keyword::ProtectionFromCreatures) {
             return false;
         }
     }

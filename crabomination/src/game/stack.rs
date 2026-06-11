@@ -2058,6 +2058,11 @@ impl GameState {
                 self.apply_regeneration(id);
                 continue;
             }
+            // CR 702.89 — umbra armor replaces destruction (not the
+            // toughness-≤-0 SBA, which isn't destruction).
+            if !dies_by_lethal_toughness && self.apply_umbra_armor(id, &mut events) {
+                continue;
+            }
 
             events.push(GameEvent::CreatureDied { card_id: id });
             // Cache the dying card's snapshot so AnotherOfYours-scope
