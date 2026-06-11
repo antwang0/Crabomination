@@ -649,9 +649,10 @@ pub struct KnownCard {
     /// cycle activation hint. Defaults to "" for older clients.
     #[serde(default)]
     pub cycling_cost_label: String,
-    /// True if this card has `Keyword::Landcycling(cost, type)` (CR 702.29e).
-    /// Drives the client's "Landcycle" hand action (`GameAction::Landcycle`):
-    /// discard + fetch a land of the named type. Defaults to `false`.
+    /// True if this card has `Keyword::Landcycling(cost, type)` or the
+    /// general `Keyword::Typecycling(cost, filter)` (CR 702.29e). Drives the
+    /// client's "Landcycle" hand action (`GameAction::Landcycle`): discard +
+    /// fetch a matching card. Defaults to `false`.
     #[serde(default)]
     pub has_landcycling: bool,
     /// Pre-rendered landcycling cost label (e.g. "{1}"). Empty when

@@ -4910,13 +4910,18 @@ impl GameState {
         use crate::card::Keyword;
         use rand::seq::SliceRandom;
         let seat = self.player_with_priority();
-        let (cycling_cost, land_type) = self.players[seat]
+        let (cycling_cost, filter) = self.players[seat]
             .hand
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| {
                 c.definition.keywords.iter().find_map(|kw| match kw {
-                    Keyword::Landcycling(mc, lt) => Some((mc.clone(), *lt)),
+                    Keyword::Landcycling(mc, lt) => Some((
+                        mc.clone(),
+                        crate::card::SelectionRequirement::Land
+                            .and(crate::card::SelectionRequirement::HasLandType(*lt)),
+                    )),
+                    Keyword::Typecycling(spec) => Some(((**spec).0.clone(), (**spec).1.clone())),
                     _ => None,
                 })
             })
@@ -4926,12 +4931,19 @@ impl GameState {
         if self.discard_card(seat, card_id, &mut events) {
             events.push(GameEvent::CardCycled { player: seat, card_id });
         }
-        // Search the library for a land of the named type; reveal + to hand.
-        if let Some(pos) = self.players[seat]
-            .library
-            .iter()
-            .position(|c| c.definition.is_land() && c.definition.subtypes.land_types.contains(&land_type))
-        {
+        // Search the library for a matching card; reveal + to hand.
+        if let Some(pos) = {
+            let ids: Vec<crate::card::CardId> =
+                self.players[seat].library.iter().map(|c| c.id).collect();
+            ids.into_iter().position(|id| {
+                self.evaluate_requirement_static(
+                    &filter,
+                    &crate::game::types::Target::Permanent(id),
+                    seat,
+                    None,
+                )
+            })
+        } {
             let fetched = self.players[seat].library.remove(pos);
             self.place_card_in_dest(
                 fetched,

@@ -507,6 +507,14 @@ pub enum Keyword {
     /// the given land type, reveal it, and put it into your hand (then
     /// shuffle). "When you cycle" triggers still fire (it is a cycling ability).
     Landcycling(crate::mana::ManaCost, LandType),
+    /// CR 702.29e — general Typecycling: pay the cost + discard this card,
+    /// then search your library for a card matching the requirement and put
+    /// it into your hand (then shuffle). Covers "Basic landcycling"
+    /// (`IsBasicLand`), Wizardcycling, Slivercycling… Plain landcycling
+    /// keeps the dedicated `Landcycling` variant. The payload is boxed
+    /// whole so the variant doesn't grow `Keyword` (it feeds back into
+    /// `SelectionRequirement`/`Effect` sizes and deep debug-build recursion).
+    Typecycling(Box<(crate::mana::ManaCost, SelectionRequirement)>),
     Echo(crate::mana::ManaCost),
     /// CR 702.24 — Cumulative upkeep: at the controller's upkeep, add an age
     /// counter, then pay the cost once per age counter or sacrifice this.

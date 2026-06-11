@@ -747,6 +747,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // `{:?}` debug shape.
         K::Devoid => "Devoid (colorless)".into(),
         K::Landcycling(cost, lt) => format!("{lt:?}cycling {}", cost.summary()),
+        K::Typecycling(spec) => format!("Typecycling {}", spec.0.summary()),
         K::CantBeCounteredIfXAtLeast(n) => {
             format!("Can't be countered if X is {n} or more")
         }

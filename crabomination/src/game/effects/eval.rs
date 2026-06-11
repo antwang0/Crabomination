@@ -1072,6 +1072,7 @@ impl GameState {
                         crate::card::Keyword::Cycling(_)
                             | crate::card::Keyword::CyclingLife(_)
                             | crate::card::Keyword::Landcycling(_, _)
+                            | crate::card::Keyword::Typecycling(_)
                     )),
                     R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
@@ -1323,6 +1324,7 @@ impl GameState {
                 crate::card::Keyword::Cycling(_)
                     | crate::card::Keyword::CyclingLife(_)
                     | crate::card::Keyword::Landcycling(_, _)
+                    | crate::card::Keyword::Typecycling(_)
             )),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,

@@ -48662,3 +48662,92 @@ pub fn trickbind() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── LTR landcyclers + basic landcycling (CR 702.29e) ─────────────────────────
+
+/// Troll of Khazad-dûm — {5}{B} 6/5 Troll; can't be blocked except by three
+/// or more creatures. Swampcycling {1}.
+pub fn troll_of_khazad_dum() -> CardDefinition {
+    CardDefinition {
+        name: "Troll of Khazad-dum",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Troll], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![
+            Keyword::CantBeBlockedExceptByN(3),
+            Keyword::Landcycling(cost(&[generic(1)]), LandType::Swamp),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lorien Revealed — {3}{U}{U} Sorcery: draw three cards. Islandcycling {1}.
+pub fn lorien_revealed() -> CardDefinition {
+    use crate::effect::shortcut::draw;
+    CardDefinition {
+        name: "Lorien Revealed",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Landcycling(cost(&[generic(1)]), LandType::Island)],
+        effect: draw(3),
+        ..Default::default()
+    }
+}
+
+/// Eagles of the North — {5}{W} 3/3 flying Bird Soldier; ETB your creatures
+/// get +1/+0 and first strike this turn. Plainscycling {1}.
+pub fn eagles_of_the_north() -> CardDefinition {
+    CardDefinition {
+        name: "Eagles of the North",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Landcycling(cost(&[generic(1)]), LandType::Plains),
+        ],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Ash Barrens — Land: {T}: Add {C}. Basic landcycling {1} (Typecycling,
+/// CR 702.29e).
+pub fn ash_barrens() -> CardDefinition {
+    CardDefinition {
+        name: "Ash Barrens",
+        card_types: vec![CardType::Land],
+        keywords: vec![Keyword::Typecycling(Box::new((
+            cost(&[generic(1)]),
+            SelectionRequirement::IsBasicLand,
+        )))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

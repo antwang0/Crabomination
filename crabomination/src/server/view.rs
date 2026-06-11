@@ -476,10 +476,11 @@ fn known_card(card: &CardInstance) -> KnownCard {
         if let crate::card::Keyword::CyclingLife(n) = kw { Some(*n) } else { None }
     });
     let landcycling_cost = card.definition.keywords.iter().find_map(|kw| {
-        if let crate::card::Keyword::Landcycling(c, _) = kw {
-            Some(c.clone())
-        } else {
-            None
+        // Typecycling rides the same client affordance (CR 702.29e).
+        match kw {
+            crate::card::Keyword::Landcycling(c, _) => Some(c.clone()),
+            crate::card::Keyword::Typecycling(spec) => Some(spec.0.clone()),
+            _ => None,
         }
     });
     let (modal_descriptions, modal_needs_target) =

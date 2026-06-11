@@ -53504,3 +53504,63 @@ fn trickbind_counters_activated_ability() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), hand_before, "draw countered");
 }
+
+// ── LTR landcyclers + Typecycling (CR 702.29e) ───────────────────────────────
+
+/// Swampcycling Troll of Khazad-dûm discards it and fetches a Swamp to hand.
+#[test]
+fn troll_of_khazad_dum_swampcycles() {
+    let mut g = two_player_game();
+    let troll = g.add_card_to_hand(0, catalog::troll_of_khazad_dum());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::swamp());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Landcycle { card_id: troll }).expect("swampcycle");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == troll), "discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Swamp"), "fetched a Swamp");
+}
+
+/// Basic landcycling (Typecycling) on Ash Barrens fetches any basic, and the
+/// land itself taps for {C} when played.
+#[test]
+fn ash_barrens_basic_landcycles() {
+    let mut g = two_player_game();
+    let barrens = g.add_card_to_hand(0, catalog::ash_barrens());
+    g.add_card_to_library(0, catalog::watery_grave());
+    g.add_card_to_library(0, catalog::mountain());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Landcycle { card_id: barrens }).expect("basic landcycle");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Mountain"),
+        "fetched a basic, skipping the nonbasic dual");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == barrens));
+}
+
+/// Lorien Revealed draws three when cast normally.
+#[test]
+fn lorien_revealed_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let s = g.add_card_to_hand(0, catalog::lorien_revealed());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand = g.players[0].hand.len() - 1;
+    cast(&mut g, s);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+}
+
+/// Eagles of the North pumps the team +1/+0 with first strike on ETB.
+#[test]
+fn eagles_of_the_north_etb_team_pump() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eagles = g.add_card_to_hand(0, catalog::eagles_of_the_north());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, eagles);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "+1/+0");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+}
