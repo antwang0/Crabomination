@@ -6683,6 +6683,59 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayLifeDraw { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let life = self.players[p].life.max(0) as u32;
+                if life == 0 { return Ok(()); }
+                let decision = Decision::ChooseAmount {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Pay how much life? (draw that many)".to_string(),
+                    max: life,
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[p].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: life },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let x = match answer {
+                    DecisionAnswer::Amount(v) => v.min(life),
+                    _ => 0,
+                };
+                if x == 0 { return Ok(()); }
+                let applied = self.adjust_life_applied(p, -(x as i32));
+                if applied < 0 {
+                    events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                }
+                for _ in 0..x {
+                    if !self.draw_one(p, events) {
+                        self.lose_to_empty_draw(p);
+                        break;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::OnAttackedUntilYourNextTurn { body } => {
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::CreatureAttacksYouUntilYourNextTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
             Effect::PayLifeLookTake { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

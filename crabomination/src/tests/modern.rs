@@ -50547,3 +50547,294 @@ fn jace_brainstorms_and_bounces() {
     assert!(g.battlefield_find(bear).is_none(), "bear bounced");
     assert!(g.players[1].hand.iter().any(|c| c.id == bear), "to owner's hand");
 }
+
+// ── Modern staples batch: scam riders, baubles, Flares, flips ───────────────
+
+/// Feign Death: the creature dies this turn → returns tapped with a +1/+1.
+#[test]
+fn feign_death_returns_dead_creature_tapped_with_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fd = g.add_card_to_hand(0, catalog::feign_death());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, fd, Target::Permanent(bear));
+    // Kill the bear.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("bear returned to the battlefield");
+    assert!(back.tapped, "returns tapped");
+    assert_eq!(back.counter_count(crate::card::CounterType::PlusOnePlusOne), 1);
+}
+
+/// Urza's Bauble: sacrifice → draw at your next upkeep.
+#[test]
+fn urzas_bauble_draws_at_next_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let bauble = g.add_card_to_battlefield(0, catalog::urzas_bauble());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bauble, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("activate bauble");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bauble).is_none(), "bauble sacrificed");
+    let hand_before = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "delayed draw fired");
+}
+
+/// Codex Shredder: {T} mills target player; the sac ability returns a card
+/// from your graveyard to hand.
+#[test]
+fn codex_shredder_mills_and_regrows() {
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::forest());
+    let shredder = g.add_card_to_battlefield(0, catalog::codex_shredder());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shredder, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("mill ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 1, "opponent milled one");
+
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.battlefield_find_mut(shredder).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shredder, ability_index: 1, target: Some(Target::Permanent(bolt)), x_value: None,
+    }).expect("regrow ability");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "card returned to hand");
+    assert!(g.battlefield_find(shredder).is_none(), "shredder sacrificed");
+}
+
+/// Flare of Malice: alt-cast by sacrificing a nontoken black creature; each
+/// opponent sacrifices their greatest-MV creature or planeswalker.
+#[test]
+fn flare_of_malice_free_cast_via_black_creature_sacrifice() {
+    let mut g = two_player_game();
+    let pitch = g.add_card_to_battlefield(0, catalog::indulgent_aristocrat()); // black creature
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());        // MV 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());            // MV 5
+    let flare = g.add_card_to_hand(0, catalog::flare_of_malice());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: flare, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free Flare via sacrifice");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pitch).is_none(), "black creature sacrificed as cost");
+    assert!(g.battlefield_find(big).is_none(), "opponent lost the greatest-MV creature");
+    assert!(g.battlefield_find(small).is_some(), "lesser creature survives");
+}
+
+/// Brutal Cathar exiles an opposing creature on ETB and gives it back when
+/// it leaves the battlefield.
+#[test]
+fn brutal_cathar_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cathar = g.add_card_to_hand(0, catalog::brutal_cathar());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, cathar, Target::Permanent(bear));
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear exiled by the cathar");
+    // Cathar dies → bear comes home.
+    let mut evs = Vec::new();
+    g.sacrifice_one(cathar, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bear returns when the cathar leaves");
+}
+
+/// Wedding Announcement ticks invitation counters each of your end steps,
+/// makes a token without two attackers, and transforms at three counters.
+#[test]
+fn wedding_announcement_counts_to_festivity() {
+    let mut g = two_player_game();
+    let wa = g.add_card_to_battlefield(0, catalog::wedding_announcement());
+    for _ in 0..3 {
+        g.fire_step_triggers(TurnStep::End);
+        drain_stack(&mut g);
+    }
+    let c = g.battlefield_find(wa).unwrap();
+    assert!(c.transformed, "three invitations → Wedding Festivity");
+    assert_eq!(c.definition.name, "Wedding Festivity");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Human").count(),
+        3,
+        "no attacks → a 1/1 Human each end step"
+    );
+}
+
+/// Valley Floodcaller pumps and untaps your Otters on each noncreature cast.
+#[test]
+fn valley_floodcaller_pumps_and_untaps_otters_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let vfc = g.add_card_to_battlefield(0, catalog::valley_floodcaller());
+    g.battlefield_find_mut(vfc).unwrap().tapped = true;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(vfc).unwrap();
+    assert!(!c.tapped, "otter untapped by its own trigger");
+    assert_eq!(g.computed_permanent(vfc).unwrap().power, 3, "2/2 + 1 = 3");
+}
+
+/// Raffine: attacking with two creatures connives the target for 2.
+#[test]
+fn raffine_connives_target_attacker_for_attacker_count() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.add_card_to_hand(0, catalog::island()); // discard fodder (nonland in hand? island is land)
+    let raffine = g.add_card_to_battlefield(0, catalog::raffine_scheming_seer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(raffine);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: raffine, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack with both");
+    drain_stack(&mut g);
+    // Connive 2: drew 2, discarded 2; the target got a counter per nonland
+    // discarded. AutoDecider pitches from the front — counters depend on
+    // what got pitched, so just assert the draw/discard happened and the
+    // trigger resolved.
+    assert_eq!(g.players[0].graveyard.len(), 2, "discarded two to connive");
+}
+
+/// Necrodominance: hand size capped at five, your graveyard-bound cards are
+/// exiled instead, and the end step converts life into cards.
+#[test]
+fn necrodominance_statics_and_end_step_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::necrodominance());
+    assert_eq!(g.effective_max_hand_size(0), Some(5), "max hand size five");
+    // Graveyard redirect: a discarded/destroyed card goes to exile.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let mut evs = Vec::new();
+    g.discard_card(0, bolt, &mut evs);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "your graveyard-bound card exiled");
+    // End step: pay 3 → draw 3.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 3);
+    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+}
+
+/// Sorin of House Markov transforms at your postcombat main once you've
+/// gained three life this turn.
+#[test]
+fn sorin_transforms_after_three_life_gained() {
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_of_house_markov());
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(sorin).unwrap().transformed, "no lifegain → no flip");
+    g.adjust_life(0, 3);
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    let flipped = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Sorin, Ravenous Neonate")
+        .expect("transformed into the planeswalker");
+    assert_eq!(flipped.counter_count(crate::card::CounterType::Loyalty), 3);
+}
+
+/// Cori-Steel Cutter: the second spell each turn mints a Monk and attaches.
+#[test]
+fn cori_steel_cutter_flurry_mints_and_attaches() {
+    let mut g = two_player_game();
+    let cutter = g.add_card_to_battlefield(0, catalog::cori_steel_cutter());
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("bolt castable");
+        drain_stack(&mut g);
+    }
+    let monk = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Monk")
+        .expect("flurry minted a Monk on the second spell");
+    assert_eq!(
+        g.battlefield_find(cutter).unwrap().attached_to,
+        Some(monk.id),
+        "cutter attached to the fresh Monk"
+    );
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Monk").count(),
+        1,
+        "first spell minted nothing"
+    );
+}
+
+/// Tamiyo transforms when you draw your third card in a turn.
+#[test]
+fn tamiyo_transforms_on_third_draw() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let tamiyo = g.add_card_to_battlefield(0, catalog::tamiyo_inquisitive_student());
+    let mut evs = Vec::new();
+    for _ in 0..2 {
+        g.draw_one(0, &mut evs);
+    }
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tamiyo).is_some(), "two draws — still a creature");
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let flipped = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Tamiyo, Seasoned Scholar")
+        .expect("third draw flips Tamiyo");
+    assert_eq!(flipped.counter_count(crate::card::CounterType::Loyalty), 2);
+}
+
+/// Flare of Duplication: alt-cast by sacrificing a red creature, copying a
+/// spell on the stack.
+#[test]
+fn flare_of_duplication_copies_target_spell() {
+    let mut g = two_player_game();
+    let pitch = g.add_card_to_battlefield(0, catalog::dragons_rage_channeler());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    let flare = g.add_card_to_hand(0, catalog::flare_of_duplication());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: flare, pitch_card: None, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free Flare via red creature sacrifice");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pitch).is_none(), "red creature sacrificed");
+    assert_eq!(g.players[1].life, 14, "bolt + copy = 6 damage");
+}

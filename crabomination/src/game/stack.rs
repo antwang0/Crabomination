@@ -1340,6 +1340,14 @@ impl GameState {
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
+        // "Until your next turn, whenever a creature attacks you…" floating
+        // triggers (Tamiyo +2) expire as their controller's turn begins.
+        self.delayed_triggers.retain(|dt| {
+            !(matches!(
+                dt.kind,
+                crate::game::types::DelayedKind::CreatureAttacksYouUntilYourNextTurn
+            ) && dt.controller == p)
+        });
         self.players[p].extra_land_plays = 0;
         // Raid (CR 702.108): the active player hasn't attacked yet this turn.
         self.players[p].attacked_this_turn = false;

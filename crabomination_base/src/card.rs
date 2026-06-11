@@ -39,7 +39,7 @@ pub enum Supertype {
 /// Creature subtypes (race/class).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CreatureType {
-    Human, Elf, Goblin, Merfolk, Zombie, Vampire, Angel, Demon, Dragon,
+    Human, Elf, Goblin, Merfolk, Moonfolk, Zombie, Vampire, Angel, Demon, Dragon,
     Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari, Dauthi,
     Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm,
     Bear, Ape, Rat, Fungus, Treefolk, Giant, Ogre, Shaman, Druid,
@@ -217,6 +217,8 @@ pub enum CounterType {
     Verse,
     Shield,
     Wish,
+    /// Invitation counter — Wedding Announcement's end-step tally.
+    Invitation,
     /// Page counter — Strixhaven Book artifacts (Diary of Dreams). Builds
     /// up on instant/sorcery cast and discounts the host's activated
     /// ability one for one. The counter-scaled cost reduction itself is

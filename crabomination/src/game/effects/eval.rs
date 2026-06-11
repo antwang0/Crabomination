@@ -198,6 +198,7 @@ impl GameState {
             Value::Min(a, b) => self.evaluate_value(a, ctx).min(self.evaluate_value(b, ctx)),
             Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
+            Value::HalvedRoundUp(v) => (self.evaluate_value(v, ctx).max(0) + 1) / 2,
             Value::IfAtLeast { value, threshold, then, else_ } => {
                 if self.evaluate_value(value, ctx) >= *threshold {
                     self.evaluate_value(then, ctx)

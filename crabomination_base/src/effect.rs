@@ -338,6 +338,9 @@ pub enum Value {
     Max(Box<Value>, Box<Value>),
     /// Clamp the inner value to ≥0.
     NonNeg(Box<Value>),
+    /// Half the inner value, rounded up (Tamiyo -7's "half the number of
+    /// cards in your library").
+    HalvedRoundUp(Box<Value>),
     /// Conditional: if `value` ≥ `threshold`, evaluate `then`, else `else_`.
     /// Powers "if X is 4 or more, …" scaling (Mossborn Hydra's doubled
     /// counters at X≥4).
@@ -2611,6 +2614,14 @@ pub enum Effect {
     /// chooses the amount via `Decision::ChooseAmount` (capped at current
     /// life; AutoDecider pays 0). Plunge into Darkness mode 1.
     PayLifeLookTake { who: PlayerRef },
+    /// "You may pay any amount of life. If you do, draw that many cards."
+    /// Amount via `Decision::ChooseAmount`, capped at current life
+    /// (AutoDecider pays 0). Necrodominance's end step.
+    PayLifeDraw { who: PlayerRef },
+    /// "Until your next turn, whenever a creature attacks you or a
+    /// planeswalker you control, [body]" — registers a floating trigger;
+    /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.
+    OnAttackedUntilYourNextTurn { body: Box<Effect> },
     /// "Sacrifice a [filter] with the greatest mana value" picker.
     /// Mirrors `Sacrifice` but the candidate sort prefers maximum CMC.
     /// Used by Soul Shatter ("Each opponent sacrifices a creature or

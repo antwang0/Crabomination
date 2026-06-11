@@ -768,9 +768,19 @@ impl crate::game::GameState {
                 _ => 0,
             })
             .sum();
-        self.players[player]
-            .max_hand_size
-            .map(|m| m.saturating_sub(reduction))
+        // Set-to-N overrides (Necrodominance) — smallest wins.
+        let set_to: Option<usize> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::ControllerMaxHandSize(n) => Some(n as usize),
+                _ => None,
+            })
+            .min();
+        let base = set_to.or(self.players[player].max_hand_size);
+        base.map(|m| m.saturating_sub(reduction))
     }
 
     /// CR 305 — Whether `player` may play lands from their graveyard

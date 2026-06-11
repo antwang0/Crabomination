@@ -528,6 +528,11 @@ pub enum DelayedKind {
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.
     YourNextSpellCastThisTurn,
+    /// "Until your next turn, whenever a creature attacks you or a
+    /// planeswalker you control, [body]" (Tamiyo, Seasoned Scholar's +2).
+    /// Fires per qualifying attacker (the attacker is the trigger source);
+    /// expires when the controller's next turn begins.
+    CreatureAttacksYouUntilYourNextTurn,
     /// "When [that permanent] leaves the battlefield, …" — fires when the
     /// watched card leaves the battlefield, any turn (not turn-scoped).
     /// Hofri Ghostforge's token rider.

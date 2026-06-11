@@ -2294,11 +2294,13 @@ impl GameState {
             for sa in &c.definition.static_abilities {
                 if let StaticEffect::ExileCardsBoundForGraveyard {
                     opponents_only,
+                    own_only,
                     colors,
                     void_counter,
                 } = &sa.effect
                 {
                     let applies = (!opponents_only || c.controller != owner)
+                        && (!own_only || c.controller == owner)
                         && colors.as_ref().is_none_or(|cs| {
                             card.definition.printed_colors().iter().any(|c| cs.contains(c))
                         });
@@ -5187,6 +5189,51 @@ impl GameState {
                     event_amount: 0,
                     intervening_if: None,
                 });
+            }
+        }
+        // "Whenever a creature attacks you or a planeswalker you control"
+        // floating triggers (Tamiyo +2). Fire once per qualifying attacker;
+        // the attacker is the trigger source.
+        let attackers: Vec<CardId> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::AttackerDeclared(id) => Some(*id),
+                _ => None,
+            })
+            .collect();
+        if !attackers.is_empty() {
+            use crate::game::types::DelayedKind;
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    matches!(dt.kind, DelayedKind::CreatureAttacksYouUntilYourNextTurn)
+                })
+                .cloned()
+                .collect();
+            for dt in watchers {
+                for &atk_id in &attackers {
+                    let defender = self
+                        .attack_for(atk_id)
+                        .and_then(|a| self.defender_for(a.target));
+                    if defender == Some(dt.controller) {
+                        self.stack.push(crate::game::types::StackItem::Trigger {
+                            source: dt.source,
+                            controller: dt.controller,
+                            effect: Box::new(dt.effect.clone()),
+                            target: None,
+                            mode: None,
+                            x_value: 0,
+                            converged_value: 0,
+                            trigger_source: Some(
+                                crate::game::effects::EntityRef::Permanent(atk_id),
+                            ),
+                            mana_spent: 0,
+                            event_amount: 0,
+                            intervening_if: None,
+                        });
+                    }
+                }
             }
         }
         // Turn-scoped "whenever a creature you control enters this turn"
@@ -8198,6 +8245,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize
             | StaticEffect::OpponentsMaxHandSizeReduced(_)
+            | StaticEffect::ControllerMaxHandSize(_)
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard

@@ -411,6 +411,8 @@ impl Effect {
             Effect::SacrificeAndRemember { .. } => false,
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
             Effect::PayLifeLookTake { .. } => false,
+            Effect::PayLifeDraw { .. } => false,
+            Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::ExileAllGraveyards { .. } => false,
             Effect::LivingEnd => false,

@@ -8858,6 +8858,7 @@ pub fn dauthi_voidwalker() -> CardDefinition {
             description: "If a card would be put into an opponent's graveyard from anywhere, exile it with a void counter on it instead.",
             effect: StaticEffect::ExileCardsBoundForGraveyard {
                 opponents_only: true,
+                own_only: false,
                 colors: None,
                 void_counter: true,
             },

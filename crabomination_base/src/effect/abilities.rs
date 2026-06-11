@@ -575,6 +575,10 @@ pub enum StaticEffect {
     /// Core Augur). Folded into `effective_max_hand_size` for every seat
     /// not on the source controller's team.
     OpponentsMaxHandSizeReduced(u32),
+    /// "Your maximum hand size is N" (Necrodominance, Cursed Rack-likes
+    /// scoped to the controller). Overrides the base seven; the smallest
+    /// active override wins.
+    ControllerMaxHandSize(u32),
     /// CR 305 / 718 — "You may play lands from your graveyard." Crucible of
     /// Worlds, Ramunap Excavator. Read by the land-play legality + the
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
@@ -612,6 +616,11 @@ pub enum StaticEffect {
     /// graveyard-placement site via `graveyard_exiled_for`.
     ExileCardsBoundForGraveyard {
         opponents_only: bool,
+        /// Restrict the redirect to the static's controller's own cards
+        /// (Necrodominance's "if a card or token would be put into YOUR
+        /// graveyard").
+        #[serde(default)]
+        own_only: bool,
         #[serde(default)]
         colors: Option<Vec<crate::mana::Color>>,
         /// Stamp a void counter on each card this redirect exiles

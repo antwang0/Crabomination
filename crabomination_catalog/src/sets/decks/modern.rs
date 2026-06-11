@@ -21652,7 +21652,7 @@ pub fn rest_in_peace() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileAllGraveyards { filter: None, opponents_only: false })],
         static_abilities: vec![StaticAbility {
             description: "If a card would be put into a graveyard from anywhere, exile it instead.",
-            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false, colors: None, void_counter: false },
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false, own_only: false, colors: None, void_counter: false },
         }],
         ..Default::default()
     }
@@ -21670,7 +21670,7 @@ pub fn leyline_of_the_void() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "If a card would be put into an opponent's graveyard from anywhere, exile it instead.",
-            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: true, colors: None, void_counter: false },
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: true, own_only: false, colors: None, void_counter: false },
         }],
         ..Default::default()
     }
@@ -39612,6 +39612,7 @@ pub fn sanctifier_en_vec() -> CardDefinition {
                           from anywhere, exile it instead.",
             effect: StaticEffect::ExileCardsBoundForGraveyard {
                 opponents_only: false,
+                own_only: false,
                 colors: Some(vec![Color::Black, Color::Red]),
                 void_counter: false,
             },
@@ -44685,6 +44686,613 @@ pub fn jace_the_mind_sculptor() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+// ── Modern staples batch: scam riders, baubles, free Flares ─────────────────
+
+/// Shared body for Feign Death / Undying Malice: until end of turn the
+/// target gains "when this dies, return it tapped with a +1/+1 counter."
+fn death_protection_rider(name: &'static str) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::WhenTargetDiesThisTurn {
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ])),
+            slot: 0,
+        },
+        ..Default::default()
+    }
+}
+
+/// Feign Death — {B} Instant. Target creature: when it dies this turn,
+/// return it tapped with a +1/+1 counter.
+pub fn feign_death() -> CardDefinition {
+    death_protection_rider("Feign Death")
+}
+
+/// Undying Malice — {B} Instant. Functional Feign Death reprint.
+pub fn undying_malice() -> CardDefinition {
+    death_protection_rider("Undying Malice")
+}
+
+/// Urza's Bauble — {0} Artifact. {T}, Sacrifice: look at a random card in
+/// target player's hand (information-only — not modeled); draw a card at
+/// the beginning of the next turn's upkeep.
+pub fn urzas_bauble() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Urza's Bauble",
+        cost: cost(&[]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DelayUntil {
+                kind: DelayedTriggerKind::YourNextUpkeep,
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Codex Shredder — {1} Artifact. {T}: target player mills 1.
+/// {5}, {T}, Sacrifice: return target card from your graveyard to your hand.
+pub fn codex_shredder() -> CardDefinition {
+    CardDefinition {
+        name: "Codex Shredder",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Mill { who: Selector::Target(0), amount: Value::Const(1) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::InYourGraveyard,
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Flare of Duplication — {1}{R}{R} Instant. Sacrifice a nontoken red
+/// creature rather than pay the cost. Copy target instant or sorcery.
+pub fn flare_of_duplication() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Flare of Duplication",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CopySpell { what: Selector::Target(0), count: Value::Const(1) },
+        alternative_cost: Some(AlternativeCost {
+            sacrifice_permanents: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasColor(Color::Red))
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+                1,
+            )),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Flare of Malice — {2}{B}{B} Instant. Sacrifice a nontoken black creature
+/// rather than pay the cost. Each opponent sacrifices their greatest-MV
+/// creature or planeswalker.
+pub fn flare_of_malice() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Flare of Malice",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SacrificeGreatestMV {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            by_power: false,
+        },
+        alternative_cost: Some(AlternativeCost {
+            sacrifice_permanents: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasColor(Color::Black))
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+                1,
+            )),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+// ── Modern staples batch 2: MID/VOW, MOM-era multicolor, MH3 flips ──────────
+
+/// Brutal Cathar // Moonrage Brute — {2}{W} Human Soldier Werewolf 2/2,
+/// Daybound. On enter or transform-in: exile target opponent creature until
+/// this leaves. Back: 3/3 first strike, Ward—3 life, Nightbound.
+pub fn brutal_cathar() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    let steal = Effect::ExileUntilSourceLeaves {
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByOpponent),
+        },
+        return_to: ExileReturnZone::Battlefield,
+    };
+    let moonrage_brute = CardDefinition {
+        name: "Moonrage Brute",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Nightbound, Keyword::Ward(WardCost::Life(3))],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Brutal Cathar",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Werewolf,
+            ],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Daybound],
+        triggered_abilities: vec![
+            etb(steal.clone()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
+                effect: steal,
+            },
+        ],
+        back_face: Some(Box::new(moonrage_brute)),
+        ..Default::default()
+    }
+}
+
+/// Wedding Announcement // Wedding Festivity — {2}{W} Enchantment. End-step
+/// invitation counter + draw (attacked with 2+) or 1/1 Human; transforms at
+/// three counters into a +1/+1 anthem.
+pub fn wedding_announcement() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    let festivity = CardDefinition {
+        name: "Wedding Festivity",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    };
+    let human = TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Wedding Announcement",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Invitation,
+                    amount: Value::Const(1),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CreaturesAttackedWithThisTurn(PlayerRef::You),
+                        Value::Const(2),
+                    ),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    else_: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: human,
+                    }),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Invitation,
+                        },
+                        Value::Const(3),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(festivity)),
+        ..Default::default()
+    }
+}
+
+/// Valley Floodcaller — {2}{U} Otter Wizard 2/2, Flash. Your noncreature
+/// spells have flash; casting one pumps and untaps your Birds, Frogs,
+/// Otters, and Rats.
+pub fn valley_floodcaller() -> CardDefinition {
+    let tribe = SelectionRequirement::HasCreatureType(CreatureType::Bird)
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Frog))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Otter))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Rat));
+    let yours = tribe.and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Valley Floodcaller",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast noncreature spells as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash {
+                filter: SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }))),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(yours.clone()),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Untap { what: Selector::EachPermanent(yours), up_to: None },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Raffine, Scheming Seer — {W}{U}{B} Sphinx Demon 1/4. Flying, Ward {1}.
+/// Whenever you attack, target attacking creature connives X (X = number of
+/// attacking creatures). Once-per-turn approximates "whenever you attack."
+pub fn raffine_scheming_seer() -> CardDefinition {
+    let x = Value::count(Selector::EachPermanent(
+        SelectionRequirement::IsAttacking.and(SelectionRequirement::ControlledByYou),
+    ));
+    CardDefinition {
+        name: "Raffine, Scheming Seer",
+        cost: cost(&[w(), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx, CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: x.clone() },
+                Effect::Discard { who: Selector::You, amount: x, random: false },
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::IsAttacking,
+                    },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::count(Selector::DiscardedThisResolution {
+                        filter: SelectionRequirement::Nonland,
+                    }),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Necrodominance — {B}{B}{B} Legendary Enchantment. Skip your draw step;
+/// end-step pay any life → draw that many; max hand size five; your
+/// graveyard-bound cards are exiled instead.
+pub fn necrodominance() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Necrodominance",
+        cost: cost(&[b(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Skip your draw step.",
+                effect: StaticEffect::SkipStep { step: TurnStep::Draw, all_players: false },
+            },
+            StaticAbility {
+                description: "Your maximum hand size is five.",
+                effect: StaticEffect::ControllerMaxHandSize(5),
+            },
+            StaticAbility {
+                description: "If a card or token would be put into your graveyard, exile it instead.",
+                effect: StaticEffect::ExileCardsBoundForGraveyard {
+                    opponents_only: false,
+                    own_only: true,
+                    colors: None,
+                    void_counter: false,
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::PayLifeDraw { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sorin of House Markov // Sorin, Ravenous Neonate — {1}{B} 1/4 Lifelink,
+/// Extort. At each of your postcombat mains, if you gained 3+ life this
+/// turn, transform into the planeswalker.
+pub fn sorin_of_house_markov() -> CardDefinition {
+    use crate::effect::shortcut::extort;
+    use crate::game::types::TurnStep;
+    let neonate = CardDefinition {
+        name: "Sorin, Ravenous Neonate",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        base_loyalty: 3,
+        triggered_abilities: vec![extort()],
+        loyalty_abilities: vec![
+            crate::card::LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::food_token(),
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::LifeGainedThisTurn(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            crate::card::LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::GainControl {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    to: None,
+                    duration: Duration::Permanent,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Sorin of House Markov",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![
+            extort(),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::PostCombatMain),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(3),
+                }),
+                effect: Effect::ExileSelfReturnTransformed,
+            },
+        ],
+        back_face: Some(Box::new(neonate)),
+        ..Default::default()
+    }
+}
+
+/// Cori-Steel Cutter — {1}{R} Equipment. +1/+1, trample, haste. Flurry —
+/// second spell each turn mints a 1/1 prowess Monk and attaches this to it.
+pub fn cori_steel_cutter() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let monk = TokenDefinition {
+        name: "Monk".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Monk], ..Default::default() },
+        keywords: vec![Keyword::Prowess],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cori-Steel Cutter",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1), r()]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Trample, Keyword::Haste],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                },
+            ),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: monk },
+                Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tamiyo, Inquisitive Student // Tamiyo, Seasoned Scholar — {U} 0/3 flier;
+/// investigates on attack; transforms on your third draw in a turn.
+pub fn tamiyo_inquisitive_student() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    let scholar = CardDefinition {
+        name: "Tamiyo, Seasoned Scholar",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        base_loyalty: 2,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::OnAttackedUntilYourNextTurn {
+                    body: Box::new(Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::Const(-1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: SelectionRequirement::InYourGraveyard.and(
+                                SelectionRequirement::HasCardType(CardType::Instant)
+                                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                            ),
+                        },
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::LastMoved,
+                            filter: SelectionRequirement::HasColor(Color::Green),
+                        },
+                        then: Box::new(Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::HalvedRoundUp(Box::new(Value::LibrarySizeOf(
+                            PlayerRef::You,
+                        ))),
+                    },
+                    Effect::SetNoMaxHandSize { who: Selector::You },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Tamiyo, Inquisitive Student",
+        cost: cost(&[u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Moonfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: investigate(1),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
+                    Predicate::ValueEquals(
+                        Value::CardsDrawnThisTurn(PlayerRef::You),
+                        Value::Const(3),
+                    ),
+                ),
+                effect: Effect::ExileSelfReturnTransformed,
+            },
+        ],
+        back_face: Some(Box::new(scholar)),
         ..Default::default()
     }
 }
