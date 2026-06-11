@@ -161,7 +161,44 @@ fn mark_unavailable(cards_dir: &Path, filename: &str) {
     }
 }
 
+/// Shared state between the background prefetch thread and the app:
+/// counters for a progress readout, a "finished" latch, and the
+/// asset-relative paths of images written since last drained (the
+/// `reload_completed_images` system hands those to `AssetServer::reload`
+/// so placeholders swap to real art as downloads land).
+#[derive(bevy::prelude::Resource, Clone, Default)]
+pub struct ImagePrefetch {
+    pub done: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    pub total: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    pub finished: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    pub completed: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+}
+
+/// Drain freshly downloaded image paths and hot-reload them so any
+/// already-spawned placeholder texture swaps to the real art.
+pub fn reload_completed_images(
+    prefetch: bevy::prelude::Res<ImagePrefetch>,
+    asset_server: bevy::prelude::Res<bevy::asset::AssetServer>,
+) {
+    let Ok(mut completed) = prefetch.completed.lock() else { return };
+    for path in completed.drain(..) {
+        asset_server.reload(path);
+    }
+}
+
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
+    ensure_card_images_with_progress(specs, assets_dir, &ImagePrefetch::default());
+}
+
+/// `ensure_card_images` with live progress reporting — run on a background
+/// thread so launch never blocks on the network (the placeholder reader
+/// serves name placeholders until the real art lands and is reloaded).
+pub fn ensure_card_images_with_progress(
+    specs: &[CardImage],
+    assets_dir: &Path,
+    progress: &ImagePrefetch,
+) {
+    use std::sync::atomic::Ordering;
     let cards_dir = assets_dir.join("cards");
     fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
 
@@ -178,6 +215,17 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     let mut downloaded = 0u32;
     let mut fictional = 0u32;
     let mut unavailable = 0u32;
+
+    // Progress denominator: the genuinely fetchable, genuinely missing set.
+    let missing: Vec<&CardImage> = specs
+        .iter()
+        .filter(|spec| {
+            !cards_dir.join(spec.filename()).exists()
+                && !spec.is_fictional()
+                && !unavailable_set.contains(&spec.filename())
+        })
+        .collect();
+    progress.total.store(missing.len(), Ordering::Relaxed);
 
     for spec in specs {
         let path = cards_dir.join(spec.filename());
@@ -203,6 +251,9 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
                 fs::write(&path, &bytes).expect("failed to write card image");
                 println!("  Saved to {}", path.display());
                 downloaded += 1;
+                if let Ok(mut completed) = progress.completed.lock() {
+                    completed.push(format!("cards/{}", spec.filename()));
+                }
             }
             // Definitively no art on Scryfall (404 or 422). Negative-cache it
             // so future launches skip it; the runtime `CardPlaceholderReader`
@@ -221,9 +272,11 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
                 unavailable += 1;
             }
         }
+        progress.done.fetch_add(1, Ordering::Relaxed);
 
         thread::sleep(Duration::from_millis(120));
     }
+    progress.finished.store(true, Ordering::Relaxed);
 
     if downloaded + fictional + unavailable > 0 {
         println!(
@@ -349,11 +402,12 @@ fn card_name_from_asset_path(path: &Path) -> Option<String> {
 /// `cards/<name>.png`, synthesizes a white name-placeholder PNG on the fly
 /// instead of failing — so no placeholder files live on disk.
 ///
-/// This is sound because [`ensure_card_images`] blocks until every real
-/// download has been written before the app starts: a card image that's
-/// still missing at load time is genuinely art-less (a synthesized card or
-/// a 404), which is exactly what the placeholder is for. Any non-card
-/// missing path falls through to the inner reader's `NotFound`.
+/// The prefetch now runs on a background thread, so a missing card image
+/// is either genuinely art-less (a synthesized card or a 404) or simply
+/// not downloaded *yet* — both get the name placeholder, and
+/// `reload_completed_images` hot-swaps in the real art as downloads land.
+/// Any non-card missing path falls through to the inner reader's
+/// `NotFound`.
 pub struct CardPlaceholderReader {
     inner: Box<dyn ErasedAssetReader>,
     font: Arc<Option<FontVec>>,

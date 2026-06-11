@@ -301,6 +301,11 @@ struct ImportDeckButton;
 #[derive(Component)]
 struct MenuStatusText;
 
+/// Live card-art download progress ("Downloading card art… 120/1500"),
+/// fed by the background prefetch thread's `ImagePrefetch` counters.
+#[derive(Component)]
+struct DownloadProgressText;
+
 /// Current menu feedback message (import errors, validation results).
 #[derive(Resource, Default)]
 struct MenuStatus(String);
@@ -363,6 +368,7 @@ impl Plugin for MenuPlugin {
                     refresh_format_toggle_visuals,
                     handle_action_buttons,
                     refresh_menu_status,
+                    update_download_progress,
                     apply_cli_boot_hint,
                 )
                     .run_if(in_state(AppState::Menu)),
@@ -574,6 +580,13 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     tf(12.0),
                     TextColor(theme::ACCENT_ORANGE),
                     MenuStatusText,
+                ));
+
+                p.spawn((
+                    Text::new(""),
+                    tf(11.0),
+                    TextColor(theme::TEXT_SECONDARY),
+                    DownloadProgressText,
                 ));
             });
         });
@@ -838,6 +851,30 @@ fn refresh_format_toggle_visuals(
         } else {
             FIELD_BG
         });
+    }
+}
+
+/// Mirror the background art-prefetch counters into the menu's progress
+/// line. Empty when idle or done — the line only speaks while the
+/// background thread is actually fetching.
+fn update_download_progress(
+    prefetch: Option<Res<crate::scryfall::ImagePrefetch>>,
+    mut q: Query<&mut Text, With<DownloadProgressText>>,
+) {
+    use std::sync::atomic::Ordering;
+    let Some(prefetch) = prefetch else { return };
+    let total = prefetch.total.load(Ordering::Relaxed);
+    let done = prefetch.done.load(Ordering::Relaxed);
+    let finished = prefetch.finished.load(Ordering::Relaxed);
+    let label = if finished || total == 0 {
+        String::new()
+    } else {
+        format!("Downloading card art…  {done}/{total} (playable now — missing art shows placeholders)")
+    };
+    for mut t in &mut q {
+        if t.0 != label {
+            t.0 = label.clone();
+        }
     }
 }
 

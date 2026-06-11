@@ -16,6 +16,7 @@ mod audit;
 mod card;
 mod config;
 mod debug_export;
+mod embedded_assets;
 mod game;
 mod menu;
 mod net_plugin;
@@ -188,7 +189,21 @@ fn main() {
     // (crate source dir in debug, exe dir in release) so the prefetch cache
     // and Bevy's asset root agree regardless of the working directory.
     let asset_dir = cfg.paths.resolved_asset_dir();
-    scryfall::ensure_card_images(&specs, &asset_dir);
+    // A custom/fresh asset dir starts empty — materialize the embedded
+    // core assets (font, cardback, table model) before anything reads them.
+    embedded_assets::materialize_core_assets(&asset_dir);
+    // Card-art prefetch runs on a background thread — launch never blocks
+    // on the network. Missing images render as name placeholders (see
+    // `CardPlaceholderReader`) and hot-swap to real art as downloads land
+    // (`reload_completed_images`); the menu shows live progress.
+    let image_prefetch = scryfall::ImagePrefetch::default();
+    {
+        let progress = image_prefetch.clone();
+        let dir = asset_dir.clone();
+        std::thread::spawn(move || {
+            scryfall::ensure_card_images_with_progress(&specs, &dir, &progress);
+        });
+    }
 
     let gfx = cfg.graphics;
     let gameplay = cfg.gameplay;
@@ -274,6 +289,7 @@ fn main() {
             MeshPickingPlugin,
         ))
         .insert_resource(cfg_store)
+        .insert_resource(image_prefetch)
         .add_plugins((
             SinglePlayerPlugin,
             MenuPlugin,
@@ -359,6 +375,8 @@ fn main() {
             Update,
             (config::persist_stops, config::persist_animation_speed),
         )
+        // Hot-swap freshly downloaded card art over its placeholder.
+        .add_systems(Update, scryfall::reload_completed_images)
         // Audit-mode card picker.
         .add_systems(OnEnter(AppState::Audit), audit::spawn_audit_picker)
         .add_systems(OnExit(AppState::Audit), audit::despawn_audit_picker)
