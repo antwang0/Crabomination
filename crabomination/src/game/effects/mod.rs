@@ -9113,6 +9113,17 @@ impl GameState {
                 .into_iter()
                 .collect(),
 
+            // The least-power creature among ALL players' (Porphyry Nodes).
+            // Battlefield-order tie-break stands in for "you choose one".
+            Selector::LeastPowerAmongAll => self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.is_creature())
+                .min_by_key(|c| c.power())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
             Selector::AttachedTo(inner) => self
                 .resolve_selector(inner, ctx)
                 .into_iter()

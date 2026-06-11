@@ -607,6 +607,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .iter()
                 .any(|&p| self.players[p].searched_library_this_turn),
+            Predicate::CardsToGraveyardThisTurnAtLeast { who, at_least } => self
+                .resolve_players(who, ctx)
+                .iter()
+                .any(|&p| self.players[p].cards_to_graveyard_this_turn >= *at_least),
             Predicate::SpellsCastThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

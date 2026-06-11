@@ -52843,3 +52843,142 @@ fn spellskite_redirects_spell_target() {
     let skite_card = g.battlefield_find(skite).expect("0/4 survives the bolt");
     assert_eq!(skite_card.damage, 3, "bolt redirected to Spellskite");
 }
+
+// ── P3K horsemanship + conditional auras + Porphyry Nodes + Ravenous Trap ───
+
+/// CR 702.31 — a horsemanship attacker can't be blocked by a vanilla
+/// creature, but can be blocked by another horsemanship creature.
+#[test]
+fn cr_702_31_horsemanship_blocks_only_horsemanship() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let liu_bei = g.add_card_to_battlefield(0, catalog::liu_bei_lord_of_shu());
+    g.clear_sickness(liu_bei);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let zhang = g.add_card_to_battlefield(1, catalog::zhang_fei_fierce_warrior());
+    g.attacking = vec![Attack { attacker: liu_bei, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    assert!(g.declare_blockers(vec![(bear, liu_bei)]).is_err(),
+        "vanilla bear can't block horsemanship");
+    g.declare_blockers(vec![(zhang, liu_bei)]).expect("horsemanship blocks horsemanship");
+}
+
+/// Sun Quan grants horsemanship to your whole team (computed keywords).
+#[test]
+fn sun_quan_grants_team_horsemanship() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::sun_quan_lord_of_wu());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Horsemanship));
+}
+
+/// Liu Bei reads +2/+2 while Guan Yu is on your battlefield.
+#[test]
+fn liu_bei_pumps_beside_guan_yu() {
+    let mut g = two_player_game();
+    let liu = g.add_card_to_battlefield(0, catalog::liu_bei_lord_of_shu());
+    assert_eq!(g.computed_permanent(liu).unwrap().power, 2);
+    let guan = g.add_card_to_battlefield(0, catalog::guan_yu_sainted_warrior());
+    assert_eq!(g.computed_permanent(liu).unwrap().power, 4, "+2/+2 beside Guan Yu");
+    // An opponent's Guan Yu doesn't count ("you control").
+    g.battlefield_find_mut(guan).unwrap().controller = 1;
+    assert_eq!(g.computed_permanent(liu).unwrap().power, 2);
+}
+
+/// Guan Yu's dies trigger may shuffle him into his owner's library.
+#[test]
+fn guan_yu_dies_shuffles_into_library_on_yes() {
+    let mut g = two_player_game();
+    let guan = g.add_card_to_battlefield(0, catalog::guan_yu_sainted_warrior());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = EffectContext::for_spell(1, None, 0, 0);
+    g.resolve_effect(&Effect::Destroy { what: crate::card::Selector::EachPermanent(
+        crate::card::SelectionRequirement::Creature) }, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != guan), "not in graveyard");
+    assert!(g.players[0].library.iter().any(|c| c.id == guan), "shuffled into library");
+}
+
+/// Porphyry Nodes destroys the least-power creature (no regeneration) at
+/// your upkeep, and sacrifices itself once no creature is left.
+#[test]
+fn porphyry_nodes_destroys_least_power_then_sacrifices_itself() {
+    let mut g = two_player_game();
+    let nodes = g.add_card_to_battlefield(0, catalog::porphyry_nodes());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pest = g.add_card_to_battlefield(1, catalog::memnite());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pest).is_none(), "1/1 (least power) destroyed");
+    assert!(g.battlefield_find(bear).is_some(), "bigger creature survives");
+    // Clear the board; the next upkeep check sacrifices the Nodes.
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::Destroy { what: crate::card::Selector::EachPermanent(
+        crate::card::SelectionRequirement::Creature) }, &ctx).unwrap();
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(nodes).is_none(), "no creatures → Nodes sacrificed");
+}
+
+/// Ravenous Trap casts for {0} once an opponent had 3+ cards put into their
+/// graveyard this turn, and exiles the targeted graveyard.
+#[test]
+fn ravenous_trap_free_after_three_cards_hit_a_graveyard() {
+    let mut g = two_player_game();
+    let trap = g.add_card_to_hand(0, catalog::ravenous_trap());
+    // Not yet: the {0} alternative is rejected with an empty tally.
+    assert!(g.perform_action(GameAction::CastSpellAlternative {
+        card_id: trap, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no cards to the graveyard yet → no free cast");
+    for _ in 0..3 { g.add_card_to_library(1, catalog::forest()); }
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::Mill {
+        who: crate::card::Selector::Player(crate::effect::PlayerRef::EachOpponent),
+        amount: crate::card::Value::Const(3),
+    }, &ctx).unwrap();
+    assert_eq!(g.players[1].cards_to_graveyard_this_turn, 3, "tally stamped");
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: trap, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("free via trap condition");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.is_empty(), "graveyard exiled");
+}
+
+/// Shield of the Oversoul reads the host's color: a green host gets +1/+1
+/// and indestructible, a white host gets +1/+1 and flying, a red host nothing.
+#[test]
+fn shield_of_the_oversoul_tracks_host_color() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let aura = g.add_card_to_hand(0, catalog::shield_of_the_oversoul());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "green host gets +1/+1");
+    assert!(c.keywords.contains(&Keyword::Indestructible));
+    assert!(!c.keywords.contains(&Keyword::Flying), "white clause off for a green host");
+}
+
+/// Steel of the Godhead on a white-and-blue host stacks both clauses
+/// (+2/+2, lifelink, unblockable).
+#[test]
+fn steel_of_the_godhead_stacks_both_clauses_on_wu_host() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::mantis_rider()); // WUR
+    let aura = g.add_card_to_hand(0, catalog::steel_of_the_godhead());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, aura, Target::Permanent(host));
+    let c = g.computed_permanent(host).unwrap();
+    assert_eq!((c.power, c.toughness), (3 + 2, 3 + 2), "both +1/+1 clauses apply");
+    assert!(c.keywords.contains(&Keyword::Lifelink));
+    assert!(c.keywords.contains(&Keyword::Unblockable));
+}

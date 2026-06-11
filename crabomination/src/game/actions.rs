@@ -133,16 +133,28 @@ pub(crate) fn extra_cost_for_spell(
         tax += 1;
     }
     // "Reveal a [filter] card from your hand or pay {N}" (Silvergill Adept):
-    // no matching hand card → the pay half joins the cost.
+    // no matching hand card → the pay half joins the cost. Same shape for
+    // "sacrifice a [filter] or pay {N}" (Bayou Groff) against the battlefield.
     for ac in &card.definition.additional_cast_cost {
-        if let crate::card::AdditionalCastCost::RevealFromHandOrPay { filter, pay } = ac {
-            let has_match = state.players[caster]
-                .hand
-                .iter()
-                .any(|c| c.id != card.id && state.evaluate_requirement_on_card(filter, c, caster));
-            if !has_match {
-                tax += pay;
+        match ac {
+            crate::card::AdditionalCastCost::RevealFromHandOrPay { filter, pay } => {
+                let has_match = state.players[caster].hand.iter().any(|c| {
+                    c.id != card.id && state.evaluate_requirement_on_card(filter, c, caster)
+                });
+                if !has_match {
+                    tax += pay;
+                }
             }
+            crate::card::AdditionalCastCost::SacrificeOrPay { filter, pay } => {
+                let has_match = state.battlefield.iter().any(|c| {
+                    c.controller == caster
+                        && state.evaluate_requirement_on_card(filter, c, caster)
+                });
+                if !has_match {
+                    tax += pay;
+                }
+            }
+            _ => {}
         }
     }
     let already_cast = state.players[caster].spells_cast_this_turn;
@@ -1269,7 +1281,7 @@ impl GameState {
                         self.players[p].hand.iter().position(|c| c.id == card_id)
                     {
                         let card = self.players[p].hand.remove(pos);
-                        self.players[p].graveyard.push(card);
+                        self.players[p].send_to_graveyard(card);
                     }
                 }
                 Ok(_) => {
@@ -3137,16 +3149,12 @@ impl GameState {
             return false;
         }
         card.definition.additional_cast_cost.iter().any(|cost| {
-            matches!(
-                cost,
-                crate::card::AdditionalCastCost::SacrificePermanent { filter, .. }
-                    if self.evaluate_requirement_static(
-                        filter,
-                        &Target::Permanent(sac_id),
-                        caster,
-                        None,
-                    )
-            )
+            let filter = match cost {
+                crate::card::AdditionalCastCost::SacrificePermanent { filter, .. } => filter,
+                crate::card::AdditionalCastCost::SacrificeOrPay { filter, .. } => filter,
+                _ => return false,
+            };
+            self.evaluate_requirement_static(filter, &Target::Permanent(sac_id), caster, None)
         })
     }
 
@@ -3228,10 +3236,11 @@ impl GameState {
                 .graveyard
                 .iter()
                 .any(|c| self.evaluate_requirement_on_card(filter, c, p)),
-            // Reveal-or-pay is always announceable: when no matching card is
-            // in hand the pay half is folded into the spell's cost
+            // Reveal-or-pay / sacrifice-or-pay are always announceable: with
+            // no match the pay half is folded into the spell's cost
             // (`extra_cost_for_spell`) and mana payment enforces it.
             A::RevealFromHandOrPay { .. } => true,
+            A::SacrificeOrPay { .. } => true,
             A::ProcessExile => self
                 .exile
                 .iter()
@@ -3413,6 +3422,29 @@ impl GameState {
                 // Knowledge-only when a matching card is in hand; the pay
                 // half was already folded into the cost.
                 A::RevealFromHandOrPay { .. } => {}
+                A::SacrificeOrPay { filter, .. } => {
+                    // With a matching permanent the sacrifice half is paid
+                    // (reusing the SacrificePermanent machinery); otherwise
+                    // the pay half was already folded into the cost.
+                    let has_match = self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && self.evaluate_requirement_static(
+                                filter, &Target::Permanent(c.id), p, None,
+                            )
+                    });
+                    if has_match {
+                        let (mut ev, sp) = self.pay_additional_costs(
+                            p,
+                            &[A::SacrificePermanent { filter: filter.clone(), count: 1 }],
+                            chosen_override.take(),
+                            None,
+                        );
+                        events.append(&mut ev);
+                        if sac_power.is_none() {
+                            sac_power = sp;
+                        }
+                    }
+                }
                 A::ProcessExile => {
                     // Auto-pick the lowest-MV opponent-owned exile card and
                     // process it into its owner's graveyard.

@@ -9400,16 +9400,22 @@ fn bayou_groff_requires_sacrificing_a_creature_to_cast() {
 }
 
 #[test]
-fn bayou_groff_uncastable_without_a_creature_to_sacrifice() {
-    // No other creature (and the pay-{3} alternative is dropped) → uncastable.
+fn bayou_groff_pays_three_without_a_creature_to_sacrifice() {
+    // No creature → the pay-{3} half joins the cost ({1}{G} + {3}).
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::bayou_groff());
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    let res = g.perform_action(GameAction::CastSpell {
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    });
-    assert!(res.is_err(), "no creature to sacrifice → cast rejected");
+    }).is_err(), "one generic and a G alone can't cover the +3 cost");
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {4}{G} with no creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "Bayou Groff entered the battlefield");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the extra 3 was spent");
 }
 
 #[test]

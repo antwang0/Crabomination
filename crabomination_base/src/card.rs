@@ -1601,6 +1601,16 @@ pub enum AdditionalCastCost {
     /// owns from exile into that player's graveyard." (Process — Processor
     /// Assault.)
     ProcessExile,
+    /// "As an additional cost to cast this spell, sacrifice a [filter] or
+    /// pay {pay}." (Bayou Groff.) When the caster controls a matching
+    /// permanent the sacrifice half is paid (auto-picking the cheapest
+    /// match); otherwise `pay` generic joins the cost via
+    /// `extra_cost_for_spell`. A "which half?" chooser for `wants_ui`
+    /// seats is a follow-up.
+    SacrificeOrPay {
+        filter: SelectionRequirement,
+        pay: u32,
+    },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.
@@ -1637,6 +1647,23 @@ pub struct EquipBonus {
     /// default CR 702.6e behavior (the ability fires off the creature).
     #[serde(default)]
     pub triggers_on_equipment: bool,
+    /// Host-conditional riders: each entry applies only while the attached
+    /// creature matches its filter ("As long as enchanted creature is green,
+    /// it gets +1/+1 and has indestructible" — Shield of the Oversoul,
+    /// Steel of the Godhead).
+    #[serde(default)]
+    pub conditional: Vec<ConditionalEquipBonus>,
+}
+
+/// One "as long as enchanted creature is [filter]" rider of an
+/// [`EquipBonus`]. Evaluated against the host each layer pass.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConditionalEquipBonus {
+    pub host_filter: SelectionRequirement,
+    pub power: i32,
+    pub toughness: i32,
+    #[serde(default)]
+    pub keywords: Vec<Keyword>,
 }
 
 /// CR 702.95 — the bonus each member of a Soulbond pair gains while paired.

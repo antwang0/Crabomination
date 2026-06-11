@@ -1469,6 +1469,7 @@ impl GameState {
             pl.cant_cast_noncreature_this_turn = false;
             pl.silenced_this_turn = false;
             pl.searched_library_this_turn = false;
+            pl.cards_to_graveyard_this_turn = 0;
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters

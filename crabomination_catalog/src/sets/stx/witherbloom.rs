@@ -67,13 +67,9 @@ pub fn pest_summoning() -> CardDefinition {
 
 // ── Bayou Groff ─────────────────────────────────────────────────────────────
 
-/// Bayou Groff — {1}{G}, 5/4 Beast. "When this creature dies, you
-/// may pay {1}. If you do, return it to its owner's hand."
-///
-/// Now wired (push XVI) via the new `Effect::MayPay` primitive: dies
 /// Bayou Groff — {1}{G}, 5/4 Plant Dog. "As an additional cost to cast this
-/// spell, sacrifice a creature or pay {3}." The pay-{3} alternative is dropped
-/// (no OR-cost primitive yet), so the catalog models the sacrifice cost.
+/// spell, sacrifice a creature or pay {3}." With a creature available the
+/// sacrifice is auto-paid; otherwise {3} joins the cost.
 pub fn bayou_groff() -> CardDefinition {
     CardDefinition {
         name: "Bayou Groff",
@@ -85,9 +81,9 @@ pub fn bayou_groff() -> CardDefinition {
         },
         power: 5,
         toughness: 4,
-        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+        additional_cast_cost: vec![AdditionalCastCost::SacrificeOrPay {
             filter: SelectionRequirement::Creature,
-            count: 1,
+            pay: 3,
         }],
         ..Default::default()
     }

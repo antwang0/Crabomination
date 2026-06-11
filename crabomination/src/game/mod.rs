@@ -3025,6 +3025,43 @@ impl GameState {
                     modification: Modification::AddKeyword(kw.clone()),
                 });
             }
+            // Host-conditional riders ("as long as enchanted creature is
+            // green, …" — Shield of the Oversoul). Evaluated against the
+            // host's pre-layer state, like `EquipScale` above.
+            for cond in &bonus.conditional {
+                let host_matches = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == target)
+                    .is_some_and(|host| {
+                        self.evaluate_requirement_on_card(&cond.host_filter, host, card.controller)
+                    });
+                if !host_matches {
+                    continue;
+                }
+                if cond.power != 0 || cond.toughness != 0 {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(cond.power, cond.toughness),
+                    });
+                }
+                for kw in &cond.keywords {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target]),
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
+            }
         }
         // CR 702.95 — Soulbond. A creature carrying a `soulbond_bonus` that's
         // paired confers the bonus on BOTH itself and its partner (P/T layer
@@ -4648,7 +4685,7 @@ impl GameState {
                     if let Some(pos) = self.exile.iter().position(|c| c.id == card_id) {
                         let c = self.exile.remove(pos);
                         let owner = c.owner;
-                        self.players[owner].graveyard.push(c);
+                        self.players[owner].send_to_graveyard(c);
                         events.push(GameEvent::CardPutIntoGraveyard {
                             player: owner, card_id, is_land,
                         });
@@ -4980,7 +5017,7 @@ impl GameState {
             }
             let card = self.players[p].library.remove(0);
             let cid = card.id;
-            self.players[p].graveyard.push(card);
+            self.players[p].send_to_graveyard(card);
             events.push(GameEvent::CardMilled { player: p, card_id: cid });
         }
         // Return the dredge card from the graveyard to its owner's hand.
@@ -6942,7 +6979,7 @@ impl GameState {
                 top_cards.extend(remaining);
                 let graveyarded = graveyard_cards.len();
                 for c in graveyard_cards {
-                    self.players[player].graveyard.push(c);
+                    self.players[player].send_to_graveyard(c);
                 }
                 let lib = &mut self.players[player].library;
                 for c in top_cards.into_iter().rev() {
@@ -7047,7 +7084,7 @@ impl GameState {
                     if let Some(pos) = self.players[player].library.iter().position(|c| c.id == *rid) {
                         let card = self.players[player].library.remove(pos);
                         if rest_to_graveyard {
-                            self.players[player].graveyard.push(card);
+                            self.players[player].send_to_graveyard(card);
                         } else {
                             self.players[player].library.push(card);
                         }

@@ -203,6 +203,13 @@ pub struct Player {
     /// `Effect::Exile`. Defaults to 0 for snapshot back-compat.
     #[serde(default)]
     pub cards_exiled_this_turn: u32,
+    /// Cards put into THIS player's graveyard from anywhere this turn
+    /// (CR 700.4-adjacent tally). Bumped at the shared graveyard-placement
+    /// funnels, reset for every player at the turn boundary. Powers
+    /// `Predicate::OpponentCardsToGraveyardThisTurnAtLeast` (Ravenous
+    /// Trap's free alt cost).
+    #[serde(default)]
+    pub cards_to_graveyard_this_turn: u32,
     /// Number of instant or sorcery spells this player has cast on the
     /// current turn. Reset to 0 in `do_untap`. Refines
     /// `spells_cast_this_turn` (which counts every spell type) so cards
@@ -410,6 +417,7 @@ impl Player {
             searched_library_this_turn: false,
             protected_from_everything: false,
             cards_exiled_this_turn: 0,
+            cards_to_graveyard_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             pending_is_discounts: Vec::new(),
             pending_spell_discounts: Vec::new(),
@@ -488,6 +496,7 @@ impl Player {
     }
 
     pub fn send_to_graveyard(&mut self, card: CardInstance) {
+        self.cards_to_graveyard_this_turn += 1;
         self.graveyard.push(card);
     }
 

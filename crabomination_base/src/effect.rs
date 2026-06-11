@@ -176,6 +176,10 @@ pub enum Selector {
     /// no creatures. Powers Triumph of Gerrard's "target creature you control
     /// with the greatest power" chapters (modeled non-targeted).
     GreatestPowerYouControl,
+    /// The single creature with the least power among ALL creatures on the
+    /// battlefield, any controller (first in battlefield order on a tie —
+    /// stands in for "you choose one"). Porphyry Nodes' upkeep destroy.
+    LeastPowerAmongAll,
     /// The permanent this one is attached to (for Auras/Equipment).
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.
@@ -678,6 +682,11 @@ pub enum Predicate {
     /// library this turn. `PlayerRef::EachOpponent` is satisfied by any one
     /// opponent. Archive Trap's "rather than pay" gate.
     SearchedLibraryThisTurn { who: PlayerRef },
+    /// True if any player matching `who` had at least `at_least` cards put
+    /// into their graveyard from anywhere this turn (CR 700.4 tally —
+    /// `Player.cards_to_graveyard_this_turn`). Ravenous Trap's free
+    /// alt-cost gate.
+    CardsToGraveyardThisTurnAtLeast { who: PlayerRef, at_least: u32 },
     /// `who` has cast at least `at_least` spells on the current turn.
     /// Backed by `Player.spells_cast_this_turn`. Used by Burrog Barrage
     /// ("if you've cast another instant or sorcery spell this turn, …")

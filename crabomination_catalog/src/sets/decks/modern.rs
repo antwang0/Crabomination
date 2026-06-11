@@ -47941,3 +47941,223 @@ pub fn spellskite() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── P3K horsemanship trio + conditional auras + traps (batch: modern_decks) ──
+
+/// Sun Quan, Lord of Wu — {4}{U}{U} 4/4 Legendary Human Soldier.
+/// Creatures you control have horsemanship (CR 702.31).
+pub fn sun_quan_lord_of_wu() -> CardDefinition {
+    CardDefinition {
+        name: "Sun Quan, Lord of Wu",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have horsemanship.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: each_your_creature(),
+                keyword: Keyword::Horsemanship,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zhang Fei, Fierce Warrior — {4}{W}{W} 4/4 Legendary Human Soldier Warrior.
+/// Vigilance, horsemanship.
+pub fn zhang_fei_fierce_warrior() -> CardDefinition {
+    CardDefinition {
+        name: "Zhang Fei, Fierce Warrior",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Horsemanship],
+        ..Default::default()
+    }
+}
+
+/// Guan Yu, Sainted Warrior — {3}{W}{W} 3/5 Legendary Human Soldier Warrior.
+/// Horsemanship. Dies: you may shuffle it into your library.
+pub fn guan_yu_sainted_warrior() -> CardDefinition {
+    CardDefinition {
+        name: "Guan Yu, Sainted Warrior",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Horsemanship],
+        triggered_abilities: vec![on_dies(Effect::MayDo {
+            description: "Shuffle Guan Yu into your library?".into(),
+            body: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Shuffled },
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Liu Bei, Lord of Shu — {3}{W}{W} 2/4 Legendary Human Soldier. Horsemanship.
+/// +2/+2 while you control Guan Yu, Sainted Warrior or Zhang Fei, Fierce Warrior.
+pub fn liu_bei_lord_of_shu() -> CardDefinition {
+    CardDefinition {
+        name: "Liu Bei, Lord of Shu",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Horsemanship],
+        static_abilities: vec![StaticAbility {
+            description: "+2/+2 while you control Guan Yu or Zhang Fei.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasName("Guan Yu, Sainted Warrior".into())
+                        .and(SelectionRequirement::ControlledByYou)
+                        .or(SelectionRequirement::HasName("Zhang Fei, Fierce Warrior".into())
+                            .and(SelectionRequirement::ControlledByYou)),
+                )),
+                power: 2,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Porphyry Nodes — {W} Enchantment. Your upkeep: destroy the least-power
+/// creature (no regen); if there are no creatures, sacrifice this instead
+/// (the printed state trigger folded into the same upkeep check).
+pub fn porphyry_nodes() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Porphyry Nodes",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(SelectionRequirement::Creature)),
+                then: Box::new(Effect::DestroyNoRegen { what: Selector::LeastPowerAmongAll }),
+                else_: Box::new(Effect::SacrificeSource),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ravenous Trap — {2}{B}{B} Instant — Trap. Free if an opponent had 3+ cards
+/// put into their graveyard this turn. Exile target player's graveyard.
+pub fn ravenous_trap() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Ravenous Trap",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0) },
+        alternative_cost: Some(AlternativeCost {
+            condition: Some(Predicate::CardsToGraveyardThisTurnAtLeast {
+                who: PlayerRef::EachOpponent,
+                at_least: 3,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Shield of the Oversoul — {2}{G/W} Aura. Green host: +1/+1 + indestructible;
+/// white host: +1/+1 + flying.
+pub fn shield_of_the_oversoul() -> CardDefinition {
+    use crate::card::ConditionalEquipBonus;
+    CardDefinition {
+        name: "Shield of the Oversoul",
+        cost: cost(&[generic(2), crate::mana::hybrid(Color::Green, Color::White)]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            conditional: vec![
+                ConditionalEquipBonus {
+                    host_filter: SelectionRequirement::HasColor(Color::Green),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Indestructible],
+                },
+                ConditionalEquipBonus {
+                    host_filter: SelectionRequirement::HasColor(Color::White),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                },
+            ],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Steel of the Godhead — {2}{W/U} Aura. White host: +1/+1 + lifelink;
+/// blue host: +1/+1 + can't be blocked.
+pub fn steel_of_the_godhead() -> CardDefinition {
+    use crate::card::ConditionalEquipBonus;
+    CardDefinition {
+        name: "Steel of the Godhead",
+        cost: cost(&[generic(2), crate::mana::hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            conditional: vec![
+                ConditionalEquipBonus {
+                    host_filter: SelectionRequirement::HasColor(Color::White),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Lifelink],
+                },
+                ConditionalEquipBonus {
+                    host_filter: SelectionRequirement::HasColor(Color::Blue),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Unblockable],
+                },
+            ],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
