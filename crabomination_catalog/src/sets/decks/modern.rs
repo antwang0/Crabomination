@@ -49650,3 +49650,283 @@ pub fn vexing_shusher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: Sliver tribal wave 2 (granted activations + utility) ────────
+
+/// Crypt Sliver — {1}{B} 1/1. All Slivers have "{T}: Regenerate target Sliver."
+pub fn crypt_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have {T}: Regenerate target Sliver.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::Regenerate {
+                        what: target_filtered(
+                            SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                        ),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Crypt Sliver", cost(&[generic(1), b()]), 1, 1)
+    }
+}
+
+/// Hibernation Sliver — {U}{B} 2/2. All Slivers have "Pay 2 life: Return
+/// this permanent to its owner's hand."
+pub fn hibernation_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have Pay 2 life: Return this to hand.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    life_cost: 2,
+                    effect: Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Hibernation Sliver", cost(&[u(), b()]), 2, 2)
+    }
+}
+
+/// Necrotic Sliver — {1}{W}{B} 2/2. All Slivers have "{3}, Sacrifice this
+/// permanent: Destroy target permanent."
+pub fn necrotic_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have {3}, Sacrifice: Destroy target permanent.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[generic(3)]),
+                    sac_cost: true,
+                    effect: Effect::Destroy {
+                        what: target_filtered(SelectionRequirement::Permanent),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Necrotic Sliver", cost(&[generic(1), w(), b()]), 2, 2)
+    }
+}
+
+/// Acidic Sliver — {B}{R} 2/2. All Slivers have "{2}, Sacrifice this
+/// permanent: This permanent deals 2 damage to any target."
+pub fn acidic_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have {2}, Sacrifice: 2 damage to any target.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[generic(2)]),
+                    sac_cost: true,
+                    effect: Effect::DealDamage {
+                        to: Selector::Target(0),
+                        amount: Value::Const(2),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Acidic Sliver", cost(&[b(), r()]), 2, 2)
+    }
+}
+
+/// Harmonic Sliver — {1}{G}{W} 1/1. All Slivers have "When this enters,
+/// destroy target artifact or enchantment."
+pub fn harmonic_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers destroy an artifact/enchantment on entry.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                ability: Box::new(etb(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                })),
+            },
+        }],
+        ..sliver("Harmonic Sliver", cost(&[generic(1), g(), w()]), 1, 1)
+    }
+}
+
+/// Telekinetic Sliver — {2}{U}{U} 2/2. All Slivers have "{T}: Tap target
+/// permanent."
+pub fn telekinetic_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have {T}: Tap target permanent.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::Tap {
+                        what: target_filtered(SelectionRequirement::Permanent),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Telekinetic Sliver", cost(&[generic(2), u(), u()]), 2, 2)
+    }
+}
+
+/// Dormant Sliver — {2}{G}{U} 2/2. All Slivers have defender and "When this
+/// enters, draw a card."
+pub fn dormant_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "All Slivers have defender.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: all_slivers(),
+                    keyword: Keyword::Defender,
+                },
+            },
+            StaticAbility {
+                description: "All Slivers cantrip on entry.",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                    ability: Box::new(etb(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    })),
+                },
+            },
+        ],
+        ..sliver("Dormant Sliver", cost(&[generic(2), g(), u()]), 2, 2)
+    }
+}
+
+/// Opaline Sliver — {1}{W}{U} 2/2. All Slivers have "Whenever this becomes
+/// the target of a spell, you may draw a card." (Printed: an opponent's
+/// spell; the caster gate isn't modeled.)
+pub fn opaline_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers may cantrip when targeted.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                    effect: Effect::MayDo {
+                        description: "Draw a card?".into(),
+                        body: Box::new(Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        }),
+                    },
+                }),
+            },
+        }],
+        ..sliver("Opaline Sliver", cost(&[generic(1), w(), u()]), 2, 2)
+    }
+}
+
+/// Ward Sliver — {4}{W} 2/2. ETB: choose a color; all Slivers have
+/// protection from the chosen color.
+pub fn ward_sliver() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have protection from the chosen color.",
+            effect: StaticEffect::GrantProtectionFromChosenColor {
+                applies_to: all_slivers(),
+            },
+        }],
+        ..sliver("Ward Sliver", cost(&[generic(4), w()]), 2, 2)
+    }
+}
+
+/// Cautery Sliver — {R}{W} 2/2. All Slivers have "{1}, Sacrifice: 1 damage
+/// to any target" and "{1}, Sacrifice: Prevent the next 1 damage to any target."
+pub fn cautery_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "All Slivers have {1}, Sacrifice: 1 damage to any target.",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: all_slivers(),
+                    ability: ActivatedAbility {
+                        mana_cost: cost(&[generic(1)]),
+                        sac_cost: true,
+                        effect: Effect::DealDamage {
+                            to: Selector::Target(0),
+                            amount: Value::Const(1),
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+            StaticAbility {
+                description: "All Slivers have {1}, Sacrifice: Prevent the next 1 damage.",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: all_slivers(),
+                    ability: ActivatedAbility {
+                        mana_cost: cost(&[generic(1)]),
+                        sac_cost: true,
+                        effect: Effect::PreventNextDamage {
+                            target: Selector::Target(0),
+                            amount: Value::Const(1),
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+        ],
+        ..sliver("Cautery Sliver", cost(&[r(), w()]), 2, 2)
+    }
+}
+
+/// Crystalline Crawler — {4} 1/1 Construct. Converge ETB counters; remove a
+/// counter: any-color mana; {T}: add a counter.
+pub fn crystalline_crawler() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Crystalline Crawler",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ConvergedValue,
+        })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

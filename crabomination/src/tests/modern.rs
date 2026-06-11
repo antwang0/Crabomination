@@ -54665,3 +54665,218 @@ fn vexing_shusher_protects_a_spell() {
     }
     assert!(g.battlefield_find(bear2).is_some(), "shushed spell resolved through the counter");
 }
+
+// ── Sliver wave 2: granted activations + utility ──────────────────────────────
+
+/// Crypt Sliver's granted tap ability regenerates a target Sliver.
+#[test]
+fn crypt_sliver_taps_to_regenerate() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crypt_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    g.clear_sickness(s);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: Some(Target::Permanent(s)), x_value: None,
+    }).expect("tap to regenerate itself");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(s)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(s).is_some(), "regen shield saved the Sliver");
+}
+
+/// Hibernation Sliver's granted ability bounces for 2 life.
+#[test]
+fn hibernation_sliver_bounce_for_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hibernation_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, x_value: None,
+    }).expect("pay 2 life, bounce");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == s), "back to hand");
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+}
+
+/// Necrotic Sliver's granted vindicate destroys any permanent.
+#[test]
+fn necrotic_sliver_vindicates() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::necrotic_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    g.clear_sickness(s);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: Some(Target::Permanent(land)), x_value: None,
+    }).expect("sac to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+    assert!(g.battlefield_find(s).is_none(), "sliver sacrificed as cost");
+}
+
+/// Acidic Sliver's granted sac ability burns any target.
+#[test]
+fn acidic_sliver_sac_burn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::acidic_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac to burn");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "2 damage");
+    assert!(g.battlefield_find(s).is_none(), "sacrificed");
+}
+
+/// Harmonic Sliver's granted ETB destroys an artifact or enchantment.
+#[test]
+fn harmonic_sliver_etb_naturalize() {
+    let mut g = two_player_game();
+    let mine_ = g.add_card_to_battlefield(1, catalog::howling_mine());
+    g.add_card_to_battlefield(0, catalog::harmonic_sliver());
+    let s = g.add_card_to_hand(0, catalog::plated_sliver());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, s);
+    assert!(g.battlefield_find(mine_).is_none(), "artifact destroyed by the granted ETB");
+}
+
+/// Telekinetic Sliver's granted tap ability taps a permanent.
+#[test]
+fn telekinetic_sliver_taps_permanent() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::telekinetic_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    g.clear_sickness(s);
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: Some(Target::Permanent(land)), x_value: None,
+    }).expect("tap target");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped);
+}
+
+/// Dormant Sliver: defender grant + ETB cantrip.
+#[test]
+fn dormant_sliver_defender_and_cantrip() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::dormant_sliver());
+    let hand_before = g.players[0].hand.len();
+    let s = g.add_card_to_hand(0, catalog::plated_sliver());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, s);
+    assert!(g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Defender));
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "hand count: -cast +draw, net +1 over the pre-add baseline");
+}
+
+/// Opaline Sliver offers a draw when a Sliver is targeted.
+#[test]
+fn opaline_sliver_draws_when_targeted() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::opaline_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::might_sliver()); // 4/4 w/ self-buff
+    let hand_before = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(s)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the sliver");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "targeting fed a draw");
+}
+
+/// Ward Sliver: ETB color choice grants all Slivers protection from it.
+#[test]
+fn ward_sliver_grants_chosen_protection() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    let w_ = g.add_card_to_hand(0, catalog::ward_sliver());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, w_);
+    let other = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    assert!(
+        g.computed_permanent(other)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Protection(Color::Red)),
+        "protection from the chosen color reaches every Sliver"
+    );
+    // A red burn spell can't even target the Sliver now.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(other)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "protection blocks targeting");
+}
+
+/// Cautery Sliver grants both the ping and the prevention sac abilities.
+#[test]
+fn cautery_sliver_ping_and_shield() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cautery_sliver());
+    let a = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    let b_ = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    g.players[0].mana_pool.add_colorless(2);
+    // Ability 0: ping the opponent.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: a, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac-ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+    // Ability 1: shield self with prevent-next-1, then take a 1-damage ping.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: b_, ability_index: 1, target: Some(Target::Player(0)), x_value: None,
+    }).expect("sac-shield");
+    drain_stack(&mut g);
+    let ctx = crate::game::effects::EffectContext::for_spell(1, Some(Target::Player(0)), 0, 0);
+    g.resolve_effect(
+        &crate::effect::Effect::DealDamage {
+            to: crate::effect::Selector::Target(0),
+            amount: crate::effect::Value::Const(1),
+        },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].life, 20, "prevention shield soaked the ping");
+}
+
+/// Crystalline Crawler: converge counters in, counter-out mana, tap to grow.
+#[test]
+fn crystalline_crawler_counter_mana_loop() {
+    let mut g = two_player_game();
+    let cc = g.add_card_to_hand(0, catalog::crystalline_crawler());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, cc);
+    assert_eq!(
+        g.battlefield_find(cc).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4, "converge: one counter per color spent"
+    );
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cc, ability_index: 0, target: None, x_value: None,
+    }).expect("remove a counter for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    assert_eq!(
+        g.battlefield_find(cc).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3
+    );
+}

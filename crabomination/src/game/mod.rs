@@ -8436,6 +8436,22 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                     None => vec![],
                 }
             }
+            // Ward Sliver — the granted protection color comes off the
+            // source's ETB `chosen_color` stamp; inert until chosen.
+            StaticEffect::GrantProtectionFromChosenColor { applies_to } => {
+                match (card.chosen_color, selector_to_affected(applies_to, card)) {
+                    (Some(color), Some(affected)) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(Keyword::Protection(color)),
+                    }],
+                    _ => vec![],
+                }
+            }
             StaticEffect::LoseKeyword { applies_to, keyword } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {

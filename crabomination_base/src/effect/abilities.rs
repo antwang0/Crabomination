@@ -89,6 +89,10 @@ pub enum StaticEffect {
     },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// "All [filter] have protection from the chosen color" — the color is
+    /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
+    /// until the choice is made.
+    GrantProtectionFromChosenColor { applies_to: Selector },
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.
