@@ -297,6 +297,17 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **THB cards deferred (each wants one primitive):**
+  - **Heliod's Intervention** — modal X-target destroy ("destroy X target
+    artifacts and/or enchantments"); needs a plain `DestroyTargets` sibling
+    of `DestroyTargetsPolymorph` plus modal-X target collection.
+  - **Shark Typhoon** — X/X token where X = the triggering spell's mana
+    value; `TokenDefinition.power` is a fixed `i32`, so dynamic-P/T token
+    mints need a `Value`-powered mint rider. Also X-cycling.
+  - **Nyxbloom Ancient** (mana tripling), **Polukranos, Unchained**
+    (escape-with-counters + fight activation), **Elspeth Conquers Death**
+    (saga + cost tax + reanimate chapter) — all primitives exist in parts;
+    just card work.
 - ⏳ **Noticed this run (gods / rope / split-second batch):**
   - **Rope client UI** — the server's `CRAB_ACTION_TIMEOUT_SECS` rope sends
     only an `ActionError` notice when it acts for a stalled seat; a visible
