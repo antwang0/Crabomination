@@ -175,10 +175,11 @@ not how Magic works" moments.
   and true "choose targets as it resolves".
 - 🟡 **Targeting refinements:** resolution-time legality re-check (CR 608.2b)
   ships for single-target spells aimed at battlefield permanents (zone-gone /
-  filter-mismatch / granted Hexproof-Shroud → fizzle to graveyard) **and for
-  multi-target spells (all-illegal → fizzle; any legal target → resolve)**.
-  Remaining: "up to N targets", "target each", "another target",
-  protection-from-color re-check.
+  filter-mismatch / granted Hexproof-Shroud → fizzle to graveyard), **for
+  multi-target spells (all-illegal → fizzle; any legal target → resolve)**,
+  and **for Aura spells** (illegal enchant target → countered, never enters;
+  bestow exempt per CR 702.103e). Remaining: "up to N targets", "target
+  each", "another target", protection-from-color re-check.
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (CR 612 —
   `ReplaceColorWord`/`ReplaceBasicLandType`; Trait Doctoring, Mind Bend);
   land-type statics ✅ (`StaticEffect::LandTypeChanger` — Blood Moon, Magus
@@ -487,7 +488,11 @@ feature; sweep card-batch by card-batch.
   keyword (Tide uses `ExileReturnZone::BattlefieldTapped` linked exile).
   Remaining: Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift (`shortcut::soulshift(n)` — CR 702.46,
-  dies → `MayDo(return target Spirit MV≤n from your graveyard)`), ⏳ Offering, ⏳ Epic, ⏳ Absorb,
+  dies → `MayDo(return target Spirit MV≤n from your graveyard)`), ⏳ Offering,
+  ✅ Epic (CR 702.50 — `Keyword::Epic` + `Player.epic_spells` snapshot:
+  permanent cast lock + per-upkeep copy via `process_epic`; Enduring Ideal),
+  ✅ Umbra armor (CR 702.89 — `Keyword::UmbraArmor` + `apply_umbra_armor` at
+  both destroy funnels; Hyena/Spider Umbra), ⏳ Absorb,
   ✅ Affinity for artifacts (`CardDefinition.affinity_filter` generic reduction;
   Frogmite, Myr Enforcer, Thoughtcast, Somber Hoverguard, Qumulox, Sojourner's
   Companion, Carapace Forger), ✅ Entwine (CR 702.41 —

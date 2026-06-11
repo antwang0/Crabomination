@@ -282,6 +282,31 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed (Modern staples batch, 2026-06-11):** 38 staples shipped
+  across three waves (see git). Deferred, each wanting one primitive:
+  - **Conspicuous Snoop** — "has all activated abilities of the top Goblin
+    card" needs a live ability-sharing static over a non-battlefield zone.
+  - **Alpine Moon** — name-keyed land-ability stripping wants a named
+    variant of `LandTypeChanger` / `AffectedPermanents` name filter.
+  - **Bring to Light** — search→exile→cast-free with a converge-scaled MV
+    gate (`ManaValueAtMost(ConvergedValue)` filter doesn't exist).
+  - **Ad Nauseam** — repeat-any-number-of-times reveal loop with a
+    per-iteration stop decision.
+  - **Spellskite** — change a target of target spell/ability to this
+    ({U/P} activation; needs a redirect-target effect).
+  - **Kataki, War's Wage** — "all artifacts have [upkeep sac tax]" needs
+    the granted-triggered-ability static framework (same gap as Nadu).
+  - **Porphyry Nodes** — "destroy the creature with the least power" wants
+    a least-power-any-controller selector.
+  - **Shield of the Oversoul / Steel of the Godhead** — conditional-on-host-
+    color aura bonuses (EquipBonus is unconditional).
+  - **Pyxis of Pandemonium / Ojer Taq** — face-down exile piles / DFC god.
+  - **Witchbane Orb** ships without the destroy-Curses ETB (player-attached
+    Curses unmodeled). **Counterbalance**'s reveal is a MayDo (bots decline
+    by default).
+  - **Lightning Storm / Ravenous Trap** — any-player stack activations and
+    a per-player cards-into-graveyard-this-turn tally, respectively.
+
 - ⏳ **Noticed this run (follow-ups sweep):**
   - **`Effect::MayPay` for a `wants_ui` seat** still answers through the
     synchronous decider (Springheart's landfall pay) — the `MayDo`
