@@ -119,7 +119,7 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     // Everything else the catalog defines (generated aggregate —
     // `scripts/gen_factory_lists.py`). Appended last so the curated
     // entries above win the `name → factory` race for duplicate names.
-    all.extend_from_slice(sets::all_factories::all_catalog_card_factories());
+    all.extend(sets::all_factories::all_catalog_card_factories());
     // Dedupe by function-pointer address so repeated copies of the same
     // card across decks/cube don't bloat the registry.
     let mut seen = std::collections::HashSet::new();

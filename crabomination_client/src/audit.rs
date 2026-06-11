@@ -195,10 +195,12 @@ pub fn catalog() -> Vec<CatalogEntry> {
         // function pointer keeps the dedup cheap. Exposes the real STX
         // printed cards + the synthesised batch-suffixed variants to
         // the audit picker.
-        tag(
-            crabomination::catalog::sets::stx::all_stx_card_factories(),
-            AuditPool::Stx,
-        );
+        if let Some((_, stx)) = crabomination::catalog::sets::all_factories::per_set_card_factories()
+            .iter()
+            .find(|(name, _)| *name == "stx")
+        {
+            tag(stx, AuditPool::Stx);
+        }
         tag(crabomination::demo::brg_combo_deck(), AuditPool::BrgDemo);
         tag(crabomination::demo::goryos_vengeance_deck(), AuditPool::GoryoDemo);
         tag(
