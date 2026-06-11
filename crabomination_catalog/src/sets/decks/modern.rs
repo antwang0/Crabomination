@@ -49106,6 +49106,12 @@ pub fn destiny_spinner() -> CardDefinition {
                 keywords: vec![Keyword::Trample, Keyword::Haste],
                 duration: Duration::EndOfTurn,
             },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // ── modern_decks: Sliver tribal expansion + tribute / clash / tempting offer ──
 
 /// Sidewinder Sliver — {W} 1/1. All Sliver creatures have flanking.

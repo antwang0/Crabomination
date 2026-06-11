@@ -54277,6 +54277,8 @@ fn destiny_spinner_uncounterable_and_animate() {
     let cp = g.computed_permanent(forest).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
     assert!(cp.card_types.contains(&CardType::Creature));
+}
+
 // ── Sliver tribal expansion + tribute / clash / tempting offer ────────────────
 
 /// Sidewinder Sliver gives all Slivers flanking; Fury Sliver double strike.
