@@ -282,37 +282,15 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Noticed this run (modern_decks batches 4-6):**
-  - **Nadu, Winged Wisdom** — wants a granted "becomes the target of a
-    spell/ability" trigger with a twice-per-turn-per-creature cap.
-  - **Six** — wants a "nonland permanent cards in your graveyard have
-    retrace during your turn" static grant over graveyard cards.
-  - **Ajani, Nacatl Pariah's −4** — "each opponent keeps one of each
-    permanent type, sacrifices the rest" (Cataclysm family primitive).
-  - **Kozilek, the Broken Reality** — manifest-from-HAND (Manifest reads
-    the library today).
-  - **Ulamog, the Defiler** — Ward—sacrifice two permanents (WardCost is
-    single-sacrifice), exile-top-half-of-library Value, counters-scaled
-    Annihilator X.
-  - **Springheart Nantuko** — landfall MayPay token-copy-of-host needs an
-    attached-host selector + a "didn't create this way" else-branch.
-  - **Not Dead After All / Role tokens** — token Auras (Wicked Role)
-    aren't modeled.
-  - **Indomitable Creativity** — X-target destroy with per-destroyed
-    reveal-until (multi-target X spells unsupported).
-  - **Clash** (CR 701.30 ✅ this run) is synchronous-decider only; a
-    `wants_ui` seat should get the bottom-or-keep prompt.
+- ⏳ **Noticed (modern_decks batches 4-6):** all the listed cards shipped
+  (Nadu / Six / Ajani MDFC / Kozilek / Ulamog the Defiler / Springheart /
+  Not Dead After All / Indomitable Creativity — each with its primitive).
+  Remaining: **Clash** (CR 701.30) is synchronous-decider only; a
+  `wants_ui` seat should get the bottom-or-keep prompt.
 
-- ⏳ **Noticed this run (staples expansion / audit):**
-  - **The Ozolith** — wants a "creature you control leaves with counters →
-    move them here" trigger reading the leaver's full counter map from LKI
-    (the modular transfer only moves +1/+1). Skipped this run.
-  - **Soulless Jailer / Underworld Breach / Karn, the Great Creator** — each
-    wants one static: permanent-cards-can't-enter-from-graveyards (a broader
-    `GraveyardLibraryLockdown`), gy-cards-gain-escape, and
-    opponents-can't-activate-artifact-abilities + the -2 wish.
-  - **Sunken Citadel** — "spend only on abilities of land sources" needs a
-    new `SpendRestriction` variant.
+- ⏳ **Noticed (staples expansion / audit):** The Ozolith, Soulless Jailer,
+  Underworld Breach, Karn the Great Creator, and Sunken Citadel all shipped
+  with their primitives. Remaining:
   - **Ulamog, the Ceaseless Hunger** cast trigger is modeled as two
     single-target exile triggers (multi-target triggers still unsupported —
     see the existing multi-target ETB note).
@@ -323,18 +301,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     blockers are at lethal (CR 510.1d) — the default split now assigns fully.
 
 - ⏳ **Noticed this run (multikicker / mill batch):**
-  - **Reveal-until-land mill** — Consuming Aberration's cast trigger and Mind
-    Grind want a "reveal from top until N land cards, mill them" primitive
-    (Aberration approximates as mill 3).
-  - **Sphinx's Tutelage** — mill-2-with-repeat-while-colors-match needs a
-    loop-until predicate over the milled pair.
   - **MayDo wants_ui suspend** ✅ — `Effect::MayDo` now suspends for a
     `wants_ui` controller via the stash-and-rerun path
     (`PendingEffectState::MayDoAnswerPending`); the client's existing
     OptionalTrigger yes/no modal answers it. Bots/tests still use the
     synchronous decider.
-  - **Level up (CR 702.87)** — Student of Warfare-style level counters with
-    banded P/T/keywords are unmodeled.
   - **Squad/Replicate/Multikicker stepper cap** — the bot probes kick counts
     1–4; an exact max-affordable computation would kick higher with big pools.
 
@@ -1684,7 +1655,7 @@ picking an item up.
 - ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
-- ✅ **CR 701.12 — Exchange (control)** — `Effect::ExchangeControl { a, b }` swaps the controllers of two resolved permanents simultaneously (Switcheroo). Exchange-life-totals + exchange-hand/graveyard already ✅. Remaining ⏳: an *until-end-of-turn* exchange variant and multi-target ETB delivery (Vedalken Plotter — see Follow-ups).
+- ✅ **CR 701.12 — Exchange (control)** — `Effect::ExchangeControl { a, b }` swaps the controllers of two resolved permanents simultaneously (Switcheroo). Exchange-life-totals + exchange-hand/graveyard already ✅. Vedalken Plotter ✅ via `Effect::ExchangeControlChoosing` (controller picks their own permanent at resolution, the opponent's is the cast target). Remaining ⏳: an *until-end-of-turn* exchange variant.
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker. ⚠️ Audit 2026-06-11: several arms bypass the funnel entirely (Living End, SacrificeAndRemember, Ward sac costs, Fading/Vanishing/cumulative upkeep) — dies triggers and Persist/Undying silently dropped; see audit P1 death-funnel family.
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
 - ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics. (Loyalty activation now honors `detained_by`; Detain's target filter is enforced at cast time.)
