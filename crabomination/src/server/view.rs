@@ -33,6 +33,13 @@ pub fn project_spectator(state: &GameState) -> ClientView {
 /// Shared projection core. `viewer` is `Some(seat)` for a seated player or
 /// `None` for a spectator (no seat, sees only public information).
 fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
+    // The projection reads the layer system many times (battlefield rows,
+    // legal attackers/blockers, combat preview) — share one gather. Dry-run
+    // affordance probes mutate *clones*, which start unfrozen.
+    state.with_frozen_layers(|state| project_for_inner(state, viewer))
+}
+
+fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
     let computed = state.compute_battlefield();
     // A spectator can't act, so skip the affordance dry-runs entirely (they
     // index `state.players[seat]` and would panic on the sentinel anyway).

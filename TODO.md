@@ -234,19 +234,22 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ### P2 — performance
 
-- ⏳ **Uncached layer recomputation is the dominant engine cost.**
-  `compute_battlefield()` / `computed_permanent()` rebuild the full
-  continuous-effect set per call (`gather_continuous_effects_inner`,
-  `mod.rs:2742`, clone-heavy). Called per SBA pass (`stack.rs:1823`), twice
-  each in `declare_attackers`/`declare_blockers`, per blocker in
-  `legal_blockers` and per blocker×attacker pair in the bot's
-  `pick_blocks`, per candidate in every `EachPermanent` filter
-  (`eval.rs:1016`), twice per protection check (`mod.rs:3506`), and twice
-  per non-combat damage event — O(N²·statics) per resolution. **A
-  generation-counter dirty-flag cache (invalidate on battlefield /
-  continuous-effects mutation) is the single highest-leverage perf change
-  in the codebase.** Helpers like `blocker_can_block_attacker` should also
-  take a precomputed `&[ComputedPermanent]` snapshot.
+- 🟡 **Uncached layer recomputation is the dominant engine cost.**
+  Largely addressed via `GameState::with_frozen_layers` — a scoped,
+  lazily-filled memo of the gathered continuous-effect set (sound by
+  construction: the closure only holds `&GameState`; clones reset to
+  unfrozen, so bot dry-runs stay correct). Frozen scopes now cover
+  `resolve_selector` (every `EachPermanent`/`ControlledBy` filter),
+  `legal_attackers`/`legal_blockers`, the bot's `pick_blocks`, the full
+  client-view projection (`project_for`), and
+  `damage_prevented_by_protection`. Test
+  `frozen_layers_match_unfrozen_computation`. (A global generation-counter
+  dirty-flag cache was rejected: `GameState` fields are mutated directly
+  throughout tests/server, so invalidation can't be guaranteed.)
+  Remaining: within a frozen scope `compute_battlefield` still re-applies
+  layers per call (`apply_layers` over all permanents per blocker in
+  `legal_blockers`); hoist `&[ComputedPermanent]` snapshots there if
+  profiles still show it.
 - ✅ **`static_str_serde::intern` leaks unboundedly**
   (`crabomination_base/src/static_str_serde.rs:38` via `tokens.rs:47`).
   Bare `Box::leak` with no dedup table, called once per token mint —

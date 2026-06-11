@@ -173,6 +173,35 @@ fn deserialize_decider<'de, D: serde::Deserializer<'de>>(
 
 // ── Game state ────────────────────────────────────────────────────────────────
 
+/// Interior-mutable memo for [`GameState::with_frozen_layers`]: the gathered
+/// continuous-effect set, shared via `Arc` so per-permanent layer passes
+/// don't re-clone it. `Mutex` (not `RefCell`) keeps `GameState: Sync` for the
+/// server's `Arc<GameState>` snapshot sink. Clones reset to unfrozen — a bot
+/// dry-run clone taken inside a freeze scope mutates, so it must re-gather.
+#[derive(Default)]
+pub(crate) struct LayerFreeze(std::sync::Mutex<LayerFreezeState>);
+
+#[derive(Default)]
+struct LayerFreezeState {
+    /// Nesting depth of active `with_frozen_layers` scopes; 0 = unfrozen.
+    depth: u32,
+    /// Lazily-gathered effect set, populated on the first computed read
+    /// inside a scope and cleared when the outermost scope exits.
+    memo: Option<std::sync::Arc<Vec<ContinuousEffect>>>,
+}
+
+impl LayerFreeze {
+    fn lock(&self) -> std::sync::MutexGuard<'_, LayerFreezeState> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+impl Clone for LayerFreeze {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+
 /// Every from-hand affordance hint for one seat, produced in a single sweep
 /// by [`GameState::compute_hand_affordances`]. Each field is the set of
 /// CardIds the client should highlight for that affordance; the view layer
@@ -610,6 +639,11 @@ pub struct GameState {
     /// printed types instead of recursing through `computed_permanent`.
     #[serde(skip)]
     pub(crate) in_layer_gather: std::sync::atomic::AtomicBool,
+    /// Scoped memo of the gathered continuous-effect set — see
+    /// [`GameState::with_frozen_layers`]. Always `None` outside a freeze
+    /// scope; clones and serde restores start unfrozen.
+    #[serde(skip)]
+    pub(crate) layer_freeze: LayerFreeze,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -943,6 +977,7 @@ impl Clone for GameState {
             mana_production_doublers: self.mana_production_doublers,
             resolving_source: self.resolving_source.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
+            layer_freeze: LayerFreeze::default(),
             additional_combat_phases: self.additional_combat_phases,
             additional_post_main_combats: self.additional_post_main_combats,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
@@ -1067,6 +1102,7 @@ impl GameState {
             mana_production_doublers: 0,
             resolving_source: None,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
+            layer_freeze: LayerFreeze::default(),
             additional_combat_phases: 0,
             additional_post_main_combats: 0,
             combat_damage_prevented_creatures: Vec::new(),
@@ -2942,7 +2978,63 @@ impl GameState {
     /// Compute the current derived state of all battlefield permanents after
     /// applying all active continuous effects in layer order.
     pub fn compute_battlefield(&self) -> Vec<ComputedPermanent> {
+        if let Some(fx) = self.frozen_effects() {
+            return crate::game::layers::apply_layers(&self.battlefield, &fx);
+        }
         crate::game::layers::apply_layers(&self.battlefield, &self.gather_continuous_effects())
+    }
+
+    /// Run `f` with the gathered continuous-effect set memoized, so every
+    /// `computed_permanent` / `compute_battlefield` call inside reuses one
+    /// gather instead of rebuilding the full effect set per call. Sound by
+    /// construction: `f` only receives `&GameState`, so none of the gather's
+    /// inputs (battlefield, continuous effects, attachments…) can change
+    /// while frozen. The memo fills lazily on the first computed read, so a
+    /// scope that never needs the layer system costs nothing. Nested freezes
+    /// reuse the outer memo. Use this around any read-only loop that filters
+    /// or inspects many permanents.
+    pub fn with_frozen_layers<R>(&self, f: impl FnOnce(&Self) -> R) -> R {
+        self.layer_freeze.lock().depth += 1;
+        // Decrement on drop (not after `f`) so a panicking assertion inside
+        // a test closure can't leave a stale memo behind.
+        struct Unfreeze<'a>(&'a GameState);
+        impl Drop for Unfreeze<'_> {
+            fn drop(&mut self) {
+                let mut st = self.0.layer_freeze.lock();
+                st.depth -= 1;
+                if st.depth == 0 {
+                    st.memo = None;
+                }
+            }
+        }
+        let _guard = Unfreeze(self);
+        f(self)
+    }
+
+    /// The memoized continuous-effect set when inside a
+    /// [`with_frozen_layers`](Self::with_frozen_layers) scope (gathering and
+    /// caching it on first use), else `None`.
+    fn frozen_effects(&self) -> Option<std::sync::Arc<Vec<ContinuousEffect>>> {
+        // Mid-gather reads see the printed-types fallback (`in_layer_gather`
+        // reentrancy guard); don't serve or populate the memo from them.
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            return None;
+        }
+        {
+            let st = self.layer_freeze.lock();
+            if st.depth == 0 {
+                return None;
+            }
+            if let Some(fx) = &st.memo {
+                return Some(fx.clone());
+            }
+        }
+        // First computed read in this scope: gather outside the lock (the
+        // gather itself re-enters `frozen_effects` via guarded eval paths).
+        let fx = std::sync::Arc::new(self.gather_continuous_effects());
+        let mut st = self.layer_freeze.lock();
+        st.memo = Some(fx.clone());
+        Some(fx)
     }
 
     /// Collect every continuous effect currently active in the game: the
@@ -3747,6 +3839,9 @@ impl GameState {
     /// all but one.
     pub fn computed_permanent(&self, id: CardId) -> Option<ComputedPermanent> {
         let card = self.battlefield.iter().find(|c| c.id == id)?;
+        if let Some(fx) = self.frozen_effects() {
+            return Some(crate::game::layers::apply_layers_one(card, &fx));
+        }
         Some(crate::game::layers::apply_layers_one(
             card,
             &self.gather_continuous_effects(),
@@ -3766,6 +3861,11 @@ impl GameState {
     /// sides through the layer system so granted protection / color-setting
     /// effects count.
     pub(crate) fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
+        // Both sides read through the layer system — share one gather.
+        self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
+    }
+
+    fn damage_prevented_by_protection_inner(&self, source: CardId, target: CardId) -> bool {
         let Some(tgt) = self.computed_permanent(target) else { return false };
         let src_colors = self
             .computed_permanent(source)

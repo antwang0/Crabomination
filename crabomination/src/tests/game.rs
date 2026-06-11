@@ -6962,3 +6962,26 @@ fn pay_life_amount_suspends_for_wants_ui() {
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(2))).unwrap();
     assert_eq!(g.players[0].life, life_before - 2, "chosen amount of life must be paid");
 }
+
+/// `with_frozen_layers` memoizes the gather without changing results: a
+/// board with an anthem + granted keywords computes identically inside and
+/// outside a freeze scope, and the memo clears when the scope exits.
+#[test]
+fn frozen_layers_match_unfrozen_computation() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    let unfrozen = g.compute_battlefield();
+    let frozen = g.with_frozen_layers(|g| {
+        // Nested freezes reuse the memo.
+        g.with_frozen_layers(|g| g.compute_battlefield())
+    });
+    for (a, b) in unfrozen.iter().zip(frozen.iter()) {
+        assert_eq!((a.id, a.power, a.toughness), (b.id, b.power, b.toughness));
+        assert_eq!(a.keywords, b.keywords);
+    }
+    assert_eq!(unfrozen.iter().find(|c| c.id == bear).unwrap().power, 3, "anthem applied");
+    // Post-scope mutations are seen again (memo cleared).
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+}

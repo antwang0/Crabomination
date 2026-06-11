@@ -246,6 +246,11 @@ impl GameState {
         {
             return Vec::new();
         }
+        // Per-candidate computed reads below — share one layer gather.
+        self.with_frozen_layers(|g| g.legal_attackers_inner(seat))
+    }
+
+    fn legal_attackers_inner(&self, seat: usize) -> Vec<CardId> {
         use crate::card::Keyword;
         self.battlefield
             .iter()
@@ -297,12 +302,16 @@ impl GameState {
         if self.step != crate::TurnStep::DeclareBlockers || self.attacking().is_empty() {
             return Vec::new();
         }
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == seat && c.can_block())
-            .filter(|c| self.can_block_any_attacker(c.id))
-            .map(|c| c.id)
-            .collect()
+        // `can_block_any_attacker` recomputes the battlefield per blocker —
+        // share one layer gather across the scan.
+        self.with_frozen_layers(|g| {
+            g.battlefield
+                .iter()
+                .filter(|c| c.controller == seat && c.can_block())
+                .filter(|c| g.can_block_any_attacker(c.id))
+                .map(|c| c.id)
+                .collect()
+        })
     }
 
     /// Hand cards the viewer could cast *with their Kicker paid* right now

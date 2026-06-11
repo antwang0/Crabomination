@@ -9040,6 +9040,12 @@ impl GameState {
     }
 
     pub(crate) fn resolve_selector(&self, sel: &Selector, ctx: &EffectContext) -> Vec<EntityRef> {
+        // Multi-candidate selectors run layer-aware filters per permanent;
+        // freeze the gather so the whole resolution shares one effect set.
+        self.with_frozen_layers(|g| g.resolve_selector_inner(sel, ctx))
+    }
+
+    fn resolve_selector_inner(&self, sel: &Selector, ctx: &EffectContext) -> Vec<EntityRef> {
         match sel {
             Selector::None => vec![],
             Selector::This => ctx.source.map(EntityRef::Permanent).into_iter().collect(),

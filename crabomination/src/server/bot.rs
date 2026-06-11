@@ -1649,6 +1649,12 @@ pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, Card
 }
 
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
+    // The heuristic probes block legality per blocker×attacker pair, each a
+    // layer-aware check — share one gather across the whole scan.
+    state.with_frozen_layers(|state| pick_blocks_inner(state, seat))
+}
+
+fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // Improved blocker heuristic (push claude/modern_decks):
     //   1. Build the candidate set of (attacker, attacker_power,
     //      attacker_toughness, has_flying) attacking us.
