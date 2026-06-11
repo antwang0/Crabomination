@@ -1953,6 +1953,7 @@ pub fn extort() -> TriggeredAbility {
             description: "Extort — pay {W/B}: drain 1".into(),
             mana_cost: crate::mana::cost(&[crate::mana::hybrid(Color::White, Color::Black)]),
             body: Box::new(drain(1)),
+            else_: None,
         },
     }
 }

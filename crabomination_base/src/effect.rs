@@ -1233,6 +1233,10 @@ pub enum EventScope {
     /// checks the targeted permanent's controller == trigger controller and
     /// the caster is an opponent.
     YourPermanentTargetedByOpponent,
+    /// A creature the source's controller controls (including the source)
+    /// becomes the target of any spell or ability, friendly or hostile.
+    /// Used with `EventKind::BecameTarget` — Nadu, Winged Wisdom.
+    YourCreatureTargeted,
     /// A creature an **opponent** controls attacks the source's controller
     /// (or a planeswalker they control). Used with `EventKind::Attacks`; the
     /// dispatcher binds the attacking creature's controller into the
@@ -1257,11 +1261,15 @@ pub struct EventSpec {
     /// to false via `#[serde(default)]` for snapshot back-compat. Dramatic Finale.
     #[serde(default)]
     pub once_per_turn: bool,
+    /// "This ability triggers only N times each turn" counted per event
+    /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
+    #[serde(default)]
+    pub per_subject_cap: Option<u8>,
 }
 
 impl EventSpec {
     pub fn new(kind: EventKind, scope: EventScope) -> Self {
-        Self { kind, scope, filter: None, once_per_turn: false }
+        Self { kind, scope, filter: None, once_per_turn: false, per_subject_cap: None }
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
@@ -1479,6 +1487,9 @@ pub enum Effect {
         description: String,
         mana_cost: crate::mana::ManaCost,
         body: Box<Effect>,
+        /// Runs when the cost was declined or unpayable ("if you don't, …").
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
     },
 
     /// Reveal-from-hand gate: "you may reveal a [filter] card from your

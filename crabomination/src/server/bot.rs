@@ -2406,6 +2406,7 @@ mod tests {
                     description: "you may pay".to_string(),
                     mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
                     body: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }),
+                    else_: None,
                 },
             }],
             ..Default::default()

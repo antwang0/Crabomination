@@ -16491,6 +16491,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                     Value::Const(100),
                 )),
                 once_per_turn: false,
+                per_subject_cap: None,
             },
             effect: Effect::WinGame { who: PlayerRef::You },
         }],
@@ -27080,6 +27081,7 @@ pub fn frenzied_goblin() -> CardDefinition {
                 keyword: Keyword::CantBlock,
                 duration: Duration::EndOfTurn,
             }),
+            else_: None,
         })],
         ..Default::default()
     }
@@ -41454,6 +41456,7 @@ pub fn savai_thundermane() -> CardDefinition {
                     },
                     Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
                 ])),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -46470,10 +46473,101 @@ pub fn the_ozolith() -> CardDefinition {
                 scope: EventScope::YourControl,
                 filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 once_per_turn: false,
+                per_subject_cap: None,
             },
             effect: Effect::MoveAllCounters {
                 from: Selector::This,
                 to: target_filtered(SelectionRequirement::Creature),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nadu, Winged Wisdom — {1}{G}{U} 3/4 Bird Wizard, flying. Whenever a
+/// creature you control becomes the target of a spell or ability, reveal
+/// the top card: land → battlefield, else → hand. Twice per creature per
+/// turn.
+pub fn nadu_winged_wisdom() -> CardDefinition {
+    CardDefinition {
+        name: "Nadu, Winged Wisdom",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                kind: EventKind::BecameTarget,
+                scope: EventScope::YourCreatureTargeted,
+                filter: None,
+                once_per_turn: false,
+                per_subject_cap: Some(2),
+            },
+            effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Springheart Nantuko — {1}{G} 1/1 Enchantment Creature, Bestow {1}{G};
+/// enchanted creature gets +1/+1. Landfall — you may pay {1}{G}: if attached
+/// to a creature you control, token copy of it; otherwise a 1/1 Insect.
+pub fn springheart_nantuko() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let insect = TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Springheart Nantuko",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        bestow: Some(cost(&[generic(1), g()])),
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {1}{G}: copy the host (or make an Insect)?".into(),
+                mana_cost: cost(&[generic(1), g()]),
+                body: Box::new(Effect::If {
+                    cond: Predicate::SelectorExists(Selector::AttachedTo(Box::new(
+                        Selector::This,
+                    ))),
+                    then: Box::new(Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        source: Selector::AttachedTo(Box::new(Selector::This)),
+                        extra_creature_types: vec![],
+                        non_legendary: true,
+                        override_pt: None,
+                    }),
+                    else_: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: insect,
+                    }),
+                }),
+                else_: None,
             },
         }],
         ..Default::default()

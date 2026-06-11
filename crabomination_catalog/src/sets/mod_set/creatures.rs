@@ -7035,6 +7035,7 @@ pub fn mentor_of_the_meek() -> CardDefinition {
                 description: "Pay {1}: draw a card".into(),
                 mana_cost: cost(&[generic(1)]),
                 body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: None,
             },
         }],
         ..Default::default()

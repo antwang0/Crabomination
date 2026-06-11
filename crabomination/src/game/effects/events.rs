@@ -80,6 +80,7 @@ pub(crate) fn event_matches_spec(
         // The "any permanent you control" scope intentionally fires for
         // subjects other than the source, so skip the implicit check there.
         && spec.scope != EventScope::YourPermanentTargetedByOpponent
+        && spec.scope != EventScope::YourCreatureTargeted
     {
         return false;
     }
@@ -236,6 +237,19 @@ pub(crate) fn event_matches_spec(
                 let target_ctrl = state.battlefield_find(*target).map(|c| c.controller);
                 target_ctrl == Some(source.controller)
                     && !state.same_team(*caster, source.controller)
+            } else {
+                false
+            }
+        }
+        EventScope::YourCreatureTargeted => {
+            // Any caster; the targeted permanent must be a creature the
+            // trigger's controller controls (Nadu).
+            if let GameEvent::BecameTarget { target, .. } = event {
+                state
+                    .battlefield_find(*target)
+                    .is_some_and(|c| {
+                        c.controller == source.controller && c.definition.is_creature()
+                    })
             } else {
                 false
             }
@@ -425,6 +439,7 @@ pub(crate) fn emblem_event_matches(
         EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
         EventScope::FromYourGraveyard
         | EventScope::YourPermanentTargetedByOpponent
+        | EventScope::YourCreatureTargeted
         | EventScope::ControllerAttackedByOpponent => false,
     }
 }

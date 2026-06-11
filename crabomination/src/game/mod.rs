@@ -809,6 +809,10 @@ pub struct GameState {
     /// `#[serde(default)]` for snapshot back-compat. Powers Dramatic Finale.
     #[serde(default)]
     pub(crate) triggered_once_per_turn_used: std::collections::HashSet<(CardId, usize)>,
+    /// `EventSpec::per_subject_cap` tallies: fires of a capped trigger this
+    /// turn, keyed by (watcher, event subject). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) per_subject_trigger_uses: std::collections::HashMap<(CardId, CardId), u8>,
     /// CR 724 — the monarch (if any). The monarch draws a card at the
     /// beginning of their end step, and a creature dealing combat damage to
     /// the monarch makes its controller the new monarch. `#[serde(default)]`
@@ -961,6 +965,7 @@ impl Clone for GameState {
             plotted_cards: self.plotted_cards.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
             triggered_once_per_turn_used: self.triggered_once_per_turn_used.clone(),
+            per_subject_trigger_uses: self.per_subject_trigger_uses.clone(),
             monarch: self.monarch,
             day_night: self.day_night,
             previous_turn_active: self.previous_turn_active,
@@ -1083,6 +1088,7 @@ impl GameState {
             plotted_cards: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
             triggered_once_per_turn_used: std::collections::HashSet::new(),
+            per_subject_trigger_uses: std::collections::HashMap::new(),
             monarch: None,
             day_night: None,
             previous_turn_active: None,
@@ -5498,6 +5504,8 @@ impl GameState {
         // (deferred so we don't mutate `self` mid-immutable-borrow).
         let mut once_fired_this_batch: std::collections::HashSet<(CardId, usize)> =
             std::collections::HashSet::new();
+        // `EventSpec::per_subject_cap` fires in this batch (deferred merge).
+        let mut capped_fired_this_batch: Vec<(CardId, CardId)> = Vec::new();
         for card in &self.battlefield {
             let stripped = computed
                 .iter()
@@ -5576,12 +5584,27 @@ impl GameState {
                         continue;
                     }
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                        let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                        // Per-subject cap ("triggers only twice each turn"
+                        // counted per creature — Nadu). Deferred bump (the
+                        // battlefield is immutably borrowed here).
+                        if let (Some(cap), Some(crate::game::effects::EntityRef::Permanent(sid))) =
+                            (ta.event.per_subject_cap, subject)
+                        {
+                            let key = (card.id, sid);
+                            let used = self.per_subject_trigger_uses.get(&key).copied().unwrap_or(0)
+                                + capped_fired_this_batch.iter().filter(|k| **k == key).count() as u8;
+                            if used >= cap {
+                                continue;
+                            }
+                            capped_fired_this_batch.push(key);
+                        }
                         candidates.push(TriggerCandidate {
                             source: card.id,
                             effect: ta.effect.clone(),
                             controller: card.controller,
                             filter: ta.event.filter.clone(),
-                            subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                            subject,
                             event_amount: self.event_amount_for(ev),
                             triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         });
@@ -5597,6 +5620,9 @@ impl GameState {
         }
         for key in once_fired_this_batch.drain() {
             self.triggered_once_per_turn_used.insert(key);
+        }
+        for key in capped_fired_this_batch {
+            *self.per_subject_trigger_uses.entry(key).or_insert(0) += 1;
         }
         // CR 702.130a / 603.10a — Enrage on lethal damage. A creature that
         // dies from the same damage that would trigger its "whenever this is

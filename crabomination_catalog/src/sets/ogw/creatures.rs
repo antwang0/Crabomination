@@ -423,6 +423,7 @@ pub fn murasa_ranger() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(2),
                 }),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -1954,6 +1955,7 @@ pub fn akoum_firebird() -> CardDefinition {
                     what: Selector::This,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 }),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -2040,6 +2042,7 @@ pub fn bearer_of_silence() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature,
             }),
+            else_: None,
         })],
         ..drone("Bearer of Silence", cost(&[crate::mana::generic(1), b()]), 2, 1)
     }
@@ -2120,6 +2123,7 @@ pub fn akoum_stonewaker() -> CardDefinition {
                         body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
                     },
                 ])),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -2177,6 +2181,7 @@ pub fn gravity_negator() -> CardDefinition {
                 keyword: Keyword::Flying,
                 duration: Duration::EndOfTurn,
             }),
+            else_: None,
         })],
         ..drone("Gravity Negator", cost(&[generic(3), u()]), 2, 3)
     }

@@ -1402,6 +1402,7 @@ pub fn lorehold_skirmisher() -> CardDefinition {
                     toughness: Value::Const(0),
                     duration: Duration::EndOfTurn,
                 }),
+                else_: None,
             },
         }],
         ..Default::default()

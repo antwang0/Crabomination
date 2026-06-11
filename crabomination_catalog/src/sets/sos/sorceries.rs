@@ -1252,6 +1252,7 @@ pub fn killians_confidence() -> CardDefinition {
                     what: Selector::This,
                     to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
                 }),
+                else_: None,
             },
         }],
         ..Default::default()

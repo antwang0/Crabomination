@@ -743,11 +743,12 @@ mod tests {
                 who: crate::card::Selector::You,
                 amount: crate::card::Value::Const(2),
             }),
+            else_: None,
         };
         let json = serde_json::to_string(&original).expect("serialize");
         let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
         match parsed {
-            Effect::MayPay { description, mana_cost, body } => {
+            Effect::MayPay { description, mana_cost, body, .. } => {
                 assert_eq!(description, "Pay {1} for great glory?");
                 assert_eq!(mana_cost.cmc(), 1);
                 assert!(matches!(*body, Effect::Draw { .. }));

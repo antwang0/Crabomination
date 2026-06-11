@@ -1229,10 +1229,11 @@ impl GameState {
                 description,
                 mana_cost,
                 body,
+                else_,
             } => {
                 // Sibling to `MayDo`: ask yes/no, then *attempt* to pay
-                // mana. If the controller can't afford the cost the body
-                // is skipped silently (the decision is moot, no error).
+                // mana. If the controller declines or can't afford the
+                // cost the body is skipped and `else_` (if any) runs.
                 // The cost is deducted from the controller's already-
                 // floated mana pool — we don't auto-tap lands inside an
                 // effect (mana abilities aren't activatable mid-resolve
@@ -1243,15 +1244,13 @@ impl GameState {
                     source,
                     description: description.clone(),
                 });
-                if !matches!(answer, DecisionAnswer::Bool(true)) {
-                    return Ok(());
+                let pay = matches!(answer, DecisionAnswer::Bool(true))
+                    && self.players[ctx.controller].mana_pool.pay(mana_cost).is_ok();
+                if pay {
+                    self.run_effect(body, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
                 }
-                // Pre-flight: try paying. On failure, treat as decline.
-                let pool = &mut self.players[ctx.controller].mana_pool;
-                if pool.pay(mana_cost).is_err() {
-                    return Ok(());
-                }
-                self.run_effect(body, ctx, events)?;
                 Ok(())
             }
 

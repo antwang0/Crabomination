@@ -155,6 +155,7 @@ pub fn soulknife_spy() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 }),
+                else_: None,
             },
         }],
         ..Default::default()

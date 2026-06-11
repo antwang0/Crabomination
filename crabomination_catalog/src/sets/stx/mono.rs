@@ -616,6 +616,7 @@ pub fn unwilling_ingredient() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 }),
+                else_: None,
             },
         }],
         ..Default::default()

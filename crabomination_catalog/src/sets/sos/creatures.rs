@@ -2045,6 +2045,7 @@ pub fn tester_of_the_tangential() -> CardDefinition {
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::Const(1),
                     }),
+                    else_: None,
                 },
             },
         ],

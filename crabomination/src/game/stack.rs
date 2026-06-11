@@ -382,7 +382,8 @@ impl GameState {
                         EventScope::OpponentControl => c.controller != active,
                         EventScope::AnotherOfYours => false,
                         EventScope::FromYourGraveyard => false, // walked separately below
-                        EventScope::YourPermanentTargetedByOpponent => false, // event-based
+                        EventScope::YourPermanentTargetedByOpponent
+                        | EventScope::YourCreatureTargeted => false, // event-based
                         EventScope::ControllerAttackedByOpponent => false, // combat-based
                     })
                     .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
@@ -1583,6 +1584,7 @@ impl GameState {
         self.entered_from_graveyard_this_turn.clear();
         // CR 603.3d — "triggers only once each turn" abilities reset.
         self.triggered_once_per_turn_used.clear();
+        self.per_subject_trigger_uses.clear();
         // CR 505.1b — discard any unconsumed additional combat phases so they
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;

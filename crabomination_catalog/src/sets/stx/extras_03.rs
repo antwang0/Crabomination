@@ -252,6 +252,7 @@ pub fn pillardrop_warden() -> CardDefinition {
                     }),
                     to: ZoneDest::Hand(PlayerRef::You),
                 }),
+                else_: None,
             },
         }],
         ..Default::default()

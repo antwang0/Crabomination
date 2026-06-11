@@ -37743,6 +37743,7 @@ fn bot_declines_self_costly_static_reflexive() {
                     description: "Pay {2}: lose 5 life.".into(),
                     mana_cost: crate::mana::cost(&[crate::mana::generic(2)]),
                     body: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(5) }),
+                    else_: None,
                 })),
             },
         }],
@@ -51611,4 +51612,67 @@ fn the_ozolith_collects_and_unloads_counters() {
         "counters delivered"
     );
     assert_eq!(g.battlefield_find(ozo).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Nadu fires when your creatures are targeted — land to battlefield, else
+/// to hand — capped at twice per creature per turn.
+#[test]
+fn nadu_reveals_on_target_capped_per_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nadu_winged_wisdom());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    let lands_before = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
+    // Target the bear three times: only the first two fire.
+    for _ in 0..3 {
+        g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: bear, caster: 0 }]);
+        drain_stack(&mut g);
+    }
+    let lands_after = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
+    assert_eq!(lands_after - lands_before, 1, "first reveal: forest to battlefield");
+    assert_eq!(g.players[0].hand.len(), 1, "second reveal: bolt to hand");
+    assert_eq!(g.players[0].library.len(), 1, "third target capped — library untouched");
+}
+
+/// Springheart Nantuko's landfall: attached → token copy of the host;
+/// unattached → 1/1 Insect (always for {1}{G}, may decline).
+#[test]
+fn springheart_nantuko_landfall_copies_host_or_makes_insect() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let nantuko = g.add_card_to_battlefield(0, catalog::springheart_nantuko());
+    // Unattached: pay → Insect.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Insect" && c.is_token),
+        "insect minted while unattached"
+    );
+    // Attached to a Serra Angel: pay → token copy of the angel.
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.battlefield_find_mut(nantuko).unwrap().attached_to = Some(angel);
+    g.battlefield_find_mut(nantuko).unwrap().bestowed = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].lands_played_this_turn = 0;
+    let land2 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land2)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield
+            .iter()
+            .filter(|c| c.definition.name == "Serra Angel" && c.is_token)
+            .count(),
+        1,
+        "token copy of the host"
+    );
 }

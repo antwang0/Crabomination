@@ -1843,6 +1843,8 @@ static DECKS: &[Factory] = &[
     super::decks::six,
     super::decks::student_of_warfare,
     super::decks::the_ozolith,
+    super::decks::nadu_winged_wisdom,
+    super::decks::springheart_nantuko,
     super::decks::spikefield_hazard,
     super::decks::malakir_rebirth,
     super::decks::bala_ged_recovery,

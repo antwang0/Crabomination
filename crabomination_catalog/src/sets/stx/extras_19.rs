@@ -459,6 +459,7 @@ fn lisette_dean_of_the_root() -> CardDefinition {
                         duration: Duration::EndOfTurn,
                     },
                 ])),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -494,6 +495,7 @@ pub fn valentin_dean_of_the_vein() -> CardDefinition {
                         count: Value::Const(1),
                         definition: valentin_pest_token(),
                     }),
+                    else_: None,
                 })),
             },
         }],
@@ -729,6 +731,7 @@ pub fn rowan_scholar_of_sparks() -> CardDefinition {
                             what: Selector::TriggerSource,
                             count: Value::Const(1),
                         }),
+                        else_: None,
                     })],
                 },
                 ..Default::default()
@@ -1004,6 +1007,7 @@ pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
                     source_zone: Zone::Library,
                     exile_after: false,
                 }),
+                else_: None,
             }),
         })],
         back_face: Some(Box::new(journey_to_the_oracle())),
