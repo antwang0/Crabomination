@@ -2791,7 +2791,9 @@ impl GameState {
         // Include static-ability effects from permanents currently on the battlefield.
         let mut all_effects: Vec<ContinuousEffect> = self.continuous_effects.clone();
         for card in &self.battlefield {
-            let ts = card.id.0 as u64; // stable ordering by card id for static abilities
+            // CR 613.7a — static-ability effects carry the source object's
+        // timestamp (entry-stamped; id-order fallback for unstamped objects).
+        let ts = card.object_timestamp();
             let mut effects = static_ability_to_effects(card, ts);
             // Team-aware static abilities: `static_ability_to_effects` is a
             // free function with no GameState handle, so it can't fill in
@@ -2854,7 +2856,7 @@ impl GameState {
             }
             if bp != 0 || bt != 0 {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Specific(vec![target]),
                     layer: Layer::L7PowerTough,
@@ -2865,7 +2867,7 @@ impl GameState {
             }
             for kw in &bonus.keywords {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Specific(vec![target]),
                     layer: Layer::L6Ability,
@@ -2887,7 +2889,7 @@ impl GameState {
             for &id in &[card.id, partner] {
                 if bonus.power != 0 || bonus.toughness != 0 {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Specific(vec![id]),
                         layer: Layer::L7PowerTough,
@@ -2901,7 +2903,7 @@ impl GameState {
                 }
                 for kw in &bonus.keywords {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Specific(vec![id]),
                         layer: Layer::L6Ability,
@@ -2919,7 +2921,7 @@ impl GameState {
         for card in &self.battlefield {
             if card.attached_to.is_some() && card.definition.has_reconfigure().is_some() {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Specific(vec![card.id]),
                     layer: Layer::L4Type,
@@ -2955,7 +2957,7 @@ impl GameState {
                         continue;
                     }
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Specific(ids),
                         layer: Layer::L6Ability,
@@ -2998,7 +3000,7 @@ impl GameState {
                     continue;
                 }
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Specific(ids),
                     layer: Layer::L6Ability,
@@ -3023,7 +3025,7 @@ impl GameState {
                 };
                 if (self.devotion_to(card.controller, colors) as u32) < *threshold {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Source,
                         layer: Layer::L4Type,
@@ -3045,7 +3047,7 @@ impl GameState {
                 .any(|k| matches!(k, crate::card::Keyword::Impending(_)));
             if is_impending && card.counter_count(crate::card::CounterType::Time) > 0 {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Source,
                     layer: Layer::L4Type,
@@ -3081,7 +3083,7 @@ impl GameState {
                     continue;
                 }
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Source,
                     layer: Layer::L7PowerTough,
@@ -3118,7 +3120,7 @@ impl GameState {
                     continue;
                 }
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Source,
                     layer: Layer::L7PowerTough,
@@ -3128,7 +3130,7 @@ impl GameState {
                 });
                 for kw in keywords {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Source,
                         layer: Layer::L6Ability,
@@ -3165,7 +3167,7 @@ impl GameState {
                 }
                 if let Some(affected) = selector_to_affected(applies_to, card) {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected,
                         layer: Layer::L7PowerTough,
@@ -3189,7 +3191,7 @@ impl GameState {
                 };
                 let Some(ct) = card.chosen_creature_type else { continue };
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::AllWithCreatureType {
                         controller: Some(card.controller),
@@ -3298,7 +3300,7 @@ impl GameState {
                     .unwrap_or((base_p, base_t)),
             };
             all_effects.push(ContinuousEffect {
-                timestamp: card.id.0 as u64,
+                timestamp: card.object_timestamp(),
                 source: card.id,
                 affected: AffectedPermanents::Source,
                 layer: Layer::L7PowerTough,
@@ -3320,7 +3322,7 @@ impl GameState {
                 && self.players[card.controller].life_gained_this_turn > 0
             {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Source,
                     layer: Layer::L7PowerTough,
@@ -3330,7 +3332,7 @@ impl GameState {
                 });
                 for kw in kws {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Source,
                         layer: Layer::L6Ability,
@@ -3348,7 +3350,7 @@ impl GameState {
                 && self.players[card.controller].graveyard.len() >= threshold
             {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Source,
                     layer: Layer::L7PowerTough,
@@ -3367,7 +3369,7 @@ impl GameState {
                 && self.players[card.controller].life_gained_this_turn > 0
             {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::All {
                         controller: Some(card.controller),
@@ -3384,7 +3386,7 @@ impl GameState {
                 });
                 for kw in kws {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::All {
                             controller: Some(card.controller),
@@ -3414,7 +3416,7 @@ impl GameState {
                 let actual = card.counters.get(&counter).copied().unwrap_or(0);
                 if actual >= threshold {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::All {
                             controller: Some(card.controller),
@@ -3439,7 +3441,7 @@ impl GameState {
                 && card.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0) > 0
             {
                 all_effects.push(ContinuousEffect {
-                    timestamp: card.id.0 as u64,
+                    timestamp: card.object_timestamp(),
                     source: card.id,
                     affected: AffectedPermanents::Source,
                     layer: Layer::L6Ability,
@@ -3454,7 +3456,7 @@ impl GameState {
             if card.suspected && card.definition.is_creature() {
                 for kw in [Keyword::Menace, Keyword::CantBlock] {
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.id.0 as u64,
+                        timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Source,
                         layer: Layer::L6Ability,
@@ -3488,7 +3490,7 @@ impl GameState {
                     });
                     if controller_has_land {
                         all_effects.push(ContinuousEffect {
-                            timestamp: card.id.0 as u64,
+                            timestamp: card.object_timestamp(),
                             source: card.id,
                             affected: AffectedPermanents::All {
                                 controller: Some(card.owner),
@@ -3718,8 +3720,9 @@ impl GameState {
     /// Put a card directly onto the battlefield (enters with summoning sickness unless cleared).
     pub fn add_card_to_battlefield(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
         let id = self.next_id();
-        self.battlefield
-            .push(CardInstance::new(id, def, player_idx));
+        let mut inst = CardInstance::new(id, def, player_idx);
+        inst.battlefield_timestamp = self.next_timestamp();
+        self.battlefield.push(inst);
         id
     }
 
@@ -3736,8 +3739,9 @@ impl GameState {
     ) -> CardId {
         let id = self.next_id();
         let def = crate::game::effects::token_to_card_definition(token);
-        self.battlefield
-            .push(CardInstance::new_token(id, def, player_idx));
+        let mut inst = CardInstance::new_token(id, def, player_idx);
+        inst.battlefield_timestamp = self.next_timestamp();
+        self.battlefield.push(inst);
         id
     }
 
@@ -5140,11 +5144,33 @@ impl GameState {
         // battlefield-entry path emits a `PermanentEntered` event.
         let turn = self.turn_number;
         for e in events {
-            if let GameEvent::PermanentEntered { card_id } = e {
-                if let Some(c) = self.battlefield_find_mut(*card_id) {
-                    c.entered_turn = Some(turn);
+            match e {
+                GameEvent::PermanentEntered { card_id } => {
+                    // CR 613.7d — the new object's timestamp is its entry
+                    // time, drawn from the same counter as resolved-effect
+                    // timestamps so static-vs-spell ordering is coherent.
+                    let ts = self.next_timestamp();
+                    if let Some(c) = self.battlefield_find_mut(*card_id) {
+                        c.entered_turn = Some(turn);
+                        c.battlefield_timestamp = ts;
+                    }
+                    self.apply_soulbond_pairing(*card_id);
                 }
-                self.apply_soulbond_pairing(*card_id);
+                // CR 613.7e/f/g — attach, turn face up, and transform each
+                // give the object a new timestamp.
+                GameEvent::AttachmentMoved { attachment, attached_to: Some(_) } => {
+                    let ts = self.next_timestamp();
+                    if let Some(c) = self.battlefield_find_mut(*attachment) {
+                        c.battlefield_timestamp = ts;
+                    }
+                }
+                GameEvent::Transformed { card_id } | GameEvent::TurnedFaceUp { card_id } => {
+                    let ts = self.next_timestamp();
+                    if let Some(c) = self.battlefield_find_mut(*card_id) {
+                        c.battlefield_timestamp = ts;
+                    }
+                }
+                _ => {}
             }
         }
         // Event-keyed delayed triggers ("when [card] dies this turn, …").

@@ -2399,6 +2399,12 @@ pub struct CardInstance {
     /// compare against `GameState.turn_number`. `None` for objects that never
     /// entered through the battlefield-entry path (hand/library/stack cards).
     pub entered_turn: Option<u32>,
+    /// CR 613.7a/d — this object's timestamp, drawn from the same counter as
+    /// resolved-effect timestamps when it entered the battlefield, and
+    /// re-stamped on attach (613.7e), face up/down (613.7f), and transform
+    /// (613.7g). Static-ability continuous effects order by it. 0 = never
+    /// stamped (the layer walk falls back to `id` order).
+    pub battlefield_timestamp: u64,
     /// CR 701.35 — Detain. `Some(detainer)` while this permanent is detained:
     /// it can't attack or block and its activated abilities can't be activated
     /// until the detaining player's next turn (cleared at the start of that
@@ -2488,6 +2494,7 @@ impl CardInstance {
             saddled: false,
             split_cast: None,
             entered_turn: None,
+            battlefield_timestamp: 0,
             detained_by: None,
             meld_parts: Vec::new(),
         }
@@ -2497,6 +2504,17 @@ impl CardInstance {
         let mut instance = Self::new(id, definition, owner);
         instance.is_token = true;
         instance
+    }
+
+    /// CR 613.7a — the timestamp this object's static-ability effects order
+    /// by. Id-order fallback for objects never stamped (direct test pushes,
+    /// pre-stamp snapshots).
+    pub fn object_timestamp(&self) -> u64 {
+        if self.battlefield_timestamp != 0 {
+            self.battlefield_timestamp
+        } else {
+            self.id.0 as u64
+        }
     }
 
     pub fn power(&self) -> i32 {
@@ -2890,6 +2908,10 @@ struct CardInstanceWire {
     /// older snapshots load as `None`.
     #[serde(default)]
     entered_turn: Option<u32>,
+    /// CR 613.7 object timestamp. `#[serde(default)]` so older snapshots
+    /// load as 0 (id-order fallback).
+    #[serde(default)]
+    battlefield_timestamp: u64,
     /// CR 701.35 Detain marker. `#[serde(default)]` so older snapshots load as
     /// `None`.
     #[serde(default)]
@@ -2975,6 +2997,7 @@ impl serde::Serialize for CardInstance {
             exiled_by: self.exiled_by,
             exiled_with: self.exiled_with,
             entered_turn: self.entered_turn,
+            battlefield_timestamp: self.battlefield_timestamp,
             detained_by: self.detained_by,
             meld_parts: self.meld_parts.clone(),
         };
@@ -3064,6 +3087,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.exiled_by = wire.exiled_by;
         c.exiled_with = wire.exiled_with;
         c.entered_turn = wire.entered_turn;
+        c.battlefield_timestamp = wire.battlefield_timestamp;
         c.detained_by = wire.detained_by;
         c.meld_parts = wire.meld_parts;
         Ok(c)

@@ -174,6 +174,9 @@ pub struct CardSnapshot {
     /// `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub entered_turn: Option<u32>,
+    /// CR 613.7 object timestamp. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub battlefield_timestamp: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -319,6 +322,7 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
         exiled_with: c.exiled_with,
         encoded_on: c.encoded_on,
         entered_turn: c.entered_turn,
+        battlefield_timestamp: c.battlefield_timestamp,
     }
 }
 
@@ -503,6 +507,7 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.exiled_with = cs.exiled_with;
     c.encoded_on = cs.encoded_on;
     c.entered_turn = cs.entered_turn;
+    c.battlefield_timestamp = cs.battlefield_timestamp;
     Ok(c)
 }
 
@@ -893,6 +898,7 @@ mod tests {
             exiled_with: None,
             encoded_on: None,
             entered_turn: None,
+            battlefield_timestamp: 0,
         };
         match restore_card(cs) {
             Err(LoadError::UnknownCard(name)) => {

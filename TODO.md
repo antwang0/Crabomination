@@ -131,15 +131,15 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   under-assignment (CR 510.1d; test
   `cr_510_1d_non_trample_under_assignment_falls_back_to_default`) —
   row closed.
-- ⏳ **Layer timestamps are incoherent** (`layers.rs:124-127` —
-  static-ability effects stamp `timestamp: card.id.0` (`mod.rs:2809` + ~25
-  sites) while resolved-spell effects use `next_effect_timestamp`
-  (`mod.rs:3527`)). Cross-comparison is arbitrary (CR 613.7), and a
-  bounced-and-recast permanent keeps its original low CardId "timestamp"
-  (re-cast Blood Moon orders before an older Urborg). Also outside the
-  timestamp system entirely: `granted_keywords_eot` merges *before* the
-  layer walk so a later "gains flying" loses to an earlier
-  `RemoveAllAbilities` (`layers.rs:309-325`, `437`).
+- 🟡 **Layer timestamps** — `CardInstance.battlefield_timestamp` is now
+  stamped from the shared `next_effect_timestamp` counter on battlefield
+  entry (CR 613.7d), attach (613.7e), turn-face-up (613.7f), and transform
+  (613.7g); static-ability effects order by `object_timestamp()` so
+  static-vs-spell cross-comparison is coherent (tests `cr_613_7_*`).
+  Remaining: `granted_keywords_eot` merges *before* the layer walk so a
+  later "gains flying" loses to an earlier `RemoveAllAbilities`
+  (`layers.rs` — needs the EOT grants to become real L6 continuous
+  effects; ~59 call sites).
 - ✅ **Step triggers skip APNAP** (`stack.rs:309-485`). `fire_step_triggers`
   queues in battlefield-`Vec` order despite the comment claiming
   "APNAP-ordered" (CR 603.3b) and bypasses the same-controller
@@ -1639,7 +1639,7 @@ picking an item up.
   final chapter → sacrifice, unless a chapter ability is still on the stack);
   Battle / Role / Dungeon / Speed SBAs remain; multi-SBA "collapse into one
   replacement" (704.7); strict spell-copy-off-stack identity (704.5e).
-- 🟡 **CR 613 — Interaction of Continuous Effects** — no dependency analyzer (613.8); CDA-first pre-pass (613.3); Aura re-stamp on enchant (613.7e). ⚠️ Audit 2026-06-11: 613.7 timestamp assignment itself is broken — statics stamp `card.id.0` while spell effects use a separate counter, and EOT keyword grants live outside the timestamp system — see audit P1.
+- 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3); EOT keyword grants still merge outside the layer walk (see audit P1 row).
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. ⚠️ Audit 2026-06-11: the replacements apply inside `adjust_life` but callers still emit `LifeGained` with the pre-replacement amount (triggers fire on suppressed gains), and `SetLifeTotal`/`ExchangeLifeTotals` bypass `adjust_life` entirely — see audit P1.
 - 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded). Remaining: choose-to-draw (121.3); mid-cast face-down draw (121.8); reveal-on-draw (121.9).

@@ -1358,3 +1358,83 @@ fn cr_702_90_strike_back_scaling_is_per_source() {
     // Torbran adds +2 to each red source's event: (2+2) + (3+2) = 9.
     assert_eq!(g.battlefield_find(atk).unwrap().damage, 9);
 }
+
+// ── CR 613.7 — coherent timestamps between statics and resolved effects ──────
+
+/// A spell's layer-6 effect resolving after an anthem's source entered
+/// applies later in timestamp order (CR 613.7a/b/d) — statics no longer
+/// carry CardId-space stamps that dwarf the effect counter.
+#[test]
+fn cr_613_7_later_removal_beats_earlier_static_grant() {
+    use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement, StaticAbility};
+    use crate::effect::{Duration, Effect, Selector, StaticEffect};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Wind Totem",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+            },
+        }],
+        ..Default::default()
+    });
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(
+        &Effect::LoseAllAbilities { what: Selector::This, duration: Duration::EndOfTurn },
+        &ctx,
+    )
+    .unwrap();
+    assert!(
+        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "later RemoveAllAbilities applies after the earlier static grant"
+    );
+}
+
+/// Attaching re-stamps the Equipment (CR 613.7e), so its keyword grant
+/// applies after an older ability-removal effect.
+#[test]
+fn cr_613_7e_attach_restamps_equipment_grant() {
+    use crate::card::{ArtifactSubtype, CardDefinition, CardType, EquipBonus, Keyword, Subtypes};
+    use crate::effect::{Duration, Effect, Selector};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wings = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Strap-On Wings",
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    // Ability removal resolves after both permanents entered…
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(
+        &Effect::LoseAllAbilities { what: Selector::This, duration: Duration::EndOfTurn },
+        &ctx,
+    )
+    .unwrap();
+    // …then the Equipment attaches: the attach re-stamp orders its grant last.
+    let atx = EffectContext::for_ability(wings, 0, Some(Target::Permanent(bear)));
+    let events = g
+        .resolve_effect(&Effect::Attach { what: Selector::This, to: Selector::Target(0) }, &atx)
+        .unwrap();
+    g.dispatch_triggers_for_events(&events);
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "post-attach grant beats the earlier removal (CR 613.7e)"
+    );
+}

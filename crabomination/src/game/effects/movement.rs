@@ -672,8 +672,9 @@ impl GameState {
                 // CR 603.4 — stamp the entry turn immediately (the central
                 // dispatch loop also sets it, but doing it here makes it
                 // readable mid-resolution — Emergent Sequence counts the land
-                // it just put in).
+                // it just put in). Same for the CR 613.7d object timestamp.
                 card.entered_turn = Some(self.turn_number);
+                card.battlefield_timestamp = self.next_timestamp();
                 // A permanent entering the battlefield from another zone is
                 // a brand-new object (rule 400.7) — clear residual damage,
                 // pump bonuses, and attachment.
