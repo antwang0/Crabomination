@@ -263,12 +263,13 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `sacrifice_one`). Strict Proctor's unpaid-tax sacrifice routes through
   `sacrifice_one`; the rich funnel also collects Equipment-granted dies
   triggers (CR 702.6e — Skullclamp via Destroy/sacrifice, not just SBA).
-- ⏳ **Parallel hand-maintained walkers with no exhaustiveness guard**:
-  `eff_find` vs `requires_target` vs `primary_target_filter` (the P0
-  targeting hole), the two `evaluate_requirement` evaluators (the hybrid
-  color bug), printed-vs-computed checks in combat (the blocker bug). Each
-  pair has already diverged at least once; unify or add compile-time/test
-  exhaustiveness checks.
+- 🟡 **Parallel hand-maintained walkers** — guard test
+  `cr_601_2c_every_catalog_target_filter_is_surfaced` now serde-walks every
+  catalog effect for `TargetFiltered` slots and asserts
+  `target_filter_for_slot_in_mode_kicked` surfaces each one (caught + fixed
+  `DiscardChosen` / `ManaClash` holes; ChooseN gets a cast-time fallback
+  filter). Remaining: the two `evaluate_requirement` evaluators and
+  printed-vs-computed combat checks still lack guards.
 - ⏳ **Card-name-keyed hack tables inside a ~720-line god function**
   (`gather_continuous_effects_inner`, `mod.rs:2742-3463`; tables at
   `mod.rs:7583-7681`). `&'static str` lookups break silently under the

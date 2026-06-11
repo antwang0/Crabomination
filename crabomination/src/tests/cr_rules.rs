@@ -1494,3 +1494,59 @@ fn cr_514_3a_discard_trigger_grants_cleanup_priority_then_repeats() {
     g.perform_action(GameAction::PassPriority).unwrap();
     assert_eq!(g.active_player_idx, 1, "repeat cleanup ended the turn");
 }
+
+// ── Audit P3 — walker exhaustiveness guard ──────────────────────────────────
+
+/// Every `Selector::TargetFiltered` slot reachable in a catalog card's spell
+/// effect must be surfaced by `target_filter_for_slot_in_mode_kicked` for
+/// some mode/kicker state — otherwise the filter is unenforced at cast time
+/// (CR 601.2c; the audit-P0 "~20 unenforced variants" class). The walk uses
+/// the effect's serde tree, so a new Effect variant holding a filtered
+/// target can't dodge it by missing an `eff_find` arm.
+#[test]
+fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
+    use serde_json::Value as J;
+    fn collect_slots(j: &J, out: &mut std::collections::BTreeSet<u8>) {
+        match j {
+            J::Object(m) => {
+                if let Some(tf) = m.get("TargetFiltered")
+                    && let Some(slot) = tf.get("slot").and_then(|s| s.as_u64())
+                {
+                    out.insert(slot as u8);
+                }
+                for v in m.values() {
+                    collect_slots(v, out);
+                }
+            }
+            J::Array(a) => {
+                for v in a {
+                    collect_slots(v, out);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut failures = Vec::new();
+    for f in crate::catalog::all_known_factories() {
+        let def = f();
+        let j = serde_json::to_value(&def.effect).expect("effect serializes");
+        let mut slots = std::collections::BTreeSet::new();
+        collect_slots(&j, &mut slots);
+        for slot in slots {
+            let surfaced = [false, true].iter().any(|&kicked| {
+                std::iter::once(None).chain((0..8).map(Some)).any(|mode| {
+                    def.effect
+                        .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
+                        .is_some()
+                })
+            });
+            if !surfaced {
+                failures.push(format!("{} slot {}", def.name, slot));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "target filters not surfaced at cast time for: {failures:?}"
+    );
+}

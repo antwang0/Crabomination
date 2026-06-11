@@ -591,6 +591,8 @@ impl Effect {
             | Effect::ExileTopOfLibrary { who, .. } => sel_filter(who),
             Effect::Drain { to, .. } => sel_filter(to),
             Effect::AddPoison { who, .. } => sel_filter(who),
+            Effect::DiscardChosen { from, .. } => sel_filter(from),
+            Effect::ManaClash { opponent } => sel_filter(opponent),
             // Edict-class effects: "target player sacrifices a permanent."
             // The `who` selector usually carries a `target_filtered(Player)`
             // filter (Sudden Edict, Cruel Edict-style spells); bare
@@ -1219,7 +1221,14 @@ impl Effect {
                             s += 1;
                         }
                     }
-                    None
+                    // The definition's `picks` are only a default — real
+                    // picks may be deferred to resolution. Fall back to the
+                    // first mode that surfaces the slot so a submitted
+                    // target is validated against *some* filter instead of
+                    // none (Confluence cycle, Defend the Campus).
+                    modes
+                        .iter()
+                        .find_map(|m| eff_find(m, slot.saturating_sub(s), None, kicked))
                 }
                 // Escalate: cast-time slot 0 validates against the base mode
                 // (the cast-time `mode`), mirroring ChooseMode. Additional
@@ -1280,6 +1289,8 @@ impl Effect {
                 | Effect::ExileTopOfLibrary { who, .. } => sel_find(who, slot),
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
+                Effect::DiscardChosen { from, .. } => sel_find(from, slot),
+                Effect::ManaClash { opponent } => sel_find(opponent, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),
                 Effect::Move { what, .. } => sel_find(what, slot),
