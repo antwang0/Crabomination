@@ -231,7 +231,9 @@ def compare(local: dict, sf: dict) -> list[str]:
     # that differ in naming convention (e.g. "protection" needs color qualifier).
     skip_kws = {"protection", "ward", "cycling", "kicker", "flashback", "equip",
                 "echo", "cumulative upkeep", "morph", "megamorph", "fortify",
-                "dredge", "annihilator", "regenerate"}
+                "dredge", "annihilator", "regenerate",
+                # Modeled as triggers/effects rather than Keyword variants.
+                "ascend", "mobilize"}
     our_kws_check = our_kws - skip_kws
     sf_kws_check = sf_kws - skip_kws
 
