@@ -3126,16 +3126,17 @@ Cross-references the detailed entries below where one exists.
 - ⏳ **Undo / mana-tap rollback** — see "Engine — Rollback / Undo system
   (plan)"; the minimal client slice (un-tap floated mana before a cast
   commits) is worth shipping ahead of the full plan.
-- ⏳ **Battlefield organization at scale** — stack identical tokens with a
-  ×N badge (see "Token stacking"), auto-tuck land stacks by name, draw a
+- 🟡 **Battlefield organization at scale** — ✅ identical tokens cascade
+  into piles with a ×N count chip (`creature_card_transform` +
+  `token_badge.rs`); same-name lands already stacked. Remaining ⏳: a
   visible aura/equipment → host link (today attachment info lives only in
   tooltips).
-- ⏳ **Attention pings** — pulse the permanent whose trigger is waiting,
-  flash/pulse the Pass button on gained priority (urgency infra
-  `pulse_urgent_pass_button` exists), low-life vignette.
-- ⏳ **Cost-payment feedback** — during manual tapping show the remaining
-  cost ("{1}{U} to go") and pre-highlight which sources auto-tap would
-  take before committing (Arena-style misplay prevention).
+- ✅ **Attention pings** — pulsing cyan ring on the pending decision's
+  source permanent (`draw_decision_source_ring`), low-life screen-edge
+  vignette (≤5 life), Pass-button urgency pulse already existed.
+- 🟡 **Cost-payment feedback** — ✅ the manual-tap banner live-updates
+  with the remaining cost ("{1}{U} to go") as sources tap. Remaining ⏳:
+  pre-highlighting which sources auto-tap would take.
 
 **Quick wins**
 - ✅ **Persist settings** — `config::ConfigStore` holds the live whole
@@ -3143,8 +3144,9 @@ Cross-references the detailed entries below where one exists.
   `persist_player_name` mirror changes into `config.toml`
   (`gameplay.{stops_my,stops_opp,animation_speed,player_name}`), and
   startup seeds `StopConfig`, `AnimationSpeed`, and the menu name from it.
-- ⏳ **Clickable game log** — hover a log line → preview the named card;
-  click → flash the permanent on the board (names already resolve).
+- 🟡 **Clickable game log** — ✅ hovering a log line that names a card
+  previews it (`ui_card_hover`, also wired onto stack-panel tiles).
+  Remaining ⏳: click → flash the permanent on the board.
 - ⏳ **Finish the hover oracle panel** — `ui::hover_info_lines` shows type
   line + keyword reminders; add triggered/activated-ability short text
   (see "X-ray card inspector").
@@ -3152,8 +3154,11 @@ Cross-references the detailed entries below where one exists.
   event stream; show on the game-over modal.
 
 **Bigger projects**
-- ⏳ **Settings screen with tabs** (gameplay / graphics / keybinds) — the
-  natural home for persistence + remappable keys; see "Settings Menu".
+- 🟡 **Settings screen** — ✅ main-menu Settings panel
+  (`systems/settings_menu.rs`): window mode (windowed / borderless),
+  resolution presets, maximize-on-launch, render quality, animation
+  speed, hand sorting — applied live and persisted. Remaining ⏳:
+  keybind remapping, audio (once there is audio).
 - ⏳ **Deck library** — save imported decks, list them in the menu, pick
   the opponent's deck, paste-from-clipboard import.
 - ⏳ **Bo3 + sideboarding UI** — Learn/Lessons sideboard plumbing exists

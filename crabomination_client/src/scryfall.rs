@@ -186,6 +186,8 @@ pub fn reload_completed_images(
     }
 }
 
+/// Blocking variant without progress reporting (tests).
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     ensure_card_images_with_progress(specs, assets_dir, &ImagePrefetch::default());
 }

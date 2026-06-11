@@ -180,9 +180,28 @@ fn asset_base_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
+/// Window mode for the primary window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WindowModeCfg {
+    #[default]
+    Windowed,
+    Borderless,
+}
+
 #[derive(Debug, Clone, Resource, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GraphicsConfig {
+    /// Windowed or borderless-fullscreen. Default: windowed.
+    pub window_mode: WindowModeCfg,
+    /// Windowed-mode resolution (the restore size when un-maximized).
+    pub window_width: u32,
+    pub window_height: u32,
+    /// Maximize the window on launch (legacy default). Picking an explicit
+    /// resolution in the settings menu turns this off.
+    pub maximize_on_launch: bool,
+    /// Render quality preset (shadows, AA, mesh detail). Default: low.
+    pub render_quality: crate::render_quality::RenderQuality,
     /// Shadow map resolution (must be a power of two). Default: 8192.
     pub shadow_map_size: usize,
     /// SMAA anti-aliasing preset: "off", "low", "medium", "high", "ultra". Default: "ultra".
@@ -198,6 +217,11 @@ pub struct GraphicsConfig {
 impl Default for GraphicsConfig {
     fn default() -> Self {
         Self {
+            window_mode: WindowModeCfg::default(),
+            window_width: 1600,
+            window_height: 1000,
+            maximize_on_launch: true,
+            render_quality: crate::render_quality::RenderQuality::default(),
             shadow_map_size: 8192,
             smaa_preset: SmaaPreset::Ultra,
             ambient_brightness: 600.0,

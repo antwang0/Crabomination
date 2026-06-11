@@ -506,6 +506,15 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     AuditCardsButton,
                 );
 
+                // Settings — window mode / resolution, quality, gameplay.
+                button(
+                    p,
+                    &tf,
+                    "Settings",
+                    theme::BUTTON_NEUTRAL_BG,
+                    crate::systems::settings_menu::OpenSettingsButton,
+                );
+
                 // Import a decklist (Arena / MTGO text format) and play
                 // it against the bot. The field holds a file path; status
                 // feedback (unknown cards, size problems) renders below.

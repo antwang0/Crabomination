@@ -220,6 +220,9 @@ fn main() {
         opp: gameplay.stops_opp.clone(),
     };
     let initial_anim_speed = AnimationSpeed(gameplay.animation_speed.clamp(0.25, 4.0));
+    let cfg_window_mode = gfx.window_mode;
+    let (cfg_window_w, cfg_window_h) = (gfx.window_width, gfx.window_height);
+    let cfg_quality = gfx.render_quality;
 
     // Custom Default asset source: it wraps the normal file reader and
     // synthesizes a white name-placeholder PNG for any missing card image,
@@ -273,7 +276,16 @@ fn main() {
                 // `pick_ui_scale`.)
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: bevy::window::WindowResolution::new(1600, 1000),
+                        mode: match cfg_window_mode {
+                            config::WindowModeCfg::Windowed => bevy::window::WindowMode::Windowed,
+                            config::WindowModeCfg::Borderless =>
+                                bevy::window::WindowMode::BorderlessFullscreen(
+                                    bevy::window::MonitorSelection::Primary,
+                                ),
+                        },
+                        resolution: bevy::window::WindowResolution::new(
+                            cfg_window_w, cfg_window_h,
+                        ),
                         position: bevy::window::WindowPosition::Centered(
                             bevy::window::MonitorSelection::Primary,
                         ),
@@ -306,10 +318,10 @@ fn main() {
         .init_gizmo_group::<TargetArrowGizmos>()
         .init_gizmo_group::<crate::systems::impact::ImpactGizmos>()
         .add_systems(Startup, configure_gizmos)
-        .insert_resource(DirectionalLightShadowMap { size: RenderQuality::default().shadow_map_size() })
+        .insert_resource(DirectionalLightShadowMap { size: cfg_quality.shadow_map_size() })
         .insert_resource(gfx)
         .insert_resource(gameplay)
-        .insert_resource(RenderQuality::default())
+        .insert_resource(cfg_quality)
         .add_message::<ChangeQuality>()
         .insert_resource(GameLog::default())
         .insert_resource(PhaseBannerTracker::default())
@@ -368,6 +380,19 @@ fn main() {
             Update,
             systems::phase_bar::handle_phase_chart_clicks
                 .run_if(in_state(AppState::InGame)),
+        )
+        // Main-menu Settings panel.
+        .init_resource::<systems::settings_menu::MenuSettingsOpen>()
+        .add_systems(
+            Update,
+            (
+                systems::settings_menu::handle_settings_open,
+                systems::settings_menu::handle_setting_rows,
+                systems::settings_menu::sync_settings_panel,
+                systems::settings_menu::update_setting_labels,
+            )
+                .chain()
+                .run_if(in_state(AppState::Menu)),
         )
         // Settings persistence: mirror stop/animation-speed changes into
         // config.toml (each system early-outs on no change).
@@ -1003,8 +1028,17 @@ fn pick_hand_zoom(logical_height: f32) -> f32 {
 /// user's actual display instead of winit's fixed ~1280×720 default.
 /// `set_maximized` records a request the winit backend applies on the next
 /// frame, filling the monitor's work area — adapts to any resolution.
-fn maximize_window(mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>) {
-    if let Ok(mut window) = windows.single_mut() {
+fn maximize_window(
+    store: Option<Res<config::ConfigStore>>,
+    mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>,
+) {
+    // Skipped when the user picked an explicit resolution in Settings
+    // (`maximize_on_launch` flips off there) or chose borderless mode.
+    let g = store.as_ref().map(|s| &s.0.graphics);
+    let maximize = g.is_none_or(|g| {
+        g.maximize_on_launch && g.window_mode == config::WindowModeCfg::Windowed
+    });
+    if maximize && let Ok(mut window) = windows.single_mut() {
         window.set_maximized(true);
     }
 }
