@@ -683,16 +683,16 @@ pub struct HoverCardPreview {
     path: String,
 }
 
-const HOVER_PREVIEW_WIDTH: f32 = 230.0;
-const HOVER_PREVIEW_HEIGHT: f32 = HOVER_PREVIEW_WIDTH * CARD_ASPECT_RATIO;
+pub(crate) const HOVER_PREVIEW_WIDTH: f32 = 230.0;
+pub(crate) const HOVER_PREVIEW_HEIGHT: f32 = HOVER_PREVIEW_WIDTH * CARD_ASPECT_RATIO;
 /// Gap kept between the preview and both the cursor and the viewport edges.
-const HOVER_PREVIEW_MARGIN: f32 = 16.0;
+pub(crate) const HOVER_PREVIEW_MARGIN: f32 = 16.0;
 
 /// Top-left (x, y) in logical px for a `pw × ph` preview placed beside the
 /// cursor. Picks whichever horizontal side has more room so the preview
 /// never covers the card the cursor is resting on, then clamps both axes so
 /// the whole card stays on screen. Vertically centered on the cursor.
-fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: f32) -> (f32, f32) {
+pub(crate) fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: f32) -> (f32, f32) {
     let x_max = (win.x - pw - margin).max(margin);
     // More room to the right → sit to the cursor's right, else to its left.
     let x = if win.x - cursor.x >= cursor.x {
@@ -1643,5 +1643,62 @@ mod tests {
         let (_, y) = preview_anchor(Vec2::new(200.0, 500.0), win, PW, PH, M);
         // Mid-screen cursor → card centered on it (top = cursor.y - ph/2).
         assert!((y - (500.0 - PH * 0.5)).abs() < 0.5, "expected centered, got y={y}");
+    }
+}
+
+// ── Low-life vignette ─────────────────────────────────────────────────────────
+
+/// Marker for the screen-edge danger frame shown when the viewer's life
+/// is critically low.
+#[derive(Component)]
+pub struct LowLifeVignette;
+
+/// Life total at or below which the danger frame shows. Flat threshold —
+/// "one burn spell from dead" reads the same in every format.
+const LOW_LIFE_THRESHOLD: i32 = 5;
+
+/// Pulse a red frame around the screen edge while the viewer's life is
+/// critically low — a peripheral-vision "you are dying" signal that
+/// doesn't depend on reading the life total.
+pub fn low_life_vignette(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    time: Res<Time>,
+    mut existing: Query<(Entity, &mut BorderColor), With<LowLifeVignette>>,
+) {
+    let low = view
+        .0
+        .as_ref()
+        .filter(|cv| cv.game_over.is_none())
+        .and_then(|cv| cv.players.iter().find(|p| p.seat == cv.your_seat))
+        .is_some_and(|p| p.life <= LOW_LIFE_THRESHOLD);
+
+    match (low, existing.iter_mut().next()) {
+        (true, Some((_, mut border))) => {
+            let pulse = 0.25 + 0.20 * (time.elapsed_secs() * std::f32::consts::TAU / 1.6).sin().abs();
+            *border = BorderColor::all(Color::srgba(0.85, 0.10, 0.10, pulse));
+        }
+        (true, None) => {
+            commands.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    border: UiRect::all(Val::Px(7.0)),
+                    ..default()
+                },
+                BorderColor::all(Color::srgba(0.85, 0.10, 0.10, 0.3)),
+                LowLifeVignette,
+                Pickable::IGNORE,
+                crate::systems::game_ui::InGameRoot,
+                GlobalZIndex(35),
+            ));
+        }
+        (false, Some((e, _))) => {
+            commands.entity(e).despawn();
+        }
+        (false, None) => {}
     }
 }

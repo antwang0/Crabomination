@@ -590,6 +590,18 @@ fn main() {
             crate::systems::token_badge::sync_token_pile_badges
                 .run_if(in_state(AppState::InGame)),
         )
+        // Clarity batch: hover-preview for UI tiles (stack panel / log
+        // lines), pulsing ring on the pending decision's source, and the
+        // low-life danger frame.
+        .add_systems(
+            Update,
+            (
+                crate::systems::ui_card_hover::ui_card_hover_preview,
+                crate::systems::gizmos::draw_decision_source_ring,
+                crate::systems::ui::low_life_vignette,
+            )
+                .run_if(in_state(AppState::InGame)),
+        )
         // Floating keyword-flag strip ("Fly DT LL") over creatures.
         .add_systems(
             Update,

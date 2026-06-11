@@ -487,3 +487,54 @@ pub fn draw_attack_plan_gizmos(
         }
     }
 }
+
+/// Pulsing cyan ring around the battlefield permanent whose pending
+/// decision is waiting on the viewer — "the game is waiting HERE". Most
+/// decisions carry their source's CardId; when that source is a live
+/// battlefield permanent, ring it so the modal's context is findable on
+/// the board at a glance.
+pub fn draw_decision_source_ring(
+    view: Res<CurrentView>,
+    time: Res<Time>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    mut gizmos: Gizmos<LegalTargetGizmos>,
+) {
+    use crabomination::net::DecisionWire as D;
+    let Some(cv) = &view.0 else { return };
+    let Some(pd) = &cv.pending_decision else { return };
+    if pd.acting_player != cv.your_seat {
+        return;
+    }
+    let source = match pd.decision.as_ref() {
+        Some(
+            D::ChooseMode { source, .. }
+            | D::ChooseModes { source, .. }
+            | D::ChooseColor { source, .. }
+            | D::OptionalTrigger { source, .. }
+            | D::ChooseCreatureType { source, .. }
+            | D::NameCard { source, .. }
+            | D::ChooseAmount { source, .. }
+            | D::DivideDamage { source, .. }
+            | D::ChooseCards { source, .. }
+            | D::ChooseTarget { source, .. },
+        ) => *source,
+        Some(D::AssignCombatDamage { attacker, .. } | D::CombatDamageOrder { attacker, .. }) => {
+            *attacker
+        }
+        _ => return,
+    };
+    let Some((t, _)) = bf_cards.iter().find(|(_, gid)| gid.0 == source) else { return };
+
+    let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
+    let color = glow(Color::srgb(0.0, pulse * 0.9, pulse), 3.0);
+    let center = t.translation + Vec3::Y * 0.2;
+    let n = 28;
+    let r = 1.35;
+    for i in 0..n {
+        let a0 = (i as f32) / (n as f32) * std::f32::consts::TAU;
+        let a1 = ((i + 1) as f32) / (n as f32) * std::f32::consts::TAU;
+        let p0 = center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r);
+        let p1 = center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r);
+        gizmos.line(p0, p1, color);
+    }
+}

@@ -12,6 +12,9 @@ pub struct LogEntry {
     /// Turn-divider row — `update_log_text` renders these with extra
     /// spacing so each turn is visually separated in the scrollback.
     pub divider: bool,
+    /// Asset path of the event's primary card, when one was resolvable —
+    /// lets the log row preview the card on hover (`ui_card_hover`).
+    pub card_art: Option<String>,
     /// The text *without* any `×N` repeat suffix, plus the current repeat
     /// count, used to coalesce a run of identical event lines (#7). Kept
     /// private — callers read `text`.
@@ -52,6 +55,7 @@ impl GameLog {
             text,
             color,
             divider: false,
+            card_art: None,
             count: 1,
         });
         self.trim();
@@ -62,7 +66,21 @@ impl GameLog {
     /// instead of flooding the scrollback — token swarms, multi-hit
     /// combat, repeated pings (#7). A divider or any differing line
     /// breaks the run.
+    /// Coalescing event push without a hover-preview card (tests and
+    /// art-less call sites).
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn push_event(&mut self, msg: impl Into<String>, color: Color) {
+        self.push_event_with_art(msg, color, None);
+    }
+
+    /// Coalescing event push, plus the event's primary card-art path so
+    /// the log row can preview the card on hover (`None` = plain row).
+    pub fn push_event_with_art(
+        &mut self,
+        msg: impl Into<String>,
+        color: Color,
+        card_art: Option<String>,
+    ) {
         let text = msg.into();
         if let Some(last) = self.entries.back_mut()
             && !last.divider
@@ -78,6 +96,7 @@ impl GameLog {
             text,
             color,
             divider: false,
+            card_art,
             count: 1,
         });
         self.trim();
@@ -93,6 +112,7 @@ impl GameLog {
             text,
             color: theme::TEXT_SECONDARY,
             divider: true,
+            card_art: None,
             count: 1,
         });
         self.trim();

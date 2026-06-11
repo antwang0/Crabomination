@@ -483,16 +483,120 @@ struct PendingCastBanner;
 
 /// Show a top-of-screen banner while a cast is waiting on manual mana
 /// tapping, so the player knows to tap their sources (or press Escape).
+/// "{1}{U} to go" — the part of `cost` the viewer's current pool doesn't
+/// cover yet, for the manual-tap banner. Display-only approximation
+/// (hybrid/Phyrexian/snow pips count as their colored side; X as 0): the
+/// engine remains authoritative about acceptance — this just tells the
+/// player roughly what's still missing as they tap.
+fn remaining_cost_label(
+    cost: &crabomination::mana::ManaCost,
+    pool: &crabomination::mana::ManaPool,
+) -> Option<String> {
+    use crabomination::mana::{Color as MC, ManaSymbol};
+    const COLORS: [(MC, char); 5] = [
+        (MC::White, 'W'),
+        (MC::Blue, 'U'),
+        (MC::Black, 'B'),
+        (MC::Red, 'R'),
+        (MC::Green, 'G'),
+    ];
+    let mut pool_left: Vec<(MC, u32)> = COLORS.iter().map(|(c, _)| (*c, pool.amount(*c))).collect();
+    let colored_total: u32 = pool_left.iter().map(|(_, n)| n).sum();
+    let other_pool = pool.total().saturating_sub(colored_total); // colorless & friends
+    let mut need: Vec<(char, u32)> = Vec::new(); // colored pips still missing
+    let mut generic = 0u32;
+    for sym in &cost.symbols {
+        let colored = match sym {
+            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
+            ManaSymbol::Hybrid(a, _) => Some(*a),
+            ManaSymbol::MonoHybrid(_, c) => Some(*c),
+            ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => {
+                generic += n;
+                None
+            }
+            ManaSymbol::Snow => {
+                generic += 1;
+                None
+            }
+            ManaSymbol::X => None,
+        };
+        if let Some(c) = colored {
+            let slot = pool_left.iter_mut().find(|(pc, _)| *pc == c).expect("five colors");
+            if slot.1 > 0 {
+                slot.1 -= 1;
+            } else {
+                let letter = COLORS.iter().find(|(pc, _)| *pc == c).expect("five colors").1;
+                match need.iter_mut().find(|(l, _)| *l == letter) {
+                    Some(e) => e.1 += 1,
+                    None => need.push((letter, 1)),
+                }
+            }
+        }
+    }
+    // Whatever pool remains (colored leftovers + colorless) covers generic.
+    let leftover: u32 = pool_left.iter().map(|(_, n)| n).sum::<u32>() + other_pool;
+    let generic_missing = generic.saturating_sub(leftover);
+    if need.is_empty() && generic_missing == 0 {
+        return None;
+    }
+    let mut out = String::new();
+    if generic_missing > 0 {
+        out.push_str(&format!("{{{generic_missing}}}"));
+    }
+    for (letter, n) in need {
+        for _ in 0..n {
+            out.push_str(&format!("{{{letter}}}"));
+        }
+    }
+    Some(out)
+}
+
+/// Marker for the banner's text node so the remaining-cost readout can be
+/// updated in place as the player taps sources.
+#[derive(Component)]
+struct PendingCastBannerText;
+
+fn pending_cast_banner_label(
+    pc: &PendingCast,
+    view: &CurrentView,
+    card_names: &crate::game::CardNames,
+) -> String {
+    let remaining = view.0.as_ref().and_then(|cv| {
+        let me = cv.players.iter().find(|p| p.seat == cv.your_seat)?;
+        let name = card_names.get(cast_action_card_id(&pc.action));
+        let def = crabomination::catalog::lookup_by_name(&name)?;
+        remaining_cost_label(&def.cost, &me.mana_pool)
+    });
+    match remaining {
+        Some(missing) => {
+            format!("{} — {missing} to go · tap mana sources, or Esc to cancel", pc.hint)
+        }
+        None => format!("{} — tap mana sources, or Esc to cancel", pc.hint),
+    }
+}
+
 fn update_pending_cast_banner(
     mut commands: Commands,
     pending: Res<PendingManaCast>,
     fonts: Option<Res<crate::theme::UiFonts>>,
+    view: Res<CurrentView>,
+    card_names: Res<crate::game::CardNames>,
     existing: Query<Entity, With<PendingCastBanner>>,
+    mut text_q: Query<&mut Text, With<PendingCastBannerText>>,
 ) {
     match (&pending.0, existing.iter().next()) {
+        (Some(pc), Some(_)) => {
+            // Live update: the remaining-cost readout shrinks as sources tap.
+            let label = pending_cast_banner_label(pc, &view, &card_names);
+            for mut text in &mut text_q {
+                if text.0 != label {
+                    text.0 = label.clone();
+                }
+            }
+        }
         (Some(pc), None) => {
             let Some(fonts) = fonts else { return };
-            let label = format!("{} — tap mana sources, or Esc to cancel", pc.hint);
+            let label = pending_cast_banner_label(pc, &view, &card_names);
             commands
                 .spawn((
                     Node {
@@ -511,6 +615,7 @@ fn update_pending_cast_banner(
                 .with_children(|row| {
                     row.spawn((
                         Text::new(label),
+                        PendingCastBannerText,
                         fonts.tf(16.0),
                         TextColor(crate::theme::ACCENT_GOLD),
                         BackgroundColor(Color::srgba(0.04, 0.06, 0.12, 0.92)),

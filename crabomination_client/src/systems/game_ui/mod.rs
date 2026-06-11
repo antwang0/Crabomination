@@ -200,6 +200,24 @@ fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static str {
     }
 }
 
+/// The event's primary card, when one is identifiable — drives the log
+/// row's hover-preview. Deliberately the high-traffic variants only.
+fn event_primary_card(ev: &crabomination::net::GameEventWire) -> Option<crabomination::card::CardId> {
+    use crabomination::net::GameEventWire as E;
+    match ev {
+        E::CardDrawn { card_id, .. }
+        | E::CardDiscarded { card_id, .. }
+        | E::LandPlayed { card_id, .. }
+        | E::SpellCast { card_id, .. }
+        | E::CardMilled { card_id, .. }
+        | E::CreatureDied { card_id }
+        | E::CreatureSacrificed { card_id, .. }
+        | E::PermanentSacrificed { card_id, .. } => Some(*card_id),
+        E::BecameTarget { target, .. } => Some(*target),
+        _ => None,
+    }
+}
+
 /// Pretty-print a `GameEventWire` for the in-game log, resolving any
 /// CardId via the running `CardNames` map (so the player sees real card
 /// names instead of `CardId(N)` debug strings) and seats via the view's
@@ -1132,13 +1150,25 @@ pub fn update_log_text(
             } else {
                 Node::default()
             };
-            p.spawn((
+            // Rows naming a resolvable card preview it on hover
+            // (`ui_card_hover`); the rest stay click-through.
+            let mut row = p.spawn((
                 Text::new(entry.text.clone()),
                 ui_fonts.tf(if entry.divider { 11.0 } else { 12.0 }),
                 TextColor(entry.color),
                 node,
-                Pickable::IGNORE,
             ));
+            match &entry.card_art {
+                Some(path) => {
+                    row.insert((
+                        Button,
+                        crate::systems::ui_card_hover::UiCardHover(path.clone()),
+                    ));
+                }
+                None => {
+                    row.insert(Pickable::IGNORE);
+                }
+            }
         }
     });
 }
@@ -1741,7 +1771,7 @@ pub fn update_stack_panel(
             } else {
                 Color::NONE
             };
-            p.spawn((
+            let mut row_ec = p.spawn((
                 Node {
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -1753,8 +1783,16 @@ pub fn update_stack_panel(
                 },
                 BorderColor::all(if is_top { theme::ACCENT_GOLD } else { Color::NONE }),
                 BackgroundColor(row_bg),
-            ))
-            .with_children(|row| {
+            ));
+            // Known items show the full card on hover (hidden ones have
+            // nothing to reveal).
+            if matches!(item, StackItemView::Known(_)) {
+                row_ec.insert((
+                    Button,
+                    crate::systems::ui_card_hover::UiCardHover(art_path.clone()),
+                ));
+            }
+            row_ec.with_children(|row| {
                 // Controller edge strip.
                 row.spawn((
                     Node {
@@ -3320,9 +3358,16 @@ pub fn handle_game_input(
             log.push_divider(format!("──  Turn {turn} · {who}  ──"));
             continue;
         }
-        log.push_event(
+        let card_art = event_primary_card(ev)
+            .map(|id| card_names.get(id))
+            // "#N" placeholders mean the id never resolved to a real name
+            // (hidden zones) — no art to preview.
+            .filter(|n| !n.starts_with('#'))
+            .map(|n| crate::scryfall::card_asset_path(&n));
+        log.push_event_with_art(
             format!("{}{}", event_glyph(ev), format_event(ev, card_names, view_ref)),
             event_color(ev),
+            card_art,
         );
     }
 

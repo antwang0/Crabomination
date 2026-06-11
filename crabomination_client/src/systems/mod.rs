@@ -19,3 +19,4 @@ pub mod pt_label;
 pub mod token_badge;
 pub mod quality;
 pub mod ui;
+pub mod ui_card_hover;
