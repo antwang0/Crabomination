@@ -305,6 +305,22 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     choose new targets" response loop).
   - **Spellskite** ability-on-stack targets (only spell targets redirect).
 
+- ⏳ **Noticed this run (claude/modern_decks, 2026-06-11 second pass):**
+  - **Per-seat decider routing** — `UnlessPlayerPays` (rhystic/Kataki taxes),
+    `RevealTopToHandLoseLifeRepeat`, and the new Seek library pick all answer
+    through the single global decider; a networked `wants_ui` seat should get
+    a stash-and-rerun suspend (same family as the existing MayPay/Fateseal
+    notes). Kataki under AutoDecider always declines → bots sacrifice their
+    artifacts even with open mana.
+  - **`SacrificeOrPay` chooser** — the auto rule (sacrifice when a match
+    exists, else fold the pay into the cost) is deterministic; a wants_ui
+    "which half?" picker would make Bayou Groff interactive.
+  - **Seek (Hide // Seek) pick agency** — `Effect::Search { who: Target }`
+    lets the searched player's decider answer; the printed card has the
+    caster choose. A `controller_picks` rider on Search would fix it.
+  - **Vizier of Many Faces** — embalm clone still wants an
+    embalm-copy-any-creature path.
+
 - ⏳ **Noticed this run (follow-ups sweep):**
   - **`Effect::MayPay` for a `wants_ui` seat** still answers through the
     synchronous decider (Springheart's landfall pay) — the `MayDo`
@@ -646,8 +662,8 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ⏳ **Bargain / Eldraine follow-ups (this run):**
   - ✅ "This spell costs {N} less if it's bargained" — `StaticEffect::
     BargainCostReduction { amount }` folded into `cast_spell_bargain` via the
-    transient `extra_cast_reduction` (Ice Out, Johann's Stopgap). Hamlet
-    Glutton's {3}-less variant just needs the row.
+    transient `extra_cast_reduction` (Ice Out, Johann's Stopgap, Hamlet
+    Glutton).
   - ✅ Cacophony Scamp / Heartfire Hero "when this dies, deals damage equal to
     its power" — CR 603.10 leaves-battlefield LKI now ships (`leaves_bf_lki` +
     `resolving_lki_source`; `Value::PowerOf`/`ToughnessOf` read the dying
