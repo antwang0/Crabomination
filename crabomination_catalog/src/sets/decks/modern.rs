@@ -1,7 +1,8 @@
 //! Modern-playable cards that complement the BRG combo and Goryo's
 //! Vengeance demo decks. These are *new* card factories, distinct from the
-//! existing `creatures.rs` / `lands.rs` / `spells.rs` set, and each card is
-//! built on the existing engine primitives — no engine changes required.
+//! existing `creatures.rs` / `lands.rs` / `spells.rs` set. Most ride
+//! existing engine primitives; some batches ship small reusable primitives
+//! alongside their cards.
 //!
 //! Cards in this file are tracked in `DECK_FEATURES.md` under the **Modern
 //! supplement** section.

@@ -296,6 +296,25 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (staples expansion / audit):**
+  - **The Ozolith** — wants a "creature you control leaves with counters →
+    move them here" trigger reading the leaver's full counter map from LKI
+    (the modular transfer only moves +1/+1). Skipped this run.
+  - **Soulless Jailer / Underworld Breach / Karn, the Great Creator** — each
+    wants one static: permanent-cards-can't-enter-from-graveyards (a broader
+    `GraveyardLibraryLockdown`), gy-cards-gain-escape, and
+    opponents-can't-activate-artifact-abilities + the -2 wish.
+  - **Sunken Citadel** — "spend only on abilities of land sources" needs a
+    new `SpendRestriction` variant.
+  - **Ulamog, the Ceaseless Hunger** cast trigger is modeled as two
+    single-target exile triggers (multi-target triggers still unsupported —
+    see the existing multi-target ETB note).
+  - **Madcap Experiment** bills its reveal count as life loss rather than
+    damage (`RevealUntilFind.life_per_revealed`); a damage rider would be
+    more faithful vs prevention effects.
+  - **`resolve_damage_assignment`** still accepts under-assignment when all
+    blockers are at lethal (CR 510.1d) — the default split now assigns fully.
+
 - ⏳ **Noticed this run (multikicker / mill batch):**
   - **Reveal-until-land mill** — Consuming Aberration's cast trigger and Mind
     Grind want a "reveal from top until N land cards, mill them" primitive

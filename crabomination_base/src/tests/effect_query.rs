@@ -6,7 +6,6 @@
 //! "Lyev Skyknight detains the caster's own land" class). Every targeted
 //! effect shape in the catalog should appear here.
 
-use super::*;
 use crate::card::{CounterType, Keyword, SelectionRequirement};
 use crate::effect::{shortcut::etb, Duration, Effect, Selector, Value};
 
