@@ -891,9 +891,16 @@ impl GameState {
                 restore(self, card);
                 return Err(GameError::NotALand(card_id));
             };
+            // Keep the front installed until the play is accepted — a
+            // rejected play must restore the card unmodified.
+            let front = card.definition.clone();
             card.definition = std::sync::Arc::new(*back);
-        }
-        if !card.definition.is_land() {
+            if !card.definition.is_land() {
+                card.definition = front;
+                restore(self, card);
+                return Err(GameError::NotALand(card_id));
+            }
+        } else if !card.definition.is_land() {
             restore(self, card);
             return Err(GameError::NotALand(card_id));
         }

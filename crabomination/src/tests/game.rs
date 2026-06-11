@@ -4046,6 +4046,34 @@ fn serum_powder_exiles_hand_and_redraws() {
     ));
 }
 
+/// CR 103.5a — a short/bogus London-mulligan bottoming answer re-poses the
+/// PutOnLibrary decision instead of granting a free fresh seven.
+#[test]
+fn london_mulligan_repose_on_short_bottoming_answer() {
+    let mut g = two_player_game();
+    for _ in 0..14 {
+        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.start_mulligan_phase();
+    // P0 takes one mulligan, then keeps.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::TakeMulligan)).unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
+    let pd = g.pending_decision.as_ref().expect("PutOnLibrary pending");
+    assert!(matches!(pd.decision, crate::decision::Decision::PutOnLibrary { player: 0, count: 1, .. }));
+    // Hostile answer: bottom nothing.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::PutOnLibrary(vec![]))).unwrap();
+    let pd = g.pending_decision.as_ref().expect("re-posed");
+    assert!(
+        matches!(pd.decision, crate::decision::Decision::PutOnLibrary { player: 0, count: 1, .. }),
+        "short answer re-poses the bottoming decision"
+    );
+    // Honest answer completes: 6-card hand.
+    let id = g.players[0].hand[0].id;
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::PutOnLibrary(vec![id]))).unwrap();
+    assert_eq!(g.players[0].hand.len(), 6, "one card bottomed after a mulligan");
+}
+
 // ── Card behavior tests ──────────────────────────────────────────────────────
 
 #[test]

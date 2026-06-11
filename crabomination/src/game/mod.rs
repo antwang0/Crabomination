@@ -4404,6 +4404,9 @@ impl GameState {
             return false;
         }
         // Pre-flight: try paying. On failure (unaffordable pool), decline.
+        // Snapshot first — a failed cast must refund the madness payment
+        // (CR 601.2h atomicity).
+        let pool_before = self.players[p].mana_pool.clone();
         if self.players[p].mana_pool.pay(cost).is_err() {
             return false;
         }
@@ -4421,7 +4424,10 @@ impl GameState {
                 events.append(&mut ev);
                 true
             }
-            Err(_) => false,
+            Err(_) => {
+                self.players[p].mana_pool = pool_before;
+                false
+            }
         }
     }
 
@@ -6172,13 +6178,37 @@ impl GameState {
                     }
                     DecisionAnswer::PutOnLibrary(ids) => {
                         // London mulligan: chosen cards go to the BOTTOM of
-                        // the library (not the top — `insert(0, …)` would put
-                        // them on top, which is the bug we're fixing).
+                        // the library. CR 103.5a — exactly `mulligans_taken`
+                        // cards must leave the hand; re-pose on a short or
+                        // bogus answer so a hostile client can't keep a
+                        // fresh seven.
+                        let mut bottomed = 0usize;
                         for card_id in ids.iter().take(mulligans_taken) {
                             if let Some(pos) = self.players[player].hand.iter().position(|c| c.id == *card_id) {
                                 let card = self.players[player].hand.remove(pos);
                                 self.players[player].library.push(card);
+                                bottomed += 1;
                             }
+                        }
+                        let still_owed = mulligans_taken - bottomed;
+                        if still_owed > 0 && !self.players[player].hand.is_empty() {
+                            let hand = self.players[player].hand
+                                .iter()
+                                .map(|c| (c.id, c.definition.name.to_string()))
+                                .collect();
+                            self.pending_decision = Some(PendingDecision {
+                                decision: Decision::PutOnLibrary {
+                                    player,
+                                    count: still_owed,
+                                    hand,
+                                },
+                                resume: ResumeContext::Mulligan {
+                                    player,
+                                    mulligans_taken: still_owed,
+                                    next_player,
+                                },
+                            });
+                            return Ok(vec![]);
                         }
                         self.advance_mulligan(next_player);
                         return Ok(vec![]);
