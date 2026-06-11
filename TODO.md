@@ -47,14 +47,13 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   client can submit any target (Lyev Skyknight can detain the caster's own
   land). CR 115.1a/601.2c. Add an exhaustiveness guard across the three
   sibling walkers (`requires_target` / `primary_target_filter` / `eff_find`).
-- 🟡 **Cast pipeline is not atomic — partial state on rejected actions**
+- ✅ **Cast pipeline is not atomic — partial state on rejected actions**
   (all reachable from network client input, CR 601.2h rewind):
-  - ⏳ Squad / Multikicker / Replicate (`actions.rs`) commit the base
-    `cast_spell` *first*, then try to pay the extra cost — failure leaves
-    the spell on the stack at base cost (deliberate under-pay cheat).
-  - ⏳ Casualty / sacrifice-reduce / Bargain (`actions.rs`) sacrifice
-    *before* the base cast can still fail — creature dies (with death
-    triggers), no spell.
+  - ✅ Squad / Multikicker / Replicate / Casualty / sacrifice-reduce /
+    Bargain run through `cast_atomically` (full dry-run on a clone before
+    committing), so a late payment failure can't strand a base-cost cast
+    or cost sacrifices. Test
+    `squad_unaffordable_extra_payment_rejects_whole_cast`.
   - ✅ `declare_attackers` validates the whole batch (incl. duplicates)
     before spending the attack tax or tapping; `declare_blockers` defers
     the block tax until after Menace/Lure/Provoke validation and rejects

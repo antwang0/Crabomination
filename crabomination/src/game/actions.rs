@@ -1367,7 +1367,34 @@ impl GameState {
     /// sacrificed as an additional cost before the spell is put on the stack;
     /// then the just-cast spell is copied (the copy's controller may choose
     /// new targets — AutoDecider keeps the originals).
+    /// CR 601.2h — run `f` on a throwaway clone first; only when the whole
+    /// additional-cost cast sequence succeeds is it re-applied to the real
+    /// state, so a late payment failure can't leave partial state (a spell
+    /// committed at base cost, or cost sacrifices with no spell).
+    fn cast_atomically(
+        &mut self,
+        f: impl Fn(&mut Self) -> Result<Vec<GameEvent>, GameError>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let mut probe = self.clone();
+        f(&mut probe)?;
+        f(self)
+    }
+
     pub(crate) fn cast_spell_casualty(
+        &mut self,
+        card_id: CardId,
+        sacrifice: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_casualty_inner(card_id, sacrifice, target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_casualty_inner(
         &mut self,
         card_id: CardId,
         sacrifice: CardId,
@@ -1427,6 +1454,20 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_squad_inner(card_id, times, target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_squad_inner(
+        &mut self,
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let squad = self
             .players[p]
@@ -1465,6 +1506,20 @@ impl GameState {
     /// resolving spell is stamped `kicked` + `kick_count = times` so
     /// `Value::TimesKicked` riders read it (Everflowing Chalice).
     pub(crate) fn cast_spell_multikicked(
+        &mut self,
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_multikicked_inner(card_id, times, target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_multikicked_inner(
         &mut self,
         card_id: CardId,
         times: u32,
@@ -1513,6 +1568,20 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_replicate_inner(card_id, times, target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_replicate_inner(
+        &mut self,
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let replicate = self
             .players[p]
@@ -1543,6 +1612,20 @@ impl GameState {
     /// `sacrifice_cost_reduction` per creature, threaded through the normal
     /// cast path via the transient `extra_cast_reduction`.
     pub(crate) fn cast_spell_sacrifice_reduce(
+        &mut self,
+        card_id: CardId,
+        sacrifices: Vec<CardId>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_sacrifice_reduce_inner(card_id, sacrifices.clone(), target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_sacrifice_reduce_inner(
         &mut self,
         card_id: CardId,
         sacrifices: Vec<CardId>,
@@ -1602,6 +1685,20 @@ impl GameState {
     /// controls is sacrificed as an additional cost and the resolving spell is
     /// stamped `bargained` (read by `Predicate::SpellWasBargained`).
     pub(crate) fn cast_spell_bargain(
+        &mut self,
+        card_id: CardId,
+        sacrifice: Option<CardId>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_bargain_inner(card_id, sacrifice, target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_bargain_inner(
         &mut self,
         card_id: CardId,
         sacrifice: Option<CardId>,

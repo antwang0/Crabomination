@@ -41266,6 +41266,25 @@ fn squad_paid_twice_mints_two_token_copies() {
     assert_eq!(tokens, 2, "the two copies are tokens");
 }
 
+/// CR 601.2h — a squad cast whose extra payments are unaffordable is
+/// rejected atomically: the spell stays in hand, no mana is spent.
+#[test]
+fn squad_unaffordable_extra_payment_rejects_whole_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::vanguard_suppressor());
+    // Base {3}{U} affordable, the two Squad {2} payments are not.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let err = g.perform_action(GameAction::CastSpellSquad {
+        card_id: id, times: 2,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "unaffordable squad payment rejects the cast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "spell stays in hand");
+    assert!(g.stack.is_empty(), "nothing committed to the stack");
+    assert_eq!(g.players[0].mana_pool.total(), 4, "no mana spent");
+}
+
 /// Squad with zero extra payments is just a normal cast — no token copies.
 #[test]
 fn squad_paid_zero_times_is_a_plain_cast() {
