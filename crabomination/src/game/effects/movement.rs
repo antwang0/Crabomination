@@ -255,8 +255,11 @@ impl GameState {
                     .unwrap_or(false);
                 if has_shield {
                     if let Some(c) = self.battlefield_find_mut(cid) {
-                        let cur = c.counter_count(CounterType::Shield);
-                        c.counters.insert(CounterType::Shield, cur.saturating_sub(1));
+                        c.remove_counters(CounterType::Shield, 1);
+                        // No 0-count residue (CR 700.9 IsModified).
+                        if c.counter_count(CounterType::Shield) == 0 {
+                            c.counters.remove(&CounterType::Shield);
+                        }
                     }
                     return;
                 }

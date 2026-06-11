@@ -1399,8 +1399,16 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.adjust_life(p, amt as i32);
-                        events.push(GameEvent::LifeGained { player: p, amount: amt });
+                        // CR 119.10 — the event carries the APPLIED amount
+                        // (post replacement/bonus); a fully-replaced gain
+                        // fires no lifegain trigger.
+                        let applied = self.adjust_life_applied(p, amt as i32);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+                        } else if applied < 0 {
+                            // Tainted Remedy turned the gain into a loss.
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
                     }
                 }
                 Ok(())
@@ -1411,8 +1419,10 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.adjust_life(p, -(amt as i32));
-                        events.push(GameEvent::LifeLost { player: p, amount: amt });
+                        let applied = self.adjust_life_applied(p, -(amt as i32));
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -1634,14 +1644,20 @@ impl GameState {
                 if amt == 0 { return Ok(()); }
                 for ent in self.resolve_selector(from, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.adjust_life(p, -(amt as i32));
-                        events.push(GameEvent::LifeLost { player: p, amount: amt });
+                        let applied = self.adjust_life_applied(p, -(amt as i32));
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
                     }
                 }
                 for ent in self.resolve_selector(to, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.adjust_life(p, amt as i32);
-                        events.push(GameEvent::LifeGained { player: p, amount: amt });
+                        let applied = self.adjust_life_applied(p, amt as i32);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+                        } else if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -2079,11 +2095,19 @@ impl GameState {
             Effect::Monstrosity { n } => {
                 // CR 701.31 — if the source isn't monstrous, add N +1/+1
                 // counters and mark it monstrous (firing BecameMonstrous).
-                let count = self.evaluate_value(n, ctx).max(0) as u32;
+                let base = self.evaluate_value(n, ctx).max(0) as u32;
                 let Some(src) = ctx.source else { return Ok(()); };
                 let already = self.battlefield_find(src).map(|c| c.monstrous).unwrap_or(true);
                 if already {
                     return Ok(());
+                }
+                // CR 614.16 — counter doublers scale monstrosity counters too.
+                let ctrl = self.battlefield_find(src).map(|c| c.controller);
+                let mut count = base;
+                if let Some(ctrl) = ctrl {
+                    for _ in 0..self.counter_doublers_for(ctrl) {
+                        count = count.saturating_mul(2);
+                    }
                 }
                 if let Some(c) = self.battlefield_find_mut(src) {
                     c.monstrous = true;
@@ -2635,9 +2659,11 @@ impl GameState {
                             .unwrap_or(false);
                         if has_shield {
                             if let Some(c) = self.battlefield_find_mut(cid) {
-                                let cur = c.counter_count(crate::card::CounterType::Shield);
-                                c.counters
-                                    .insert(crate::card::CounterType::Shield, cur.saturating_sub(1));
+                                c.remove_counters(crate::card::CounterType::Shield, 1);
+                                // No 0-count residue (CR 700.9 IsModified).
+                                if c.counter_count(crate::card::CounterType::Shield) == 0 {
+                                    c.counters.remove(&crate::card::CounterType::Shield);
+                                }
                             }
                             continue;
                         }
@@ -3938,6 +3964,8 @@ impl GameState {
                         let kinds: Vec<(crate::card::CounterType, u32)> =
                             c.counters.iter().map(|(k, v)| (*k, *v)).collect();
                         c.counters.clear();
+                        // CR 122.1b — keyword counters are counters too.
+                        c.keyword_counters.clear();
                         for (kind, count) in kinds {
                             events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count });
                         }
@@ -3995,6 +4023,9 @@ impl GameState {
                         };
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             *c.keyword_counters.entry(keyword.clone()).or_insert(0) += n;
+                            // "This permanent gained a counter this turn"
+                            // payoffs count keyword counters too (CR 122.1b).
+                            self.permanents_gained_counter_this_turn.insert(cid);
                         }
                     }
                 }

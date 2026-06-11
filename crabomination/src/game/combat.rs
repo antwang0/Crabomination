@@ -1019,16 +1019,25 @@ impl GameState {
         &self,
         total_power: u32,
         lethals: &[(CardId, u32)],
+        has_trample: bool,
     ) -> Vec<(CardId, u32)> {
         let mut remaining = total_power;
-        lethals
+        let mut split: Vec<(CardId, u32)> = lethals
             .iter()
             .map(|&(id, lethal)| {
                 let a = lethal.min(remaining);
                 remaining -= a;
                 (id, a)
             })
-            .collect()
+            .collect();
+        // CR 510.1d — ALL the attacker's damage must be assigned; without
+        // trample the excess goes to the blockers (default: the last one)
+        // rather than vanishing. With trample the remainder is left for the
+        // caller's trample-over-to-player path (CR 702.19g).
+        if !has_trample && remaining > 0 && let Some(last) = split.last_mut() {
+            last.1 += remaining;
+        }
+        split
     }
 
     /// Build the `Decision::AssignCombatDamage` for dividing `total_power`
@@ -1062,14 +1071,15 @@ impl GameState {
         &self,
         total_power: u32,
         lethals: &[(CardId, u32)],
+        has_trample: bool,
         answer: &crate::decision::DecisionAnswer,
     ) -> Vec<(CardId, u32)> {
         use crate::decision::DecisionAnswer;
         let DecisionAnswer::CombatDamageAssignment(pairs) = answer else {
-            return self.default_damage_split(total_power, lethals);
+            return self.default_damage_split(total_power, lethals, has_trample);
         };
         if pairs.is_empty() {
-            return self.default_damage_split(total_power, lethals);
+            return self.default_damage_split(total_power, lethals, has_trample);
         }
         // Re-key the answer into blocker order (missing entries = 0).
         let amounts: Vec<u32> = lethals
@@ -1084,14 +1094,14 @@ impl GameState {
             .collect();
         let assigned: u32 = amounts.iter().sum();
         if assigned > total_power {
-            return self.default_damage_split(total_power, lethals);
+            return self.default_damage_split(total_power, lethals, has_trample);
         }
         // Ordering rule: once a blocker is under-assigned, no later blocker
         // (nor trample-over) may receive damage.
         let mut earlier_all_lethal = true;
         for (i, &(_, lethal)) in lethals.iter().enumerate() {
             if !earlier_all_lethal && amounts[i] > 0 {
-                return self.default_damage_split(total_power, lethals);
+                return self.default_damage_split(total_power, lethals, has_trample);
             }
             if amounts[i] < lethal {
                 earlier_all_lethal = false;
@@ -1099,7 +1109,7 @@ impl GameState {
         }
         if total_power > assigned && !earlier_all_lethal {
             // A trample-over leftover requires every blocker to be at lethal.
-            return self.default_damage_split(total_power, lethals);
+            return self.default_damage_split(total_power, lethals, has_trample);
         }
         lethals.iter().map(|&(id, _)| id).zip(amounts).collect()
     }
@@ -1168,7 +1178,7 @@ impl GameState {
                 let lethals = self.combat_lethals(atk.has_deathtouch, &order, computed);
                 // No meaningful choice with zero power — store the default.
                 if total_power == 0 {
-                    let split = self.default_damage_split(total_power, &lethals);
+                    let split = self.default_damage_split(total_power, &lethals, atk.has_trample);
                     self.combat_damage_assignment.insert(atk.id, split);
                     continue;
                 }
@@ -1186,7 +1196,8 @@ impl GameState {
                     return true;
                 }
                 let answer = self.decider.decide(&decision);
-                let split = self.resolve_damage_assignment(total_power, &lethals, &answer);
+                let split =
+                    self.resolve_damage_assignment(total_power, &lethals, atk.has_trample, &answer);
                 self.combat_damage_assignment.insert(atk.id, split);
             }
         }
@@ -1210,7 +1221,14 @@ impl GameState {
                     .find(|c| c.id == bid)
                     .map(|c| c.toughness.max(0) as u32)
                     .unwrap_or(0);
-                (bid, if attacker_deathtouch { 1 } else { tough })
+                // CR 510.1c — lethal accounts for damage already marked
+                // (a double-strike trampler only needs the remainder in the
+                // regular step). Deathtouch: any nonzero amount (702.2e).
+                let marked = self
+                    .battlefield_find(bid)
+                    .map(|c| c.damage)
+                    .unwrap_or(0);
+                (bid, if attacker_deathtouch { 1 } else { tough.saturating_sub(marked) })
             })
             .collect()
     }
@@ -1253,7 +1271,8 @@ impl GameState {
                     power.max(0) as u32
                 };
                 let lethals = self.combat_lethals(deathtouch, &order, &computed);
-                let split = self.resolve_damage_assignment(total_power, &lethals, answer);
+                let trample = atk_cp.is_some_and(|c| c.keywords.contains(&Keyword::Trample));
+                let split = self.resolve_damage_assignment(total_power, &lethals, trample, answer);
                 self.combat_damage_assignment.insert(attacker, split);
             }
         }
@@ -1396,8 +1415,10 @@ impl GameState {
                     self.deal_combat_damage_to_target(atk, amount, &mut events);
                     if atk.has_lifelink {
                         let a = self.active_player_idx;
-                        self.adjust_life(a, amount as i32);
-                        events.push(GameEvent::LifeGained { player: a, amount });
+                        let applied = self.adjust_life_applied(a, amount as i32);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained { player: a, amount: applied as u32 });
+                        }
                     }
                 }
             } else {
@@ -1413,20 +1434,28 @@ impl GameState {
                 // blocker, prevented, or a non-UI path that stored the
                 // default). The lethal for each is 1 under deathtouch (CR
                 // 702.2e).
+                // CR 510.1c — lethal accounts for marked damage; deathtouch
+                // needs only 1 (CR 702.2e). Shared with `combat_lethals`.
                 let lethals: Vec<(CardId, u32)> = blocker_ids
                     .iter()
                     .map(|&bid| {
                         let tough = computed_of(bid)
                             .map(|c| c.toughness.max(0) as u32)
                             .unwrap_or(0);
-                        (bid, if atk.has_deathtouch { 1 } else { tough })
+                        let marked = self
+                            .battlefield_find(bid)
+                            .map(|c| c.damage)
+                            .unwrap_or(0);
+                        (bid, if atk.has_deathtouch { 1 } else { tough.saturating_sub(marked) })
                     })
                     .collect();
                 let assignment = self
                     .combat_damage_assignment
                     .get(&atk.id)
                     .cloned()
-                    .unwrap_or_else(|| self.default_damage_split(total_power, &lethals));
+                    .unwrap_or_else(|| {
+                        self.default_damage_split(total_power, &lethals, atk.has_trample)
+                    });
                 let mut lifelink_dealt = 0i32;
                 let mut assigned_to_blockers = 0u32;
 
@@ -1509,9 +1538,10 @@ impl GameState {
 
                 if atk.has_lifelink && lifelink_dealt > 0 {
                     let a = self.active_player_idx;
-                    let amt = lifelink_dealt as u32;
-                    self.adjust_life(a, lifelink_dealt);
-                    events.push(GameEvent::LifeGained { player: a, amount: amt });
+                    let applied = self.adjust_life_applied(a, lifelink_dealt);
+                    if applied > 0 {
+                        events.push(GameEvent::LifeGained { player: a, amount: applied as u32 });
+                    }
                 }
 
                 // Only blockers whose own keywords say they deal damage in

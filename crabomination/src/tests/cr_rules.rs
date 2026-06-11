@@ -1020,3 +1020,129 @@ fn cr_509_1a_animated_land_can_block() {
         .expect("animated land is a legal blocker");
     assert_eq!(g.block_map.get(&land), Some(&attacker));
 }
+
+// ── CR 510.1c/d — marked damage + full assignment ─────────────────────────────
+
+/// A double-strike trampler only needs the blocker's REMAINING toughness as
+/// lethal in the regular step — the rest tramples over (CR 510.1c).
+#[test]
+fn cr_510_1c_marked_damage_counts_toward_lethal() {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    fn ds_trampler() -> CardDefinition {
+        CardDefinition {
+            name: "Test DS Trampler",
+            cost: crate::mana::cost(&[crate::mana::generic(3), crate::mana::r()]),
+            card_types: vec![CardType::Creature],
+            power: 4,
+            toughness: 4,
+            keywords: vec![Keyword::DoubleStrike, Keyword::Trample],
+            ..Default::default()
+        }
+    }
+    fn wall_3_6() -> CardDefinition {
+        CardDefinition {
+            name: "Test Wall 3/6",
+            cost: crate::mana::cost(&[crate::mana::generic(2)]),
+            card_types: vec![CardType::Creature],
+            power: 0,
+            toughness: 6,
+            ..Default::default()
+        }
+    }
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, ds_trampler());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, wall_3_6());
+    g.clear_sickness(blocker);
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().unwrap();
+    // FS step: 4 to the 6-toughness wall (no overflow yet).
+    assert_eq!(g.players[1].life, life, "no trample-over in the FS step");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    // Regular step: 4 marked already, lethal = 2 → 2 tramples through.
+    assert_eq!(g.players[1].life, life - 2, "marked damage counted toward lethal");
+}
+
+/// Without trample the attacker's full power is assigned to its blocker —
+/// the excess doesn't vanish (CR 510.1d).
+#[test]
+fn cr_510_1d_excess_damage_assigned_to_blocker() {
+    use crate::card::{CardDefinition, CardType, Keyword};
+    fn indestructible_2_2() -> CardDefinition {
+        CardDefinition {
+            name: "Test Indestructible Bear",
+            cost: crate::mana::cost(&[crate::mana::generic(2)]),
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Indestructible],
+            ..Default::default()
+        }
+    }
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::ulamog_the_ceaseless_hunger());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, indestructible_2_2());
+    g.clear_sickness(blocker);
+    for _ in 0..25 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(
+        g.battlefield_find(blocker).unwrap().damage,
+        10,
+        "all ten damage assigned to the lone blocker"
+    );
+}
+
+// ── CR 119.10 — lifegain events carry the applied amount ─────────────────────
+
+/// A fully-suppressed gain emits no LifeGained event (no lifegain triggers).
+#[test]
+fn cr_119_10_suppressed_gain_emits_no_event() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::platinum_emperion());
+    let eff = Effect::GainLife { who: Selector::You, amount: Value::Const(5) };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(
+        !events.iter().any(|e| matches!(e, GameEvent::LifeGained { .. })),
+        "no LifeGained for a gain that never happened"
+    );
+}
+
+// ── CR 122.1b — RemoveAllCounters clears keyword counters too ────────────────
+
+#[test]
+fn cr_122_1b_remove_all_counters_clears_keyword_counters() {
+    use crate::card::Keyword;
+    use crate::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().keyword_counters.insert(Keyword::Flying, 1);
+    g.battlefield_find_mut(bear)
+        .unwrap()
+        .add_counters(crate::card::CounterType::PlusOnePlusOne, 2);
+    let eff = Effect::RemoveAllCounters { what: Selector::This };
+    let ctx = EffectContext::for_ability(bear, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.counters.is_empty(), "regular counters cleared");
+    assert!(c.keyword_counters.is_empty(), "keyword counters cleared (CR 122.1b)");
+}

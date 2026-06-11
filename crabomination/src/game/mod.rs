@@ -1417,6 +1417,16 @@ impl GameState {
         new_total
     }
 
+    /// Like [`adjust_life`] but returns the *applied* delta — after the
+    /// cannot-gain/lose drops, gain→loss replacement, and gain bonuses
+    /// (CR 119.7/119.10/614). Callers that emit `LifeGained`/`LifeLost`
+    /// must use this so triggers don't fire on gains that never happened.
+    pub fn adjust_life_applied(&mut self, seat: usize, delta: i32) -> i32 {
+        let before = self.effective_life(seat);
+        let after = self.adjust_life(seat, delta);
+        after - before
+    }
+
     /// Overwrite the effective life total for `seat` (Effect::SetLife
     /// path). Routes through the shared pool when set, else writes
     /// `players[seat].life` directly. Does not bump
