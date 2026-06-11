@@ -124,6 +124,10 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         sets::ths::baleful_eidolon,
     ];
     all.extend_from_slice(&ths);
+    // Everything else the catalog defines (generated aggregate —
+    // `scripts/gen_factory_lists.py`). Appended last so the curated
+    // entries above win the `name → factory` race for duplicate names.
+    all.extend_from_slice(sets::all_factories::all_catalog_card_factories());
     // Dedupe by function-pointer address so repeated copies of the same
     // card across decks/cube don't bloat the registry.
     let mut seen = std::collections::HashSet::new();
@@ -274,6 +278,21 @@ mod tests {
         ] {
             let def = lookup_by_name(name).unwrap_or_else(|| panic!("{name} should resolve"));
             assert_eq!(def.name, name);
+        }
+    }
+
+    #[test]
+    fn every_catalog_factory_resolves_by_name() {
+        // Drift guard: any `pub fn x() -> CardDefinition` in the catalog
+        // must be reachable via the registry (generated aggregate list —
+        // scripts/gen_factory_lists.py).
+        for f in sets::all_factories::all_catalog_card_factories() {
+            let def = f();
+            assert!(
+                lookup_by_name(def.name).is_some(),
+                "{} defined but not resolvable",
+                def.name
+            );
         }
     }
 
