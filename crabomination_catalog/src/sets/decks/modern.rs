@@ -34965,6 +34965,29 @@ pub fn crystalline_sliver() -> CardDefinition {
     }
 }
 
+/// Lymph Sliver — {3}{W} 1/1 Sliver. All Sliver creatures have absorb 1.
+pub fn lymph_sliver() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Lymph Sliver",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "All Sliver creatures have absorb 1.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Sliver)),
+                keyword: Keyword::Absorb(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── modern_decks: Elf / Zombie / Vampire tribal ──────────────────────────────
 
 /// Elvish Champion — {1}{G}{G} 2/2 Elf. Other Elves get +1/+1 and have

@@ -2270,6 +2270,39 @@ impl GameState {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
+        // CR 704.5y — if a permanent has more than one Role controlled by
+        // the same player attached, each but the newest (by battlefield
+        // timestamp, CardId tiebreak) goes to its owner's graveyard.
+        let stale_roles: Vec<CardId> = {
+            let mut by_host: std::collections::HashMap<(CardId, usize), Vec<(u64, CardId)>> =
+                std::collections::HashMap::new();
+            for c in self.battlefield.iter().filter(|c| {
+                c.definition
+                    .subtypes
+                    .enchantment_subtypes
+                    .contains(&crate::card::EnchantmentSubtype::Role)
+            }) {
+                if let Some(host) = c.attached_to {
+                    by_host
+                        .entry((host, c.controller))
+                        .or_default()
+                        .push((c.battlefield_timestamp, c.id));
+                }
+            }
+            by_host
+                .into_values()
+                .filter(|roles| roles.len() > 1)
+                .flat_map(|mut roles| {
+                    roles.sort();
+                    roles.pop(); // keep the newest
+                    roles.into_iter().map(|(_, id)| id)
+                })
+                .collect()
+        };
+        for id in stale_roles {
+            events.append(&mut self.remove_to_graveyard_with_triggers(id));
+        }
+
         // CR 704.5n — "If an Equipment or Fortification is attached to an
         // illegal permanent or to a player, it becomes unattached from
         // that permanent or player. It remains on the battlefield."

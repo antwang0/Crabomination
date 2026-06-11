@@ -1783,3 +1783,118 @@ fn cr_702_61_triggers_fire_but_activations_blocked() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(stone).is_some(), "Mind Stone never sacrificed");
 }
+
+// ── CR 702.64 — Absorb ────────────────────────────────────────────────────────
+
+/// Lymph Sliver grants all Slivers absorb 1: each damage event to a Sliver
+/// is reduced by 1, per source per event.
+#[test]
+fn cr_702_64_absorb_prevents_n_per_damage_event() {
+    use crate::effect::{Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lymph_sliver());
+    let subject = g.add_card_to_battlefield(0, catalog::crystalline_sliver()); // 2/2
+    // Hit the 2/2 Sliver for 2 → absorb 1 → 1 marked damage, survives.
+    let ctx = crate::game::effects::EffectContext::for_spell(
+        1, Some(Target::Permanent(subject)), 0, 0,
+    );
+    g.resolve_effect(
+        &Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(
+        g.battlefield_find(subject).map(|c| c.damage),
+        Some(1),
+        "absorb 1 soaks one of the two"
+    );
+    // A second event is absorbed separately: 1 damage → fully prevented.
+    g.resolve_effect(
+        &Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.battlefield_find(subject).map(|c| c.damage), Some(1), "1-damage event fully absorbed");
+}
+
+/// Absorb applies to combat damage and keeps a 1-power attacker from
+/// denting the Sliver at all.
+#[test]
+fn cr_702_64_absorb_soaks_combat_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lymph_sliver());
+    let sliver = g.add_card_to_battlefield(0, catalog::crystalline_sliver()); // 2/2 absorb 1
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(0) }];
+    g.block_map.insert(sliver, bear);
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 1;
+    g.resolve_combat().unwrap();
+    // Bear deals 2, absorb 1 → 1 marked (survives); the 2/2 strikes back
+    // for 2 and the bear dies.
+    assert_eq!(g.battlefield_find(sliver).map(|c| c.damage), Some(1),
+        "2/2 with absorb survives the 2-power hit with 1 marked");
+    assert!(g.battlefield_find(bear).is_none(), "bear takes the full strike-back");
+}
+
+// ── CR 704.5y — Role uniqueness SBA ───────────────────────────────────────────
+
+/// Two Roles controlled by the same player on one permanent: the older one
+/// goes to the graveyard (and, being a token, ceases to exist).
+#[test]
+fn cr_704_5y_same_controller_roles_keep_only_the_newest() {
+    use crate::card::{EnchantmentSubtype, EquipBonus, TokenDefinition};
+    use crate::effect::Selector;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let role = TokenDefinition {
+        name: "Wicked".into(),
+        card_types: vec![crate::card::CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
+            ..Default::default()
+        },
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    };
+    let ctx = crate::game::effects::EffectContext::for_ability(bear, 0, None);
+    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: role };
+    g.resolve_effect(&mint, &ctx).unwrap();
+    let first: Vec<CardId> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Wicked").map(|c| c.id).collect();
+    assert_eq!(first.len(), 1);
+    g.resolve_effect(&mint, &ctx).unwrap();
+    g.check_state_based_actions();
+    let roles: Vec<&crate::card::CardInstance> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Wicked").collect();
+    assert_eq!(roles.len(), 1, "only one Role survives the SBA");
+    assert_ne!(roles[0].id, first[0], "the newer Role is the survivor");
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.definition.name == "Wicked"),
+        "the dead Role token ceases to exist"
+    );
+}
+
+/// Roles controlled by different players coexist (CR 704.5y is
+/// per-controller).
+#[test]
+fn cr_704_5y_different_controllers_roles_coexist() {
+    use crate::card::{EnchantmentSubtype, TokenDefinition};
+    use crate::effect::Selector;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let role = TokenDefinition {
+        name: "Cursed".into(),
+        card_types: vec![crate::card::CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: role };
+    g.resolve_effect(&mint, &crate::game::effects::EffectContext::for_ability(bear, 0, None)).unwrap();
+    g.resolve_effect(&mint, &crate::game::effects::EffectContext::for_ability(bear, 1, None)).unwrap();
+    g.check_state_based_actions();
+    let n = g.battlefield.iter().filter(|c| c.definition.name == "Cursed").count();
+    assert_eq!(n, 2, "one Role per controller may stay");
+}

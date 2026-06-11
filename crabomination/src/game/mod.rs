@@ -8006,26 +8006,7 @@ impl GameState {
         Ok(events)
     }
 
-    /// Resolve a triggered ability's effect tree.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn continue_trigger_resolution(
-        &mut self,
-        source: CardId,
-        controller: usize,
-        effect: crate::effect::Effect,
-        target: Option<Target>,
-        mode: usize,
-        x_value: u32,
-        converged_value: u32,
-        mana_spent: u32,
-    ) -> Result<Vec<GameEvent>, GameError> {
-        self.continue_trigger_resolution_with_source(
-            source, controller, effect, target, mode, x_value, converged_value, mana_spent, None,
-            0,
-        )
-    }
-
-    /// Variant of `continue_trigger_resolution` that carries the
+    /// Resolve a triggered ability's effect tree, carrying the
     /// trigger's "source entity" (the just-cast spell, the dying
     /// creature, etc.) into `ctx.trigger_source`. Used by spell-cast
     /// triggers whose body looks up the cast spell on the stack

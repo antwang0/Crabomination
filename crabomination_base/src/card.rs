@@ -390,6 +390,10 @@ pub enum Keyword {
     Flanking,
     /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
     Bushido(u32),
+    /// Absorb N (CR 702.64) — if a source would deal damage to this
+    /// creature, prevent N of that damage (per source, per event; multiple
+    /// instances each apply).
+    Absorb(u32),
     /// Rampage N (CR 702.23) — when this becomes blocked, it gets +N/+N for each blocker beyond the first.
     Rampage(u32),
     Intimidate,

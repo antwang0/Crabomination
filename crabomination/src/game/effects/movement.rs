@@ -62,6 +62,35 @@ impl GameState {
             }
             return 0;
         }
+        // CR 702.64 — Absorb N on the damaged creature prevents N of this
+        // event's damage per instance (each instance applies separately).
+        let mut amount = amount;
+        if let EntityRef::Permanent(cid) = ent {
+            let absorbed: u32 = self
+                .computed_permanent(cid)
+                .map(|cp| {
+                    cp.keywords
+                        .iter()
+                        .filter_map(|k| match k {
+                            crate::card::Keyword::Absorb(n) => Some(*n),
+                            _ => None,
+                        })
+                        .sum()
+                })
+                .unwrap_or(0);
+            let soaked = absorbed.min(amount);
+            if soaked > 0 {
+                events.push(GameEvent::DamagePrevented {
+                    amount: soaked,
+                    to_player: None,
+                    to_card: Some(cid),
+                });
+                amount -= soaked;
+                if amount == 0 {
+                    return 0;
+                }
+            }
+        }
         if self.prevention_shields.is_empty() {
             return amount;
         }

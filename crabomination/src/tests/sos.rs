@@ -12768,12 +12768,12 @@ fn paradigm_free_copy_resolves_with_scripted_yes() {
     // Resolve `CastFreeParadigmCopy` directly as a trigger from the
     // Paradigm-exiled card. Threads `source = seminar_id` so the
     // effect locates the original in exile.
-    g.continue_trigger_resolution(
+    g.continue_trigger_resolution_with_source(
         seminar_id,
         0,
         crate::effect::Effect::CastFreeParadigmCopy,
         None,
-        0, 0, 0, 0,
+        0, 0, 0, 0, None, 0,
     ).expect("paradigm copy effect resolves");
     drain_stack(&mut g);
 

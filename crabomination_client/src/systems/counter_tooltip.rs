@@ -588,6 +588,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Vanishing(_) => "Enters with that many time counters; remove one each upkeep, and sacrifice it when the last is gone.",
         K::Protection(_) => "Can't be blocked, targeted, dealt damage, enchanted, or equipped by anything of the named quality.",
         K::Bushido(_) => "Whenever it blocks or becomes blocked, it gets +N/+N until end of turn.",
+        K::Absorb(_) => "If a source would deal damage to this creature, prevent N of that damage.",
         K::Rampage(_) => "Whenever it becomes blocked, it gets +N/+N for each blocker beyond the first.",
         K::Crew(_) => "Tap any number of creatures with total power N or greater to turn this Vehicle into an artifact creature.",
         K::Madness(_) => "If you discard it, you may cast it for its madness cost instead of putting it in your graveyard.",
@@ -726,6 +727,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // Cost/count-bearing keywords that otherwise fell through to the raw
         // `{:?}` debug shape — give them printed-Oracle phrasing.
         K::Bushido(n) => format!("Bushido {n}"),
+        K::Absorb(n) => format!("Absorb {n}"),
         K::Rampage(n) => format!("Rampage {n}"),
         K::Regenerate(_) => "Regeneration".into(),
         K::Buyback(cost) => format!("Buyback {}", cost.summary()),

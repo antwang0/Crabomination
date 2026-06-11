@@ -1232,6 +1232,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cursecatcher,
         galerider_sliver,
         crystalline_sliver,
+        lymph_sliver,
         winged_sliver,
         switcheroo,
         coastal_piracy,
