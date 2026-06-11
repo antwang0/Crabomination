@@ -50,14 +50,6 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         sets::decks::blossoming_sands,
     ];
     all.extend_from_slice(&gainlands);
-    // STX (Strixhaven 2021) factory list — large but bounded; the
-    // dedup pass below removes any factory the cube/sos pools already
-    // exposed. Without this, mid-game snapshots involving STX
-    // permanents would fail snapshot-reload at the `name → factory`
-    // lookup stage.
-    for &f in sets::stx::all_stx_card_factories() {
-        all.push(f);
-    }
     // Extra-turn spells (sets::xtra) — registered so mid-game snapshots
     // involving them round-trip through the name→factory lookup.
     let xtra: [CardFactory; 6] = [

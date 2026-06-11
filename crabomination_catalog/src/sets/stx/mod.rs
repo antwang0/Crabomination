@@ -8,7 +8,6 @@
 
 pub use super::no_abilities;
 
-mod all_factories;
 // `extras` was a single 40k-line file; it's split into `extras_NN` sibling
 // modules (~60 factories each) purely to cut incremental compile time.
 // They live at this same module depth so every `super::`/`super::super::`
@@ -44,7 +43,6 @@ mod shared;
 mod silverquill;
 mod witherbloom;
 
-pub use all_factories::all_stx_card_factories;
 #[allow(ambiguous_glob_reexports)]
 pub use extras_00::*;
 #[allow(ambiguous_glob_reexports)]
