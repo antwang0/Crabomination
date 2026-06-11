@@ -1921,6 +1921,8 @@ static DECKS: &[Factory] = &[
     super::decks::esper_sentinel,
     super::decks::mystic_remora,
     super::decks::ad_nauseam,
+    super::decks::kataki_wars_wage,
+    super::decks::alpine_moon,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,

@@ -6246,8 +6246,9 @@ impl GameState {
                     Selector::EachPermanent(req) => {
                         // Evaluate the filter from the granting source's
                         // controller so "ControlledByYou" picks that
-                        // player's permanents.
-                        if self.evaluate_requirement_static(req, &tgt, src.controller, None) {
+                        // player's permanents (and `NamedBySource` reads
+                        // the granting source's chosen name).
+                        if self.evaluate_requirement_static(req, &tgt, src.controller, Some(src.id)) {
                             out.push(ability.clone());
                         }
                     }

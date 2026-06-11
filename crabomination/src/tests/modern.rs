@@ -53229,3 +53229,66 @@ fn confront_the_past_enforces_mv_at_most_x() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(pw_id).is_some(), "reanimated");
 }
+
+// ── Kataki (granted-trigger static) + Alpine Moon (named-land hate) ─────────
+
+/// Kataki grants every artifact an upkeep sac-tax: unpaid → sacrificed,
+/// paid {1} (auto-tapped) → survives.
+#[test]
+fn kataki_taxes_artifacts_each_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::kataki_wars_wage());
+    let rock = g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.active_player_idx = 0;
+    // AutoDecider declines the {1} → the artifact is sacrificed.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "unpaid tax → sacrificed");
+    // With a land and a willing payer it survives.
+    let rock2 = g.add_card_to_battlefield(0, catalog::mind_stone());
+    let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock2).is_some(), "paid tax → survives");
+    assert!(
+        g.battlefield_find(mtn).unwrap().tapped || g.battlefield_find(rock2).unwrap().tapped,
+        "a mana source was auto-tapped for the tax"
+    );
+}
+
+/// Kataki's tax doesn't touch non-artifacts.
+#[test]
+fn kataki_ignores_nonartifacts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::kataki_wars_wage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Alpine Moon strips the named opponent land's abilities (its printed mana
+/// ability is gone) and grants "{T}: any color" instead.
+#[test]
+fn alpine_moon_neutralizes_named_land() {
+    let mut g = two_player_game();
+    let post = g.add_card_to_battlefield(1, catalog::cloudpost());
+    let moon = g.add_card_to_hand(0, catalog::alpine_moon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Cloudpost".into())]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: moon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Alpine Moon");
+    drain_stack(&mut g);
+    let computed = g.computed_permanent(post).unwrap();
+    assert!(computed.lost_all_abilities, "printed abilities stripped");
+    assert!(computed.subtypes.land_types.is_empty(), "land types stripped");
+    // The granted any-color ability is usable by the land's controller.
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: post, ability_index: 0, target: None, x_value: None,
+    }).expect("granted mana ability");
+    assert_eq!(g.players[1].mana_pool.total(), 1, "made one mana of a chosen color");
+}

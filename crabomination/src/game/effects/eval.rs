@@ -1267,6 +1267,10 @@ impl GameState {
                         self.find_card_anywhere(*id)
                             .is_some_and(|c| c.definition.name == card.definition.name)
                     }),
+                    R::NamedBySource => source
+                        .and_then(|sid| self.battlefield_find(sid))
+                        .and_then(|s| s.named_card.as_deref())
+                        .is_some_and(|n| n == card.definition.name),
                     _ => unreachable!("handled above"),
                 }
             }

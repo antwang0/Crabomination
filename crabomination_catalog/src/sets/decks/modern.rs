@@ -48378,3 +48378,80 @@ pub fn ad_nauseam() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Kataki + Alpine Moon (granted-trigger static / named-land hate) ─────────
+
+/// Kataki, War's Wage — {1}{W} 2/1 Legendary Spirit. All artifacts have
+/// "At the beginning of your upkeep, sacrifice this artifact unless you
+/// pay {1}."
+pub fn kataki_wars_wage() -> CardDefinition {
+    use crate::card::WardCost;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Kataki, War's Wage",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "All artifacts have \"At the beginning of your upkeep, sacrifice this artifact unless you pay {1}.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::Artifact,
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(TurnStep::Upkeep),
+                        EventScope::YourControl,
+                    ),
+                    effect: Effect::UnlessPlayerPays {
+                        who: PlayerRef::You,
+                        cost: WardCost::generic(1),
+                        then: Box::new(Effect::SacrificeSource),
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Alpine Moon — {R} Enchantment. ETB: choose a nonbasic land card name.
+/// Opponents' lands with that name lose all land types and abilities and
+/// gain "{T}: Add one mana of any color."
+pub fn alpine_moon() -> CardDefinition {
+    CardDefinition {
+        name: "Alpine Moon",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::NameCard { what: Selector::This })],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Lands your opponents control with the chosen name lose all land types and abilities.",
+                effect: StaticEffect::NamedLandsNeutralized,
+            },
+            StaticAbility {
+                description: "…and they gain \"{T}: Add one mana of any color.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::ControlledByOpponent)
+                            .and(SelectionRequirement::NamedBySource),
+                    ),
+                    ability: ActivatedAbility {
+                        tap_cost: true,
+                        effect: Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: crate::effect::ManaPayload::AnyColors(Value::Const(1)),
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

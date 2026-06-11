@@ -1187,6 +1187,33 @@ impl GameState {
             .unwrap_or(&[])
     }
 
+    /// Triggered abilities granted to `card` by battlefield
+    /// `StaticEffect::GrantTriggeredAbility` statics ("All artifacts have
+    /// '…'" — Kataki, War's Wage). Each fires as though printed on the
+    /// matching permanent (CR 702.6e-style source binding).
+    pub(crate) fn statics_granted_triggers_for(
+        &self,
+        card: &CardInstance,
+    ) -> Vec<crate::card::TriggeredAbility> {
+        let mut out = Vec::new();
+        for src in &self.battlefield {
+            for sa in &src.definition.static_abilities {
+                if let crate::effect::StaticEffect::GrantTriggeredAbility { filter, ability } =
+                    &sa.effect
+                    && self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(card.id),
+                        src.controller,
+                        Some(src.id),
+                    )
+                {
+                    out.push((**ability).clone());
+                }
+            }
+        }
+        out
+    }
+
     /// Apply format-specific setup: starting life total, turn-1 draw
     /// rule, and (for Two-Headed Giant) the team partition + shared
     /// life pool.
@@ -3240,6 +3267,42 @@ impl GameState {
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::RemoveCardType(CardType::Creature),
+                });
+            }
+        }
+        // Alpine Moon — opponents' lands matching the source's chosen name
+        // lose all land types and abilities (the any-color mana grant rides
+        // a separate `GrantActivatedAbility` over `NamedBySource`).
+        for card in &self.battlefield {
+            let has = card.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::NamedLandsNeutralized)
+            });
+            let Some(name) = card.named_card.as_deref().filter(|_| has) else { continue };
+            let hit: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.definition.is_land()
+                        && c.definition.name == name
+                        && !self.same_team(c.controller, card.controller)
+                })
+                .map(|c| c.id)
+                .collect();
+            if hit.is_empty() {
+                continue;
+            }
+            for (layer, modification) in [
+                (Layer::L4Type, Modification::SetLandTypes(vec![])),
+                (Layer::L6Ability, Modification::RemoveAllAbilities),
+            ] {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(hit.clone()),
+                    layer,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification,
                 });
             }
         }
@@ -5637,12 +5700,14 @@ impl GameState {
             // (CR 603.3d) can be tracked per (source, index); granted
             // triggers are never once-per-turn and use a sentinel index.
             let n_printed = card.definition.triggered_abilities.len();
+            let static_granted = self.statics_granted_triggers_for(card);
             let all_triggers = card
                 .definition
                 .triggered_abilities
                 .iter()
                 .enumerate()
-                .chain(self.granted_triggers(card.id).iter().map(|t| (usize::MAX, t)));
+                .chain(self.granted_triggers(card.id).iter().map(|t| (usize::MAX, t)))
+                .chain(static_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
                 // CR 603.3d — "triggers only once each turn": skip if it has
                 // already fired this turn or earlier in this same batch.
@@ -8577,6 +8642,12 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // GrantKeywordToAttackers — needs live combat state, resolved in
             // `compute_battlefield` against `GameState.attacking`.
             | StaticEffect::GrantKeywordToAttackers { .. }
+            // GrantTriggeredAbility — surfaced by `statics_granted_triggers_for`
+            // in both trigger dispatchers; no layer effect.
+            | StaticEffect::GrantTriggeredAbility { .. }
+            // NamedLandsNeutralized — live-resolved in
+            // `gather_continuous_effects_inner` (needs the source's named_card).
+            | StaticEffect::NamedLandsNeutralized
             // GrantActivatedAbility — surfaced as a virtual activated ability
             // in `activate_ability`; not a characteristic layer effect.
             | StaticEffect::GrantActivatedAbility { .. }

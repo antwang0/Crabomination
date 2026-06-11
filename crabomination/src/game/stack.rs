@@ -369,27 +369,34 @@ impl GameState {
         // re-check it after gathering — predicate evaluation needs
         // `&self.evaluate_predicate(...)` which can't run inside the inner
         // closure due to the `iter` borrow.
+        let scope_matches = |scope: &EventScope, controller: usize| match scope {
+            EventScope::AnyPlayer => true,
+            EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
+                controller == active
+            }
+            EventScope::OpponentControl => controller != active,
+            EventScope::AnotherOfYours => false,
+            EventScope::FromYourGraveyard => false, // walked separately below
+            EventScope::YourPermanentTargetedByOpponent
+            | EventScope::YourCreatureTargeted => false, // event-based
+            EventScope::ControllerAttackedByOpponent => false, // combat-based
+        };
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
             .battlefield
             .iter()
             .flat_map(|c| {
+                // Printed triggers plus statics-granted ones (Kataki's "All
+                // artifacts have '…upkeep…'"), both firing off `c`.
+                let granted = self.statics_granted_triggers_for(c);
                 c.definition
                     .triggered_abilities
                     .iter()
+                    .cloned()
+                    .chain(granted)
                     .filter(|t| t.event.kind == kind)
-                    .filter(|t| match t.event.scope {
-                        EventScope::AnyPlayer => true,
-                        EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
-                            c.controller == active
-                        }
-                        EventScope::OpponentControl => c.controller != active,
-                        EventScope::AnotherOfYours => false,
-                        EventScope::FromYourGraveyard => false, // walked separately below
-                        EventScope::YourPermanentTargetedByOpponent
-                        | EventScope::YourCreatureTargeted => false, // event-based
-                        EventScope::ControllerAttackedByOpponent => false, // combat-based
-                    })
-                    .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
+                    .filter(|t| scope_matches(&t.event.scope, c.controller))
+                    .map(|t| (c.id, t.effect, c.controller, t.event.filter))
+                    .collect::<Vec<_>>()
             })
             .collect();
         // Walk the active player's graveyard for `FromYourGraveyard`

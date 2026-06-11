@@ -561,6 +561,20 @@ pub enum StaticEffect {
         applies_to: Selector,
         ability: ActivatedAbility,
     },
+    /// "All [filter] permanents have '[triggered ability]'" (CR 613 layer 6
+    /// grant — Kataki, War's Wage's "All artifacts have 'At the beginning of
+    /// your upkeep, sacrifice this artifact unless you pay {1}'"). The
+    /// ability fires as though printed on each matching permanent, so
+    /// `YourControl`/`SelfSource` scopes read that permanent's controller.
+    GrantTriggeredAbility {
+        filter: SelectionRequirement,
+        ability: Box<TriggeredAbility>,
+    },
+    /// Alpine Moon — lands matching the source's chosen name
+    /// (`CardInstance.named_card`) that opponents control lose all land
+    /// types and abilities. Pair with a `GrantActivatedAbility` over
+    /// `NamedBySource` lands for the "{T}: Add one mana of any color" half.
+    NamedLandsNeutralized,
     /// Necrotic Ooze — "As long as this is on the battlefield, it has all
     /// activated abilities of all creature cards in all graveyards." Surfaced
     /// by `granted_abilities_for` (which walks every graveyard for creature
