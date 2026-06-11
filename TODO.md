@@ -110,15 +110,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   also the Lure/MustBlock able-blocker scans at `665-778`). Blocker
   legality reads printed `CardInstance::can_block()`; attacker legality
   already reads the computed view (comment at `combat.rs:241`). CR 509.1a.
-- ⏳ **Lifegain events ignore replacements** (`mod.rs:1350-1399` +
-  `effects/mod.rs:1325`). `adjust_life` applies can't-gain / Tainted Remedy
-  / `LifeGainBonus` internally but returns only the new total; callers emit
-  `LifeGained` with the *requested* amount, so lifegain triggers fire on
-  gains that never happened (CR 119.10) and `TriggerEventAmount` payoffs
-  read pre-bonus values. Return the applied delta (the `DoubleLife` arm at
-  `effects/mod.rs:1346` shows the recompute pattern). Related:
-  `SetLifeTotal`/`ExchangeLifeTotals` (`effects/mod.rs:1474-1526`) bypass
-  `adjust_life` entirely (CR 119.7) and never set `lost_life_this_turn`.
+- 🟡 **Lifegain events ignore replacements** — `adjust_life_applied` returns
+  the post-replacement delta; `GainLife`/`LoseLife`/`Drain` and the combat
+  lifelink sites now emit events with the applied amount (CR 119.10).
+  Remaining: other scattered `adjust_life` + manual-event sites, and
+  `SetLifeTotal`/`ExchangeLifeTotals` still bypass `adjust_life` (CR 119.7).
 - ✅ **Every coin flip is heads** (`mod.rs:2563` +
   `decision.rs:481`). `AutoDecider` answers constant `Bool(true)` for
   `Decision::CoinFlip` despite the doc promising engine RNG, and no live
@@ -136,12 +132,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   prevention shields and Torbran-style scaling apply once with
   `dealing_blocker_ids.first()` as the source, and per-blocker
   `creature_damage` records log full power even when partially prevented.
-- ⏳ **Excess non-trample damage vanishes / lethal ignores marked damage**
-  (`combat.rs:996-1010`, `1063-1082`, `1146-1194`). `default_damage_split`
-  caps at lethal and discards the remainder; `resolve_damage_assignment`
-  accepts under-assignment whenever all blockers are at lethal (CR 510.1d);
-  `combat_lethals` ignores damage already marked (CR 510.1c — double-strike
-  tramplers under-tramp in the regular step).
+- 🟡 **Excess non-trample damage vanishes / lethal ignores marked damage** —
+  default split now assigns the full power (excess to the last blocker
+  without trample) and lethal subtracts marked damage at both lethal sites.
+  Remaining: `resolve_damage_assignment` still accepts under-assignment
+  whenever all blockers are at lethal (CR 510.1d).
 - ⏳ **Layer timestamps are incoherent** (`layers.rs:124-127` —
   static-ability effects stamp `timestamp: card.id.0` (`mod.rs:2809` + ~25
   sites) while resolved-spell effects use `next_effect_timestamp`
@@ -209,13 +204,12 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   702.110b breaks under incremental multi-defender submission); a duplicate
   blocker in one batch silently un-blocks the first attacker while keeping
   both Flanking/Bushido/Rampage deltas.
-- ⏳ **Counter handling inconsistencies** (`effects/mod.rs:2011`, `2208`,
-  `2522`, `3773`, `3814`; `eval.rs:1115`). `Monstrosity`/`Explore` skip CR
-  614.16 doublers that `AddCounter`/`Support`/`Amass` apply;
-  `AddKeywordCounter` emits no `CounterAdded` and applies no doubler
-  despite its comment; `RemoveAllCounters` leaves `keyword_counters`
-  (CR 122.1b); shield-counter depletion leaves a 0-count map entry that
-  makes `R::IsModified` true forever (CR 700.9).
+- 🟡 **Counter handling inconsistencies** — fixed this run: `Monstrosity`
+  applies doublers, `RemoveAllCounters` clears `keyword_counters`
+  (CR 122.1b), shield-counter depletion removes the 0-count entry
+  (CR 700.9), `AddKeywordCounter` marks `permanents_gained_counter_this_turn`.
+  Remaining: `Explore`'s counter skips doublers; a `CounterAdded`-equivalent
+  event for keyword counters.
 - ✅ **Soulshift fetches from any graveyard**
   (`crabomination_base/src/effect/shortcut.rs:2048-2062`). The desugar's
   `InGraveyard` matches all players and routes to the card's owner's hand —
@@ -1579,7 +1573,7 @@ picking an item up.
 - ✅ **CR 702.95 — Soulbond** (auto-pairs lowest-CardId partner; a controller "may"/decline prompt still ⏳).
 - ✅ **CR 702.134 — Mentor** (`shortcut::mentor`).
 - ✅ **CR 702.105 — Dethrone** (primitive only; no simple printed card exists yet).
-- ✅ **CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift** (carded + tested). ⚠️ Audit 2026-06-11: the Soulshift desugar fetches from *any* graveyard (should be yours only, CR 702.47a) and Graft only watches your own entering creatures — see audit P1.
+- ✅ **CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift** (carded + tested). (Soulshift now fetches only your graveyard via `InYourGraveyard`; Graft watches any entering creature.)
 - ✅ **CR 702.68 / 702.69 / 702.70 — Frenzy / Gravestorm / Poisonous**.
 - ✅ **CR 702.139 — Revolt**.
 - ✅ **CR 702.79 / 702.92 — Persist / Undying** (return on *any* death, not just lethal-damage SBA).
@@ -1626,8 +1620,8 @@ picking an item up.
   CR 712 below.
   `StaticEffect::PreventUntap` honors `Selector::This` (Basalt/Grim Monolith)
   and `Selector::AttachedTo(This)` (Claustrophobia/Dehydration).
-- 🟡 **CR 510 — Combat Damage Step** (added by audit 2026-06-11) — a blocked attacker whose blockers all left combat deals full damage to the player (no "remains blocked" state, 510.1c — breaks every double-strike-vs-blocker combat); excess non-trample damage is discarded instead of assigned (510.1d); lethal ignores damage already marked (510.1c); blocker strike-back is aggregated across sources (infect/deathtouch/prevention leak, 702.90). See audit P0/P1.
-- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ⚠️ Audit 2026-06-11: blocker legality reads *printed* characteristics, so animated manlands / crewed Vehicles can't block (509.1a) — see audit P1. ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).
+- 🟡 **CR 510 — Combat Damage Step** — remains-blocked ✅ (`blocked_attackers`, 510.1c); excess non-trample damage assigned to the last blocker ✅ (510.1d); lethal accounts for marked damage ✅ (510.1c, double-strike tramplers). Remaining: blocker strike-back aggregated across sources (infect/deathtouch/prevention leak, 702.90) — see audit P1.
+- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); full ability removal (113.10b); "can't have" anti-grant (113.11). Counter-target-ability (113.9) ✅ — `Effect::CounterAbility` (Consign to Memory, Stifle) with precise targeting via `SelectionRequirement::HasAbilityOnStack`.
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.
@@ -1635,7 +1629,7 @@ picking an item up.
   `GameAction::CompanionToHand`, {3} sorcery-speed sideboard→hand; deck
   validation ⏳). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
-- ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). ⚠️ Audit 2026-06-11: in live games **every flip is heads** — `AutoDecider` answers constant `Bool(true)` for `Decision::CoinFlip` and nothing installs an RNG-backed decider — see audit P1.
+- ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). (AutoDecider now flips a real random coin; scripted tests stay deterministic.)
 - 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
@@ -1660,7 +1654,7 @@ picking an item up.
 - ✅ **CR 701.12 — Exchange (control)** — `Effect::ExchangeControl { a, b }` swaps the controllers of two resolved permanents simultaneously (Switcheroo). Exchange-life-totals + exchange-hand/graveyard already ✅. Remaining ⏳: an *until-end-of-turn* exchange variant and multi-target ETB delivery (Vedalken Plotter — see Follow-ups).
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker. ⚠️ Audit 2026-06-11: several arms bypass the funnel entirely (Living End, SacrificeAndRemember, Ward sac costs, Fading/Vanishing/cumulative upkeep) — dies triggers and Persist/Undying silently dropped; see audit P1 death-funnel family.
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
-- ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics. ⚠️ Audit 2026-06-11: `activate_loyalty_ability` lacks the `detained_by` gate, and `Effect::Detain`'s target filter is one of the ~20 unenforced `eff_find` arms — see audit P0/P1.
+- ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics. (Loyalty activation now honors `detained_by`; Detain's target filter is enforced at cast time.)
 - ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
 - ✅ **CR 701.57 — Discover N** — `Effect::Discover { n }`: exile from top until a nonland MV≤N, cast it free or put in hand (controller's choice), bottom the rest. Ships Geological Appraiser, Trumpeting Carnosaur. (Cascade-adjacent; shares the bottom-the-rest tail.)
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
