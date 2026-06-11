@@ -48905,3 +48905,186 @@ pub fn sword_of_hearth_and_home() -> CardDefinition {
         },
     ]))
 }
+
+// ── THB batch ────────────────────────────────────────────────────────────────
+
+/// Setessan Champion — {2}{G} 1/3. Constellation: an enchantment you control
+/// enters → +1/+1 counter and draw a card.
+pub fn setessan_champion() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Setessan Champion",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Enchantment,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Woe Strider — {2}{B} 3/2. ETB 0/1 Goat; sacrifice another creature: scry 1.
+/// Escape {3}{B}{B}, exile four other cards.
+pub fn woe_strider() -> CardDefinition {
+    let goat = TokenDefinition {
+        name: "Goat".into(),
+        power: 0,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goat], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Woe Strider",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Escape(cost(&[generic(3), b(), b()]), 4)],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: goat,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Treacherous Blessing — {2}{B} Enchantment. ETB draw three; you cast a
+/// spell → lose 1; becomes targeted → sacrifice it.
+pub fn treacherous_blessing() -> CardDefinition {
+    CardDefinition {
+        name: "Treacherous Blessing",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                effect: Effect::SacrificeSource,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Anax, Hardened in the Forge — {1}{R}{R} */3 Demigod; power = devotion to
+/// red. This or another nontoken creature you control dies → a 1/1 Satyr
+/// (two if its power was 4 or greater).
+pub fn anax_hardened_in_the_forge() -> CardDefinition {
+    use crate::card::{DynamicPt, Predicate};
+    let satyr = || TokenDefinition {
+        name: "Satyr".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Satyr], ..Default::default() },
+        keywords: vec![Keyword::CantBlock],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Anax, Hardened in the Forge",
+        cost: cost(&[generic(1), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demigod], ..Default::default() },
+        power: 0,
+        toughness: 3,
+        dynamic_pt: Some(DynamicPt::DevotionTo { color: Color::Red, base_t: 3 }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken)),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                // CR 603.10 — LKI power of the dying creature (two Satyrs
+                // when its power was 4 or greater).
+                count: Value::IfAtLeast {
+                    value: Box::new(Value::PowerOf(Box::new(Selector::TriggerSource))),
+                    threshold: 4,
+                    then: Box::new(Value::Const(2)),
+                    else_: Box::new(Value::Const(1)),
+                },
+                definition: satyr(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Destiny Spinner — {1}{G} 2/3 enchantment creature. Your creature and
+/// enchantment spells can't be countered; {3}{G}: animate a land into an
+/// X/X trampler, X = your enchantments.
+pub fn destiny_spinner() -> CardDefinition {
+    CardDefinition {
+        name: "Destiny Spinner",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Creature and enchantment spells you control can't be countered.",
+            effect: StaticEffect::SpellsUncounterable {
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::BecomeCreature {
+                what: target_filtered(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+                    )),
+                    filter: SelectionRequirement::Enchantment,
+                },
+                toughness: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+                    )),
+                    filter: SelectionRequirement::Enchantment,
+                },
+                creature_types: vec![CreatureType::Elemental],
+                keywords: vec![Keyword::Trample, Keyword::Haste],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -693,6 +693,18 @@ impl crate::game::GameState {
         {
             return true;
         }
+        // Battlefield statics — "creature and enchantment spells you
+        // control can't be countered" (Destiny Spinner). The card is mid-cast
+        // (in no zone yet), so match the filter on the card itself.
+        for src in self.battlefield.iter().filter(|c| c.controller == caster) {
+            for sa in &src.definition.static_abilities {
+                if let crate::effect::StaticEffect::SpellsUncounterable { filter } = &sa.effect
+                    && self.evaluate_requirement_on_card(filter, card, caster)
+                {
+                    return true;
+                }
+            }
+        }
         // Cavern of Souls' "can't be countered" rider is provenance-based:
         // it rides the spent mana (`SpendRestriction::
         // CreatureOfTypeUncounterable` → `cast_paid_uncounterable`), not a

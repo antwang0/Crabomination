@@ -54132,3 +54132,149 @@ fn sword_of_hearth_and_home_flicker_and_fetch() {
     let fetched = g.battlefield_find(plains).expect("basic fetched");
     assert!(fetched.tapped);
 }
+
+/// Setessan Champion grows and draws on your enchantment ETBs.
+#[test]
+fn setessan_champion_constellation() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::setessan_champion());
+    g.add_card_to_library(0, catalog::forest());
+    let ench = g.add_card_to_hand(0, catalog::treacherous_blessing());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::swamp()); }
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, ench);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(champ).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1
+    );
+}
+
+/// Woe Strider: Goat on ETB, sac-to-scry, and Escape from the graveyard.
+#[test]
+fn woe_strider_goat_and_escape() {
+    let mut g = two_player_game();
+    let strider = g.add_card_to_hand(0, catalog::woe_strider());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, strider);
+    drain_stack(&mut g);
+    let goat = g.battlefield.iter().find(|c| c.definition.name == "Goat").expect("token");
+    assert_eq!((goat.power(), goat.toughness()), (0, 1));
+    // Sac the goat to scry.
+    let goat_id = goat.id;
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: strider, ability_index: 0, target: None, x_value: None,
+    }).expect("sac to scry");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(goat_id).is_none(), "goat sacrificed");
+    // Escape: bin it plus four other cards, recast from the graveyard.
+    g.remove_to_graveyard_with_triggers(strider);
+    drain_stack(&mut g);
+    let fodder: Vec<_> = (0..4).map(|_| g.add_card_to_graveyard(0, catalog::forest())).collect();
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastEscape {
+        card_id: strider, exile_cards: fodder,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(strider).is_some(), "escaped onto the battlefield");
+}
+
+/// Treacherous Blessing draws three, drains on casts, dies to targeting.
+#[test]
+fn treacherous_blessing_lifecycle() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::swamp()); }
+    let tb = g.add_card_to_hand(0, catalog::treacherous_blessing());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len() - 1;
+    cast(&mut g, tb);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
+    // A later cast costs 1 life.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19, "lost 1 on the cast");
+    // Targeting it makes it sacrifice itself.
+    let disenchant = g.add_card_to_hand(1, catalog::disenchant());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: disenchant, target: Some(Target::Permanent(tb)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("target it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tb).is_none());
+}
+
+/// Anax's power tracks red devotion, and dying nontoken creatures leave Satyrs.
+#[test]
+fn anax_devotion_power_and_satyrs() {
+    let mut g = two_player_game();
+    let anax = g.add_card_to_battlefield(0, catalog::anax_hardened_in_the_forge());
+    // Anax alone: {1}{R}{R} = 2 red pips of devotion.
+    assert_eq!(g.computed_permanent(anax).unwrap().power, 2);
+    g.add_card_to_battlefield(0, catalog::purphoros_bronze_blooded());
+    assert_eq!(g.computed_permanent(anax).unwrap().power, 3, "+1 from Purphoros' {{R}}");
+    // A dying 6-power nontoken creature leaves two Satyrs.
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.battlefield_find_mut(dragon).unwrap().damage = 3;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(dragon)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("finish the dragon");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Satyr").count(),
+        2,
+        "power ≥ 4 → two Satyrs"
+    );
+}
+
+/// Destiny Spinner protects your creature spells from counters and animates lands.
+#[test]
+fn destiny_spinner_uncounterable_and_animate() {
+    let mut g = two_player_game();
+    let spinner = g.add_card_to_battlefield(0, catalog::destiny_spinner());
+    // Opponent's Counterspell fizzles against your creature spell.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    let cs = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cs, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter attempt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "creature spell can't be countered");
+    // Animate a land: X = enchantments you control (Spinner itself = 1).
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spinner, ability_index: 0, target: Some(Target::Permanent(forest)), x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(forest).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.card_types.contains(&CardType::Creature));
+}

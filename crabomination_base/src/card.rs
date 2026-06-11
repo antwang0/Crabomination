@@ -45,7 +45,7 @@ pub enum CreatureType {
     Bear, Ape, Rat, Fungus, Treefolk, Giant, Ogre, Shaman, Druid,
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
-    Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph,
+    Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph, Demigod,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith,
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
@@ -1759,6 +1759,9 @@ pub enum DynamicPt {
     /// Power = N, toughness = N+1 where N is the count of distinct card
     /// types across every player's graveyard. Tarmogoyf, Cosmogoyf.
     DistinctTypesInAllGraveyards,
+    /// Power = the controller's devotion to `color` (CR 700.5), with a
+    /// fixed printed toughness. Anax, Hardened in the Forge (`*/3`).
+    DevotionTo { color: crate::mana::Color, base_t: i32 },
     /// Power = toughness = size of the controller's graveyard. Cruel
     /// Somnophage.
     ControllerGraveyardSize,

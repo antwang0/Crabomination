@@ -66,7 +66,10 @@ impl GameState {
             // `CountersOn`.
             Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
-                    let cid = e.as_permanent_id()?;
+                    // `as_card_id` (not `as_permanent_id`): a dies-trigger
+                    // subject arrives as `EntityRef::Card` once the creature
+                    // is in the graveyard (Anax's "if its power was 4+").
+                    let cid = e.as_card_id()?;
                     // CR 603.10 — a leaves-battlefield trigger ("when this
                     // dies, deals damage equal to its power") reads the
                     // dying object's last-known power, counters/pumps

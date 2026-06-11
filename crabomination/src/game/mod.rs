@@ -3593,6 +3593,17 @@ impl GameState {
                 crate::card::DynamicPt::DistinctTypesInAllGraveyards => {
                     (goyf_n, goyf_n + 1)
                 }
+                crate::card::DynamicPt::DevotionTo { color, base_t } => {
+                    let mut ctx = crate::game::effects::EffectContext::for_spell(
+                        card.controller, None, 0, 0,
+                    );
+                    ctx.source = Some(card.id);
+                    let n = self.evaluate_value(
+                        &crate::effect::Value::DevotionTo(vec![color]),
+                        &ctx,
+                    );
+                    (n, base_t)
+                }
                 crate::card::DynamicPt::ControllerGraveyardSize => {
                     let n = self.players[card.controller].graveyard.len() as i32;
                     (n, n)
@@ -8359,40 +8370,6 @@ fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
     })
 }
 
-/// Compute-time conditional self-pump table: cards whose printed Oracle
-/// is "As long as you've gained life this turn, this creature gets +P/+T
-/// [and gains keyword(s)]." The pump and keyword grants are emitted as
-/// short-lived continuous effects (P/T at layer 7b, keyword grants at
-/// layer 6) every `compute_battlefield` pass when the controller's
-/// `life_gained_this_turn` tally is non-zero.
-///
-/// Returns `Some((power_bump, toughness_bump, keywords))` if `name`
-/// matches a known lifegain-self-pump card, else `None`. Adding a new
-/// such card requires appending one row here instead of a new `if name
-/// == "..."` branch in `compute_battlefield`.
-///
-/// Current entries:
-/// - Honor Troll (STX): +2/+0 and Lifelink
-/// - Ulna Alley Shopkeep (SOS Infusion): +2/+0 (no keyword)
-/// Threshold-style self-pump table: cards reading "As long as there are N
-/// or more cards in your graveyard, this creature gets +P/+T." Returns
-/// Graveyard-resident static-ability table: cards whose printed
-/// Oracle is "As long as [this card] is in your graveyard and you
-/// control a [Land subtype], creatures you control have [keyword]."
-/// This is the Judgment Incarnation cycle (Anger / Wonder / Filth /
-/// Brawn / Genesis / Valor) — STA reprinted a subset of these. The
-/// engine walks each graveyard during `compute_battlefield` and
-/// applies a continuous `AddKeyword` effect to the controller's
-/// creatures when the gate (land subtype controlled) is met.
-///
-/// Returns `Some((land_subtype, keyword))` if `name` matches a known
-/// gy-anthem Incarnation, else `None`.
-///
-/// Current entries:
-/// - Anger (STA reprint, Judgment): controls Mountain → Haste anthem
-/// - Wonder (STA reprint, Judgment): controls Island → Flying anthem
-/// - Brawn (STA reprint, Judgment): controls Forest → Trample anthem
-/// - Valor (STA reprint, Judgment): controls Plains → First Strike anthem
 // ── Static ability conversion ─────────────────────────────────────────────────
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
@@ -8776,6 +8753,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // GraveyardAnthem is zone-special: gathered from graveyards in
             // `gather_continuous_effects_inner`, never from the battlefield.
             | StaticEffect::GraveyardAnthem { .. }
+            | StaticEffect::SpellsUncounterable { .. }
             | StaticEffect::MinusCounterReduction
             | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })

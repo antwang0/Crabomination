@@ -615,6 +615,10 @@ pub enum StaticEffect {
     /// Incarnation cycle (Anger, Wonder, Brawn, Valor, Filth). Zone-special:
     /// gathered from graveyards, not the battlefield.
     GraveyardAnthem { land_type: crate::card::LandType, keyword: Keyword },
+    /// "[Filter] spells you control can't be countered" — Destiny Spinner
+    /// (creature and enchantment spells). Read at cast time by
+    /// `caster_grants_uncounterable_with_x` off the caster's battlefield.
+    SpellsUncounterable { filter: SelectionRequirement },
     /// CR 614.x — "If a nontoken creature would enter the battlefield and it
     /// wasn't cast, exile it instead." Containment Priest. A global ETB
     /// replacement read off the battlefield in `place_card_in_dest`'s
