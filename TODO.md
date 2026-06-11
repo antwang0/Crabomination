@@ -47,27 +47,23 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   client can submit any target (Lyev Skyknight can detain the caster's own
   land). CR 115.1a/601.2c. Add an exhaustiveness guard across the three
   sibling walkers (`requires_target` / `primary_target_filter` / `eff_find`).
-- ⏳ **Cast pipeline is not atomic — partial state on rejected actions**
+- 🟡 **Cast pipeline is not atomic — partial state on rejected actions**
   (all reachable from network client input, CR 601.2h rewind):
-  - Squad / Multikicker / Replicate (`actions.rs:1418/1461/1502`) commit the
-    base `cast_spell` *first*, then try to pay the extra cost — failure
-    leaves the spell on the stack at base cost (deliberate under-pay cheat).
-  - Casualty / sacrifice-reduce / Bargain (`actions.rs:1377/1556/1605`)
-    sacrifice *before* the base cast can still fail — creature dies (with
-    death triggers), no spell.
-  - `declare_attackers` (`combat.rs:157-298`) spends the attack tax and taps
-    attackers mid-loop before validation finishes — one illegal attacker
-    corrupts the whole declaration. `declare_blockers` pays the block tax
-    before Menace/Lure/Provoke validation (`combat.rs:593`).
-  - `play_land_with_face` (`actions.rs:872`) restores a rejected back-face
-    land with the *back* definition still installed — card permanently
-    corrupted in hand.
-  - Madness (`mod.rs:4327`) pays the madness cost before
-    `cast_card_for_free` can fail — mana lost, no refund.
-  - London mulligan bottoming (`mod.rs:6080`) never validates that
-    `mulligans_taken` cards actually left the hand — a hostile client
-    mulligans to a free fresh 7 (CR 103.5a). Use the `CleanupDiscard`
-    re-pose-until-satisfied pattern (`mod.rs:6179`).
+  - ⏳ Squad / Multikicker / Replicate (`actions.rs`) commit the base
+    `cast_spell` *first*, then try to pay the extra cost — failure leaves
+    the spell on the stack at base cost (deliberate under-pay cheat).
+  - ⏳ Casualty / sacrifice-reduce / Bargain (`actions.rs`) sacrifice
+    *before* the base cast can still fail — creature dies (with death
+    triggers), no spell.
+  - ✅ `declare_attackers` validates the whole batch (incl. duplicates)
+    before spending the attack tax or tapping; `declare_blockers` defers
+    the block tax until after Menace/Lure/Provoke validation and rejects
+    duplicate blockers.
+  - ✅ `play_land_with_face` restores a rejected back-face land unmodified.
+  - ✅ Madness refunds the paid cost when `cast_card_for_free` fails.
+  - ✅ London mulligan bottoming re-poses until `mulligans_taken` cards
+    actually left the hand (CR 103.5a; test
+    `london_mulligan_repose_on_short_bottoming_answer`).
 - ✅ **`Effect::PumpPT` discards its duration** (`effects/mod.rs:3040`).
   Always writes the EOT-cleared `power_bonus`/`toughness_bonus` fields, so
   `Duration::Permanent` pumps expire at cleanup (Wall of Roots's cumulative
@@ -76,7 +72,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ### P1 — rules-visible bugs
 
-- 🟡 **Death-funnel bypass family** — arms that route battlefield→graveyard
+- ✅ **Death-funnel bypass family** — arms that route battlefield→graveyard
   around `remove_to_graveyard_with_triggers`, silently dropping dies
   triggers, Persist/Undying, `died_card_snapshots`, and tallies (CR 700.4):
   Fixed this run: `LivingEnd` + `SacrificeAndRemember` route through
@@ -84,20 +80,21 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   Fading/Vanishing + cumulative upkeep use the shared `sacrifice_one`;
   Ward `Discard(n)` goes through `discard_card` (CardDiscarded + Madness),
   and `discard_card` itself now routes the graveyard placement through
-  `route_to_graveyard` (CR 614.6). Remaining: Ward `SacrificeCreature`
-  discards the returned event vec; `process_attacking_token_cleanup`
-  skips the die snapshot.
+  `route_to_graveyard` (CR 614.6). Ward `SacrificeCreature` and
+  `process_attacking_token_cleanup` now route through `sacrifice_one`
+  (events + die snapshot) — family closed; promote new arms through the
+  rich funnels only.
 - ✅ **Hybrid/Phyrexian permanents read as colorless on the battlefield**
   (`effects/eval.rs:1040-1045`). `evaluate_requirement_static::HasColor`
   scans bare `Colored` pips only; the sibling evaluator at `eval.rs:1284`
   already uses `ManaCost::colors()` with a comment warning about exactly
   this. CR 105.2/202.2.
-- ⏳ **"Each player discards" stops at the first `wants_ui` seat**
-  (`effects/mod.rs:1816`, also `1925`, `5903`, `6171`, `6211`, `6246`).
-  The loop suspends with continuation `Noop` mid-iteration, dropping every
-  remaining player — in human-vs-bot a symmetric discard hits only the
-  human. `Effect::Sacrifice` (`effects/mod.rs:4731`) shows the correct
-  auto-pick-first / defer-one-suspension pattern.
+- ✅ **"Each player discards" stops at the first `wants_ui` seat** —
+  `per_seat_continuation` re-runs the effect for every unprocessed seat
+  after the suspended seat answers (Discard / DiscardAnyNumber /
+  DiscardChosen / ExileChosenFromHand / ExileChosenUntilSourceLeaves /
+  ExileFromHandTaxed / Sacrifice). Test
+  `symmetric_discard_reaches_every_ui_seat`.
 - ✅ **`OneSpellPerTurn` reads a stale counter** (`mod.rs:3932`).
   `spells_cast_this_turn` resets at the player's *own* untap
   (`stack.rs:1308`), so under Rule of Law a non-active player is locked out
@@ -110,30 +107,32 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - 🟡 **Lifegain events ignore replacements** — `adjust_life_applied` returns
   the post-replacement delta; `GainLife`/`LoseLife`/`Drain` and the combat
   lifelink sites now emit events with the applied amount (CR 119.10).
-  Remaining: other scattered `adjust_life` + manual-event sites, and
-  `SetLifeTotal`/`ExchangeLifeTotals` still bypass `adjust_life` (CR 119.7).
+  `SetLifeTotal`/`ExchangeLifeTotals` now route the delta through
+  `adjust_life_applied` (CR 119.7). Remaining: other scattered
+  `adjust_life` + manual-event sites.
 - ✅ **Every coin flip is heads** (`mod.rs:2563` +
   `decision.rs:481`). `AutoDecider` answers constant `Bool(true)` for
   `Decision::CoinFlip` despite the doc promising engine RNG, and no live
   path installs another decider — deterministic and exploitable.
-- ⏳ **Non-combat damage funnel missing Infect/Wither/deathtouch**
-  (`effects/movement.rs:248-302`). Permanent-branch damage is always
-  `c.damage += amount` (CR 702.90e/702.80a) and `dealt_deathtouch_damage`
-  is never set (CR 702.2c — `Effect::Fight` hand-rolls the flag because of
-  this). `Effect::Fight` itself (`effects/mod.rs:1295-1314`) passes
-  `source: None`, dropping lifelink, protection prevention, and
-  infect/wither for both fight halves.
+- ✅ **Non-combat damage funnel missing Infect/Wither/deathtouch** —
+  `deal_damage_to_from` now lands wither/infect damage as -1/-1 counters
+  (CR 702.80a/702.90e) and flags deathtouch (CR 702.2c); `Effect::Fight`
+  routes both halves through the funnel with their sources (lifelink,
+  protection, computed power). Tests `cr_702_80a_*`, `cr_702_2c_*`,
+  `cr_701_12_fight_applies_lifelink_from_each_half`.
 - ⏳ **Combat damage aggregation across sources** (`combat.rs:1506-1562`,
   `1568-1597`). All blockers' strike-back is summed once: any infect
   blocker converts the *whole* sum to counters (CR 702.90 is per-source),
   prevention shields and Torbran-style scaling apply once with
   `dealing_blocker_ids.first()` as the source, and per-blocker
   `creature_damage` records log full power even when partially prevented.
-- 🟡 **Excess non-trample damage vanishes / lethal ignores marked damage** —
+- ✅ **Excess non-trample damage vanishes / lethal ignores marked damage** —
   default split now assigns the full power (excess to the last blocker
   without trample) and lethal subtracts marked damage at both lethal sites.
-  Remaining: `resolve_damage_assignment` still accepts under-assignment
-  whenever all blockers are at lethal (CR 510.1d).
+  `resolve_damage_assignment` now also rejects non-trample
+  under-assignment (CR 510.1d; test
+  `cr_510_1d_non_trample_under_assignment_falls_back_to_default`) —
+  row closed.
 - ⏳ **Layer timestamps are incoherent** (`layers.rs:124-127` —
   static-ability effects stamp `timestamp: card.id.0` (`mod.rs:2809` + ~25
   sites) while resolved-spell effects use `next_effect_timestamp`
@@ -148,9 +147,9 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   "APNAP-ordered" (CR 603.3b) and bypasses the same-controller
   `TriggerOrder` choice; the unified event dispatcher does it right
   (`apnap_rank`, `mod.rs:5432`).
-- ⏳ **`drain_trigger_queue` drops trigger batches** (`mod.rs:5697`) —
-  silently discards an entire batch when a decision is already pending,
-  despite its comment claiming auto-target fallback.
+- ✅ **`drain_trigger_queue` drops trigger batches** — a batch arriving
+  while a decision is pending now auto-targets everything instead of
+  vanishing.
 - ✅ **`GainControl` doesn't set summoning sickness**
   (`effects/mod.rs:3979-4013`). A Control-Magic-style steal attacks the
   same turn without haste (CR 302.6); Act-of-Treason effects mask it with
@@ -160,12 +159,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `route_to_graveyard` directly, bypassing the `cast_via_flashback` exile
   rider consumed only on the success path (`mod.rs:7091`, `7149`) —
   re-flashbackable (CR 702.34d).
-- ⏳ **Mass exilers bypass `move_card_to`** (`effects/mod.rs:2782-2915`,
-  `1118-1124` — `ExileAllGraveyards`, `LivingEnd` exile half,
-  `ExilePlayerGraveyard`, `ExileHand`, `ExileSameNameAsTarget`, `Process`).
-  `CardLeftGraveyard` / `cards_left_graveyard_this_turn` never fire (the
-  shipped Witherbloom payoffs go dead vs Rest in Peace / Go Blank);
-  `Process` skips `route_to_graveyard` redirects (CR 614.6).
+- ✅ **Mass exilers bypass `move_card_to`** — `note_left_graveyard`
+  (tally + `CardLeftGraveyard`) fires from `ExileAllGraveyards`,
+  `LivingEnd`, `ExilePlayerGraveyard`, `ExileSameNameAsTarget`; `Process`
+  routes through `route_to_graveyard` (CR 614.6). Test
+  `mass_graveyard_exile_fires_left_graveyard_bookkeeping`.
 - ✅ **`DigToHandLoseLife` emits fake draws** (`effects/mod.rs:2110-2158`).
   Cards put into hand emit `CardDrawn` (CR 121.5 — Sheoldred/Bowmasters
   fire spuriously) while `cards_drawn_this_turn` is *not* bumped; the
@@ -195,17 +193,14 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   grants one only when SBAs/triggers happen), and when the cleanup discard
   *does* fire triggers, `finish_cleanup` advances the turn anyway, stranding
   them past the EOT wipe (CR 514.3a repeat loop unimplemented).
-- ⏳ **Batch-relative block validation** (`combat.rs:597-641`, `793-833`).
-  Menace counts only the current `assignments` batch while the
-  CantBeBlockedExceptByN/ByMoreThanOne checks merge `block_map` (CR
-  702.110b breaks under incremental multi-defender submission); a duplicate
-  blocker in one batch silently un-blocks the first attacker while keeping
-  both Flanking/Bushido/Rampage deltas.
+- ✅ **Batch-relative block validation** — Menace merges `block_map` like
+  its sibling checks (CR 702.110b) and duplicate blockers (in-batch or
+  re-blocking) are rejected. Test `duplicate_blocker_in_batch_rejected`.
 - 🟡 **Counter handling inconsistencies** — fixed this run: `Monstrosity`
   applies doublers, `RemoveAllCounters` clears `keyword_counters`
   (CR 122.1b), shield-counter depletion removes the 0-count entry
   (CR 700.9), `AddKeywordCounter` marks `permanents_gained_counter_this_turn`.
-  Remaining: `Explore`'s counter skips doublers; a `CounterAdded`-equivalent
+  `Explore` now applies doublers. Remaining: a `CounterAdded`-equivalent
   event for keyword counters.
 - ✅ **Soulshift fetches from any graveyard**
   (`crabomination_base/src/effect/shortcut.rs:2048-2062`). The desugar's
@@ -230,12 +225,9 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   hand and still draws (CR 602.2b). The "isn't expressible as a cost"
   comment is stale — `ActivatedAbility.discard_cost` exists and Fauna
   Shaman uses it.
-- ⏳ **Inconsistent `CardInstance` helpers**
-  (`crabomination_base/src/card.rs:2486-2508`, `2592-2600`).
-  `has_protection_from` ignores `granted_keywords_eot`/
-  `removed_keywords_eot` (unlike `has_keyword`); `ward_cost()` collapses
-  colored Ward to generic and returns `None` for Life/Discard/Sacrifice
-  Wards. Currently test-only but public API traps.
+- ✅ **Inconsistent `CardInstance` helpers** — `has_protection_from` rides
+  `has_keyword` (EOT grants/strips count); `ward()` exposes the full
+  `WardCost` with `ward_cost()` documented as the mana-only shortcut.
 - ✅ **`CopySpellUnlessPaid` duplicates the spell-copy block**
   (`effects/mod.rs:7028-7134`) and has already diverged from
   `copy_stack_spell`: missing the `CantBeCopied` guard (CR 707) and the
