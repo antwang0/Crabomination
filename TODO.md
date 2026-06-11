@@ -292,6 +292,24 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (gods / rope / split-second batch):**
+  - **Rope client UI** — the server's `CRAB_ACTION_TIMEOUT_SECS` rope sends
+    only an `ActionError` notice when it acts for a stalled seat; a visible
+    countdown / "the server passed for you" toast would surface it properly.
+  - **Opponent-owned `MayDo`/`Search` decisions** still answer through the
+    resolving controller's decider (Boseiju's "that player may search",
+    Karametra's fetch under a `wants_ui` opponent) — same family as the
+    existing per-seat decider-routing note.
+  - **Nylea, Keen-Eyed's nonland branch** omits the optional "you may put it
+    into your graveyard" (the reveal stays on top instead).
+  - **`AutoDecider::decide` panics on an empty `ChooseTarget.legal` set** —
+    unreachable today (the engine never raises an empty-choice decision),
+    but the rope path now calls it server-side; a graceful fallback would
+    be cheap insurance.
+  - **`Selector::LastCreatedTokens` + `GrantKeyword`** (Sokenzan) grants
+    haste only to tokens minted in the same resolution — fine today; a
+    "they gain haste" rider on `CreateToken` would be tidier.
+
 - ⏳ **Noticed (Modern staples batch, 2026-06-11):** 38 staples shipped
   across three waves (see git). The "deferred, each wanting one primitive"
   list is now almost fully shipped: Conspicuous Snoop ✅
