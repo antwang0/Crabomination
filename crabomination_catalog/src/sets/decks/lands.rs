@@ -1834,3 +1834,101 @@ pub fn sheltered_thicket() -> CardDefinition {
 pub fn scattered_groves() -> CardDefinition {
     cycling_dual("Scattered Groves", LandType::Forest, LandType::Plains, Color::Green, Color::White)
 }
+
+// ── AFR creature lands ───────────────────────────────────────────────────────
+
+/// Shared frame for the AFR mono creature-land cycle: taps for one color,
+/// enters tapped with two or more other lands, animate ability + optional
+/// printed attack trigger.
+#[allow(clippy::too_many_arguments)]
+fn afr_land(
+    name: &'static str,
+    color: Color,
+    animate_cost: ManaCost,
+    power: i32,
+    toughness: i32,
+    creature_types: Vec<crate::card::CreatureType>,
+    keywords: Vec<crate::card::Keyword>,
+    attack_effect: Option<Effect>,
+) -> CardDefinition {
+    use crate::effect::Duration;
+    let animate = ActivatedAbility {
+        mana_cost: animate_cost,
+        effect: Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(power),
+            toughness: Value::Const(toughness),
+            creature_types,
+            keywords,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(color), animate],
+        triggered_abilities: std::iter::once(fastland_etb_conditional_tap())
+            .chain(attack_effect.map(crate::effect::shortcut::on_attack))
+            .collect(),
+        ..Default::default()
+    }
+}
+
+/// Hall of Storm Giants — {5}{U}: 7/7 Giant with ward {3}.
+pub fn hall_of_storm_giants() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword, WardCost};
+    afr_land(
+        "Hall of Storm Giants", Color::Blue, cost(&[generic(5), u()]), 7, 7,
+        vec![CreatureType::Giant],
+        vec![Keyword::Ward(WardCost::generic(3))],
+        None,
+    )
+}
+
+/// Cave of the Frost Dragon — {4}{W}: 3/4 Dragon with flying.
+pub fn cave_of_the_frost_dragon() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword};
+    afr_land(
+        "Cave of the Frost Dragon", Color::White, cost(&[generic(4), crate::mana::w()]), 3, 4,
+        vec![CreatureType::Dragon], vec![Keyword::Flying],
+        None,
+    )
+}
+
+/// Hive of the Eye Tyrant — {3}{B}: 3/3 menace; attacks → exile target card
+/// from defending player's graveyard.
+pub fn hive_of_the_eye_tyrant() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
+    use crate::effect::shortcut::target_filtered;
+    afr_land(
+        "Hive of the Eye Tyrant", Color::Black, cost(&[generic(3), crate::mana::b()]), 3, 3,
+        vec![CreatureType::Horror], vec![Keyword::Menace],
+        Some(Effect::Exile { what: target_filtered(R::InGraveyard) }),
+    )
+}
+
+/// Lair of the Hydra — {X}{G}: X/X Hydra.
+pub fn lair_of_the_hydra() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::effect::Duration;
+    let animate = ActivatedAbility {
+        mana_cost: cost(&[crate::mana::x(), crate::mana::g()]),
+        effect: Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::XFromCost,
+            toughness: Value::XFromCost,
+            creature_types: vec![CreatureType::Hydra],
+            keywords: vec![],
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Lair of the Hydra",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(Color::Green), animate],
+        triggered_abilities: vec![fastland_etb_conditional_tap()],
+        ..Default::default()
+    }
+}

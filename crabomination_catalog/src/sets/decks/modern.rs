@@ -43423,8 +43423,8 @@ pub fn aven_riftwatcher() -> CardDefinition {
     }
 }
 
-/// Den of the Bugbear — red manland. Enters tapped with four-plus lands
-/// (fastland gate); {1}{R}: 3/2 Goblin until end of turn; while animated,
+/// Den of the Bugbear — red manland. Enters tapped with two-plus other lands
+/// (fastland gate); {3}{R}: 3/2 Goblin until end of turn; while animated,
 /// attacking mints a 1/1 Goblin tapped and attacking.
 pub fn den_of_the_bugbear() -> CardDefinition {
     use crate::effect::AttackingTokenCleanup;
@@ -43441,7 +43441,7 @@ pub fn den_of_the_bugbear() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
-                mana_cost: cost(&[generic(1), r()]),
+                mana_cost: cost(&[generic(3), r()]),
                 effect: Effect::BecomeCreature {
                     what: Selector::This,
                     power: Value::Const(3),
@@ -48787,4 +48787,121 @@ pub fn orims_chant() -> CardDefinition {
         ]),
         ..Default::default()
     }
+}
+
+/// Emry, Lurker of the Loch — {2}{U} 1/2, affinity for artifacts. ETB mill
+/// four; {T}: you may cast target artifact card in your graveyard this turn.
+pub fn emry_lurker_of_the_loch() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Emry, Lurker of the Loch",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::You,
+            amount: Value::Const(4),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantMayPlay {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::InYourGraveyard),
+                ),
+                duration: MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragon's Claw — {2} Artifact: a red spell is cast → you may gain 1 life.
+pub fn dragons_claw() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Dragon's Claw",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Red),
+                }),
+            effect: Effect::MayDo {
+                description: "Gain 1 life?".into(),
+                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sanguine Bond — {3}{B}{B} Enchantment: you gain life → target opponent
+/// loses that much.
+pub fn sanguine_bond() -> CardDefinition {
+    CardDefinition {
+        name: "Sanguine Bond",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sword of Sinew and Steel — protection from black and from red. On combat
+/// damage: destroy up to one target planeswalker and up to one artifact.
+pub fn sword_of_sinew_and_steel() -> CardDefinition {
+    sword("Sword of Sinew and Steel", [Color::Black, Color::Red], Effect::MayDo {
+        description: "Destroy target planeswalker or artifact?".into(),
+        body: Box::new(Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Planeswalker.or(SelectionRequirement::Artifact),
+            ),
+        }),
+    })
+}
+
+/// Sword of Hearth and Home — protection from green and from white. On combat
+/// damage: flicker up to one creature you own + fetch a basic land tapped.
+pub fn sword_of_hearth_and_home() -> CardDefinition {
+    sword("Sword of Hearth and Home", [Color::Green, Color::White], Effect::Seq(vec![
+        Effect::MayDo {
+            description: "Exile a creature you own, then return it?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                },
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ])),
+        },
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+    ]))
 }

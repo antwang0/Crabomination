@@ -48729,7 +48729,7 @@ fn den_of_the_bugbear_attacks_and_mints_an_attacking_goblin() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: den, ability_index: 1, target: None, x_value: None,
     }).unwrap();
@@ -53956,4 +53956,179 @@ fn nylea_keen_eyed_discount_and_dig() {
     }).expect("dig");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "creature revealed → hand");
+}
+
+// ── AFR creature lands + Klothys/Emry/Claw/Bond/Swords ───────────────────────
+
+/// Hall of Storm Giants animates into a 7/7 warded Giant; AFR lands enter
+/// tapped only with two or more other lands.
+#[test]
+fn hall_of_storm_giants_animates() {
+    use crate::card::{CreatureType, Keyword, WardCost};
+    let mut g = two_player_game();
+    let hall = g.add_card_to_battlefield(0, catalog::hall_of_storm_giants());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hall, ability_index: 1, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(hall).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7));
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types.contains(&CardType::Land), "still a land");
+    assert!(cp.subtypes.creature_types.contains(&CreatureType::Giant));
+    assert!(cp.keywords.contains(&Keyword::Ward(WardCost::generic(3))));
+}
+
+/// Lair of the Hydra animates into an X/X.
+#[test]
+fn lair_of_the_hydra_x_animate() {
+    let mut g = two_player_game();
+    let lair = g.add_card_to_battlefield(0, catalog::lair_of_the_hydra());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lair, ability_index: 1, target: None, x_value: Some(4),
+    }).expect("animate for X=4");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lair).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// Klothys exiles a graveyard land for mana, a nonland for drain.
+#[test]
+fn klothys_main_phase_exile_branches() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::klothys_god_of_destiny());
+    let land = g.add_card_to_graveyard(1, catalog::mountain());
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(land)),
+    ]));
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == land));
+    assert_eq!(g.players[0].mana_pool.total(), 1, "land branch adds a mana");
+    // Nonland branch drains.
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+    assert_eq!(g.players[0].life, 22);
+}
+
+/// Emry mills four on ETB and lets you cast an artifact from your graveyard.
+#[test]
+fn emry_mills_and_recasts_artifacts() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let emry = g.add_card_to_hand(0, catalog::emry_lurker_of_the_loch());
+    // Affinity: one artifact → {1}{U}.
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, emry);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 4, "milled four");
+    let bauble = g.add_card_to_graveyard(0, catalog::mishras_bauble());
+    g.clear_sickness(emry);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: emry, ability_index: 0, target: Some(Target::Permanent(bauble)), x_value: None,
+    }).expect("grant may-cast");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bauble, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Bauble from the graveyard");
+}
+
+/// Dragon's Claw offers a life on each red spell.
+#[test]
+fn dragons_claw_gains_on_red_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragons_claw());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20 - 3 + 1, "took the bolt, gained 1");
+}
+
+/// Sanguine Bond converts your life gain into opponent life loss.
+#[test]
+fn sanguine_bond_drains_on_gain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sanguine_bond());
+    let mut evs = Vec::new();
+    let applied = g.adjust_life_applied(0, 3);
+    evs.push(GameEvent::LifeGained { player: 0, amount: applied as u32 });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23);
+    assert_eq!(g.players[1].life, 17, "opponent lost that much");
+}
+
+/// Sword of Sinew and Steel snipes an artifact on connect.
+#[test]
+fn sword_of_sinew_and_steel_destroys_artifact() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_sinew_and_steel());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(stone)),
+    ]));
+    g.clear_sickness(bear);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: bear, target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+        if g.step == TurnStep::PostCombatMain { break; }
+    }
+    assert!(g.battlefield_find(stone).is_none(), "artifact destroyed");
+}
+
+/// Sword of Hearth and Home flickers your creature and fetches a basic.
+#[test]
+fn sword_of_hearth_and_home_flicker_and_fetch() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_hearth_and_home());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+    let plains = g.add_card_to_library(0, catalog::plains());
+    // The trigger auto-targets the only creature (the bear) for the flicker.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(plains)),
+    ]));
+    g.clear_sickness(bear);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: bear, target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+        if g.step == TurnStep::PostCombatMain { break; }
+    }
+    assert!(g.battlefield_find(bear).is_some(), "flickered back onto the battlefield");
+    let fetched = g.battlefield_find(plains).expect("basic fetched");
+    assert!(fetched.tapped);
 }

@@ -818,3 +818,45 @@ pub fn nylea_keen_eyed() -> CardDefinition {
         ..god("Nylea, Keen-Eyed", cost(&[generic(3), g()]), vec![Color::Green], 5, 6)
     }
 }
+
+/// Klothys, God of Destiny — {1}{R}{G} 4/5. At your first main, exile target
+/// graveyard card: land → add {R} or {G}; else gain 2 and ping opponents 2.
+pub fn klothys_god_of_destiny() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::ManaPayload;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::PreCombatMain),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Exile {
+                    what: target_filtered(SelectionRequirement::InGraveyard),
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::Land,
+                    },
+                    then: Box::new(Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::OfColors(
+                            vec![Color::Red, Color::Green],
+                            Value::Const(1),
+                        ),
+                    }),
+                    else_: Box::new(Effect::Seq(vec![
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                        Effect::DealDamage {
+                            to: Selector::Player(PlayerRef::EachOpponent),
+                            amount: Value::Const(2),
+                        },
+                    ])),
+                },
+            ]),
+        }],
+        ..god2("Klothys, God of Destiny", cost(&[generic(1), r(), g()]), vec![Color::Red, Color::Green], 4, 5)
+    }
+}

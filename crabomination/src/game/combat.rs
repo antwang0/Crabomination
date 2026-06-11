@@ -2028,11 +2028,15 @@ impl GameState {
         for (trig_source, effect, controller) in triggers {
             // Most combat-damage triggers implicitly target the damaged player
             // (drain riders, "that player discards / loses life"). But some
-            // target a *graveyard* card instead — Efreet Flamepainter re-casts
-            // an instant, Venerable Warsinger reanimates a creature. For those,
-            // auto-pick the graveyard target rather than mis-binding slot 0 to
-            // the damaged player.
-            let target = if effect.prefers_graveyard_target() {
+            // target a *graveyard* card (Efreet Flamepainter, Venerable
+            // Warsinger) or a battlefield permanent (Sword of Sinew and
+            // Steel's "destroy up to one artifact") — for those, auto-pick
+            // instead of mis-binding slot 0 to the damaged player. A slot-0
+            // filter that can't match a player is the precise tell.
+            let slot0_rejects_player = effect
+                .target_filter_for_slot_in_mode_kicked(0, None, false)
+                .is_some_and(|f| !f.can_match_player());
+            let target = if effect.prefers_graveyard_target() || slot0_rejects_player {
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(trig_source))
                     .or(Some(default_target.clone()))
             } else {
