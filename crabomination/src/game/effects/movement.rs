@@ -176,6 +176,13 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Iroas-style "prevent all damage to attacking creatures
+        // you control".
+        if let EntityRef::Permanent(tgt) = ent
+            && self.damage_to_attacker_prevented(tgt)
+        {
+            return;
+        }
         // CR 614.2 / 614.5 — global damage doubling (Furnace of Rath) then
         // halving (Ghosts of the Innocent), applied before prevention so a
         // shield soaks the already-scaled total (CR 616 lets the affected
@@ -689,6 +696,9 @@ impl GameState {
                 // it just put in). Same for the CR 613.7d object timestamp.
                 card.entered_turn = Some(self.turn_number);
                 card.battlefield_timestamp = self.next_timestamp();
+                if card.definition.is_creature() {
+                    self.players[p].creatures_entered_this_turn.push(card.id);
+                }
                 // A permanent entering the battlefield from another zone is
                 // a brand-new object (rule 400.7) — clear residual damage,
                 // pump bonuses, and attachment.

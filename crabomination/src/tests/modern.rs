@@ -53564,3 +53564,246 @@ fn eagles_of_the_north_etb_team_pump() {
     assert_eq!(cp.power, 3, "+1/+0");
     assert!(cp.keywords.contains(&Keyword::FirstStrike));
 }
+
+// ── Theros gods batch (CR 700.5 devotion) ────────────────────────────────────
+
+/// Heliod grants other creatures vigilance and mints 2/1 Cleric tokens.
+#[test]
+fn heliod_vigilance_anthem_and_cleric_token() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let heliod = g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance));
+    assert!(!g.computed_permanent(heliod).unwrap().keywords.contains(&Keyword::Vigilance),
+        "\"other creatures\" excludes Heliod");
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: heliod, ability_index: 0, target: None, x_value: None,
+    }).expect("mint Cleric");
+    drain_stack(&mut g);
+    let cleric = g.battlefield.iter().find(|c| c.definition.name == "Cleric").expect("token");
+    assert_eq!((cleric.power(), cleric.toughness()), (2, 1));
+    assert!(cleric.definition.card_types.contains(&CardType::Enchantment));
+}
+
+/// Heliod isn't a creature below five white devotion; is at five.
+#[test]
+fn heliod_devotion_gate() {
+    let mut g = two_player_game();
+    let heliod = g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun());
+    assert!(!g.computed_permanent(heliod).unwrap().card_types.contains(&CardType::Creature));
+    // Heliod itself is {3}{W} = 1 white pip; add four more.
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::yoked_ox()); }
+    assert!(g.computed_permanent(heliod).unwrap().card_types.contains(&CardType::Creature));
+}
+
+/// Purphoros pings each opponent for 2 when another creature enters.
+#[test]
+fn purphoros_pings_on_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::purphoros_god_of_the_forge());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "2 damage on the bear's ETB");
+}
+
+/// Xenagos gives another creature haste and doubles its power at combat.
+#[test]
+fn xenagos_combat_trigger_doubles_power() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::xenagos_god_of_revels());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+X/+0 where X is its power");
+    assert_eq!(cp.toughness, 2);
+    assert!(cp.keywords.contains(&Keyword::Haste));
+}
+
+/// Phenax grants creatures a tap-to-mill-by-toughness ability.
+#[test]
+fn phenax_grants_mill_by_toughness() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::phenax_god_of_deception());
+    let ox = g.add_card_to_battlefield(0, catalog::yoked_ox());
+    g.clear_sickness(ox);
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let printed = catalog::yoked_ox().activated_abilities.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ox, ability_index: printed, target: Some(Target::Player(1)), x_value: None,
+    }).expect("granted mill ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 4, "milled X = Yoked Ox's toughness");
+    assert!(g.battlefield_find(ox).unwrap().tapped);
+}
+
+/// Pharika exiles a graveyard creature and gives its owner a Snake.
+#[test]
+fn pharika_exiles_and_mints_snake_for_owner() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let pharika = g.add_card_to_battlefield(0, catalog::pharika_god_of_affliction());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pharika, ability_index: 0, target: Some(Target::Permanent(dead)), x_value: None,
+    }).expect("activate Pharika");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dead), "creature card exiled");
+    let snake = g.battlefield.iter().find(|c| c.definition.name == "Snake").expect("token");
+    assert_eq!(snake.controller, 1, "the exiled card's owner gets the Snake");
+    assert!(snake.definition.keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Karametra fetches a Forest or Plains tapped when you cast a creature.
+#[test]
+fn karametra_fetches_on_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::karametra_god_of_harvests());
+    g.add_card_to_library(0, catalog::island());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear);
+    drain_stack(&mut g);
+    let forest = g.battlefield.iter().find(|c| c.definition.name == "Forest").expect("fetched");
+    assert!(forest.tapped, "enters tapped");
+}
+
+/// Mogis makes each opponent sacrifice a creature (or take 2) at their upkeep.
+#[test]
+fn mogis_upkeep_punisher() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mogis_god_of_slaughter());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "sacrificed to Mogis");
+    // With no creature, they take 2 instead.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Athreos returns your dying creatures unless an opponent pays 3 life.
+#[test]
+fn athreos_returns_creature_unless_opponent_pays() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::athreos_god_of_passage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Kill it with a burn spell so the death event dispatches the watcher;
+    // AutoDecider declines to pay → the creature comes back.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "returned to hand");
+    assert_eq!(g.players[1].life, 20, "opponent declined the 3-life payment");
+}
+
+/// Iroas grants menace and prevents all damage to your attacking creatures.
+#[test]
+fn iroas_menace_and_attacker_shield() {
+    use crate::card::Keyword;
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::iroas_god_of_victory());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace));
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    // Spell damage to the attacking bear is prevented.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "damage prevented — bear lives");
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0);
+}
+
+/// Kruphix keeps unspent mana as colorless across steps.
+#[test]
+fn kruphix_unspent_mana_becomes_colorless() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kruphix_god_of_horizons());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.empty_mana_pools();
+    assert_eq!(g.players[0].mana_pool.total(), 2, "kept as colorless");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2);
+    assert_eq!(g.players[1].mana_pool.total(), 0, "opponent's pool empties");
+}
+
+/// Ephara draws at upkeep only if another creature entered last turn.
+#[test]
+fn ephara_draws_after_a_creature_turn() {
+    let mut g = two_player_game();
+    let eph = g.add_card_to_battlefield(0, catalog::ephara_god_of_the_polis());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    // No creature entered last turn → no draw.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "no entry last turn — no draw");
+    // A bear entered this turn; only Ephara herself doesn't count.
+    g.players[0].creatures_entered_last_turn = vec![eph];
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "Ephara alone doesn't count");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].creatures_entered_last_turn = vec![bear];
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "draws after a creature turn");
+}
+
+/// Keranos: first draw on your turn — land draws a card, nonland bolts.
+#[test]
+fn keranos_first_draw_branches() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::keranos_god_of_storms());
+    g.active_player_idx = 0;
+    // Nonland first draw → 3 damage (auto-target picks the opponent).
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "nonland reveal bolts");
+    // Land first draw → extra card.
+    // `add_card_to_library` appends to the bottom — island first so it's on top.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].cards_drawn_this_turn = 0;
+    let hand = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "land reveal draws another");
+    assert_eq!(g.players[1].life, 17, "the second (non-first) draw doesn't retrigger");
+}

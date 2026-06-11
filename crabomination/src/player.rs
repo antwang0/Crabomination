@@ -129,6 +129,15 @@ pub struct Player {
     /// for snapshot back-compat.
     #[serde(default)]
     pub creatures_died_this_turn: u32,
+    /// Creatures that entered the battlefield under this player's control
+    /// this turn (stamped at the shared ETB funnels). Rotated into
+    /// `creatures_entered_last_turn` at end of turn — Ephara, God of the
+    /// Polis reads the previous turn's entries at each upkeep.
+    #[serde(default)]
+    pub creatures_entered_this_turn: Vec<crate::card::CardId>,
+    /// Last turn's `creatures_entered_this_turn` (see above).
+    #[serde(default)]
+    pub creatures_entered_last_turn: Vec<crate::card::CardId>,
     /// Number of times an "Nth time this turn" landfall ability this player
     /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
     /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
@@ -404,6 +413,8 @@ impl Player {
             cards_drawn_this_step: 0,
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
+            creatures_entered_this_turn: Vec::new(),
+            creatures_entered_last_turn: Vec::new(),
             escalating_resolutions_this_turn: 0,
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,

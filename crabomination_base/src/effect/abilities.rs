@@ -602,6 +602,14 @@ pub enum StaticEffect {
         colors: Vec<crate::mana::Color>,
         threshold: u32,
     },
+    /// CR 615 — "Prevent all damage that would be dealt to attacking
+    /// creatures you control." Iroas, God of Victory. Consulted at both the
+    /// combat strike-back and the shared non-combat damage funnel.
+    PreventDamageToYourAttackers,
+    /// CR 106.4 override — "If you would lose unspent mana, that mana
+    /// becomes colorless instead." Kruphix, God of Horizons. Consulted at
+    /// the step/phase pool-empty sites.
+    UnspentManaBecomesColorless,
     /// CR 614.x — "If a nontoken creature would enter the battlefield and it
     /// wasn't cast, exile it instead." Containment Priest. A global ETB
     /// replacement read off the battlefield in `place_card_in_dest`'s

@@ -662,6 +662,10 @@ pub enum Predicate {
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.
     PlayerAttackedThisTurn { who: PlayerRef },
+    /// True if a creature other than the predicate's source entered the
+    /// battlefield under `who`'s control last turn (Ephara, God of the
+    /// Polis). Backed by `Player.creatures_entered_last_turn`.
+    AnotherCreatureEnteredControlLastTurn { who: PlayerRef },
     /// True if any player `who` resolves to has cast a blue or black spell
     /// this turn (Veil of Summer's conditional cantrip).
     CastBlueOrBlackThisTurn { who: PlayerRef },

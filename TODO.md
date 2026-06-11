@@ -1506,10 +1506,13 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - **Nykthos UI** — the `DevotionOfChosenColor` payload suspends on a
   `ChooseColor` for wants_ui players; a devotion preview on the chip would
   help (the count is shown in the HUD already).
-- **Theros gods left to add** — Heliod (God of the Sun), Purphoros, Pharika,
-  and the two-color Theros: Beyond Death gods all reuse
-  `StaticEffect::NotCreatureWhileDevotionBelow`; add them with ability text
-  from the Scryfall cache.
+- **Theros gods** ✅ — the full THS-block pantheon ships (Heliod, Purphoros,
+  Pharika, Karametra, Keranos, Xenagos, Athreos, Ephara, Iroas, Kruphix,
+  Mogis, Phenax + the earlier Nylea/Thassa/Erebos), with new primitives
+  `PreventDamageToYourAttackers` (Iroas), `UnspentManaBecomesColorless`
+  (Kruphix), and `Predicate::AnotherCreatureEnteredControlLastTurn`
+  (Ephara — per-turn `creatures_entered_{this,last}_turn` log). Remaining:
+  the Theros: Beyond Death two-pip gods.
 - **Client build deps** — building the client in the web sandbox needs
   `libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev` (install via
   apt). Once present `cargo build/clippy -p crabomination_client` works.

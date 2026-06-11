@@ -300,3 +300,378 @@ pub fn hammer_of_purphoros() -> CardDefinition {
         )
     }
 }
+
+/// Two-color god frame: devotion threshold 7 (CR 700.5).
+fn god2(
+    name: &'static str,
+    cost_: crate::mana::ManaCost,
+    colors: Vec<Color>,
+    power: i32,
+    toughness: i32,
+) -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as your devotion to its colors is less than seven, this isn't a creature.",
+            effect: StaticEffect::NotCreatureWhileDevotionBelow { colors: colors.clone(), threshold: 7 },
+        }],
+        ..god(name, cost_, colors, power, toughness)
+    }
+}
+
+/// Heliod, God of the Sun — {3}{W} 5/6. Other creatures you control have
+/// vigilance. {2}{W}{W}: Create a 2/1 white Cleric enchantment creature token.
+pub fn heliod_god_of_the_sun() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let cleric = TokenDefinition {
+        name: "Cleric".into(),
+        power: 2,
+        toughness: 1,
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cleric], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as your devotion to white is less than five, Heliod isn't a creature.",
+                effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                    colors: vec![Color::White],
+                    threshold: 5,
+                },
+            },
+            StaticAbility {
+                description: "Other creatures you control have vigilance.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Vigilance,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), w()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: cleric,
+            },
+            ..Default::default()
+        }],
+        ..god("Heliod, God of the Sun", cost(&[generic(3), w()]), vec![Color::White], 5, 6)
+    }
+}
+
+/// Purphoros, God of the Forge — {3}{R} 6/5. Whenever another creature you
+/// control enters, deal 2 to each opponent. {2}{R}: your creatures +1/+0.
+pub fn purphoros_god_of_the_forge() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::PumpPT {
+                what: your_creatures(),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..god("Purphoros, God of the Forge", cost(&[generic(3), r()]), vec![Color::Red], 6, 5)
+    }
+}
+
+/// Xenagos, God of Revels — {3}{R}{G} 6/5. At the beginning of combat on
+/// your turn, another target creature you control gains haste and +X/+0
+/// where X is its power.
+pub fn xenagos_god_of_revels() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::PowerOf(Box::new(Selector::Target(0))),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..god2("Xenagos, God of Revels", cost(&[generic(3), r(), g()]), vec![Color::Red, Color::Green], 6, 5)
+    }
+}
+
+/// Phenax, God of Deception — {3}{U}{B} 4/7. Creatures you control have
+/// "{T}: Target player mills X cards, where X is this creature's toughness."
+pub fn phenax_god_of_deception() -> CardDefinition {
+    let mill_ability = crate::card::ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::Mill {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::ToughnessOf(Box::new(Selector::This)),
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as your devotion to blue and black is less than seven, Phenax isn't a creature.",
+                effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                    colors: vec![Color::Blue, Color::Black],
+                    threshold: 7,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control have \"{T}: Target player mills X cards, where X is this creature's toughness.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: your_creatures(),
+                    ability: mill_ability,
+                },
+            },
+        ],
+        ..god("Phenax, God of Deception", cost(&[generic(3), u(), b()]), vec![Color::Blue, Color::Black], 4, 7)
+    }
+}
+
+/// Pharika, God of Affliction — {1}{B}{G} 5/5. {B}{G}: Exile target creature
+/// card from a graveyard; its owner creates a 1/1 B/G deathtouch Snake
+/// enchantment creature token.
+pub fn pharika_god_of_affliction() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let snake = TokenDefinition {
+        name: "Snake".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        colors: vec![Color::Black, Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b(), g()]),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    count: Value::Const(1),
+                    definition: snake,
+                },
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                    ),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..god2("Pharika, God of Affliction", cost(&[generic(1), b(), g()]), vec![Color::Black, Color::Green], 5, 5)
+    }
+}
+
+/// Karametra, God of Harvests — {3}{G}{W} 6/7. Whenever you cast a creature
+/// spell, you may search for a Forest or Plains card → battlefield tapped.
+pub fn karametra_god_of_harvests() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::MayDo {
+                description: "Search your library for a Forest or Plains card and put it onto the battlefield tapped?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land.and(
+                        SelectionRequirement::HasLandType(crate::card::LandType::Forest)
+                            .or(SelectionRequirement::HasLandType(crate::card::LandType::Plains)),
+                    ),
+                    to: crate::effect::ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+            },
+        }],
+        ..god2("Karametra, God of Harvests", cost(&[generic(3), g(), w()]), vec![Color::Green, Color::White], 6, 7)
+    }
+}
+
+/// Mogis, God of Slaughter — {2}{B}{R} 7/5. At each opponent's upkeep, deals
+/// 2 damage to that player unless they sacrifice a creature.
+pub fn mogis_god_of_slaughter() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::OpponentControl,
+            ),
+            effect: Effect::Punisher {
+                chooser: Selector::Player(PlayerRef::ActivePlayer),
+                options: vec![Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::You),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                }],
+                otherwise: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::Const(2),
+                }),
+            },
+        }],
+        ..god2("Mogis, God of Slaughter", cost(&[generic(2), b(), r()]), vec![Color::Black, Color::Red], 7, 5)
+    }
+}
+
+/// Athreos, God of Passage — {1}{W}{B} 5/4. Whenever another creature you
+/// control dies, return it to your hand unless an opponent pays 3 life.
+pub fn athreos_god_of_passage() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::EachOpponent,
+                cost: crate::card::WardCost::Life(3),
+                then: Box::new(Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(
+                        Selector::TriggerSource,
+                    ))),
+                }),
+            },
+        }],
+        ..god2("Athreos, God of Passage", cost(&[generic(1), w(), b()]), vec![Color::White, Color::Black], 5, 4)
+    }
+}
+
+/// Iroas, God of Victory — {2}{R}{W} 7/4. Creatures you control have menace;
+/// prevent all damage that would be dealt to attacking creatures you control.
+pub fn iroas_god_of_victory() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as your devotion to red and white is less than seven, Iroas isn't a creature.",
+                effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                    colors: vec![Color::Red, Color::White],
+                    threshold: 7,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control have menace.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: your_creatures(),
+                    keyword: Keyword::Menace,
+                },
+            },
+            StaticAbility {
+                description: "Prevent all damage that would be dealt to attacking creatures you control.",
+                effect: StaticEffect::PreventDamageToYourAttackers,
+            },
+        ],
+        ..god("Iroas, God of Victory", cost(&[generic(2), r(), w()]), vec![Color::Red, Color::White], 7, 4)
+    }
+}
+
+/// Kruphix, God of Horizons — {3}{G}{U} 4/7. You have no maximum hand size;
+/// unspent mana becomes colorless instead of emptying.
+pub fn kruphix_god_of_horizons() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as your devotion to green and blue is less than seven, Kruphix isn't a creature.",
+                effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                    colors: vec![Color::Green, Color::Blue],
+                    threshold: 7,
+                },
+            },
+            StaticAbility {
+                description: "You have no maximum hand size.",
+                effect: StaticEffect::NoMaximumHandSize,
+            },
+            StaticAbility {
+                description: "If you would lose unspent mana, that mana becomes colorless instead.",
+                effect: StaticEffect::UnspentManaBecomesColorless,
+            },
+        ],
+        ..god("Kruphix, God of Horizons", cost(&[generic(3), g(), u()]), vec![Color::Green, Color::Blue], 4, 7)
+    }
+}
+
+/// Ephara, God of the Polis — {2}{W}{U} 6/5. At the beginning of each
+/// upkeep, if another creature entered under your control last turn, draw.
+pub fn ephara_god_of_the_polis() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::AnotherCreatureEnteredControlLastTurn {
+                    who: PlayerRef::You,
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..god2("Ephara, God of the Polis", cost(&[generic(2), w(), u()]), vec![Color::White, Color::Blue], 6, 5)
+    }
+}
+
+/// Keranos, God of Storms — {3}{U}{R} 6/5. Reveal the first card you draw on
+/// each of your turns: land → draw a card; nonland → deal 3 to any target.
+pub fn keranos_god_of_storms() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::ValueAtMost(
+                        Value::CardsDrawnThisTurn(PlayerRef::You),
+                        Value::Const(1),
+                    ),
+                ])),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(3),
+                }),
+            },
+        }],
+        ..god2("Keranos, God of Storms", cost(&[generic(3), u(), r()]), vec![Color::Blue, Color::Red], 6, 5)
+    }
+}

@@ -2660,6 +2660,9 @@ impl GameState {
         inst.owner = ctrl;
         inst.controller = ctrl;
         inst.tapped = tapped;
+        if inst.definition.is_creature() {
+            self.players[ctrl].creatures_entered_this_turn.push(id);
+        }
         self.battlefield.push(inst);
         events.push(crate::game::GameEvent::TokenCreated { card_id: id });
         events.push(crate::game::GameEvent::PermanentEntered { card_id: id });
@@ -3877,6 +3880,52 @@ impl GameState {
     /// has protection from any of that source's (computed) colors. Reads both
     /// sides through the layer system so granted protection / color-setting
     /// effects count.
+    /// CR 106.4 override — empty every player's mana pool, except that a
+    /// player with an `UnspentManaBecomesColorless` static (Kruphix) keeps
+    /// the total as colorless mana.
+    pub(crate) fn empty_mana_pools(&mut self) {
+        let keepers: Vec<usize> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::UnspentManaBecomesColorless)
+                })
+            })
+            .map(|c| c.controller)
+            .collect();
+        for (i, player) in self.players.iter_mut().enumerate() {
+            if keepers.contains(&i) {
+                let total = player.mana_pool.total();
+                player.mana_pool.empty();
+                player.mana_pool.add_colorless(total);
+            } else {
+                player.mana_pool.empty();
+            }
+        }
+    }
+
+    /// CR 615 — true if `target` is an attacking creature whose controller
+    /// has a `PreventDamageToYourAttackers` static in play (Iroas, God of
+    /// Victory). Overridden by "damage can't be prevented" (CR 615.12).
+    pub(crate) fn damage_to_attacker_prevented(&self, target: CardId) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        if !self.attacking.iter().any(|a| a.attacker == target) {
+            return false;
+        }
+        let Some(controller) = self.battlefield_find(target).map(|c| c.controller) else {
+            return false;
+        };
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::PreventDamageToYourAttackers)
+                })
+        })
+    }
+
     pub(crate) fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
         // Both sides read through the layer system — share one gather.
         self.with_frozen_layers(|g| g.damage_prevented_by_protection_inner(source, target))
@@ -8737,6 +8786,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty
             | StaticEffect::OneSpellPerTurn
+            | StaticEffect::PreventDamageToYourAttackers
+            | StaticEffect::UnspentManaBecomesColorless
             | StaticEffect::MinusCounterReduction
             | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })

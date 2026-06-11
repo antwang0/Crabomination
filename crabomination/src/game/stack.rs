@@ -99,10 +99,9 @@ impl GameState {
 
         // Stack is empty — advance to next step.
 
-        // MTG rule 500.4: mana pools empty at the end of each step and phase.
-        for player in &mut self.players {
-            player.mana_pool.empty();
-        }
+        // MTG rule 500.4: mana pools empty at the end of each step and phase
+        // (Kruphix converts to colorless instead, CR 106.4 override).
+        self.empty_mana_pools();
 
         // Auto-declare empty blockers if no one blocked.
         if self.step == TurnStep::DeclareBlockers
@@ -1697,15 +1696,18 @@ impl GameState {
         // are "this turn" effects; they expire at cleanup too.
         self.prevention_shields.clear();
         self.damage_cant_be_prevented_this_turn = false;
-        // Empty mana pools
-        for player in &mut self.players {
-            player.mana_pool.empty();
-        }
+        // Empty mana pools (Kruphix converts to colorless instead).
+        self.empty_mana_pools();
     }
 
     /// The end of the turn: consume extra turns / skip-turn debt, advance the
     /// active player and turn number, and sweep expired play permissions.
     fn end_turn(&mut self) {
+        // Rotate the per-turn creature-entry log (Ephara reads "last turn"
+        // at each upkeep, so the rotation is per game turn, not per player).
+        for pl in &mut self.players {
+            pl.creatures_entered_last_turn = std::mem::take(&mut pl.creatures_entered_this_turn);
+        }
         // CR 500.7 — extra turns. If the active player banked an extra
         // turn (Time Walk, Ral Zarek's -7 emblem), keep the turn instead
         // of passing: consume one charge and just bump the turn number.

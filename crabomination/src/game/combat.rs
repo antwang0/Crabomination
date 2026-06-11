@@ -1584,7 +1584,9 @@ impl GameState {
 
                 let attacker_takes_strike_back = !prevent_combat_damage
                     // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
-                    && !self.combat_damage_prevented_creatures.contains(&atk.id);
+                    && !self.combat_damage_prevented_creatures.contains(&atk.id)
+                    // CR 615 — Iroas shields attacking creatures you control.
+                    && !self.damage_to_attacker_prevented(atk.id);
 
                 if attacker_takes_strike_back {
                     // CR 702.90 / 615.6 — each blocker's strike-back is its

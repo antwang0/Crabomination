@@ -583,6 +583,15 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].attacked_this_turn),
+            Predicate::AnotherCreatureEnteredControlLastTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| {
+                    self.players[p]
+                        .creatures_entered_last_turn
+                        .iter()
+                        .any(|&cid| Some(cid) != ctx.source)
+                }),
             Predicate::CastBlueOrBlackThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

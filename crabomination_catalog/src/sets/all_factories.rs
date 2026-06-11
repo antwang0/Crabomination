@@ -7400,6 +7400,18 @@ static THS: &[Factory] = &[
     super::ths::spear_of_heliod,
     super::ths::whip_of_erebos,
     super::ths::hammer_of_purphoros,
+    super::ths::heliod_god_of_the_sun,
+    super::ths::purphoros_god_of_the_forge,
+    super::ths::xenagos_god_of_revels,
+    super::ths::phenax_god_of_deception,
+    super::ths::pharika_god_of_affliction,
+    super::ths::karametra_god_of_harvests,
+    super::ths::mogis_god_of_slaughter,
+    super::ths::athreos_god_of_passage,
+    super::ths::iroas_god_of_victory,
+    super::ths::kruphix_god_of_horizons,
+    super::ths::ephara_god_of_the_polis,
+    super::ths::keranos_god_of_storms,
     super::ths::nykthos_shrine_to_nyx,
 ];
 static TMP: &[Factory] = &[
