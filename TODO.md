@@ -168,12 +168,10 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   fire spuriously) while `cards_drawn_this_turn` is *not* bumped; the
   rest-to-graveyard branch bypasses `route_to_graveyard`. The engine's own
   `RevealTopAndDrawIf` (`mod.rs:6037`) cites the rule correctly.
-- ⏳ **Hybrid mana payment solver rejects payable costs**
-  (`crabomination_base/src/mana.rs:606-675`). Greedy forced-pip-first
-  resolution fails e.g. `{W/U}{W/G}{W/G}` vs {W,U,G} and
-  `{W/U}{2/W}` vs {W,U} (hybrid pass commits before mono-hybrid). Failure
-  is atomic but castable spells report unpayable — needs real bipartite
-  matching over pips×colors.
+- ✅ **Hybrid mana payment solver rejects payable costs** — hybrid and
+  mono-hybrid pips are now assigned jointly by backtracking (CR 601.2g),
+  leaving room for the cost's generic/snow drains. Tests
+  `hybrid_solver_tests::*`.
 - ✅ **`CardInstanceWire` drops six persistent fields**
   (`crabomination_base/src/card.rs:2649-2959`): `kick_count`,
   `squad_count`, `bargained`, `encoded_on`, `granted_activated_abilities`,

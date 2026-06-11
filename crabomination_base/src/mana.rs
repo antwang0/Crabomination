@@ -603,73 +603,97 @@ impl ManaPool {
             tmp.colorless -= colorless_needed;
         }
 
-        // Pass 3: hybrid pips ({a/b}). Resolve with constraint
-        // propagation — pay any pip that currently has only one
-        // affordable color *first*, so a limited pool isn't spent on the
-        // wrong half. Example: paying {W/R}{W/G} from a {W, R} pool must
-        // take W for the {W/G} pip and R for the {W/R} pip; a naive
-        // "always try A first" pays W for {W/R} then can't cover {W/G}.
-        let mut hybrids: Vec<(Color, Color)> = cost
+        // Pass 3: hybrid ({a/b}) and mono-hybrid ({n/C}) pips, assigned
+        // jointly by backtracking so a tight pool routes each pip to the
+        // half that keeps the rest payable (CR 601.2g) — `{W/U}{W/G}{W/G}`
+        // from {W,U,G} and `{W/U}{2/W}` from {W,U} both resolve. The pip
+        // count is tiny, so the worst case is a handful of branches. The
+        // search also leaves enough total mana behind for the cost's
+        // later generic / snow drains.
+        enum HyPip {
+            Hybrid(Color, Color),
+            Mono(u32, Color),
+        }
+        let pips: Vec<HyPip> = cost
             .symbols
             .iter()
             .filter_map(|s| match s {
-                ManaSymbol::Hybrid(a, b) => Some((*a, *b)),
+                ManaSymbol::Hybrid(a, b) => Some(HyPip::Hybrid(*a, *b)),
+                ManaSymbol::MonoHybrid(n, c) => Some(HyPip::Mono(*n, *c)),
                 _ => None,
             })
             .collect();
-        while !hybrids.is_empty() {
-            // Prefer a "forced" pip (exactly one color affordable);
-            // otherwise the first pip with any affordable color.
-            let forced = hybrids
+        if !pips.is_empty() {
+            let downstream: u32 = cost
+                .symbols
                 .iter()
-                .position(|(a, b)| (tmp.amount(*a) > 0) ^ (tmp.amount(*b) > 0));
-            let idx = match forced.or_else(|| {
-                hybrids
-                    .iter()
-                    .position(|(a, b)| tmp.amount(*a) > 0 || tmp.amount(*b) > 0)
-            }) {
-                Some(i) => i,
-                None => {
-                    let (a, b) = hybrids[0];
-                    return Err(ManaError::CannotPayHybrid { color_a: a, color_b: b });
-                }
-            };
-            let (a, b) = hybrids.remove(idx);
-            if tmp.amount(a) > 0 {
-                *tmp.slot_mut(a) -= 1;
-            } else {
-                *tmp.slot_mut(b) -= 1;
-            }
-        }
-
-        // Pass 3.5: monocolored hybrid pips ({n/C}). Prefer paying the
-        // colored side (1 mana) when a matching colored mana is on hand;
-        // otherwise pay {n} generic from any remaining bucket. This is
-        // greedy but optimal for the single-pip "Archaic" costs.
-        for sym in &cost.symbols {
-            if let ManaSymbol::MonoHybrid(n, c) = sym {
-                if tmp.amount(*c) > 0 {
-                    *tmp.slot_mut(*c) -= 1;
-                } else {
-                    // Pay {n} generic from any bucket (colors then colorless).
-                    let mut rem = *n;
+                .map(|s| match s {
+                    ManaSymbol::Generic(n) => *n,
+                    ManaSymbol::Snow => 1,
+                    _ => 0,
+                })
+                .sum();
+            fn assign(
+                pool: &ManaPool,
+                pips: &[HyPip],
+                deferred_generic: u32,
+                downstream: u32,
+            ) -> Option<ManaPool> {
+                let Some((pip, rest)) = pips.split_first() else {
+                    if pool.total() < deferred_generic + downstream {
+                        return None;
+                    }
+                    // Deduct the mono-hybrid generic halves now (colors
+                    // first, colorless last — same bucket order as the
+                    // generic pass).
+                    let mut done = pool.clone();
+                    let mut rem = deferred_generic;
                     for color in Color::ALL {
-                        if rem == 0 { break; }
-                        let drain = rem.min(tmp.amount(color));
-                        *tmp.slot_mut(color) -= drain;
+                        if rem == 0 {
+                            break;
+                        }
+                        let drain = rem.min(done.amount(color));
+                        *done.slot_mut(color) -= drain;
                         rem -= drain;
                     }
-                    if rem > 0 {
-                        let drain = rem.min(tmp.colorless);
-                        tmp.colorless -= drain;
-                        rem -= drain;
+                    let drain = rem.min(done.colorless);
+                    done.colorless -= drain;
+                    rem -= drain;
+                    return (rem == 0).then_some(done);
+                };
+                let options: Vec<(Option<Color>, u32)> = match pip {
+                    HyPip::Hybrid(a, b) => vec![(Some(*a), 0), (Some(*b), 0)],
+                    // Colored half first — it's 1 mana vs {n}.
+                    HyPip::Mono(n, c) => vec![(Some(*c), 0), (None, *n)],
+                };
+                for (color, generic) in options {
+                    let mut next = pool.clone();
+                    if let Some(c) = color {
+                        if next.amount(c) == 0 {
+                            continue;
+                        }
+                        *next.slot_mut(c) -= 1;
                     }
-                    if rem > 0 {
-                        return Err(ManaError::InsufficientGeneric {
-                            needed: *n,
-                            have: *n - rem,
-                        });
+                    if let Some(done) =
+                        assign(&next, rest, deferred_generic + generic, downstream)
+                    {
+                        return Some(done);
                     }
+                }
+                None
+            }
+            match assign(&tmp, &pips, 0, downstream) {
+                Some(done) => tmp = done,
+                None => {
+                    // Surface the most informative error for the pip mix.
+                    if let Some(HyPip::Hybrid(a, b)) =
+                        pips.iter().find(|p| matches!(p, HyPip::Hybrid(..)))
+                    {
+                        return Err(ManaError::CannotPayHybrid { color_a: *a, color_b: *b });
+                    }
+                    let needed =
+                        pips.iter().map(|p| if let HyPip::Mono(n, _) = p { *n } else { 0 }).sum();
+                    return Err(ManaError::InsufficientGeneric { needed, have: tmp.total() });
                 }
             }
         }
@@ -989,3 +1013,66 @@ pub fn cost(symbols: &[ManaSymbol]) -> ManaCost {
 #[cfg(test)]
 #[path = "tests/mana.rs"]
 mod tests;
+
+#[cfg(test)]
+mod hybrid_solver_tests {
+    use super::*;
+
+    fn pool(colors: &[Color]) -> ManaPool {
+        let mut p = ManaPool::default();
+        for &c in colors {
+            p.add(c, 1);
+        }
+        p
+    }
+
+    #[test]
+    fn hybrid_assignment_backtracks_across_pips() {
+        // {W/U}{W/G}{W/G} from {W,U,G}: only U→{W/U}, W+G→{W/G}s works.
+        let mut p = pool(&[Color::White, Color::Blue, Color::Green]);
+        let c = ManaCost {
+            symbols: vec![
+                ManaSymbol::Hybrid(Color::White, Color::Blue),
+                ManaSymbol::Hybrid(Color::White, Color::Green),
+                ManaSymbol::Hybrid(Color::White, Color::Green),
+            ],
+        };
+        p.pay(&c).expect("payable with the right routing");
+        assert_eq!(p.total(), 0);
+    }
+
+    #[test]
+    fn hybrid_and_mono_hybrid_assigned_jointly() {
+        // {W/U}{2/W} from {W,U}: {W/U}→U and {2/W}→W.
+        let mut p = pool(&[Color::White, Color::Blue]);
+        let c = ManaCost {
+            symbols: vec![
+                ManaSymbol::Hybrid(Color::White, Color::Blue),
+                ManaSymbol::MonoHybrid(2, Color::White),
+            ],
+        };
+        p.pay(&c).expect("payable with the right routing");
+        assert_eq!(p.total(), 0);
+    }
+
+    #[test]
+    fn hybrid_choice_leaves_mana_for_generic() {
+        // {1}{W/U} from {W,U}: the hybrid must not strand the generic.
+        let mut p = pool(&[Color::White, Color::Blue]);
+        let c = ManaCost {
+            symbols: vec![ManaSymbol::Generic(1), ManaSymbol::Hybrid(Color::White, Color::Blue)],
+        };
+        p.pay(&c).expect("payable");
+        assert_eq!(p.total(), 0);
+    }
+
+    #[test]
+    fn unpayable_hybrid_still_errors() {
+        let mut p = pool(&[Color::Red]);
+        let c = ManaCost {
+            symbols: vec![ManaSymbol::Hybrid(Color::White, Color::Blue)],
+        };
+        assert!(p.pay(&c).is_err());
+        assert_eq!(p.total(), 1, "failed payment must not drain the pool");
+    }
+}
