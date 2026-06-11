@@ -221,8 +221,8 @@ pub enum StaticEffect {
     /// as "you", so fixed taxes use `Value::Const(n)` (Ghostly Prison /
     /// Propaganda / Windborn Muse = 2, Baird = 1, all `protect_planeswalkers`
     /// per card) while dynamic ones scale off the controller's board — Sphere
-    /// of Safety = number of enchantments you control. Copies stack. A wants_ui
-    /// interactive pay prompt is a TODO.
+    /// of Safety = number of enchantments you control. Copies stack. Paid from
+    /// the pool, auto-tapping mana sources for any shortfall.
     AttackTaxToController { amount: Value, protect_planeswalkers: bool },
     /// CR 509.1d — block tax. "Creatures can't block unless their controllers
     /// pay `amount` for each of those creatures." Checked in `declare_blockers`,
@@ -231,8 +231,8 @@ pub enum StaticEffect {
     /// covered). `only_while_attacking` gates the static on the source itself
     /// being an attacking creature this combat (Archangel of Tithes — the
     /// block-tax half is live only while it attacks); `false` makes it an
-    /// always-on enchantment-style tax. A wants_ui interactive pay prompt is a
-    /// TODO (shared with the attack-tax path).
+    /// always-on enchantment-style tax. Paid from the pool, auto-tapping mana
+    /// sources for any shortfall.
     BlockTaxToController {
         amount: Value,
         #[serde(default)]

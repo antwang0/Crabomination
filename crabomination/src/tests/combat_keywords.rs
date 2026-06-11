@@ -1213,3 +1213,56 @@ fn cr_702_26e_phase_out_removes_attacker_from_combat() {
     assert!(g.battlefield_find(atk).is_none(), "attacker phased out");
     assert!(g.attacking().is_empty(), "phased-out attacker no longer in combat");
 }
+
+/// The attack tax auto-taps mana sources for a shortfall — an empty pool
+/// with two untapped Plains still pays Ghostly Prison's {2}.
+#[test]
+fn cr_508_1g_attack_tax_auto_taps_lands() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    let l1 = g.add_card_to_battlefield(0, catalog::plains());
+    let l2 = g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("auto-tap covers the tax");
+    assert!(g.battlefield_find(l1).unwrap().tapped && g.battlefield_find(l2).unwrap().tapped);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "tapped mana all went to the tax");
+}
+
+/// The block tax auto-taps the blocking player's mana sources too.
+#[test]
+fn cr_509_1d_block_tax_auto_taps_lands() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    let blocker = g.add_card_to_battlefield(1, body("Wall", 0, 4, vec![]));
+    let land = g.add_card_to_battlefield(1, catalog::plains());
+    use crate::card::{CardDefinition, CardType, StaticAbility};
+    use crate::effect::{StaticEffect, Value};
+    g.add_card_to_battlefield(1, CardDefinition {
+        name: "Toll Booth",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures can't block unless their controller pays {1} for each.",
+            effect: StaticEffect::BlockTaxToController {
+                amount: Value::Const(1),
+                only_while_attacking: false,
+            },
+        }],
+        ..Default::default()
+    });
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, atk)]))
+        .expect("auto-tap covers the block tax");
+    assert!(g.battlefield_find(land).unwrap().tapped, "Plains tapped for the {{1}}");
+}

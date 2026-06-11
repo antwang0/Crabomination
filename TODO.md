@@ -1674,13 +1674,12 @@ picking an item up.
 - 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact.)
 - 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). `PlayerRef::DefendingPlayer` now resolves off the *triggering attacker* for `YourControl`-scoped Attacks triggers (not just the ability source), so "whenever a creature you control attacks, defending player loses N" fires correctly (Leeching Sliver, CR 509.2). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
-- 🟡 **CR 508.1g — Attack tax** — `StaticEffect::AttackTaxToController { amount }`
+- ✅ **CR 508.1g — Attack tax** — `StaticEffect::AttackTaxToController { amount }`
   taxes attackers hitting the source's controller (Ghostly Prison, Propaganda).
-  `declare_attackers` sums the tax across the batch and auto-pays from the
-  attacker's mana pool, rejecting the declaration if unpayable. Test
-  `cr_508_1g_ghostly_prison_taxes_attackers`. Remaining ⏳: a wants_ui
-  interactive pay prompt (today the attacker must have the mana floating), and
-  cost-to-block (509.1d-f) is still open.
+  `declare_attackers` sums the tax across the batch and pays it from the
+  attacker's pool, auto-tapping mana sources for any shortfall (atomic
+  rollback if unpayable); block tax (509.1d) pays the same way per blocking
+  player. Tests `cr_508_1g_*`, `cr_509_1d_block_tax_auto_taps_lands`.
 - 🟡 **CR 605 — Mana Abilities** — triggered-mana-ability fast-path (605.4a).
 - ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.

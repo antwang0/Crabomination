@@ -217,9 +217,9 @@ impl GameState {
 
         // CR 508.1g — attack tax (Ghostly Prison / Propaganda). Sum {amount}
         // for each attacker hitting a player who controls an
-        // `AttackTaxToController` static (copies stack), then auto-pay it from
-        // the active player's mana pool. Reject the whole declaration if the
-        // pool can't cover it (a wants_ui interactive pay prompt is a TODO).
+        // `AttackTaxToController` static (copies stack), then pay it from the
+        // active player's pool, auto-tapping for any shortfall. Reject the
+        // whole declaration if it's unpayable.
         let mut total_tax = 0u32;
         for atk in &attacks {
             // The defending player whose statics apply, and whether the attack
@@ -254,10 +254,12 @@ impl GameState {
             }
         }
         if total_tax > 0 {
-            if self.players[p].mana_pool.total() < total_tax {
+            // Pay from the floating pool, auto-tapping mana sources for any
+            // shortfall (rolled back atomically if unpayable).
+            let tax_cost = crate::mana::cost(&[crate::mana::generic(total_tax)]);
+            if self.try_pay_with_auto_tap(p, &tax_cost).is_err() {
                 return Err(GameError::CannotAttack(attacks[0].attacker));
             }
-            self.players[p].mana_pool.spend_generic(total_tax);
         }
 
         for atk in attacks {
@@ -566,10 +568,9 @@ impl GameState {
 
         // CR 509.1d — block tax (Archangel of Tithes). Sum every active
         // `BlockTaxToController` amount (an `only_while_attacking` source counts
-        // only while it's attacking this combat) and auto-pay {tax} per declared
-        // blocker out of that blocker's controller's mana pool. Reject the whole
-        // declaration if a blocking player can't cover it. (A wants_ui pay prompt
-        // is a TODO, shared with the attack-tax path.)
+        // only while it's attacking this combat) and pay {tax} per declared
+        // blocker from that blocker's controller's pool, auto-tapping for any
+        // shortfall. Reject the whole declaration if a player can't cover it.
         let block_tax_per: u32 = {
             let mut sum = 0u32;
             for c in &self.battlefield {
@@ -593,20 +594,14 @@ impl GameState {
             }
             sum
         };
-        // Affordability is validated here; the actual spend is deferred to
-        // after every block-legality check so a rejected declaration never
-        // costs mana (CR 601.2h-style atomicity).
+        // The spend is deferred to after every block-legality check so a
+        // rejected declaration never costs mana (CR 601.2h-style atomicity).
         let mut block_tax_by_controller: std::collections::HashMap<usize, u32> =
             std::collections::HashMap::new();
         if block_tax_per > 0 {
             for &(blocker_id, _) in &assignments {
                 if let Some(b) = self.battlefield_find(blocker_id) {
                     *block_tax_by_controller.entry(b.controller).or_insert(0) += block_tax_per;
-                }
-            }
-            for (&player, &owed) in &block_tax_by_controller {
-                if self.players[player].mana_pool.total() < owed {
-                    return Err(GameError::CannotBlock(assignments[0].0));
                 }
             }
         }
@@ -807,9 +802,24 @@ impl GameState {
             }
         }
 
-        // All validation passed — pay the block tax (CR 509.1d).
-        for (player, owed) in block_tax_by_controller {
-            self.players[player].mana_pool.spend_generic(owed);
+        // All validation passed — pay the block tax (CR 509.1d) from each
+        // blocking player's pool, auto-tapping for any shortfall. Restore
+        // every payment if any player can't cover theirs.
+        if !block_tax_by_controller.is_empty() {
+            let mut snapshots = Vec::new();
+            let mut payers: Vec<(usize, u32)> = block_tax_by_controller.into_iter().collect();
+            payers.sort_by_key(|(p, _)| *p);
+            for (player, owed) in payers {
+                let snap = self.snapshot_payment_state(player);
+                let cost = crate::mana::cost(&[crate::mana::generic(owed)]);
+                if self.try_pay_with_auto_tap(player, &cost).is_err() {
+                    for (p, s) in snapshots {
+                        self.restore_payment_state(p, s);
+                    }
+                    return Err(GameError::CannotBlock(assignments[0].0));
+                }
+                snapshots.push((player, snap));
+            }
         }
 
         // Combat-keyword P/T adjustments applied on block declaration:
