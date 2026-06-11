@@ -572,6 +572,9 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Delve => "You may exile cards from your graveyard, each paying for {1} of this spell's cost.",
         K::Cascade => "When you cast it, exile cards from the top of your library until you hit a cheaper nonland card; you may cast that card for free.",
         K::Storm => "When you cast it, copy it for each spell cast before it this turn.",
+        K::SplitSecond => {
+            "While this spell is on the stack, players can't cast spells or activate non-mana abilities."
+        }
         K::Dredge(_) => "Instead of drawing, you may mill that many cards to return this from your graveyard to your hand.",
         K::Rebound => "If cast from your hand, it's exiled instead of going to the graveyard, and you may cast it for free next turn.",
         K::CantBeCountered => "Can't be countered.",

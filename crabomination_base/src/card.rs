@@ -579,6 +579,10 @@ pub enum Keyword {
     /// color and "colorless permanent" payoffs treat it as colorless.
     Devoid,
     Storm,
+    /// CR 702.61 — Split second. While this spell is on the stack, players
+    /// can't cast other spells or activate abilities that aren't mana
+    /// abilities (special actions and triggered abilities still work).
+    SplitSecond,
     /// CR 702.69 — "When you cast this spell, copy it for each permanent put
     /// into a graveyard from the battlefield this turn." A self-cast copy
     /// rider mirroring Storm but counting `permanents_to_graveyard_this_turn`.

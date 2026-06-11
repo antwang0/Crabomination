@@ -1716,3 +1716,70 @@ fn cr_704_5e_countered_spell_copy_ceases_to_exist() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt) || g.players[1].graveyard.iter().any(|c| c.id == bolt),
         "the real Bolt resolved/died normally");
 }
+
+// ── CR 702.61 — Split second ─────────────────────────────────────────────────
+
+/// While a split-second spell is on the stack, no player may cast spells or
+/// activate non-mana abilities; mana abilities stay legal (702.61a-b).
+#[test]
+fn cr_702_61_split_second_locks_casts_and_nonmana_abilities() {
+    let mut g = two_player_game();
+    let shock = g.add_card_to_hand(0, catalog::sudden_shock());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    let mountain = g.add_card_to_battlefield(1, catalog::mountain());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: shock, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sudden Shock");
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap_err();
+    assert_eq!(err, GameError::SplitSecondLock, "no responses under split second");
+    // Mana abilities are exempt (702.61b).
+    g.battlefield_find_mut(mountain).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mountain, ability_index: 0, target: None, x_value: None,
+    }).expect("tapping for mana stays legal");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "Sudden Shock resolved for 2");
+    // Lock lifts once the spell leaves the stack.
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable again after resolution");
+}
+
+/// Triggered abilities still trigger and go on the stack under split second
+/// (CR 702.61b), and a non-mana activated ability is rejected.
+#[test]
+fn cr_702_61_triggers_fire_but_activations_blocked() {
+    let mut g = two_player_game();
+    // Opponent has a cast trigger watcher and an activatable artifact.
+    g.add_card_to_battlefield(1, catalog::thermo_alchemist());
+    let edict = g.add_card_to_hand(0, catalog::sudden_edict());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.clear_sickness(stone);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: edict, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sudden Edict");
+    // Mind Stone's draw ability ({1},{T},Sac: draw) is not a mana ability.
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add_colorless(1);
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 1, target: None, x_value: None,
+    }).unwrap_err();
+    assert_eq!(err, GameError::SplitSecondLock);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stone).is_some(), "Mind Stone never sacrificed");
+}

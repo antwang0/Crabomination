@@ -10845,23 +10845,16 @@ pub fn bond_of_discipline() -> CardDefinition {
     }
 }
 
-/// Sudden Edict — {1}{B} Instant. Target player sacrifices a creature.
-/// This spell can't be countered.
-///
-/// Edict effect — bypasses hexproof, indestructible, and protection by
-/// forcing the targeted player to choose a creature to sacrifice. Uses
-/// `target_filtered(Player)` for the `who` slot so
-/// `primary_target_filter` surfaces a Player filter and the bot's
-/// auto-target heuristic picks an opponent. The "can't be countered"
-/// rider uses `Keyword::CantBeCountered` (same keyword Carnage Tyrant
-/// relies on).
+/// Sudden Edict — {1}{B} Instant. Split second; target player sacrifices
+/// a creature. The edict bypasses hexproof/indestructible by making the
+/// targeted player choose the sacrifice.
 pub fn sudden_edict() -> CardDefinition {
     use crate::card::Keyword;
     CardDefinition {
         name: "Sudden Edict",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::CantBeCountered],
+        keywords: vec![Keyword::SplitSecond],
         effect: Effect::Sacrifice {
             who: target_filtered(SelectionRequirement::Player),
             count: Value::Const(1),
@@ -48602,6 +48595,70 @@ pub fn cao_cao_lord_of_wei() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+// ── Split second batch (CR 702.61) ───────────────────────────────────────────
+
+/// Sudden Shock — {1}{R} Instant. Split second; deals 2 damage to any target.
+pub fn sudden_shock() -> CardDefinition {
+    use crate::effect::shortcut::{deal, target};
+    CardDefinition {
+        name: "Sudden Shock",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::SplitSecond],
+        effect: deal(2, target()),
+        ..Default::default()
+    }
+}
+
+/// Sudden Death — {1}{B}{B} Instant. Split second; target creature gets
+/// -4/-4 until end of turn.
+pub fn sudden_death() -> CardDefinition {
+    CardDefinition {
+        name: "Sudden Death",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::SplitSecond],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-4),
+            toughness: Value::Const(-4),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Wipe Away — {1}{U}{U} Instant. Split second; return target permanent to
+/// its owner's hand.
+pub fn wipe_away() -> CardDefinition {
+    CardDefinition {
+        name: "Wipe Away",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::SplitSecond],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Trickbind — {1}{U} Instant. Split second; counter target activated or
+/// triggered ability.
+pub fn trickbind() -> CardDefinition {
+    CardDefinition {
+        name: "Trickbind",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::SplitSecond],
+        effect: Effect::CounterAbility {
+            what: target_filtered(SelectionRequirement::HasAbilityOnStack),
+        },
         ..Default::default()
     }
 }

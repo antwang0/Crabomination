@@ -6220,6 +6220,61 @@ impl GameState {
         out
     }
 
+    /// CR 702.61a — true while any spell on the stack has split second.
+    pub(crate) fn stack_has_split_second(&self) -> bool {
+        self.stack.iter().any(|si| match si {
+            crate::game::types::StackItem::Spell { card, .. } => {
+                card.definition.keywords.contains(&crate::card::Keyword::SplitSecond)
+            }
+            _ => false,
+        })
+    }
+
+    /// CR 702.61 — which actions a split-second lock forbids: every cast,
+    /// loyalty activations, and activated abilities that aren't mana
+    /// abilities (keyword activations like Cycling / Equip / Crew /
+    /// Ninjutsu are activated abilities too, CR 702.29f). Special actions
+    /// (land drops, Foretell, Plot, Suspend, TurnFaceUp, CompanionToHand,
+    /// UnlockRoomDoor) and decision submissions stay legal (702.61b).
+    pub(crate) fn split_second_blocks(&self, action: &GameAction) -> bool {
+        use GameAction as A;
+        match action {
+            a if a.is_cast() => true,
+            A::ActivateLoyaltyAbility { .. }
+            | A::Cycle { .. }
+            | A::Landcycle { .. }
+            | A::Reinforce { .. }
+            | A::Equip { .. }
+            | A::Reconfigure { .. }
+            | A::Crew { .. }
+            | A::Saddle { .. }
+            | A::Ninjutsu { .. } => true,
+            A::ActivateAbility { card_id, ability_index, .. } => {
+                // Allow mana abilities (CR 702.61b). Resolve the ability the
+                // same way `activate_ability` does: printed first (any zone),
+                // then granted abilities at indices ≥ printed_count.
+                let printed = self
+                    .battlefield_find(*card_id)
+                    .or_else(|| {
+                        self.players.iter().find_map(|p| {
+                            p.graveyard.iter().chain(p.hand.iter()).find(|c| c.id == *card_id)
+                        })
+                    })
+                    .and_then(|c| c.definition.activated_abilities.get(*ability_index).cloned());
+                let ability = printed.or_else(|| {
+                    let printed_count = self
+                        .battlefield_find(*card_id)
+                        .map(|c| c.definition.activated_abilities.len())?;
+                    self.granted_abilities_for(*card_id)
+                        .into_iter()
+                        .nth(ability_index.checked_sub(printed_count)?)
+                });
+                !ability.is_some_and(|a| is_mana_ability(&a.effect))
+            }
+            _ => false,
+        }
+    }
+
     pub(crate) fn granted_abilities_for(
         &self,
         card_id: CardId,

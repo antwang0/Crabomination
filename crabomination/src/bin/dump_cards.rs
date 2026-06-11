@@ -66,6 +66,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Improvise => "Improvise",
         Keyword::Delve => "Delve",
         Keyword::Storm => "Storm",
+        Keyword::SplitSecond => "Split second",
         Keyword::Gravestorm => "Gravestorm",
         Keyword::CantBeCopied => "Can't be copied",
         Keyword::Prowess => "Prowess",

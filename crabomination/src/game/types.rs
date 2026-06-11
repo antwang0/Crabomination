@@ -1436,6 +1436,9 @@ pub enum GameError {
     SilencedThisTurn,
     #[error("You can't cast spells — an epic spell you control has resolved")]
     EpicLocked,
+    /// CR 702.61 — a spell with split second is on the stack.
+    #[error("A spell with split second is on the stack — only mana abilities and special actions are allowed")]
+    SplitSecondLock,
     #[error("A permanent names this spell — it can't be cast")]
     SpellNameLocked,
     /// A one-spell-per-turn lock (Rule of Law, CR 601) bars this cast.

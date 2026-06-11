@@ -626,19 +626,14 @@ pub fn stern_dismissal() -> CardDefinition {
 // ── Krosan Grip (STA reprint) ──────────────────────────────────────────────
 
 /// Krosan Grip — {2}{G} Instant (Strixhaven Mystical Archive reprint,
-/// originally Time Spiral). "Split second / Destroy target artifact or
-/// enchantment."
-///
-/// ✅ Body wired as a single `Effect::Destroy` against an artifact or
-/// enchantment target. The Split Second keyword (no spells or non-mana
-/// abilities can be cast/activated while this is on the stack) is
-/// engine-wide ⏳ — it's a stack-state restriction that the priority
-/// system doesn't yet expose. The destroy half plays correctly always.
+/// originally Time Spiral). Split second; destroy target artifact or
+/// enchantment.
 pub fn krosan_grip() -> CardDefinition {
     CardDefinition {
         name: "Krosan Grip",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![crate::card::Keyword::SplitSecond],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),

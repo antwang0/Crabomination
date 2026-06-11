@@ -4361,6 +4361,13 @@ impl GameState {
         {
             return Err(GameError::SpellLimitReached);
         }
+        // CR 702.61 — split second: while such a spell is on the stack no
+        // player may cast spells or activate non-mana abilities. Special
+        // actions (land drops, foretell, plot, turning face up, suspend…)
+        // and triggered abilities are unaffected (702.61b).
+        if self.stack_has_split_second() && self.split_second_blocks(&action) {
+            return Err(GameError::SplitSecondLock);
+        }
         // Voice of Victory — the active player's opponents can't cast spells
         // during that player's turn.
         if action.is_cast() {

@@ -53440,3 +53440,67 @@ fn token_static_abilities_survive_serde() {
     assert!(token_static(&def), "factory carries the token static");
     assert!(token_static(&restored), "token static survives the wire");
 }
+
+// ── Split second batch (CR 702.61) ───────────────────────────────────────────
+
+/// Sudden Death shrinks a creature -4/-4 for the turn.
+#[test]
+fn sudden_death_shrinks_for_turn() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::cryptic_serpent());
+    let s = g.add_card_to_hand(0, catalog::sudden_death());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(big).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 1), "6/5 at -4/-4");
+}
+
+/// Wipe Away bounces any permanent — lands included.
+#[test]
+fn wipe_away_bounces_a_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::mountain());
+    let s = g.add_card_to_hand(0, catalog::wipe_away());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none());
+    assert!(g.players[1].hand.iter().any(|c| c.id == land));
+}
+
+/// Trickbind counters an activated ability on the stack.
+#[test]
+fn trickbind_counters_activated_ability() {
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.clear_sickness(stone);
+    g.players[1].mana_pool.add_colorless(1);
+    g.add_card_to_library(1, catalog::island());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 1, target: None, x_value: None,
+    }).expect("activate draw ability");
+    let ability_on_stack = matches!(g.stack.last(),
+        Some(crate::game::types::StackItem::Trigger { source, .. }) if *source == stone);
+    assert!(ability_on_stack, "draw ability uses the stack");
+    g.priority.player_with_priority = 0;
+    let t = g.add_card_to_hand(0, catalog::trickbind());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: t, target: Some(Target::Permanent(stone)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Trickbind");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before, "draw countered");
+}
