@@ -34,6 +34,16 @@ impl GameState {
 
     pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {
         match v {
+            Value::HalfLibrarySizeRoundedUp(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| ((self.players[p].library.len() as i32) + 1) / 2)
+                .unwrap_or(0),
+            Value::GreatestManaValueInExile => self
+                .exile
+                .iter()
+                .map(|c| c.definition.cost.cmc() as i32)
+                .max()
+                .unwrap_or(0),
             Value::Const(n) => *n,
             Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
             Value::CountMatching { sel, filter } => self

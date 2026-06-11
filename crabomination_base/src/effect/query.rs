@@ -136,6 +136,10 @@ impl Effect {
             Effect::HoneFromHand { .. } => false,
             Effect::PutFromHandOntoBattlefield { .. } => false,
             Effect::Manifest { .. } => false,
+            Effect::ManifestFromHand { who, count, .. } => {
+                sel_has_target(who) || value_has_target(count)
+            }
+            Effect::WishToHand { .. } => false,
             Effect::ManifestDread { .. } => false,
             Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands => false,

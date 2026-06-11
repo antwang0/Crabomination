@@ -15,6 +15,7 @@ fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Life(n) => *n == 0,
         WardCost::Discard(n) => *n == 0,
         WardCost::SacrificeCreature => false,
+        WardCost::SacrificePermanents(n) => *n == 0,
     }
 }
 
@@ -6552,6 +6553,28 @@ impl GameState {
             if src_is_artifact
                 && self.battlefield.iter().flat_map(|c| &c.definition.static_abilities).any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::ArtifactActivatedAbilitiesLocked)
+                })
+            {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
+        // Karn, the Great Creator — activated abilities (mana abilities
+        // included) of artifacts controlled by an opponent of Karn's
+        // controller can't be activated.
+        {
+            let src_artifact_on_bf = !source_in_gy
+                && !source_in_hand
+                && self.battlefield_find(card_id).is_some_and(|c| c.definition.is_artifact());
+            if src_artifact_on_bf
+                && self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, p)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantActivateArtifactAbilities
+                            )
+                        })
                 })
             {
                 return Err(GameError::AbilitySuppressedByNamedCard);

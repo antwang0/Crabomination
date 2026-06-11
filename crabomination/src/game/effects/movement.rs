@@ -370,7 +370,13 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) {
-        if let Some(c) = self.players[p].library.iter_mut().find(|c| c.id == cid) {
+        let pl = &mut self.players[p];
+        if let Some(c) = pl
+            .library
+            .iter_mut()
+            .chain(pl.hand.iter_mut())
+            .find(|c| c.id == cid)
+        {
             c.turn_face_down();
         }
         let dest = ZoneDest::Battlefield {

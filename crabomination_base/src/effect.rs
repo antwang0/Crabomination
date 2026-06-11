@@ -275,6 +275,12 @@ impl Selector {
 /// A numeric expression evaluated at effect-time.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Value {
+    /// Half of a player's library size, rounded up (Ulamog, the Defiler's
+    /// cast trigger).
+    HalfLibrarySizeRoundedUp(PlayerRef),
+    /// The greatest mana value among cards in exile (Ulamog, the Defiler's
+    /// enters-with-counters count).
+    GreatestManaValueInExile,
     Const(i32),
     /// Number of entities the selector resolves to.
     CountOf(Box<Selector>),
@@ -2740,6 +2746,16 @@ pub enum Effect {
     /// onto the battlefield face down as 2/2 creatures (the real card is
     /// stashed and can be turned face up for its mana cost if it's a creature).
     Manifest { who: PlayerRef, amount: Value },
+    /// CR 701.34 from the hand — the resolved player manifests `count`
+    /// cards from their hand; if `controller_draws`, the effect's
+    /// controller draws one card per card manifested (Kozilek, the Broken
+    /// Reality).
+    ManifestFromHand { who: Selector, count: Value, controller_draws: bool },
+    /// "Wish" — put a card you own matching `filter` from your sideboard
+    /// ("outside the game") or from exile into your hand (Karn, the Great
+    /// Creator's -2). Chosen via `Decision::ChooseCards` for a `wants_ui`
+    /// controller; auto-picks the first sideboard match otherwise.
+    WishToHand { filter: SelectionRequirement },
 
     /// CR 702.166 — Manifest dread: look at the top two cards of `who`'s
     /// library, put one onto the battlefield face down as a 2/2 creature, and

@@ -393,6 +393,12 @@ pub enum StaticEffect {
     /// battlefield with counters on it, those counters move onto this
     /// permanent (applied at the leave funnels).
     CollectsLeaverCounters,
+    /// Karn, the Great Creator: activated abilities of artifacts the
+    /// controller's opponents control can't be activated.
+    OpponentsCantActivateArtifactAbilities,
+    /// Ulamog, the Defiler: the source has annihilator X, where X is the
+    /// number of +1/+1 counters on it (computed-keyword injection).
+    AnnihilatorPerPlusOneCounter,
     /// CR 614.10 — skip-step replacement: "[players/you] skip [their/your]
     /// <step> step(s)." The skipped step never occurs — no turn-based
     /// actions, step triggers, or priority (a skipped untap also skips

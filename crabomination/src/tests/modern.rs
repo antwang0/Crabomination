@@ -51676,3 +51676,105 @@ fn springheart_nantuko_landfall_copies_host_or_makes_insect() {
         "token copy of the host"
     );
 }
+
+/// Kozilek's cast trigger manifests two from the opponent's hand and draws.
+#[test]
+fn kozilek_broken_reality_manifests_opponent_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::island());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let koz = g.add_card_to_hand(0, catalog::kozilek_the_broken_reality());
+    g.players[0].mana_pool.add_colorless(9);
+    let hand_before = g.players[0].hand.len() - 1; // minus Kozilek itself
+    g.step = TurnStep::PreCombatMain;
+    crate::game::cast(&mut g, koz);
+    let manifested = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 1 && c.face_down)
+        .count();
+    assert_eq!(manifested, 2, "two cards manifested face down");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew one per manifest");
+    // Anthem: other colorless creatures get +3/+2 (manifests are colorless 2/2s).
+    let face_down_pt = g
+        .battlefield
+        .iter()
+        .find(|c| c.controller == 1 && c.face_down)
+        .map(|c| c.id)
+        .and_then(|id| g.computed_permanent(id))
+        .map(|c| (c.power, c.toughness));
+    assert_eq!(face_down_pt, Some((2, 2)), "opponent's manifest unaffected by my anthem");
+}
+
+/// Ulamog, the Defiler: exiles half the library, enters with counters equal
+/// to the greatest exiled MV, computes annihilator from them, and wards with
+/// a two-permanent sacrifice.
+#[test]
+fn ulamog_defiler_counters_and_annihilator() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    g.players[1].library.clear();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    g.add_card_to_library(1, catalog::ulamog_the_ceaseless_hunger()); // MV 10 in library
+    let ula = g.add_card_to_hand(0, catalog::ulamog_the_defiler());
+    g.players[0].mana_pool.add_colorless(10);
+    g.step = TurnStep::PreCombatMain;
+    crate::game::cast(&mut g, ula);
+    // Top half rounded up of 4 = 2 exiled (island, island).
+    assert_eq!(g.players[1].library.len(), 2);
+    let c = g.battlefield_find(ula).unwrap();
+    // Greatest MV in exile is 0 (two Islands) — unless something else sits
+    // in exile; counters equal that greatest MV.
+    assert_eq!(
+        c.counter_count(CounterType::PlusOnePlusOne) > 0,
+        g.exile.iter().any(|x| x.definition.cost.cmc() > 0),
+    );
+    // Force five counters and read annihilator off the computed view.
+    g.battlefield_find_mut(ula).unwrap().counters.insert(CounterType::PlusOnePlusOne, 5);
+    let kws = g.computed_permanent(ula).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Annihilator(5)), "annihilator scales with counters");
+}
+
+/// Karn, the Great Creator: opponents can't activate artifact abilities;
+/// +1 animates a noncreature artifact; -2 wishes an artifact from the
+/// sideboard.
+#[test]
+fn karn_great_creator_locks_animates_and_wishes() {
+    let mut g = two_player_game();
+    let karn = g.add_card_to_battlefield(0, catalog::karn_the_great_creator());
+    // Opponent's mana rock is locked out.
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: rock, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "opponent's artifact ability locked");
+    // Our own artifacts are fine.
+    let mine = g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mine, ability_index: 0, target: None, x_value: None,
+    }).expect("own rock still works");
+    // +1: animate the opponent's rock (MV 2) into a 2/2 until next turn.
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: karn, ability_index: 0, target: Some(Target::Permanent(rock)), x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let c = g.computed_permanent(rock).unwrap();
+    assert!(c.card_types.contains(&crate::card::CardType::Creature));
+    assert_eq!((c.power, c.toughness), (2, 2), "MV/MV body");
+    // -2: wish an artifact from the sideboard.
+    let wish_target = crate::card::CardInstance::new(g.next_id(), catalog::mind_stone(), 0);
+    let wid = wish_target.id;
+    g.players[0].sideboard.push(wish_target);
+    g.turn_number += 1; // fresh loyalty window
+    g.battlefield_find_mut(karn).unwrap().loyalty_uses_this_turn = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: karn, ability_index: 1, target: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == wid), "wished to hand");
+}

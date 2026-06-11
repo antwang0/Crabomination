@@ -4988,6 +4988,23 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::SacrificePermanents(n) => {
+                        let picks: Vec<CardId> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == affected_controller)
+                            .take(*n as usize)
+                            .map(|c| c.id)
+                            .collect();
+                        if picks.len() == *n as usize {
+                            for sac_id in picks {
+                                self.sacrifice_one(sac_id, affected_controller, events);
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 };
 
                 if !paid {
@@ -5453,6 +5470,97 @@ impl GameState {
                             fires_once: true,
                         });
                     }
+                }
+                Ok(())
+            }
+
+            Effect::ManifestFromHand { who, count, controller_draws } => {
+                // CR 701.34 from the hand (Kozilek): the resolved player
+                // manifests `count` cards from their hand (their choice —
+                // auto-picks from the front for bots/tests); the effect's
+                // controller draws one per card manifested.
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let mut manifested = 0u32;
+                    for _ in 0..n {
+                        let Some(cid) = self.players[p].hand.first().map(|c| c.id) else { break };
+                        self.manifest_card(cid, p, ctx, events);
+                        manifested += 1;
+                    }
+                    if *controller_draws {
+                        for _ in 0..manifested {
+                            self.draw_one(ctx.controller, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::WishToHand { filter } => {
+                // Sideboard first ("outside the game"), then own exiled
+                // cards; a wants_ui controller picks via ChooseCards.
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let mut candidates: Vec<(CardId, bool)> = self.players[p]
+                    .sideboard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, true))
+                    .collect();
+                candidates.extend(
+                    self.exile
+                        .iter()
+                        .filter(|c| {
+                            c.owner == p && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .map(|c| (c.id, false)),
+                );
+                let Some(&(first, _)) = candidates.first() else { return Ok(()) };
+                let chosen = if candidates.len() > 1 && self.players[p].wants_ui {
+                    let cands = candidates
+                        .iter()
+                        .filter_map(|&(id, sb)| {
+                            let name = if sb {
+                                self.players[p].sideboard.iter().find(|c| c.id == id)
+                            } else {
+                                self.exile.iter().find(|c| c.id == id)
+                            }
+                            .map(|c| c.definition.name.to_string())?;
+                            Some((id, name))
+                        })
+                        .collect();
+                    match self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Put which card into your hand?".into(),
+                        candidates: cands,
+                        min: 1,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(ids) => ids
+                            .first()
+                            .copied()
+                            .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                            .unwrap_or(first),
+                        _ => first,
+                    }
+                } else {
+                    first
+                };
+                let card = if let Some(pos) =
+                    self.players[p].sideboard.iter().position(|c| c.id == chosen)
+                {
+                    Some(self.players[p].sideboard.remove(pos))
+                } else {
+                    self.exile
+                        .iter()
+                        .position(|c| c.id == chosen)
+                        .map(|pos| self.exile.remove(pos))
+                };
+                if let Some(card) = card {
+                    let cid = card.id;
+                    self.players[p].hand.push(card);
+                    events.push(GameEvent::CardDrawn { player: p, card_id: cid });
                 }
                 Ok(())
             }

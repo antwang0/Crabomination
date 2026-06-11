@@ -3448,6 +3448,28 @@ impl GameState {
                 modification: Modification::SetPowerToughness(power, toughness),
             });
         }
+        // Ulamog, the Defiler — annihilator X where X = +1/+1 counters,
+        // injected as a computed layer-6 keyword.
+        for card in &self.battlefield {
+            let has = card.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::AnnihilatorPerPlusOneCounter)
+            });
+            if !has {
+                continue;
+            }
+            let n = card.counter_count(crate::card::CounterType::PlusOnePlusOne);
+            if n > 0 {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(crate::card::Keyword::Annihilator(n)),
+                });
+            }
+        }
         // CR 702.87 — Level up: the band matching the creature's level-counter
         // count sets its base P/T (layer 7a CDA) and grants its keywords.
         for card in &self.battlefield {
@@ -8447,6 +8469,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GraveyardCardsHaveEscape { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::CollectsLeaverCounters
+            | StaticEffect::OpponentsCantActivateArtifactAbilities
+            // AnnihilatorPerPlusOneCounter — needs a live counter count,
+            // injected in `gather_continuous_effects_inner`.
+            | StaticEffect::AnnihilatorPerPlusOneCounter
             // SkipStep — consulted by `advance_step` (CR 614.10); no layer.
             | StaticEffect::SkipStep { .. }
             // AttackPowerCapByControllerHand — consulted in declare_attackers.

@@ -311,6 +311,8 @@ pub enum WardCost {
     Life(u32),
     Discard(u32),
     SacrificeCreature,
+    /// "Ward—Sacrifice N permanents." (Ulamog, the Defiler.)
+    SacrificePermanents(u32),
 }
 
 impl WardCost {

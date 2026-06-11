@@ -46573,3 +46573,133 @@ pub fn springheart_nantuko() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kozilek, the Broken Reality — {9} 9/9 Eldrazi. Cast: target opponent
+/// manifests two cards from their hand; you draw one per card manifested.
+/// Other colorless creatures you control get +3/+2.
+pub fn kozilek_the_broken_reality() -> CardDefinition {
+    CardDefinition {
+        name: "Kozilek, the Broken Reality",
+        cost: cost(&[generic(9)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 9,
+        toughness: 9,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::ManifestFromHand {
+                who: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::OpponentPlayer,
+                },
+                count: Value::Const(2),
+                controller_draws: true,
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Other colorless creatures you control get +3/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Colorless)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 3,
+                toughness: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ulamog, the Defiler — {10} 7/7 Eldrazi. Cast: target opponent exiles the
+/// top half of their library (rounded up). Ward—sacrifice two permanents.
+/// Enters with +1/+1 counters equal to the greatest MV in exile; annihilator
+/// X where X is its +1/+1 counter count.
+pub fn ulamog_the_defiler() -> CardDefinition {
+    CardDefinition {
+        name: "Ulamog, the Defiler",
+        cost: cost(&[generic(10)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Ward(WardCost::SacrificePermanents(2))],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::GreatestManaValueInExile)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::ExileTopOfLibrary {
+                who: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::OpponentPlayer,
+                },
+                amount: Value::HalfLibrarySizeRoundedUp(PlayerRef::Target(0)),
+                link_to_source: false,
+                face_down: false,
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Ulamog has annihilator X, where X is the number of +1/+1 counters on it.",
+            effect: StaticEffect::AnnihilatorPerPlusOneCounter,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Karn, the Great Creator — {4} planeswalker, loyalty 5. Opponents can't
+/// activate artifact abilities. +1: target noncreature artifact becomes an
+/// MV/MV artifact creature until your next turn. -2: put an artifact card
+/// you own from the sideboard or exile into your hand.
+pub fn karn_the_great_creator() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Karn, the Great Creator",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Karn],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of artifacts your opponents control can't be activated.",
+            effect: StaticEffect::OpponentsCantActivateArtifactAbilities,
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::BecomeCreature {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::Not(Box::new(
+                                SelectionRequirement::Creature,
+                            ))),
+                    ),
+                    power: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    toughness: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    creature_types: vec![],
+                    keywords: vec![],
+                    duration: Duration::UntilYourNextUntap,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::WishToHand { filter: SelectionRequirement::Artifact },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
