@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 // ── Turn step sequence ────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TurnStep {
     Untap,
     Upkeep,

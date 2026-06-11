@@ -204,7 +204,12 @@ impl Plugin for SinglePlayerPlugin {
             .add_systems(PreUpdate, poll_net)
             .add_systems(
                 Update,
-                (drive_pending_mana_cast, update_pending_cast_banner, update_spectator_banner),
+                (
+                    drive_pending_mana_cast,
+                    update_pending_cast_banner,
+                    update_spectator_banner,
+                    update_reconnect_banner,
+                ),
             )
             // Reconnect runs only when a reconnectable match's link has dropped.
             .add_systems(Update, maybe_reconnect.run_if(|r: Res<ResumeInfo>| r.lost));
@@ -574,6 +579,82 @@ fn update_spectator_banner(
                         Pickable::IGNORE,
                     ));
                 });
+        }
+        (false, Some(e)) => {
+            commands.entity(e).despawn();
+        }
+        _ => {}
+    }
+}
+
+/// Marker for the "connection lost — reconnecting" banner shown while
+/// `maybe_reconnect` is retrying a dropped match link.
+#[derive(Component)]
+struct ReconnectBanner;
+
+/// Marker for the banner's text node so the attempt counter can be updated
+/// in place between retries.
+#[derive(Component)]
+struct ReconnectBannerText;
+
+/// Surface the mid-match reconnect loop (`maybe_reconnect`) to the player.
+/// Without this the board simply freezes while the background retries run.
+/// Shown while a reconnectable match (`ResumeInfo.token` held) is either
+/// flagged lost or mid-retry (`attempts` only resets once messages flow
+/// again — see `poll_net`); despawned on recovery or once the loop gives
+/// up and bails to the menu.
+fn update_reconnect_banner(
+    mut commands: Commands,
+    resume: Res<ResumeInfo>,
+    fonts: Option<Res<crate::theme::UiFonts>>,
+    existing: Query<Entity, With<ReconnectBanner>>,
+    mut text_q: Query<&mut Text, With<ReconnectBannerText>>,
+) {
+    let reconnecting = resume.token.is_some() && (resume.lost || resume.attempts > 0);
+    let label = format!(
+        "⟳ Connection lost — reconnecting (attempt {} of {MAX_RECONNECT_ATTEMPTS})…",
+        resume.attempts.max(1)
+    );
+    match (reconnecting, existing.iter().next()) {
+        (true, None) => {
+            let Some(fonts) = fonts else { return };
+            commands
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(48.0),
+                        left: Val::Px(0.0),
+                        width: Val::Percent(100.0),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    ReconnectBanner,
+                    crate::systems::game_ui::InGameRoot,
+                    Pickable::IGNORE,
+                    GlobalZIndex(45),
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(label),
+                        ReconnectBannerText,
+                        fonts.tf(16.0),
+                        TextColor(crate::theme::ACCENT_ORANGE),
+                        BackgroundColor(crate::theme::HUD_BG_DANGER),
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                            ..default()
+                        },
+                        Pickable::IGNORE,
+                    ));
+                });
+        }
+        (true, Some(_)) => {
+            for mut text in &mut text_q {
+                if text.0 != label {
+                    text.0 = label.clone();
+                }
+            }
         }
         (false, Some(e)) => {
             commands.entity(e).despawn();

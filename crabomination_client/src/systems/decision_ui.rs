@@ -112,6 +112,15 @@ pub struct DecisionUiState {
     /// For AssignCombatDamage (CR 510.1d): the working per-blocker damage
     /// split.
     pub damage_assign: Vec<(CardId, u32)>,
+    /// For ChooseModes (CR 700.2d "choose N" / Escalate): the working
+    /// selected-mode set, in pick order. `None` = not yet seeded from the
+    /// wire default (distinct from "player deselected everything").
+    pub modes_selected: Option<Vec<u8>>,
+    /// For ChooseAmount: the working value (kept within `0..=max`).
+    pub amount: u32,
+    /// For DivideDamage (CR 601.2d): working per-target amounts, parallel
+    /// to the wire's target list.
+    pub divide: Vec<u32>,
     /// CardId the modal was last spawned for — avoids respawning each frame.
     pub spawned_for: Option<DecisionKey>,
 }
@@ -146,6 +155,18 @@ pub enum DecisionKey {
     OptionalTrigger(CardId, String),
     /// `Decision::NameCard` (CR 201.3) — keyed by the asking source.
     NameCard(CardId),
+    /// `Decision::ChooseModes` (CR 700.2d) — keyed by source + shape.
+    ChooseModes(CardId, usize, usize),
+    /// Resolution-time `Decision::ChooseMode` for a modal trigger (Riot,
+    /// Fabricate) — keyed by source + mode count.
+    ChooseModeTrigger(CardId, usize),
+    /// `Decision::ChooseAmount` — keyed by source + bound + prompt.
+    ChooseAmount(CardId, u32, String),
+    /// `Decision::DivideDamage` (CR 601.2d) — keyed by source + total +
+    /// target list.
+    DivideDamage(CardId, u32, Vec<Target>),
+    /// `Decision::ChooseCreatureType` — keyed by the asking source.
+    ChooseCreatureType(CardId),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -198,6 +219,21 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
             Some(DecisionKey::OptionalTrigger(*source, description.clone()))
         }
         DecisionWire::NameCard { source, .. } => Some(DecisionKey::NameCard(*source)),
+        DecisionWire::ChooseModes { source, num_modes, count, .. } => {
+            Some(DecisionKey::ChooseModes(*source, *num_modes, *count))
+        }
+        DecisionWire::ChooseMode { source, num_modes, .. } => {
+            Some(DecisionKey::ChooseModeTrigger(*source, *num_modes))
+        }
+        DecisionWire::ChooseAmount { source, max, prompt } => {
+            Some(DecisionKey::ChooseAmount(*source, *max, prompt.clone()))
+        }
+        DecisionWire::DivideDamage { source, total, targets } => {
+            Some(DecisionKey::DivideDamage(*source, *total, targets.clone()))
+        }
+        DecisionWire::ChooseCreatureType { source, .. } => {
+            Some(DecisionKey::ChooseCreatureType(*source))
+        }
         _ => None,
     }
 }
@@ -236,6 +272,9 @@ pub fn spawn_decision_ui(
         state.search_selected = None;
         state.put_on_library.clear();
         state.discard_selected.clear();
+        state.modes_selected = None;
+        state.amount = 0;
+        state.divide.clear();
         state.spawned_for = None;
         // Clear any decision-driven targeting flag so the cursor
         // doesn't stay armed across a state change.
@@ -262,6 +301,9 @@ pub fn spawn_decision_ui(
                 state.search_selected = None;
                 state.put_on_library.clear();
                 state.discard_selected.clear();
+                state.modes_selected = None;
+                state.amount = 0;
+                state.divide.clear();
                 state.spawned_for = None;
             }
             if targeting.pending_decision_target {
@@ -443,6 +485,57 @@ pub fn spawn_decision_ui(
                 blockers,
                 &state.damage_assign,
             );
+        }
+        DecisionWire::ChooseModes { source, count, num_modes, default, mode_texts, .. } => {
+            if state.modes_selected.is_none() {
+                state.modes_selected = Some(default.clone());
+            }
+            state.spawned_for = Some(key);
+            let selected = state.modes_selected.clone().unwrap_or_default();
+            let title = view_card_name(cv, *source, "Modal effect");
+            spawn_choose_modes_modal(
+                &mut commands,
+                &ui_fonts,
+                &title,
+                *num_modes,
+                *count,
+                mode_texts,
+                &selected,
+            );
+        }
+        DecisionWire::ChooseMode { source, num_modes, mode_texts } => {
+            state.spawned_for = Some(key);
+            let title = view_card_name(cv, *source, "Triggered ability");
+            spawn_choose_trigger_mode_modal(&mut commands, &ui_fonts, &title, *num_modes, mode_texts);
+        }
+        DecisionWire::ChooseAmount { prompt, max, .. } => {
+            state.amount = 0;
+            state.spawned_for = Some(key);
+            spawn_choose_amount_modal(&mut commands, &ui_fonts, prompt, *max, state.amount);
+        }
+        DecisionWire::DivideDamage { source, total, targets } => {
+            if state.divide.len() != targets.len() {
+                state.divide = crabomination::decision::even_damage_split(*total, targets.len());
+            }
+            state.spawned_for = Some(key);
+            let title = view_card_name(cv, *source, "Divided damage");
+            let rows: Vec<String> = targets
+                .iter()
+                .map(|t| match t {
+                    Target::Permanent(id) => view_card_name(cv, *id, "Permanent"),
+                    Target::Player(s) => cv
+                        .players
+                        .iter()
+                        .find(|p| p.seat == *s)
+                        .map(|p| p.name.clone())
+                        .unwrap_or_else(|| format!("Player {s}")),
+                })
+                .collect();
+            spawn_divide_damage_modal(&mut commands, &ui_fonts, &title, *total, &rows, &state.divide);
+        }
+        DecisionWire::ChooseCreatureType { suggestions, .. } => {
+            state.spawned_for = Some(key);
+            spawn_creature_type_modal(&mut commands, &ui_fonts, suggestions);
         }
         DecisionWire::ChooseTarget { legal, source_name, description, .. } => {
             // No modal — reuse the existing in-scene targeting cursor.
@@ -1953,6 +2046,19 @@ pub fn handle_confirm(
             DecisionWire::AssignCombatDamage { .. } => {
                 DecisionAnswer::CombatDamageAssignment(state.damage_assign.clone())
             }
+            DecisionWire::ChooseModes { .. } => {
+                // The engine sanitises (dropping dupes/out-of-range, falling
+                // back to the card default when empty), so an under-picked
+                // set is safe to send.
+                DecisionAnswer::Modes(state.modes_selected.clone().unwrap_or_default())
+            }
+            DecisionWire::ChooseAmount { .. } => DecisionAnswer::Amount(state.amount),
+            DecisionWire::DivideDamage { total, .. } => {
+                // CR 601.2d — the split must use the whole total; hold the
+                // modal open until the remaining-pool readout hits zero.
+                if state.divide.iter().sum::<u32>() != *total { continue; }
+                DecisionAnswer::DamageDivision(state.divide.clone())
+            }
             _ => continue,
         };
 
@@ -1967,6 +2073,9 @@ pub fn handle_confirm(
         state.trigger_order.clear();
         state.damage_order.clear();
         state.damage_assign.clear();
+        state.modes_selected = None;
+        state.amount = 0;
+        state.divide.clear();
         state.spawned_for = None;
     }
 }
@@ -2841,6 +2950,613 @@ pub fn handle_choose_color_buttons(
     for (interaction, btn) in &buttons {
         if *interaction == Interaction::Pressed {
             outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Color(btn.0)));
+            state.spawned_for = None;
+            return;
+        }
+    }
+}
+
+// ── Resolution-time choice modals (CR 700.2d / 601.2d / amounts / types) ─────
+//
+// These five answer the decisions the engine raises through the
+// stash-and-rerun suspend path (`PendingEffectState::*AnswerPending`):
+// "choose N" / Escalate mode sets, deferred modal-trigger picks, "choose a
+// number", divided damage, and creature-type choices.
+
+/// Display name for `id` resolved from the live view — battlefield first,
+/// then known stack items — falling back to `fallback`.
+fn view_card_name(
+    cv: &crabomination::net::ClientView,
+    id: CardId,
+    fallback: &str,
+) -> String {
+    cv.battlefield
+        .iter()
+        .find(|p| p.id == id)
+        .map(|p| p.name.clone())
+        .or_else(|| {
+            cv.stack.iter().find_map(|s| match s {
+                crabomination::net::StackItemView::Known(k) if k.source == id => {
+                    Some(k.name.clone())
+                }
+                _ => None,
+            })
+        })
+        .unwrap_or_else(|| fallback.to_string())
+}
+
+fn mode_label(idx: usize, texts: &[String]) -> String {
+    match texts.get(idx) {
+        Some(t) if !t.is_empty() => format!("{}. {}", idx + 1, t),
+        _ => format!("Mode {}", idx + 1),
+    }
+}
+
+/// Toggle for one mode in the ChooseModes modal. Flips membership in
+/// `DecisionUiState::modes_selected`.
+#[derive(Component)]
+pub struct ChooseModesToggle(pub u8);
+
+/// Single-pick button in the deferred trigger ChooseMode modal — submits
+/// `DecisionAnswer::Mode` immediately.
+#[derive(Component)]
+pub struct TriggerModeButton(pub usize);
+
+/// −/+ stepper in the ChooseAmount modal.
+#[derive(Component)]
+pub struct AmountStepButton(pub i64);
+
+/// Marker for the ChooseAmount modal's live value readout.
+#[derive(Component)]
+pub struct AmountValueText;
+
+/// −/+ stepper for one target row of the DivideDamage modal.
+#[derive(Component)]
+pub struct DivideDamageButton {
+    pub index: usize,
+    pub delta: i32,
+}
+
+/// Marker for one target row's live amount readout (`.0` = target index).
+#[derive(Component)]
+pub struct DivideValueText(pub usize);
+
+/// Marker for the DivideDamage modal's "unassigned damage" readout.
+#[derive(Component)]
+pub struct DivideRemainingText;
+
+/// Pick button in the ChooseCreatureType modal — submits immediately.
+#[derive(Component)]
+pub struct CreatureTypePickButton(pub crabomination::card::CreatureType);
+
+/// Shared scaffold: full-screen centering root + column panel, returning the
+/// panel entity for the caller to fill.
+fn spawn_modal_panel(commands: &mut Commands, min_width: f32) -> Entity {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            DecisionModal,
+        ))
+        .id();
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(12.0),
+                align_items: AlignItems::Center,
+                min_width: Val::Px(min_width),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+    commands.entity(root).add_child(panel);
+    panel
+}
+
+fn spawn_confirm_button(panel: &mut ChildSpawnerCommands, ui_fonts: &UiFonts) {
+    panel
+        .spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                ..default()
+            },
+            BackgroundColor(theme::BUTTON_PRIMARY_BG),
+            HoverTint::new(theme::BUTTON_PRIMARY_BG),
+            DecisionConfirmButton,
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new("Confirm"),
+                ui_fonts.tf(18.0),
+                TextColor(theme::TEXT_PRIMARY),
+                bevy::picking::Pickable::IGNORE,
+            ));
+        });
+}
+
+fn spawn_choose_modes_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    title: &str,
+    num_modes: usize,
+    count: usize,
+    mode_texts: &[String],
+    selected: &[u8],
+) {
+    let panel = spawn_modal_panel(commands, 380.0);
+    // `count == num_modes` is the Escalate shape ("choose one or more,
+    // paying for extras"); an exact-N pick otherwise.
+    let prompt = if count == num_modes {
+        format!("{title} — choose one or more")
+    } else {
+        format!("{title} — choose {count}")
+    };
+    let title_owned = prompt;
+    let rows: Vec<(u8, String, bool)> = (0..num_modes)
+        .map(|i| {
+            (i as u8, mode_label(i, mode_texts), selected.contains(&(i as u8)))
+        })
+        .collect();
+    let fonts18 = ui_fonts.tf(18.0);
+    let fonts14 = ui_fonts.tf(14.0);
+    commands.entity(panel).with_children(|p| {
+        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        for (idx, label, is_on) in rows {
+            let bg = if is_on { theme::BUTTON_SELECTED_BG } else { theme::BUTTON_NEUTRAL_BG };
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    align_self: AlignSelf::Stretch,
+                    ..default()
+                },
+                BackgroundColor(bg),
+                ChooseModesToggle(idx),
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new(label),
+                    fonts14.clone(),
+                    TextColor(theme::TEXT_PRIMARY),
+                    bevy::picking::Pickable::IGNORE,
+                ));
+            });
+        }
+        spawn_confirm_button(p, ui_fonts);
+    });
+}
+
+fn spawn_choose_trigger_mode_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    title: &str,
+    num_modes: usize,
+    mode_texts: &[String],
+) {
+    let panel = spawn_modal_panel(commands, 380.0);
+    let title_owned = format!("{title} — choose one");
+    let labels: Vec<String> = (0..num_modes).map(|i| mode_label(i, mode_texts)).collect();
+    let fonts18 = ui_fonts.tf(18.0);
+    let fonts14 = ui_fonts.tf(14.0);
+    commands.entity(panel).with_children(|p| {
+        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        for (idx, label) in labels.into_iter().enumerate() {
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    align_self: AlignSelf::Stretch,
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                TriggerModeButton(idx),
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new(label),
+                    fonts14.clone(),
+                    TextColor(theme::TEXT_PRIMARY),
+                    bevy::picking::Pickable::IGNORE,
+                ));
+            });
+        }
+    });
+}
+
+fn spawn_choose_amount_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    prompt: &str,
+    max: u32,
+    value: u32,
+) {
+    let panel = spawn_modal_panel(commands, 320.0);
+    let prompt_owned = format!("{prompt} (0–{max})");
+    let fonts18 = ui_fonts.tf(18.0);
+    let fonts16 = ui_fonts.tf(16.0);
+    let fonts22 = ui_fonts.tf(22.0);
+    commands.entity(panel).with_children(|p| {
+        p.spawn((Text::new(prompt_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        p.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(12.0),
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            for (label, delta) in
+                [("−5", -5i64), ("−", -1), ("+", 1), ("+5", 5), ("Max", i64::MAX)]
+            {
+                // Value readout sits between the − and + clusters.
+                if delta == 1 {
+                    row.spawn((
+                        Text::new(value.to_string()),
+                        fonts22.clone(),
+                        TextColor(theme::ACCENT_GOLD),
+                        AmountValueText,
+                        Node {
+                            min_width: Val::Px(56.0),
+                            justify_content: JustifyContent::Center,
+                            ..default()
+                        },
+                    ));
+                }
+                row.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    AmountStepButton(delta),
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        fonts16.clone(),
+                        TextColor(theme::TEXT_PRIMARY),
+                        bevy::picking::Pickable::IGNORE,
+                    ));
+                });
+            }
+        });
+        spawn_confirm_button(p, ui_fonts);
+    });
+}
+
+fn spawn_divide_damage_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    title: &str,
+    total: u32,
+    target_names: &[String],
+    amounts: &[u32],
+) {
+    let panel = spawn_modal_panel(commands, 380.0);
+    let title_owned = format!("{title} — divide {total} damage");
+    let assigned: u32 = amounts.iter().sum();
+    let fonts18 = ui_fonts.tf(18.0);
+    let fonts16 = ui_fonts.tf(16.0);
+    let fonts14 = ui_fonts.tf(14.0);
+    let rows: Vec<(usize, String, u32)> = target_names
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (i, n.clone(), amounts.get(i).copied().unwrap_or(0)))
+        .collect();
+    commands.entity(panel).with_children(|p| {
+        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        for (index, name, amount) in rows {
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(10.0),
+                align_items: AlignItems::Center,
+                align_self: AlignSelf::Stretch,
+                justify_content: JustifyContent::SpaceBetween,
+                ..default()
+            })
+            .with_children(|row| {
+                row.spawn((
+                    Text::new(name),
+                    fonts14.clone(),
+                    TextColor(theme::TEXT_BODY),
+                ));
+                row.spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(8.0),
+                    align_items: AlignItems::Center,
+                    ..default()
+                })
+                .with_children(|stepper| {
+                    for (label, delta) in [("−", -1i32), ("+", 1)] {
+                        if delta == 1 {
+                            stepper.spawn((
+                                Text::new(amount.to_string()),
+                                fonts16.clone(),
+                                TextColor(theme::ACCENT_GOLD),
+                                DivideValueText(index),
+                                Node {
+                                    min_width: Val::Px(32.0),
+                                    justify_content: JustifyContent::Center,
+                                    ..default()
+                                },
+                            ));
+                        }
+                        stepper.spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+                                border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                                ..default()
+                            },
+                            BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                            HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                            DivideDamageButton { index, delta },
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new(label),
+                                fonts16.clone(),
+                                TextColor(theme::TEXT_PRIMARY),
+                                bevy::picking::Pickable::IGNORE,
+                            ));
+                        });
+                    }
+                });
+            });
+        }
+        p.spawn((
+            Text::new(format!("Unassigned: {}", total - assigned.min(total))),
+            fonts14.clone(),
+            TextColor(theme::TEXT_SECONDARY),
+            DivideRemainingText,
+        ));
+        spawn_confirm_button(p, ui_fonts);
+    });
+}
+
+fn spawn_creature_type_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    suggestions: &[crabomination::card::CreatureType],
+) {
+    let panel = spawn_modal_panel(commands, 420.0);
+    let fonts18 = ui_fonts.tf(18.0);
+    let fonts14 = ui_fonts.tf(14.0);
+    let types: Vec<crabomination::card::CreatureType> = suggestions.to_vec();
+    commands.entity(panel).with_children(|p| {
+        p.spawn((
+            Text::new("Choose a creature type"),
+            fonts18.clone(),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+        p.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            flex_wrap: FlexWrap::Wrap,
+            column_gap: Val::Px(8.0),
+            row_gap: Val::Px(8.0),
+            max_width: Val::Px(560.0),
+            justify_content: JustifyContent::Center,
+            ..default()
+        })
+        .with_children(|grid| {
+            for ct in types {
+                grid.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(12.0), Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    CreatureTypePickButton(ct),
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(format!("{ct:?}")),
+                        fonts14.clone(),
+                        TextColor(theme::TEXT_PRIMARY),
+                        bevy::picking::Pickable::IGNORE,
+                    ));
+                });
+            }
+        });
+    });
+}
+
+/// Flip one mode's membership in the working ChooseModes selection and
+/// restyle the toggle in place. An exact-N decision (count < num_modes)
+/// evicts the oldest pick once over budget, so the player can always click
+/// their way to a legal set.
+pub fn handle_choose_modes_toggle(
+    view: Res<CurrentView>,
+    mut state: ResMut<DecisionUiState>,
+    mut toggles: Query<
+        (&Interaction, &ChooseModesToggle, &mut BackgroundColor),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut all_toggles: Query<(&ChooseModesToggle, &mut BackgroundColor), Without<Interaction>>,
+) {
+    let Some(cv) = &view.0 else { return };
+    let Some((count, num_modes)) =
+        cv.pending_decision.as_ref().and_then(|p| match p.decision.as_ref() {
+            Some(DecisionWire::ChooseModes { count, num_modes, .. }) => {
+                Some((*count, *num_modes))
+            }
+            _ => None,
+        })
+    else {
+        return;
+    };
+    let mut evicted: Option<u8> = None;
+    for (interaction, toggle, mut bg) in toggles.iter_mut() {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let selected = state.modes_selected.get_or_insert_with(Vec::new);
+        if let Some(pos) = selected.iter().position(|&m| m == toggle.0) {
+            selected.remove(pos);
+            *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG);
+        } else {
+            selected.push(toggle.0);
+            *bg = BackgroundColor(theme::BUTTON_SELECTED_BG);
+            // Exact-N picks: drop the oldest selection once over budget.
+            if count < num_modes && selected.len() > count {
+                evicted = Some(selected.remove(0));
+            }
+        }
+    }
+    if let Some(old) = evicted {
+        for (toggle, mut bg) in all_toggles.iter_mut() {
+            if toggle.0 == old {
+                *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG);
+            }
+        }
+    }
+}
+
+/// Submit a deferred trigger-mode pick the moment its button is clicked.
+pub fn handle_trigger_mode_buttons(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &TriggerModeButton), Changed<Interaction>>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if !matches!(
+        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
+        Some(DecisionWire::ChooseMode { .. })
+    ) {
+        return;
+    }
+    let Some(outbox) = outbox else { return };
+    for (interaction, btn) in &buttons {
+        if *interaction == Interaction::Pressed {
+            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Mode(btn.0)));
+            state.spawned_for = None;
+            return;
+        }
+    }
+}
+
+/// Adjust the working ChooseAmount value (clamped to `0..=max`) and update
+/// the readout in place.
+pub fn handle_amount_buttons(
+    view: Res<CurrentView>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &AmountStepButton), Changed<Interaction>>,
+    mut value_text: Query<&mut Text, With<AmountValueText>>,
+) {
+    let Some(cv) = &view.0 else { return };
+    let Some(max) = cv.pending_decision.as_ref().and_then(|p| match p.decision.as_ref() {
+        Some(DecisionWire::ChooseAmount { max, .. }) => Some(*max),
+        _ => None,
+    }) else {
+        return;
+    };
+    let mut changed = false;
+    for (interaction, btn) in &buttons {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let next = if btn.0 == i64::MAX {
+            max as i64
+        } else {
+            state.amount as i64 + btn.0
+        };
+        state.amount = next.clamp(0, max as i64) as u32;
+        changed = true;
+    }
+    if changed {
+        for mut t in &mut value_text {
+            t.0 = state.amount.to_string();
+        }
+    }
+}
+
+/// Adjust one target's share of a divided-damage split (each target keeps
+/// ≥1 per CR 601.2d; the total never exceeds the spell's amount) and update
+/// the row + remaining readouts in place.
+pub fn handle_divide_damage_buttons(
+    view: Res<CurrentView>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &DivideDamageButton), Changed<Interaction>>,
+    mut row_texts: Query<(&mut Text, &DivideValueText), Without<DivideRemainingText>>,
+    mut remaining_text: Query<&mut Text, (With<DivideRemainingText>, Without<DivideValueText>)>,
+) {
+    let Some(cv) = &view.0 else { return };
+    let Some(total) = cv.pending_decision.as_ref().and_then(|p| match p.decision.as_ref() {
+        Some(DecisionWire::DivideDamage { total, .. }) => Some(*total),
+        _ => None,
+    }) else {
+        return;
+    };
+    let mut changed = false;
+    for (interaction, btn) in &buttons {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let assigned: u32 = state.divide.iter().sum();
+        let Some(v) = state.divide.get_mut(btn.index) else { continue };
+        if btn.delta > 0 && assigned < total {
+            *v += 1;
+            changed = true;
+        } else if btn.delta < 0 && *v > 1 {
+            *v -= 1;
+            changed = true;
+        }
+    }
+    if changed {
+        for (mut t, marker) in &mut row_texts {
+            if let Some(v) = state.divide.get(marker.0) {
+                t.0 = v.to_string();
+            }
+        }
+        let assigned: u32 = state.divide.iter().sum();
+        for mut t in &mut remaining_text {
+            t.0 = format!("Unassigned: {}", total.saturating_sub(assigned));
+        }
+    }
+}
+
+/// Submit a creature-type pick the moment its button is clicked.
+pub fn handle_creature_type_buttons(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &CreatureTypePickButton), Changed<Interaction>>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if !matches!(
+        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
+        Some(DecisionWire::ChooseCreatureType { .. })
+    ) {
+        return;
+    }
+    let Some(outbox) = outbox else { return };
+    for (interaction, btn) in &buttons {
+        if *interaction == Interaction::Pressed {
+            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::CreatureType(btn.0)));
             state.spawned_for = None;
             return;
         }

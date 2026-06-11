@@ -975,7 +975,38 @@ pub enum PendingEffectState {
     /// Needle, Phyrexian Revoker). The chooser names a card and the engine
     /// stamps it onto `target_id.named_card`.
     NameCardPending { target_id: CardId },
+    /// Suspended on a `ChooseModes` for a resolution-time "choose N" /
+    /// Escalate effect. The apply step validates the answer shape, drops
+    /// out-of-range indices, and stashes it in
+    /// `GameState.stashed_resolution_answer`; the re-queued originating
+    /// effect consumes the stash instead of re-asking its decider.
+    ModesAnswerPending { num_modes: usize },
+    /// Suspended on a `ChooseMode` for a modal trigger whose pick was
+    /// deferred to resolution (`wants_ui` controller). Same stash-and-rerun
+    /// shape as `ModesAnswerPending`.
+    ModeAnswerPending { num_modes: usize },
+    /// Suspended on a `ChooseAmount` ("pay any amount of life", "sacrifice
+    /// any number"). The answer is clamped to `max` then stashed.
+    AmountAnswerPending { max: u32 },
+    /// Suspended on the `OptionalTrigger` raised by `Effect::MayDo`. The
+    /// yes/no answer is stashed for the re-run.
+    MayDoAnswerPending,
+    /// Suspended on a `DivideDamage` split. The raw division is stashed;
+    /// the re-run renormalises a malformed answer (wrong length / sum).
+    DivisionAnswerPending,
+    /// Suspended on a `ChooseCreatureType` whose answer feeds a one-shot
+    /// resolution effect (Crippling Fear's "except chosen type" sweep)
+    /// rather than a permanent stamp (`ChooseCreatureTypePending`).
+    CreatureTypeAnswerPending,
 }
+
+/// Sentinel trigger-mode value meaning "the controller's mode pick was
+/// deferred to resolution" (`pick_trigger_mode` defers for `wants_ui`
+/// controllers whose modal trigger has no targeting modes). Only the
+/// `Effect::ChooseMode` resolution arm inspects `ctx.mode` against this;
+/// non-modal effects never read it, so the sentinel rides the existing
+/// `Option<usize>` plumbing (`unwrap_or(0)` sites included) untouched.
+pub(crate) const MODE_PICK_DEFERRED: usize = usize::MAX;
 
 // ── Events ────────────────────────────────────────────────────────────────────
 

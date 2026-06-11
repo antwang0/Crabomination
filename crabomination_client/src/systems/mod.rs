@@ -14,6 +14,7 @@ pub mod kb_cursor;
 pub mod keyword_label;
 pub mod legal_target_filter;
 pub mod lobby_ui;
+pub mod phase_bar;
 pub mod pt_label;
 pub mod quality;
 pub mod ui;

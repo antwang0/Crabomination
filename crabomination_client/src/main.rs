@@ -80,7 +80,7 @@ use systems::ui::{
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
     update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_damage_order_reorder, handle_damage_assign_buttons, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_name_card_buttons, handle_learn_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, handle_optional_buttons, handle_choose_modes_toggle, handle_trigger_mode_buttons, handle_amount_buttons, handle_divide_damage_buttons, handle_creature_type_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -306,6 +306,7 @@ fn main() {
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .init_resource::<systems::game_ui::SurrenderConfirm>()
+        .init_resource::<systems::phase_bar::StopConfig>()
         .insert_resource(menu::CliBootHint(load_state_arg))
         .insert_resource(menu::CliBootFormat(play_format_arg))
         .add_systems(Startup, setup)
@@ -326,6 +327,12 @@ fn main() {
                 setup_game_hud,
                 setup_quality_panel,
             ),
+        )
+        // Phase-chart stop toggles (click a step row to cycle stop/skip).
+        .add_systems(
+            Update,
+            systems::phase_bar::handle_phase_chart_clicks
+                .run_if(in_state(AppState::InGame)),
         )
         // Audit-mode card picker.
         .add_systems(OnEnter(AppState::Audit), audit::spawn_audit_picker)
@@ -673,7 +680,17 @@ fn main() {
                 handle_choose_color_buttons,
                 handle_name_card_buttons,
                 handle_learn_buttons,
-                handle_optional_buttons,
+                // Resolution-time choice modals (modes / amounts / divided
+                // damage / creature type) — independent handlers grouped to
+                // stay inside Bevy's tuple-arity limit.
+                (
+                    handle_optional_buttons,
+                    handle_choose_modes_toggle,
+                    handle_trigger_mode_buttons,
+                    handle_amount_buttons,
+                    handle_divide_damage_buttons,
+                    handle_creature_type_buttons,
+                ),
                 spawn_mode_pick_ui,
                 handle_mode_pick_buttons,
             )

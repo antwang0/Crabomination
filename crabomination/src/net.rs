@@ -1186,6 +1186,10 @@ pub enum DecisionWire {
     ChooseMode {
         source: CardId,
         num_modes: usize,
+        /// Short rendering of each mode so the client can label its buttons;
+        /// empty for legacy senders (client falls back to "Mode N").
+        #[serde(default)]
+        mode_texts: Vec<String>,
     },
     ChooseColor {
         source: CardId,
@@ -1232,6 +1236,10 @@ pub enum DecisionWire {
     /// "As [card] enters, choose a creature type." Cavern of Souls.
     ChooseCreatureType {
         source: CardId,
+        /// Engine-ranked candidate types (types present in the game first,
+        /// then tribal staples) rendered as pick buttons.
+        #[serde(default)]
+        suggestions: Vec<crate::card::CreatureType>,
     },
     /// CR 201.3 — "As [card] enters, choose a card name." Pithing Needle.
     NameCard {
@@ -1271,6 +1279,10 @@ pub enum DecisionWire {
         num_modes: usize,
         count: usize,
         default: Vec<u8>,
+        /// Short rendering of each mode so the client can label its toggles;
+        /// empty for legacy senders (client falls back to "Mode N").
+        #[serde(default)]
+        mode_texts: Vec<String>,
     },
     /// CR 701.45 — Learn: reveal a Lesson from `lessons` into hand, or
     /// discard a card from `hand` to draw.
@@ -1337,9 +1349,10 @@ impl From<&Decision> for DecisionWire {
                     description: description.clone(),
                 }
             }
-            Decision::ChooseMode { source, num_modes } => DecisionWire::ChooseMode {
+            Decision::ChooseMode { source, num_modes, mode_texts } => DecisionWire::ChooseMode {
                 source: *source,
                 num_modes: *num_modes,
+                mode_texts: mode_texts.clone(),
             },
             Decision::ChooseColor { source, legal } => DecisionWire::ChooseColor {
                 source: *source,
@@ -1382,8 +1395,11 @@ impl From<&Decision> for DecisionWire {
                     serum_powders: serum_powders.clone(),
                 }
             }
-            Decision::ChooseCreatureType { source } => {
-                DecisionWire::ChooseCreatureType { source: *source }
+            Decision::ChooseCreatureType { source, suggestions } => {
+                DecisionWire::ChooseCreatureType {
+                    source: *source,
+                    suggestions: suggestions.clone(),
+                }
             }
             Decision::NameCard { source, source_name, suggestions } => DecisionWire::NameCard {
                 source: *source,
@@ -1407,12 +1423,13 @@ impl From<&Decision> for DecisionWire {
                     blockers: blockers.clone(),
                 }
             }
-            Decision::ChooseModes { source, num_modes, count, default } => {
+            Decision::ChooseModes { source, num_modes, count, default, mode_texts } => {
                 DecisionWire::ChooseModes {
                     source: *source,
                     num_modes: *num_modes,
                     count: *count,
                     default: default.clone(),
+                    mode_texts: mode_texts.clone(),
                 }
             }
             Decision::Learn { player, lessons, hand } => DecisionWire::Learn {
@@ -1801,20 +1818,24 @@ impl GameEventWire {
     /// resolves card ids to display names (typically the client's
     /// `CardNames` table); unknown ids should fall back to a stable
     /// placeholder like `#N`.
-    pub fn fmt_for_log(&self, name: &dyn Fn(CardId) -> String) -> String {
+    pub fn fmt_for_log(
+        &self,
+        name: &dyn Fn(CardId) -> String,
+        pn: &dyn Fn(usize) -> String,
+    ) -> String {
         use GameEventWire as E;
         match self {
             E::StepChanged(s) => format!("Step → {s:?}"),
-            E::TurnStarted { player, turn } => format!("Turn {turn} — P{player}"),
-            E::CardDrawn { player, card_id } => format!("P{player} drew {}", name(*card_id)),
+            E::TurnStarted { player, turn } => format!("Turn {turn} — {}", pn(*player)),
+            E::CardDrawn { player, card_id } => format!("{} drew {}", pn(*player), name(*card_id)),
             E::CardDiscarded { player, card_id } => {
-                format!("P{player} discarded {}", name(*card_id))
+                format!("{} discarded {}", pn(*player), name(*card_id))
             }
-            E::LandPlayed { player, card_id } => format!("P{player} played {}", name(*card_id)),
-            E::SpellCast { player, card_id, .. } => format!("P{player} cast {}", name(*card_id)),
+            E::LandPlayed { player, card_id } => format!("{} played {}", pn(*player), name(*card_id)),
+            E::SpellCast { player, card_id, .. } => format!("{} cast {}", pn(*player), name(*card_id)),
             E::AbilityActivated { source } => format!("{} ability activated", name(*source)),
-            E::ManaAdded { player, color, .. } => format!("P{player} adds {color:?}"),
-            E::ColorlessManaAdded { player, .. } => format!("P{player} adds colorless"),
+            E::ManaAdded { player, color, .. } => format!("{} adds {color:?}", pn(*player)),
+            E::ColorlessManaAdded { player, .. } => format!("{} adds colorless", pn(*player)),
             E::PermanentEntered { card_id } => {
                 format!("{} entered the battlefield", name(*card_id))
             }
@@ -1824,7 +1845,7 @@ impl GameEventWire {
                 to_player,
                 to_card,
             } => match (to_player, to_card) {
-                (Some(p), _) => format!("{amount} damage → P{p}"),
+                (Some(p), _) => format!("{amount} damage → {}", pn(*p)),
                 (_, Some(cid)) => format!("{amount} damage → {}", name(*cid)),
                 _ => format!("{amount} damage"),
             },
@@ -1833,22 +1854,22 @@ impl GameEventWire {
                 to_player,
                 to_card,
             } => match (to_player, to_card) {
-                (Some(p), _) => format!("prevented {amount} damage → P{p}"),
+                (Some(p), _) => format!("prevented {amount} damage → {}", pn(*p)),
                 (_, Some(cid)) => format!("prevented {amount} damage → {}", name(*cid)),
                 _ => format!("prevented {amount} damage"),
             },
-            E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
-            E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
-            E::EnergyGained { player, amount } => format!("P{player} gets {amount} energy"),
-            E::CoinFlipWon { player } => format!("P{player} won a coin flip"),
-            E::CoinFlipLost { player } => format!("P{player} lost a coin flip"),
-            E::DiceRolled { player, count } => format!("P{player} rolled {count} dice"),
+            E::LifeLost { player, amount } => format!("{} loses {amount} life", pn(*player)),
+            E::LifeGained { player, amount } => format!("{} gains {amount} life", pn(*player)),
+            E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
+            E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
+            E::CoinFlipLost { player } => format!("{} lost a coin flip", pn(*player)),
+            E::DiceRolled { player, count } => format!("{} rolled {count} dice", pn(*player)),
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
             E::CreatureSacrificed { card_id, who } => {
-                format!("P{who} sacrificed creature {}", name(*card_id))
+                format!("{} sacrificed creature {}", pn(*who), name(*card_id))
             }
             E::PermanentSacrificed { card_id, who } => {
-                format!("P{who} sacrificed permanent {}", name(*card_id))
+                format!("{} sacrificed permanent {}", pn(*who), name(*card_id))
             }
             E::PumpApplied {
                 card_id,
@@ -1875,13 +1896,13 @@ impl GameEventWire {
             E::TurnedFaceUp { card_id } => format!("{} was turned face up", name(*card_id)),
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),
             E::CardMilled { player, card_id } => {
-                format!("P{player} milled {}", name(*card_id))
+                format!("{} milled {}", pn(*player), name(*card_id))
             }
             E::ScryPerformed {
                 player,
                 looked_at,
                 bottomed,
-            } => format!("P{player} scry {looked_at} ({bottomed} to bottom)"),
+            } => format!("{} scry {looked_at} ({bottomed} to bottom)", pn(*player)),
             E::AttackerDeclared(cid) => format!("{} attacks", name(*cid)),
             E::BlockerDeclared { blocker, attacker } => {
                 format!("{} blocks {}", name(*blocker), name(*attacker))
@@ -1893,7 +1914,7 @@ impl GameEventWire {
             E::FirstStrikeDamageResolved => "First-strike damage resolved".into(),
             E::TopCardRevealed {
                 player, card_name, ..
-            } => format!("P{player} revealed {card_name}"),
+            } => format!("{} revealed {card_name}", pn(*player)),
             E::AttachmentMoved {
                 attachment,
                 attached_to,
@@ -1902,9 +1923,9 @@ impl GameEventWire {
                 None => format!("{} unattached", name(*attachment)),
             },
             E::VehicleCrewed { vehicle } => format!("{} crewed", name(*vehicle)),
-            E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
-            E::MonarchChanged { player } => format!("P{player} becomes the monarch"),
-            E::CityBlessingGained { player } => format!("P{player} gets the city's blessing"),
+            E::PoisonAdded { player, amount } => format!("{} +{amount} poison", pn(*player)),
+            E::MonarchChanged { player } => format!("{} becomes the monarch", pn(*player)),
+            E::CityBlessingGained { player } => format!("{} gets the city's blessing", pn(*player)),
             E::DayNightChanged { is_day } => {
                 format!("it becomes {}", if *is_day { "day" } else { "night" })
             }
@@ -1926,23 +1947,23 @@ impl GameEventWire {
                 player,
                 looked_at,
                 graveyarded,
-            } => format!("P{player} surveil {looked_at} ({graveyarded} to graveyard)"),
+            } => format!("{} surveil {looked_at} ({graveyarded} to graveyard)", pn(*player)),
             E::CardLeftGraveyard { player, card_id } => {
-                format!("P{player} {} left graveyard", name(*card_id))
+                format!("{} {} left graveyard", pn(*player), name(*card_id))
             }
             E::CardPutIntoGraveyard { player, card_id } => {
-                format!("P{player} put {} into graveyard", name(*card_id))
+                format!("{} put {} into graveyard", pn(*player), name(*card_id))
             }
             E::BecameTarget { target, caster } => {
-                format!("{} targeted by P{caster}", name(*target))
+                format!("{} targeted by {}", name(*target), pn(*caster))
             }
             E::CardCycled { player, card_id } => {
-                format!("P{player} cycled {}", name(*card_id))
+                format!("{} cycled {}", pn(*player), name(*card_id))
             }
-            E::Expended { player, total } => format!("P{player} expended (spell-mana {total})"),
-            E::PlayerConceded { player } => format!("P{player} conceded"),
+            E::Expended { player, total } => format!("{} expended (spell-mana {total})", pn(*player)),
+            E::PlayerConceded { player } => format!("{} conceded", pn(*player)),
             E::GameOver { winner } => match winner {
-                Some(p) => format!("Game over — P{p} wins"),
+                Some(p) => format!("Game over — {} wins", pn(*p)),
                 None => "Game over — draw".into(),
             },
         }

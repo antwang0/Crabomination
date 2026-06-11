@@ -25,14 +25,30 @@ impl GameState {
     /// the printed Magic cards in scope today (Prismari Apprentice,
     /// future Tempted by the Oriq Magecraft rider) all have a top-level
     /// `ChooseMode` so the simple walk is sufficient.
-    pub(crate) fn pick_trigger_mode(&mut self, effect: &Effect, source: CardId) -> Option<usize> {
+    pub(crate) fn pick_trigger_mode(
+        &mut self,
+        effect: &Effect,
+        source: CardId,
+        controller: usize,
+    ) -> Option<usize> {
         if let Effect::ChooseMode(modes) = effect {
             if modes.is_empty() {
                 return None;
             }
+            // A `wants_ui` controller picks through the client modal at
+            // resolution time instead of the synchronous decider (which
+            // would silently take mode 0 — Riot creatures never hasty).
+            // Deferral is gated on no mode requiring a target, since target
+            // slots are assigned at push time, before the pick exists.
+            if self.players.get(controller).is_some_and(|p| p.wants_ui)
+                && modes.iter().all(|m| !m.requires_target())
+            {
+                return Some(crate::game::types::MODE_PICK_DEFERRED);
+            }
             let answer = self.decider.decide(&Decision::ChooseMode {
                 source,
                 num_modes: modes.len(),
+                mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
             });
             if let DecisionAnswer::Mode(idx) = answer {
                 return Some(idx.min(modes.len() - 1));
@@ -436,7 +452,7 @@ impl GameState {
         // silently auto-targeting them.
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for (source, effect, controller, captured_target, bound_token) in delayed_to_fire {
-            let mode = self.pick_trigger_mode(&effect, source);
+            let mode = self.pick_trigger_mode(&effect, source, controller);
             // A bound token (Saheeli / Reflection of Kiki-Jiki) rides as
             // the trigger's subject so `Selector::LastCreatedToken`
             // re-finds it at fire time.
@@ -470,7 +486,7 @@ impl GameState {
             });
         }
         for (source, effect, controller, intervening_if) in triggers_with_filter {
-            let mode = self.pick_trigger_mode(&effect, source);
+            let mode = self.pick_trigger_mode(&effect, source, controller);
             queue.push(PendingTriggerPush {
                 source,
                 controller,
@@ -506,7 +522,7 @@ impl GameState {
             .collect();
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for effect in effects {
-            let mode = self.pick_trigger_mode(&effect, card_id);
+            let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
                 source: card_id,
                 controller,
@@ -859,7 +875,7 @@ impl GameState {
                         // CR 700.2b — modal ETB trigger mode pick at
                         // push-time (Biblioplex Tomekeeper's "choose up
                         // to one — prepare / unprepare").
-                        let mode = self.pick_trigger_mode(&effect, card_id);
+                        let mode = self.pick_trigger_mode(&effect, card_id, caster);
                         for _ in 0..etb_multiplier {
                             self.stack.push(StackItem::Trigger {
                                 source: card_id,

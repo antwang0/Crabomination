@@ -1123,7 +1123,7 @@ impl GameState {
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
             // CR 700.2b — modal ETB trigger mode pick at push-time.
-            let mode = self.pick_trigger_mode(&effect, card_id);
+            let mode = self.pick_trigger_mode(&effect, card_id, controller);
             for _ in 0..multiplier {
                 self.stack.push(StackItem::Trigger {
                     source: card_id,
@@ -5332,7 +5332,7 @@ impl GameState {
             // Powers Prismari Apprentice's modal Magecraft (Scry 1 / +1/+0 EOT):
             // AutoDecider picks mode 0 (Scry); ScriptedDecider::new([Mode(1)])
             // exercises the pump branch.
-            let mode = self.pick_trigger_mode(&effect, source);
+            let mode = self.pick_trigger_mode(&effect, source, listener_controller);
             self.stack.push(StackItem::Trigger {
                 source,
                 controller: listener_controller,
@@ -7259,7 +7259,7 @@ impl GameState {
             };
             // CR 601.2b — a modal activated ability's mode is chosen as part
             // of the activation (Shifting Ceratops's reach/trample/haste).
-            let mode = self.pick_trigger_mode(&queued_effect, card_id);
+            let mode = self.pick_trigger_mode(&queued_effect, card_id, p);
             self.stack.push(StackItem::Trigger {
                 source: card_id,
                 controller: p,

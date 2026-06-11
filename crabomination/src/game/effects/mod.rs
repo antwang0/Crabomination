@@ -919,7 +919,38 @@ impl GameState {
                     }
                     return Ok(());
                 }
-                let idx = ctx.mode;
+                let idx = if ctx.mode == crate::game::types::MODE_PICK_DEFERRED {
+                    // A wants_ui trigger controller's pick was deferred from
+                    // push time to resolution (see `pick_trigger_mode`):
+                    // consume the stashed modal answer, or suspend for one.
+                    use crate::decision::{Decision, DecisionAnswer};
+                    let decision = Decision::ChooseMode {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        num_modes: modes.len(),
+                        mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                    };
+                    match self.stashed_resolution_answer.take() {
+                        Some(DecisionAnswer::Mode(i)) => i.min(modes.len().saturating_sub(1)),
+                        Some(_) => 0,
+                        None if self.players[ctx.controller].wants_ui => {
+                            self.suspend_signal = Some((
+                                decision,
+                                PendingEffectState::ModeAnswerPending { num_modes: modes.len() },
+                                effect.clone(),
+                            ));
+                            return Ok(());
+                        }
+                        // Defensive: a deferred pick reaching a non-UI
+                        // controller (control changed mid-stack) falls back
+                        // to the decider.
+                        None => match self.decider.decide(&decision) {
+                            DecisionAnswer::Mode(i) => i.min(modes.len().saturating_sub(1)),
+                            _ => 0,
+                        },
+                    }
+                } else {
+                    ctx.mode
+                };
                 if let Some(m) = modes.get(idx) {
                     self.run_effect(m, ctx, events)
                 } else {
@@ -936,12 +967,28 @@ impl GameState {
                 // if the result is empty.
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseModes {
+                let decision = Decision::ChooseModes {
                     source,
                     num_modes: modes.len(),
                     count: picks.len(),
                     default: picks.clone(),
-                });
+                    mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                };
+                // Stash-and-rerun suspend: a `wants_ui` controller answers
+                // through the client modal; the resume re-runs this effect
+                // with the sanitised answer stashed.
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
                 let in_range = |v: &[u8]| -> Vec<u8> {
                     v.iter().copied().filter(|&i| (i as usize) < modes.len()).collect()
                 };
@@ -1012,12 +1059,25 @@ impl GameState {
                 // keeps just the base — no escalate cost, mirroring a plain
                 // modal cast (so existing single-mode casts are unaffected).
                 let base = (ctx.mode as u8).min(modes.len().saturating_sub(1) as u8);
-                let answer = self.decider.decide(&Decision::ChooseModes {
+                let decision = Decision::ChooseModes {
                     source,
                     num_modes: modes.len(),
                     count: modes.len(),
                     default: vec![base],
-                });
+                    mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
                 let chosen: Vec<u8> = match answer {
                     DecisionAnswer::Modes(v) => v,
                     _ => vec![base],
@@ -1065,26 +1125,31 @@ impl GameState {
             }
 
             Effect::MayDo { description, body } => {
-                // Yes/no decision via `Decision::OptionalTrigger`. The
-                // installed `Decider` answers — `AutoDecider` defaults to
-                // `Bool(false)` (skip), `ScriptedDecider` lets tests
-                // inject `Bool(true)` to exercise the body. Asked of the
-                // *controller* of the effect (`ctx.controller`).
-                //
-                // Synchronous path: we don't currently surface MayDo
-                // through the wants_ui suspend flow because the decision
-                // is local to one effect resolution and the wire format
-                // already carries `DecisionWire::OptionalTrigger`. A
-                // future refinement could plumb it through
-                // `suspend_signal` for human-in-the-loop play; for now
-                // wants_ui players land on the AutoDecider's `false`
-                // default.
+                // Yes/no decision via `Decision::OptionalTrigger`, asked of
+                // the *controller* of the effect (`ctx.controller`). A
+                // `wants_ui` controller gets the client's yes/no modal via
+                // the stash-and-rerun suspend; bots / tests answer through
+                // the installed `Decider` (`AutoDecider` declines,
+                // `ScriptedDecider` injects `Bool(true)` to exercise the
+                // body).
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                let decision = Decision::OptionalTrigger {
                     source,
                     description: description.clone(),
-                });
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::MayDoAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
                 let yes = matches!(answer, DecisionAnswer::Bool(true));
                 if yes {
                     self.run_effect(body, ctx, events)?;
@@ -1210,11 +1275,23 @@ impl GameState {
                     .cloned()
                     .collect();
                 if targets.is_empty() { return Ok(()); }
-                let answer = self.decider.decide(&Decision::DivideDamage {
+                let decision = Decision::DivideDamage {
                     source: ctx.source.unwrap_or(CardId(0)),
                     total: amt,
                     targets: targets.clone(),
-                });
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::DivisionAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
                 let mut division = match answer {
                     crate::decision::DecisionAnswer::DamageDivision(v) => v,
                     _ => vec![],
@@ -6320,11 +6397,23 @@ impl GameState {
                 let max = candidates.len() as u32;
                 if max == 0 { return Ok(()); }
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseAmount {
+                let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Sacrifice how many?".to_string(),
                     max,
-                });
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[p].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
                 let n = match answer {
                     DecisionAnswer::Amount(v) => v.min(max),
                     _ => 0,
@@ -6354,11 +6443,23 @@ impl GameState {
                 let life = self.players[p].life.max(0) as u32;
                 if life == 0 { return Ok(()); }
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::ChooseAmount {
+                let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Pay how much life?".to_string(),
                     max: life,
-                });
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[p].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::AmountAnswerPending { max: life },
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
                 let x = match answer {
                     DecisionAnswer::Amount(v) => v.min(life),
                     _ => 0,
@@ -7147,10 +7248,13 @@ impl GameState {
                         _ => None,
                     });
                 let Some(target_id) = candidate else { return Ok(()); };
-                let decision = Decision::ChooseCreatureType { source: target_id };
+                let chooser = ctx.controller;
+                let decision = Decision::ChooseCreatureType {
+                    source: target_id,
+                    suggestions: self.creature_type_suggestions(chooser),
+                };
                 let pending =
                     PendingEffectState::ChooseCreatureTypePending { target_id };
-                let chooser = ctx.controller;
                 if self.players[chooser].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
                     return Ok(());
@@ -7369,18 +7473,32 @@ impl GameState {
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 // Crippling Fear-style "Choose a creature type. Creatures
                 // other than creatures of the chosen type get -P/-T EOT."
-                // Synchronously decides via `self.decider` (AutoDecider
-                // picks Demon, ScriptedDecider can override) so the
-                // effect resolves in a single pass without
-                // suspend/resume. The pump is applied per-creature via
-                // the standard `power_bonus` / `toughness_bonus` mutation
-                // path (same code shape as Effect::PumpPT).
+                // A `wants_ui` controller picks through the client modal
+                // (stash-and-rerun suspend); bots / tests answer via
+                // `self.decider` (AutoDecider picks Demon, ScriptedDecider
+                // can override). The pump is applied per-creature via the
+                // standard `power_bonus` / `toughness_bonus` mutation path
+                // (same code shape as Effect::PumpPT).
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = self.evaluate_value(power, ctx);
                 let t = self.evaluate_value(toughness, ctx);
                 let source_id = ctx.source.unwrap_or(CardId(0));
-                let decision = Decision::ChooseCreatureType { source: source_id };
-                let answer = self.decider.decide(&decision);
+                let decision = Decision::ChooseCreatureType {
+                    source: source_id,
+                    suggestions: self.creature_type_suggestions(ctx.controller),
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::CreatureTypeAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(crate::game::GameError::DecisionAnswerMismatch);
                 };

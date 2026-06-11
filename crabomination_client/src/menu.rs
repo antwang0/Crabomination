@@ -215,13 +215,17 @@ enum FocusedField {
     PlayerName,
     HostPort,
     JoinAddr,
+    DeckPath,
 }
 
 #[derive(Resource)]
-struct MenuFields {
-    player_name: String,
+pub(crate) struct MenuFields {
+    pub(crate) player_name: String,
     host_port: String,
     join_addr: String,
+    /// Path to a plain-text decklist (Arena / MTGO format) for the
+    /// "Play Deck vs Bot" import flow.
+    deck_path: String,
     focused: FocusedField,
     format: MatchFormat,
 }
@@ -238,6 +242,7 @@ impl Default for MenuFields {
             host_port: "7777".to_string(),
             join_addr: std::env::var("CRAB_SERVER")
                 .unwrap_or_else(|_| "127.0.0.1:7777".to_string()),
+            deck_path: "deck.txt".to_string(),
             focused: FocusedField::None,
             format: MatchFormat::default(),
         }
@@ -268,6 +273,26 @@ struct MenuRoot;
 
 #[derive(Component)]
 struct PlayBotButton;
+
+/// "Play Deck vs Bot" — reads the decklist file named in the DeckPath
+/// field, validates it against the catalog, and starts a local-bot match
+/// with the imported deck.
+#[derive(Component)]
+struct ImportDeckButton;
+
+/// Feedback line under the import controls ("12 cards unknown: …",
+/// "deck.txt not found", "Imported 60 cards").
+#[derive(Component)]
+struct MenuStatusText;
+
+/// Current menu feedback message (import errors, validation results).
+#[derive(Resource, Default)]
+struct MenuStatus(String);
+
+/// A successfully imported maindeck, consumed by `spawn_inprocess_bot`
+/// (it outranks the format's stock decks, like `DraftedDecks`).
+#[derive(Resource, Clone)]
+pub struct ImportedDeck(pub Vec<crabomination::cube::CardFactory>);
 
 #[derive(Component)]
 struct SpectateBotsButton;
@@ -307,6 +332,7 @@ impl Plugin for MenuPlugin {
             .init_resource::<PendingDraftFormat>()
             .init_resource::<PendingLobbyServer>()
             .init_resource::<MenuFields>()
+            .init_resource::<MenuStatus>()
             .init_resource::<CliBootHint>()
             .init_resource::<CliBootFormat>()
             .add_systems(OnEnter(AppState::Menu), spawn_menu)
@@ -320,6 +346,7 @@ impl Plugin for MenuPlugin {
                     handle_format_toggle,
                     refresh_format_toggle_visuals,
                     handle_action_buttons,
+                    refresh_menu_status,
                     apply_cli_boot_hint,
                 )
                     .run_if(in_state(AppState::Menu)),
@@ -457,6 +484,21 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     AuditCardsButton,
                 );
 
+                // Import a decklist (Arena / MTGO text format) and play
+                // it against the bot. The field holds a file path; status
+                // feedback (unknown cards, size problems) renders below.
+                p.spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Stretch,
+                    row_gap: Val::Px(6.0),
+                    width: Val::Px(280.0),
+                    ..default()
+                })
+                .with_children(|imp| {
+                    button(imp, &tf, "Play Deck vs Bot", BUTTON_PRIMARY_BG, ImportDeckButton);
+                    field(imp, &tf, "Deck file:", FocusedField::DeckPath);
+                });
+
                 // Display name (shown to other players in lobbies).
                 p.spawn(Node {
                     flex_direction: FlexDirection::Column,
@@ -509,6 +551,13 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     Text::new("Click a text field to edit. Backspace deletes."),
                     tf(11.0),
                     TextColor(theme::TEXT_PLACEHOLDER),
+                ));
+
+                p.spawn((
+                    Text::new(""),
+                    tf(12.0),
+                    TextColor(theme::ACCENT_ORANGE),
+                    MenuStatusText,
                 ));
             });
         });
@@ -646,12 +695,14 @@ fn handle_text_input(
         FocusedField::PlayerName => fields.player_name.clone(),
         FocusedField::HostPort => fields.host_port.clone(),
         FocusedField::JoinAddr => fields.join_addr.clone(),
+        FocusedField::DeckPath => fields.deck_path.clone(),
         FocusedField::None => return,
     };
     let max_len = match fields.focused {
         FocusedField::PlayerName => MAX_PLAYER_NAME_LEN,
         FocusedField::HostPort => 5,
         FocusedField::JoinAddr => 80,
+        FocusedField::DeckPath => 160,
         FocusedField::None => return,
     };
     let mut changed = false;
@@ -686,6 +737,7 @@ fn handle_text_input(
             FocusedField::PlayerName => fields.player_name = buf,
             FocusedField::HostPort => fields.host_port = buf,
             FocusedField::JoinAddr => fields.join_addr = buf,
+            FocusedField::DeckPath => fields.deck_path = buf,
             FocusedField::None => {}
         }
     }
@@ -701,6 +753,10 @@ fn accepts_char(field: FocusedField, ch: char) -> bool {
         FocusedField::HostPort => ch.is_ascii_digit(),
         FocusedField::JoinAddr => {
             ch.is_ascii_alphanumeric() || matches!(ch, '.' | ':' | '-' | '_')
+        }
+        // Filesystem paths: also slashes, ~, spaces.
+        FocusedField::DeckPath => {
+            ch.is_ascii_alphanumeric() || matches!(ch, '.' | '/' | '\\' | '~' | '-' | '_' | ' ')
         }
         FocusedField::None => false,
     }
@@ -718,6 +774,7 @@ fn refresh_field_text(
             FocusedField::PlayerName => &fields.player_name,
             FocusedField::HostPort => &fields.host_port,
             FocusedField::JoinAddr => &fields.join_addr,
+            FocusedField::DeckPath => &fields.deck_path,
             FocusedField::None => continue,
         };
         let cursor = if fields.focused == which.0 { "_" } else { "" };
@@ -752,12 +809,25 @@ fn refresh_format_toggle_visuals(
     }
 }
 
+/// Mirror `MenuStatus` into its text node.
+fn refresh_menu_status(status: Res<MenuStatus>, mut q: Query<&mut Text, With<MenuStatusText>>) {
+    if !status.is_changed() {
+        return;
+    }
+    for mut t in &mut q {
+        t.0 = status.0.clone();
+    }
+}
+
 fn handle_action_buttons(
+    mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
     mut pending: ResMut<PendingNetMode>,
     mut pending_draft: ResMut<PendingDraftFormat>,
     mut lobby_server: ResMut<PendingLobbyServer>,
+    mut status: ResMut<MenuStatus>,
     fields: Res<MenuFields>,
+    import_q: Query<&Interaction, (Changed<Interaction>, With<ImportDeckButton>)>,
     play_q: Query<&Interaction, (Changed<Interaction>, With<PlayBotButton>)>,
     spectate_q: Query<&Interaction, (Changed<Interaction>, With<SpectateBotsButton>)>,
     load_q: Query<&Interaction, (Changed<Interaction>, With<LoadDebugStateButton>)>,
@@ -785,6 +855,37 @@ fn handle_action_buttons(
     if play_q.iter().any(|i| *i == Interaction::Pressed) {
         pending.0 = Some((NetMode::LocalBot, format));
         next_state.set(AppState::InGame);
+        return;
+    }
+    if import_q.iter().any(|i| *i == Interaction::Pressed) {
+        let path = fields.deck_path.trim();
+        match std::fs::read_to_string(path) {
+            Err(e) => status.0 = format!("Can't read {path}: {e}"),
+            Ok(text) => {
+                let parsed = crabomination::decklist::parse_decklist(&text);
+                if !parsed.unknown.is_empty() {
+                    // Refuse rather than silently playing a partial deck.
+                    let shown = parsed.unknown.iter().take(4).cloned()
+                        .collect::<Vec<_>>().join(", ");
+                    let more = parsed.unknown.len().saturating_sub(4);
+                    status.0 = format!(
+                        "{} card(s) not in the catalog: {shown}{}",
+                        parsed.unknown.len(),
+                        if more > 0 { format!(" (+{more} more)") } else { String::new() },
+                    );
+                } else if parsed.main.len() < 40 {
+                    status.0 = format!(
+                        "Deck has only {} cards (need at least 40)",
+                        parsed.main.len()
+                    );
+                } else {
+                    status.0.clear();
+                    commands.insert_resource(ImportedDeck(parsed.main));
+                    pending.0 = Some((NetMode::LocalBot, format));
+                    next_state.set(AppState::InGame);
+                }
+            }
+        }
         return;
     }
     if spectate_q.iter().any(|i| *i == Interaction::Pressed) {
@@ -904,6 +1005,32 @@ pub fn start_net_session_from_menu(world: &mut World) {
     }
 }
 
+/// Stamp display names onto a freshly built local match state so the HUD
+/// and log read "Alice" / "Bot" instead of the engine's "P0" / "P1"
+/// placeholders. Seat 0 gets `seat0`; other seats get `other` (numbered
+/// when there are several, e.g. Commander's three bots).
+pub(crate) fn name_seats(state: &mut GameState, seat0: &str, other: &str) {
+    let many_others = state.players.len() > 2;
+    for (i, p) in state.players.iter_mut().enumerate() {
+        p.name = if i == 0 {
+            seat0.to_string()
+        } else if many_others {
+            format!("{other} {i}")
+        } else {
+            other.to_string()
+        };
+    }
+}
+
+/// The menu's display name (trimmed), falling back to "Player".
+pub(crate) fn menu_player_name(world: &World) -> String {
+    world
+        .get_resource::<MenuFields>()
+        .map(|f| f.player_name.trim().to_string())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| "Player".to_string())
+}
+
 fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     let (server_seat, ClientChannel { tx, rx }) = seat_pair();
     let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
@@ -931,20 +1058,33 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     if drafted.is_some() {
         world.remove_resource::<DraftedDecks>();
     }
-    let state = if let Some(decks) = drafted {
+    let human_name = menu_player_name(world);
+    let imported: Option<ImportedDeck> = world.remove_resource::<ImportedDeck>();
+    let state = if let Some(deck) = imported {
+        // Imported decklist vs. the stock Modern bot deck.
+        crabomination::draft::build_draft_match_state(
+            deck.0,
+            crabomination::demo::brg_combo_deck().to_vec(),
+            human_name.clone(),
+            "Bot".into(),
+        )
+    } else if let Some(decks) = drafted {
         crabomination::draft::build_draft_match_state(
             decks.player_deck,
             decks.opponent_deck,
-            "You".into(),
+            human_name,
             decks.opponent_label,
         )
-    } else if let Some(name) = audit_card.as_deref() {
-        crate::audit::build_audit_state(name).unwrap_or_else(|| {
-            eprintln!("audit: unknown card '{name}', falling back to {:?}", format);
-            format.build_state()
-        })
     } else {
-        format.build_state()
+        let mut state = match audit_card.as_deref() {
+            Some(name) => crate::audit::build_audit_state(name).unwrap_or_else(|| {
+                eprintln!("audit: unknown card '{name}', falling back to {:?}", format);
+                format.build_state()
+            }),
+            None => format.build_state(),
+        };
+        name_seats(&mut state, &human_name, "Bot");
+        state
     };
     let n_seats = state.players.len();
     let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(n_seats);
@@ -984,7 +1124,10 @@ fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
     let sink_for_match = Arc::clone(&sink);
     // Size the bot list to the format's seat count — Commander brings
     // 4 seats, the other formats bring 2.
-    let state = format.build_state();
+    let mut state = format.build_state();
+    for (i, p) in state.players.iter_mut().enumerate() {
+        p.name = format!("Bot {}", i + 1);
+    }
     let n_seats = state.players.len();
     let occupants: Vec<SeatOccupant> = (0..n_seats)
         .map(|_| SeatOccupant::Bot(Box::new(RandomBot::new())))
@@ -1001,6 +1144,7 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
     let bind = format!("0.0.0.0:{port}");
     let listener = TcpListener::bind(&bind)?;
     let (server_seat0, ClientChannel { tx, rx }) = seat_pair();
+    let host_name = menu_player_name(world);
 
     std::thread::spawn(move || {
         let (stream, peer) = match listener.accept() {
@@ -1018,8 +1162,12 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
                 return;
             }
         };
+        let mut state = format.build_state();
+        // Direct host mode has no lobby handshake to learn the joiner's
+        // name, so seat 1 gets a generic label rather than "P1".
+        name_seats(&mut state, &host_name, "Opponent");
         run_match(
-            format.build_state(),
+            state,
             vec![
                 SeatOccupant::Human(server_seat0),
                 SeatOccupant::Human(server_seat1),

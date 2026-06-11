@@ -22,6 +22,7 @@ pub mod catalog {
 mod card_registry;
 
 pub mod cube;
+pub mod decklist;
 pub mod decision;
 pub mod demo;
 pub mod draft;

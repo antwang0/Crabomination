@@ -57,8 +57,16 @@ pub enum Decision {
         description: String,
     },
 
-    /// Pick a mode index from a modal spell (e.g. Command suite).
-    ChooseMode { source: CardId, num_modes: usize },
+    /// Pick a mode index from a modal spell or trigger (e.g. Command suite,
+    /// Riot/Fabricate ETB choices). `mode_texts` carries a short rendering of
+    /// each mode (`Effect::effect_short_text`) so a UI can label its buttons;
+    /// empty for legacy senders.
+    ChooseMode {
+        source: CardId,
+        num_modes: usize,
+        #[serde(default)]
+        mode_texts: Vec<String>,
+    },
 
     /// Pick a color (Birds of Paradise, Gilded Lotus, Prismatic Lens).
     ChooseColor { source: CardId, legal: Vec<Color> },
@@ -123,6 +131,11 @@ pub enum Decision {
     ChooseCreatureType {
         /// Source permanent that's asking for the type.
         source: CardId,
+        /// Heuristic candidates, most relevant first (types present across
+        /// the game's zones, then common tribal staples). A UI renders these
+        /// as pick buttons; an answer outside the list is still legal.
+        #[serde(default)]
+        suggestions: Vec<crate::card::CreatureType>,
     },
 
     /// CR 201.3 — "As this enters, choose a card name." Pithing Needle,
@@ -198,6 +211,10 @@ pub enum Decision {
         num_modes: usize,
         count: usize,
         default: Vec<u8>,
+        /// Short rendering of each mode (`Effect::effect_short_text`) so a
+        /// UI can label its toggles; empty for legacy senders.
+        #[serde(default)]
+        mode_texts: Vec<String>,
     },
 
     /// CR 701.45 — Learn. The player may reveal a Lesson from their

@@ -198,12 +198,22 @@ fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static str {
 }
 
 /// Pretty-print a `GameEventWire` for the in-game log, resolving any
-/// CardId via the running `CardNames` map so the player sees real card
-/// names instead of `CardId(N)` debug strings. Thin wrapper around the
+/// CardId via the running `CardNames` map (so the player sees real card
+/// names instead of `CardId(N)` debug strings) and seats via the view's
+/// player names (instead of `P0`/`P1`). Thin wrapper around the
 /// engine-side `GameEventWire::fmt_for_log` so new event variants only
 /// need a body added in one place (`crabomination/src/net.rs`).
-fn format_event(ev: &crabomination::net::GameEventWire, names: &crate::game::CardNames) -> String {
-    ev.fmt_for_log(&|id| names.get(id))
+fn format_event(
+    ev: &crabomination::net::GameEventWire,
+    names: &crate::game::CardNames,
+    view: Option<&crabomination::net::ClientView>,
+) -> String {
+    ev.fmt_for_log(
+        &|id| names.get(id),
+        &|seat| {
+            view.map(|cv| player_name(cv, seat)).unwrap_or_else(|| format!("P{seat}"))
+        },
+    )
 }
 
 /// Drives End Turn / Next Turn fast-forward: while these flags are set,
@@ -503,7 +513,10 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
         ))
         .with_children(|p| {
             for (step, _) in PHASE_CHART_STEPS {
+                // `Button` so a click can cycle the step's priority stop
+                // (see `phase_bar::handle_phase_chart_clicks`).
                 p.spawn((
+                    Button,
                     Node {
                         padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
                         border_radius: BorderRadius::all(Val::Px(2.0)),
@@ -1056,20 +1069,40 @@ const PHASE_ROW_ACTIVE_BG: Color = Color::srgba(0.18, 0.18, 0.28, 0.85);
 
 pub fn update_phase_chart(
     view: Res<CurrentView>,
+    stops: Option<Res<crate::systems::phase_bar::StopConfig>>,
     mut rows: Query<(&PhaseStepLabel, &Children, &mut BackgroundColor)>,
     mut texts: Query<(&mut Text, &mut TextColor)>,
 ) {
+    use crate::systems::phase_bar::StopMode;
     let Some(cv) = &view.0 else { return };
     let current = cv.step;
+    let my_turn = cv.active_player == cv.your_seat;
     for (label, children, mut bg) in &mut rows {
         let active = label.0 == current;
+        let mode = stops
+            .as_ref()
+            .map(|s| s.mode(my_turn, label.0))
+            .unwrap_or_default();
         *bg = BackgroundColor(if active { PHASE_ROW_ACTIVE_BG } else { Color::NONE });
         // Each row has exactly one Text child — rewrite its content + colour.
+        // A configured stop reads as a suffix tag scoped to the kind of turn
+        // currently shown (clicking the row cycles it — see
+        // `phase_bar::handle_phase_chart_clicks`).
         for child in children.iter() {
             if let Ok((mut text, mut color)) = texts.get_mut(child) {
                 let marker = if active { "▶ " } else { "   " };
-                text.0 = format!("{marker}{}", step_short_label(label.0));
-                *color = TextColor(if active { theme::ACCENT_YELLOW } else { theme::TEXT_MUTED });
+                let stop_tag = match mode {
+                    StopMode::Auto => "",
+                    StopMode::Always => "  [stop]",
+                    StopMode::Skip => "  [skip]",
+                };
+                text.0 = format!("{marker}{}{stop_tag}", step_short_label(label.0));
+                *color = TextColor(match (active, mode) {
+                    (true, _) => theme::ACCENT_YELLOW,
+                    (false, StopMode::Always) => theme::ACCENT_ORANGE,
+                    (false, StopMode::Skip) => theme::TEXT_MUTED.with_alpha(0.5),
+                    (false, StopMode::Auto) => theme::TEXT_MUTED,
+                });
             }
         }
     }
@@ -2777,6 +2810,7 @@ pub fn auto_advance_p0(
     outbox: Option<Res<NetOutbox>>,
     view: Res<CurrentView>,
     mut ff: ResMut<FastForward>,
+    stops: Option<Res<crate::systems::phase_bar::StopConfig>>,
 ) {
     let Some(cv) = &view.0 else { return };
     let Some(outbox) = outbox else { return };
@@ -2790,6 +2824,19 @@ pub fn auto_advance_p0(
     if cv.priority != cv.your_seat { return; }
 
     let your_seat = cv.your_seat;
+
+    // Phase-bar per-step stop override for this kind of turn (yours vs.
+    // an opponent's). `Always` holds priority outright (an explicit
+    // fast-forward still wins); `Skip` is folded into `should_advance`
+    // below and also bypasses the combat view-holds.
+    use crate::systems::phase_bar::StopMode;
+    let stop_mode = stops
+        .as_ref()
+        .map(|s| s.mode(cv.active_player == your_seat, cv.step))
+        .unwrap_or_default();
+    if stop_mode == StopMode::Always && !ff.end_turn && !ff.next_turn {
+        return;
+    }
 
     if ff.end_turn && cv.active_player != your_seat {
         ff.end_turn = false;
@@ -2812,6 +2859,7 @@ pub fn auto_advance_p0(
         && cv.battlefield.iter().any(|c| c.attacking)
         && !ff.end_turn
         && !ff.next_turn
+        && stop_mode != StopMode::Skip
     {
         return;
     }
@@ -2837,7 +2885,9 @@ pub fn auto_advance_p0(
                 && !c.keywords.contains(&Keyword::Defender)
         });
         let nothing_to_block = !any_attacker || !any_blocker;
-        if !(ff.next_turn && nothing_to_block) {
+        // An explicit per-step Skip means "never stop here" — the player
+        // opted out of blocking; everything else holds the window open.
+        if !(ff.next_turn && nothing_to_block) && stop_mode != StopMode::Skip {
             return;
         }
     }
@@ -2916,6 +2966,7 @@ pub fn auto_advance_p0(
         || ff.next_turn
         || cv.step == TurnStep::Untap
         || stack_is_own_triggers_only
+        || stop_mode == StopMode::Skip
         || ((bookkeeping_step || cv.active_player != your_seat) && !has_instant_play);
 
     if should_advance {
@@ -2995,7 +3046,7 @@ pub fn handle_game_input(
             continue;
         }
         log.push_event(
-            format!("{}{}", event_glyph(ev), format_event(ev, card_names)),
+            format!("{}{}", event_glyph(ev), format_event(ev, card_names, view_ref)),
             event_color(ev),
         );
     }

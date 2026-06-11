@@ -567,6 +567,15 @@ pub struct GameState {
     /// `remaining` carries any sibling effects still queued behind the one that
     /// suspended (e.g. `Draw` after `Scry` in a Seq).
     pub(crate) suspend_signal: Option<(Decision, PendingEffectState, Effect)>,
+    /// One-shot validated answer for a resolution-time choice whose suspend
+    /// re-queues the originating effect as its continuation (`ChooseN`,
+    /// `Escalate`, `MayDo`, `DealDamageDivided`, `ChooseAmount` payers, and
+    /// deferred trigger `ChooseMode`s). `apply_pending_effect_answer` stashes
+    /// the sanitised answer here; the re-run effect `take()`s it instead of
+    /// asking the decider again. Always consumed within the same
+    /// `submit_decision` call, so it never crosses a serialization boundary.
+    #[serde(skip, default)]
+    pub(crate) stashed_resolution_answer: Option<DecisionAnswer>,
     /// True when an effect has flagged "prevent all combat damage this turn"
     /// (CR 615 — damage prevention as a replacement effect). Wired by
     /// Owlin Shieldmage's ETB trigger, Holy Day, Hallowed Burial-adjacent
@@ -912,6 +921,7 @@ impl Clone for GameState {
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
+            stashed_resolution_answer: self.stashed_resolution_answer.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             mana_production_doublers: self.mana_production_doublers,
             resolving_source: self.resolving_source.clone(),
@@ -1032,6 +1042,7 @@ impl GameState {
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
+            stashed_resolution_answer: None,
             prevent_combat_damage_this_turn: false,
             mana_production_doublers: 0,
             resolving_source: None,
@@ -5544,7 +5555,7 @@ impl GameState {
                 }
             }
             // CR 700.2b — modal triggered ability mode pick at push-time.
-            let mode = self.pick_trigger_mode(&effect, source);
+            let mode = self.pick_trigger_mode(&effect, source, controller);
             if triggered_by_etb {
                 // Yarok / Elesh Norn replacement (CR 614). A `wants`-side
                 // ETB-trigger multiplier scales how many times this
@@ -6878,7 +6889,111 @@ impl GameState {
                 }
                 Ok(Vec::new())
             }
+            // ── Stash-and-rerun answers ──────────────────────────────────
+            // These five suspend with the *originating effect* re-queued as
+            // the continuation; the apply step only validates/sanitises the
+            // answer and stashes it for the re-run to consume (see
+            // `GameState.stashed_resolution_answer`).
+            PendingEffectState::ModesAnswerPending { num_modes } => {
+                let DecisionAnswer::Modes(v) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let sane: Vec<u8> =
+                    v.iter().copied().filter(|&i| (i as usize) < num_modes).collect();
+                self.stashed_resolution_answer = Some(DecisionAnswer::Modes(sane));
+                Ok(Vec::new())
+            }
+            PendingEffectState::ModeAnswerPending { num_modes } => {
+                let DecisionAnswer::Mode(i) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let sane = (*i).min(num_modes.saturating_sub(1));
+                self.stashed_resolution_answer = Some(DecisionAnswer::Mode(sane));
+                Ok(Vec::new())
+            }
+            PendingEffectState::AmountAnswerPending { max } => {
+                let DecisionAnswer::Amount(n) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                self.stashed_resolution_answer = Some(DecisionAnswer::Amount((*n).min(max)));
+                Ok(Vec::new())
+            }
+            PendingEffectState::MayDoAnswerPending => {
+                let DecisionAnswer::Bool(b) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                self.stashed_resolution_answer = Some(DecisionAnswer::Bool(*b));
+                Ok(Vec::new())
+            }
+            PendingEffectState::DivisionAnswerPending => {
+                let DecisionAnswer::DamageDivision(v) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Raw stash — the re-run renormalises wrong length/sum.
+                self.stashed_resolution_answer =
+                    Some(DecisionAnswer::DamageDivision(v.clone()));
+                Ok(Vec::new())
+            }
+            PendingEffectState::CreatureTypeAnswerPending => {
+                let DecisionAnswer::CreatureType(ct) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                self.stashed_resolution_answer = Some(DecisionAnswer::CreatureType(*ct));
+                Ok(Vec::new())
+            }
         }
+    }
+
+    /// Heuristic candidates for a `ChooseCreatureType` decision, rendered by
+    /// the client as pick buttons: every creature type on the battlefield,
+    /// in any graveyard, or among `chooser`'s own hand and library (their
+    /// deck is known to them; opponents' hidden zones are excluded so the
+    /// suggestion list can't leak), most frequent first, padded with tribal
+    /// staples and capped to keep the modal scannable.
+    pub(crate) fn creature_type_suggestions(
+        &self,
+        chooser: usize,
+    ) -> Vec<crate::card::CreatureType> {
+        use crate::card::CreatureType;
+        let mut counts: std::collections::HashMap<CreatureType, usize> =
+            std::collections::HashMap::new();
+        let public = self
+            .battlefield
+            .iter()
+            .chain(self.players.iter().flat_map(|p| p.graveyard.iter()));
+        let own = self
+            .players
+            .get(chooser)
+            .into_iter()
+            .flat_map(|p| p.hand.iter().chain(p.library.iter()));
+        for c in public.chain(own) {
+            for &ct in &c.definition.subtypes.creature_types {
+                *counts.entry(ct).or_insert(0) += 1;
+            }
+        }
+        let mut ranked: Vec<(CreatureType, usize)> = counts.into_iter().collect();
+        ranked.sort_by(|a, b| {
+            b.1.cmp(&a.1).then_with(|| format!("{:?}", a.0).cmp(&format!("{:?}", b.0)))
+        });
+        let mut out: Vec<CreatureType> = ranked.into_iter().map(|(ct, _)| ct).collect();
+        for ct in [
+            CreatureType::Human,
+            CreatureType::Elf,
+            CreatureType::Goblin,
+            CreatureType::Zombie,
+            CreatureType::Merfolk,
+            CreatureType::Dragon,
+            CreatureType::Angel,
+            CreatureType::Demon,
+            CreatureType::Soldier,
+            CreatureType::Wizard,
+        ] {
+            if !out.contains(&ct) {
+                out.push(ct);
+            }
+        }
+        out.truncate(24);
+        out
     }
 
     /// Resolve a spell's effect tree. On suspension, installs a

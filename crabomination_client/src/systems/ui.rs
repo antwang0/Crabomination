@@ -412,6 +412,7 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
             ("`", "Debug console"),
             ("X", "Export game state"),
             ("V", "Browse the exile zone"),
+            ("Click phase chart", "Cycle stop / skip for that step"),
         ],
     ),
     (
@@ -703,17 +704,67 @@ fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: f32) -> (f3
     (x, y)
 }
 
+/// Rules-text lines for the hover preview's info panel, resolved from the
+/// catalog by card name. Since cards render art-only (no printed text box),
+/// this is where a player learns what a hovered card actually does: the
+/// type line, P/T, and each printed keyword with its CR reminder text
+/// ("Menace — can only be blocked by two or more creatures."). Returns
+/// `(text, is_reminder)` pairs; reminder lines render dimmer. Empty when
+/// the name isn't in the catalog (tokens, fictional placeholders).
+fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
+    let Some(def) = crabomination::catalog::lookup_by_name(name) else {
+        return Vec::new();
+    };
+    let mut lines: Vec<(String, bool)> = Vec::new();
+    let types = def
+        .card_types
+        .iter()
+        .map(|t| format!("{t:?}"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let subtypes = def
+        .subtypes
+        .creature_types
+        .iter()
+        .map(|t| format!("{t:?}"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let mut type_line = if subtypes.is_empty() {
+        types
+    } else {
+        format!("{types} — {subtypes}")
+    };
+    if def.is_creature() {
+        type_line.push_str(&format!("  ·  {}/{}", def.power, def.toughness));
+    }
+    if !type_line.is_empty() {
+        lines.push((type_line, false));
+    }
+    for kw in &def.keywords {
+        let label = crate::systems::counter_tooltip::keyword_label(kw);
+        match crate::systems::counter_tooltip::keyword_reminder(kw) {
+            Some(reminder) => lines.push((format!("{label} — {reminder}"), true)),
+            None => lines.push((label, true)),
+        }
+    }
+    lines
+}
+
 /// Arena-style automatic card-zoom preview: while a card is hovered (and Alt
 /// isn't held — Alt drives the centered detailed peek + counter tooltip in
 /// `peek_popup` / `update_alt_tooltip`), show an enlarged copy of its face
-/// beside the cursor without dimming the board. Roadmap Tier 7 #1.
+/// beside the cursor without dimming the board, plus a type-line/keyword
+/// reminder panel resolved from the catalog. Roadmap Tier 7 #1 / Tier 8
+/// reminder text.
 #[allow(clippy::type_complexity)]
 pub fn hover_card_preview(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
-    hovered_cards: Query<&CardFrontTexture, (With<Card>, With<CardHovered>)>,
+    hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>), (With<Card>, With<CardHovered>)>,
+    card_names: Res<crate::game::CardNames>,
     asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
     mut existing: Query<(Entity, &mut Node, &HoverCardPreview)>,
 ) {
     let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
@@ -730,18 +781,41 @@ pub fn hover_card_preview(
 
     // Desired preview: front texture of the hovered card, when the cursor is
     // on-screen and Alt isn't held.
-    let desired: Option<(String, Vec2)> = match (alt_held, window.cursor_position()) {
-        (false, Some(c)) => hovered_cards.iter().next().map(|t| (t.0.clone(), c)),
+    let desired: Option<(String, Option<crabomination::card::CardId>, Vec2)> = match (alt_held, window.cursor_position()) {
+        (false, Some(c)) => hovered_cards
+            .iter()
+            .next()
+            .map(|(t, id)| (t.0.clone(), id.map(|g| g.0), c)),
         _ => None,
     };
 
-    let Some((path, cursor)) = desired else {
+    let Some((path, card_id, cursor)) = desired else {
         despawn_all(&mut commands, &existing);
         return;
     };
 
+    let info = card_id
+        .map(|id| hover_info_lines(&card_names.get(id)))
+        .unwrap_or_default();
+    // Estimated panel height so the anchor keeps the whole column on screen
+    // (reminder lines wrap to ~2 rows at this width).
+    let info_height: f32 = if info.is_empty() {
+        0.0
+    } else {
+        16.0 + info
+            .iter()
+            .map(|(text, _)| if text.len() > 44 { 34.0 } else { 18.0 })
+            .sum::<f32>()
+    };
+
     let win = Vec2::new(window.width(), window.height());
-    let (x, y) = preview_anchor(cursor, win, HOVER_PREVIEW_WIDTH, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN);
+    let (x, y) = preview_anchor(
+        cursor,
+        win,
+        HOVER_PREVIEW_WIDTH,
+        HOVER_PREVIEW_HEIGHT + info_height,
+        HOVER_PREVIEW_MARGIN,
+    );
 
     if let Ok((entity, mut node, marker)) = existing.single_mut() {
         node.left = Val::Px(x);
@@ -755,23 +829,63 @@ pub fn hover_card_preview(
     }
 
     let texture: Handle<Image> = asset_server.load(&path);
-    commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            left: Val::Px(x),
-            top: Val::Px(y),
-            width: Val::Px(HOVER_PREVIEW_WIDTH),
-            height: Val::Px(HOVER_PREVIEW_HEIGHT),
-            border: UiRect::all(Val::Px(2.0)),
-            border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
-            ..default()
-        },
-        BorderColor::all(theme::ACCENT_GOLD),
-        ImageNode { image: texture, ..default() },
-        Pickable::IGNORE,
-        HoverCardPreview { path },
-        crate::systems::game_ui::InGameRoot,
-    ));
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(x),
+                top: Val::Px(y),
+                width: Val::Px(HOVER_PREVIEW_WIDTH),
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+            Pickable::IGNORE,
+            HoverCardPreview { path: path.clone() },
+            crate::systems::game_ui::InGameRoot,
+        ))
+        .with_children(|col| {
+            col.spawn((
+                Node {
+                    width: Val::Px(HOVER_PREVIEW_WIDTH),
+                    height: Val::Px(HOVER_PREVIEW_HEIGHT),
+                    border: UiRect::all(Val::Px(2.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BorderColor::all(theme::ACCENT_GOLD),
+                ImageNode { image: texture, ..default() },
+                Pickable::IGNORE,
+            ));
+            if !info.is_empty() {
+                col.spawn((
+                    Node {
+                        width: Val::Px(HOVER_PREVIEW_WIDTH),
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::all(Val::Px(8.0)),
+                        row_gap: Val::Px(3.0),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::PANEL_BG),
+                    Pickable::IGNORE,
+                ))
+                .with_children(|panel| {
+                    for (text, is_reminder) in info {
+                        let color = if is_reminder {
+                            theme::TEXT_SECONDARY
+                        } else {
+                            theme::TEXT_PRIMARY
+                        };
+                        panel.spawn((
+                            Text::new(text),
+                            ui_fonts.tf(12.0),
+                            TextColor(color),
+                            Pickable::IGNORE,
+                        ));
+                    }
+                });
+            }
+        });
 }
 
 const BROWSER_CARD_WIDTH: f32 = 220.0;

@@ -437,12 +437,13 @@ pub fn handle_rematch_button(
     format: Res<ActiveMatchFormat>,
     kind: Res<ActiveMatchKind>,
     audit: Res<crate::audit::AuditTarget>,
+    menu_fields: Option<Res<crate::menu::MenuFields>>,
     commands: Commands,
 ) {
     if !button_q.iter().any(|i| *i == Interaction::Pressed) {
         return;
     }
-    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit);
+    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit, menu_fields);
 }
 
 /// When a game ends and `auto_rematch.remaining > 0`, fire a rematch
@@ -457,6 +458,7 @@ pub fn apply_auto_rematch_on_game_over(
     format: Res<ActiveMatchFormat>,
     kind: Res<ActiveMatchKind>,
     audit: Res<crate::audit::AuditTarget>,
+    menu_fields: Option<Res<crate::menu::MenuFields>>,
     mut auto: ResMut<AutoRematchState>,
     commands: Commands,
 ) {
@@ -468,7 +470,7 @@ pub fn apply_auto_rematch_on_game_over(
     if !matches!(*kind, ActiveMatchKind::SpectateBotVsBot) { return; }
     if auto.remaining == 0 { return; }
     auto.remaining -= 1;
-    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit);
+    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit, menu_fields);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -482,6 +484,7 @@ fn rematch_in_place(
     format: ActiveMatchFormat,
     kind: ActiveMatchKind,
     audit: Res<crate::audit::AuditTarget>,
+    menu_fields: Option<Res<crate::menu::MenuFields>>,
 ) {
     for e in &modal_q {
         commands.entity(e).despawn();
@@ -503,10 +506,23 @@ fn rematch_in_place(
     // Audit-mode rematch reuses the same target card so the user
     // can re-attempt the same setup without re-picking from the
     // catalog.
-    let state = audit.0
+    let mut state = audit.0
         .as_deref()
         .and_then(crate::audit::build_audit_state)
         .unwrap_or_else(|| chosen.build_state_for_restart());
+    // Re-stamp display names — a freshly built state reverts to "P0"/"P1".
+    let human_name = menu_fields
+        .map(|f| f.player_name.trim().to_string())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| "Player".to_string());
+    match kind {
+        ActiveMatchKind::HumanVsBot => crate::menu::name_seats(&mut state, &human_name, "Bot"),
+        ActiveMatchKind::SpectateBotVsBot => {
+            for (i, p) in state.players.iter_mut().enumerate() {
+                p.name = format!("Bot {}", i + 1);
+            }
+        }
+    }
 
     match kind {
         ActiveMatchKind::HumanVsBot => {

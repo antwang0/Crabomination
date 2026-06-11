@@ -6687,3 +6687,168 @@ fn pathway_cycle_faces_tap_for_their_colors() {
         assert_eq!(g2.players[0].mana_pool.amount(*back_color), 1);
     }
 }
+
+// ── Resolution-time decision suspends for wants_ui seats ─────────────────────
+//
+// These exercise the stash-and-rerun suspend path: each decision used to be
+// answered silently by the AutoDecider even for a `wants_ui` seat.
+
+#[test]
+fn choose_n_suspends_for_wants_ui_and_runs_picked_modes() {
+    use crate::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let spell = crate::card::CardDefinition {
+        name: "Test Charm",
+        card_types: vec![crate::card::CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ],
+        },
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, spell);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    let card_in_library = g.add_card_to_library(0, catalog::forest());
+    let _ = card_in_library;
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("ChooseModes should suspend for wants_ui");
+    match &pd.decision {
+        Decision::ChooseModes { mode_texts, count, .. } => {
+            assert_eq!(*count, 1);
+            assert_eq!(mode_texts.len(), 2, "modes should carry UI labels");
+        }
+        other => panic!("expected ChooseModes, got {other:?}"),
+    }
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    // Override the default (mode 0, gain life) with mode 1 (draw).
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Modes(vec![1])))
+        .unwrap();
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.players[0].life, life_before, "gain-life mode must not run");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw mode must run");
+}
+
+#[test]
+fn divide_damage_suspends_for_wants_ui_and_honors_split() {
+    use crate::decision::Decision;
+    use crate::game::Target;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let bear_a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut bolt = catalog::forked_bolt();
+    bolt.cost = Default::default();
+    let id = g.add_card_to_hand(0, bolt);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear_a)),
+        additional_targets: vec![Target::Permanent(bear_b)],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("DivideDamage should suspend for wants_ui");
+    assert!(matches!(pd.decision, Decision::DivideDamage { total: 2, .. }));
+    // Pile both damage onto bear A instead of the auto-decider's 1/1 split.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::DamageDivision(vec![2, 0])))
+        .unwrap();
+    assert!(g.pending_decision.is_none());
+    assert!(!g.battlefield.iter().any(|c| c.id == bear_a), "bear A took 2 and died");
+    assert!(g.battlefield.iter().any(|c| c.id == bear_b), "bear B took none");
+}
+
+#[test]
+fn may_do_suspends_for_wants_ui_instead_of_auto_declining() {
+    use crate::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let spell = crate::card::CardDefinition {
+        name: "Test Optional Draw",
+        card_types: vec![crate::card::CardType::Instant],
+        effect: Effect::MayDo {
+            description: "Draw a card".into(),
+            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        },
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, spell);
+    g.add_card_to_library(0, catalog::forest());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("MayDo should suspend for wants_ui");
+    assert!(matches!(pd.decision, Decision::OptionalTrigger { .. }));
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true))).unwrap();
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "accepting must run the body");
+}
+
+#[test]
+fn riot_trigger_mode_defers_to_resolution_for_wants_ui() {
+    use crate::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut goblin = catalog::zhur_taa_goblin();
+    goblin.cost = Default::default();
+    let id = g.add_card_to_hand(0, goblin);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    // Resolve the creature, then its Riot ETB trigger — which should now
+    // suspend on a ChooseMode instead of silently taking mode 0 (haste).
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("Riot ChooseMode should suspend for wants_ui");
+    match &pd.decision {
+        Decision::ChooseMode { num_modes, mode_texts, .. } => {
+            assert_eq!(*num_modes, 2);
+            assert_eq!(mode_texts.len(), 2);
+        }
+        other => panic!("expected ChooseMode, got {other:?}"),
+    }
+    // Pick mode 1: the +1/+1 counter.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Mode(1))).unwrap();
+    assert!(g.pending_decision.is_none());
+    let goblin_card = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    assert_eq!(
+        goblin_card.counter_count(crate::card::CounterType::PlusOnePlusOne),
+        1,
+        "counter mode must run instead of haste"
+    );
+}
+
+#[test]
+fn pay_life_amount_suspends_for_wants_ui() {
+    use crate::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let spell = crate::card::CardDefinition {
+        name: "Test Plunge",
+        card_types: vec![crate::card::CardType::Instant],
+        effect: Effect::PayLifeLookTake { who: crate::effect::PlayerRef::You },
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, spell);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    drain_stack(&mut g);
+    let pd = g.pending_decision.as_ref().expect("ChooseAmount should suspend for wants_ui");
+    assert!(matches!(pd.decision, Decision::ChooseAmount { .. }));
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Amount(2))).unwrap();
+    assert_eq!(g.players[0].life, life_before - 2, "chosen amount of life must be paid");
+}

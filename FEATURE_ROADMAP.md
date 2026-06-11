@@ -69,10 +69,14 @@ and the rules-coverage audit in `TODO.md`.
   (`CounterUnlessPaid.exile`), `Predicate::PlayerSacrificedThisResolution`,
   slot-parameterized `WhenTargetDiesThisTurn`, `Effect::DoublePower`,
   `Effect::ExileReturnNextEndStep` (blink-return-EOT), `Value::CountMatching`.
-- **Client:** 3D board, game-log panel, targeting + decision UI, attack-all +
-  per-attacker picking, priority-aware Pass/Respond, counter tooltips, card-zoom
-  hover preview, animations, keyboard cursor (incl. WUBRG hotkeys), commander-
-  damage HUD, legal-play highlighting, monarch/day-night/blessing chips.
+- **Client:** 3D board, game-log panel (player names, not seat indices),
+  targeting + decision UI (incl. resolution-time modes/amounts/divided-damage/
+  creature-type modals), attack-all + per-attacker picking, priority-aware
+  Pass/Respond with per-step stop/skip overrides on the clickable phase
+  chart, counter tooltips, card-zoom hover preview with type-line + keyword
+  reminder panel, animations, keyboard cursor (incl. WUBRG hotkeys),
+  commander-damage HUD, legal-play highlighting, monarch/day-night/blessing
+  chips, reconnect banner, decklist import.
 
 ---
 
@@ -575,9 +579,15 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    the cursor (flipping to whichever side has more room so it never covers
    the card), with no board-dimming. Alt-hold still drives the centered
    detailed peek + counter/P-T tooltip.
-2. ⏳ **Stops / auto-yield configuration** — per-phase stops + "yield until
-   something needs me" (priority plumbing already exists; today only Pass /
-   End Turn / Next Turn).
+2. ✅ **Stops / auto-yield configuration** — `auto_advance_p0` already
+   provided the smart default ("yield until something needs me": pass
+   bookkeeping windows, hold when you could act or an opponent spell is on
+   the stack). Now layered on top: per-step **stop overrides**
+   (`systems::phase_bar::StopConfig`) — click a phase-chart row to cycle
+   Auto → **Stop** (always hold, MTGO-style) → **Skip** (pass even with
+   plays), tracked separately for your turns vs. opponents'. Markers render
+   in the chart rows; fast-forwards and opponent spells still override
+   Skip safely.
 3. 🟡 **Combat math / damage preview** — `combat_preview` (`server::view`)
    projects each player's life swing (damage + lifelink) and the dying
    creatures off the declared attackers/blocks, honoring first/double strike,
@@ -598,7 +608,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    priority after your spell resolves).
 7. ⏳ **Stack visualization** with response affordances and "respond / let
    resolve" per item.
-8. ⏳ **Phase bar / step indicator** with click-to-advance and stop markers.
+8. 🟡 **Phase bar / step indicator** — the left-edge phase chart shows every
+   step with the current one highlighted and now carries clickable stop
+   markers (see #2). Remaining ⏳: click-to-advance ("pass until this
+   step").
 9. 🟡 **Resolution-time decision coverage for humans.** Most of these
    decisions used to be answered silently by the AutoDecider even for a
    `wants_ui` seat. Now shipped via the **stash-and-rerun suspend** (the
@@ -717,7 +730,15 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 
 - ⏳ **In-app deck builder** (search by name/type/cost/keyword, curve view,
   legality check, sample-hand tester).
-- ⏳ **Import / export** (Arena/MTGO/.dec/.cod text formats).
+- 🟡 **Import / export** — **import ships**: `crabomination::decklist::
+  parse_decklist` reads Arena / MTGO text (counts, `4x`, bare names,
+  set/collector suffixes, `SB:`, section headers, blank-line sideboard
+  convention), resolves case-insensitively against the full registry, and
+  reports unknown names instead of dropping them. The menu's "Play Deck vs
+  Bot" + deck-file field loads a list, refuses partial decks (unknown
+  cards / <40 cards, with feedback in the menu), and starts a local-bot
+  match via the draft match builder. Remaining ⏳: export, .dec/.cod,
+  paste-from-clipboard, choosing the opponent's deck.
 - ⏳ **Deck stats** (mana curve, color pips, type breakdown).
 - ⏳ **Collection / ownership tracking** (if a progression layer is wanted).
 - ⏳ **Card search engine** over the catalog (Scryfall-like syntax).

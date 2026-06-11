@@ -526,7 +526,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
 /// Short reminder text for the evergreen keywords. `None` for keywords
 /// whose name is self-explanatory or that carry their own cost label
 /// (Ward, Cycling, Flashback, …), so the reminder block stays compact.
-fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
+pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
     use crabomination::card::Keyword as K;
     Some(match kw {
         K::Flying => "Can only be blocked by creatures with flying or reach.",
@@ -608,7 +608,7 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
     })
 }
 
-fn keyword_label(kw: &crabomination::card::Keyword) -> String {
+pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
     use crabomination::card::Keyword as K;
     use crabomination::mana::Color;
     let color_word = |c: &Color| -> &'static str {
