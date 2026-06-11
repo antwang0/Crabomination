@@ -45595,3 +45595,28 @@ pub fn scion_of_draco() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Recross the Paths — {2}{G} Sorcery. Reveal until a land → battlefield,
+/// rest to the bottom; clash: a win returns this to its owner's hand.
+pub fn recross_the_paths() -> CardDefinition {
+    use crate::effect::RevealMissDest;
+    CardDefinition {
+        name: "Recross the Paths",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                cap: Value::Const(200),
+                life_per_revealed: 0,
+                miss_dest: RevealMissDest::BottomRandom,
+            },
+            Effect::ClashWithOpponent {
+                on_win: Box::new(Effect::ReturnResolvingSpellToHand),
+            },
+        ]),
+        ..Default::default()
+    }
+}

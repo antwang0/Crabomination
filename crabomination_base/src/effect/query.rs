@@ -413,6 +413,7 @@ impl Effect {
             Effect::PayLifeLookTake { .. } => false,
             Effect::PayLifeDraw { .. } => false,
             Effect::RevealUntilLandDamage { to, .. } => sel_has_target(to),
+            Effect::ClashWithOpponent { .. } => false,
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::ExileAllGraveyards { .. } => false,

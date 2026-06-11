@@ -2621,6 +2621,11 @@ pub enum Effect {
     /// Amount via `Decision::ChooseAmount`, capped at current life
     /// (AutoDecider pays 0). Necrodominance's end step.
     PayLifeDraw { who: PlayerRef },
+    /// CR 701.30 — "Clash with an opponent": you and the lowest-seat
+    /// opponent each reveal your library's top card and may bottom it
+    /// (synchronous decider); if yours had the higher mana value, `on_win`
+    /// runs. Recross the Paths.
+    ClashWithOpponent { on_win: Box<Effect> },
     /// Goblin Charbelcher: reveal from the top until a land; deal damage
     /// equal to the nonland reveals to `to` (doubled when the land has
     /// `double_if`'s subtype); all reveals go to the bottom.

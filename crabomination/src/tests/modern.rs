@@ -51006,3 +51006,31 @@ fn scion_of_draco_domain_discount_and_color_grants() {
     );
 }
 
+
+/// CR 701.30 — Recross the Paths fetches the first land to the battlefield
+/// and a won clash returns the spell to hand.
+#[test]
+fn cr_701_30_recross_the_paths_clash_win_returns_to_hand() {
+    let mut g = two_player_game();
+    // P0 top-down: nonland, then a Forest (the find), then a high-MV card
+    // for the clash reveal.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::serra_angel()); // MV 5 — clash reveal
+    g.add_card_to_library(1, catalog::grizzly_bears()); // MV 2 — opponent reveal
+    let rp = g.add_card_to_hand(0, catalog::recross_the_paths());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Forest" && c.controller == 0),
+        "first land revealed lands on the battlefield"
+    );
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == rp),
+        "won clash (5 vs 2) returns the spell to hand"
+    );
+}

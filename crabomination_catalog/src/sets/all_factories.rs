@@ -51,7 +51,7 @@ pub fn all_catalog_card_factories() -> &'static [Factory] {
         super::ap::gaeas_skyfolk,
         // -- arn (1 factories) --
         super::arn::juzam_djinn,
-        // -- decks (1786 factories) --
+        // -- decks (1787 factories) --
         super::decks::callous_sell_sword,
         super::decks::chancellor_of_the_tangle,
         super::decks::cosmogoyf,
@@ -1819,6 +1819,7 @@ pub fn all_catalog_card_factories() -> &'static [Factory] {
         super::decks::emrakul_the_world_anew,
         super::decks::ugin_the_spirit_dragon,
         super::decks::scion_of_draco,
+        super::decks::recross_the_paths,
         super::decks::pact_of_negation,
         super::decks::plunge_into_darkness,
         super::decks::serum_powder,

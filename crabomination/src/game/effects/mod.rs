@@ -6736,6 +6736,42 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ClashWithOpponent { on_win } => {
+                // CR 701.30 — both reveal the top card; each may bottom it
+                // (synchronous decider; AutoDecider keeps it on top). The
+                // controller wins on a strictly higher mana value.
+                use crate::decision::{Decision, DecisionAnswer};
+                let me = ctx.controller;
+                let Some(opp) = self.opponents_of(me).first().copied() else {
+                    return Ok(());
+                };
+                let mut mv = [0i64; 2];
+                for (i, p) in [me, opp].into_iter().enumerate() {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    mv[i] = top.definition.cost.cmc() as i64;
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name: top.definition.name,
+                        is_land: top.definition.is_land(),
+                    });
+                    let bottom = matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source: ctx.source.unwrap_or(CardId(0)),
+                            description: "Put the revealed card on the bottom?".into(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    );
+                    if bottom {
+                        let card = self.players[p].library.remove(0);
+                        self.players[p].library.push(card);
+                    }
+                }
+                if mv[0] > mv[1] {
+                    self.run_effect(on_win, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::RevealUntilLandDamage { to, double_if } => {
                 let p = ctx.controller;
                 let mut nonland = 0u32;
