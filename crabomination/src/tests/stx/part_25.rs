@@ -1062,20 +1062,37 @@ fn strixhaven_pondkeeper_etb_scries_and_has_flash() {
 }
 
 #[test]
-fn zimone_quandrix_prodigy_draws_with_tap_ability() {
+fn zimone_quandrix_prodigy_puts_land_and_scales_draw() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::zimone_quandrix_prodigy());
     g.clear_sickness(id);
-    g.add_card_to_library(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![land])]));
     g.players[0].mana_pool.add_colorless(1);
-    let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, x_value: None,
     })
-    .expect("Zimone {1}, T: draw activatable");
+    .expect("Zimone land-drop ability");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Zimone draws a card");
-    assert!(g.battlefield_find(id).unwrap().tapped, "tapped by the ability");
+    assert!(g.battlefield_find(land).unwrap().tapped, "land from hand, tapped");
+
+    // Second ability: eight lands → draw two.
+    for _ in 0..7 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(4);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    })
+    .expect("Zimone draw ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 2, "eight lands → draw two");
 }
 
 #[test]

@@ -412,6 +412,7 @@ impl Effect {
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
             Effect::PayLifeLookTake { .. } => false,
             Effect::PayLifeDraw { .. } => false,
+            Effect::RevealUntilLandDamage { to, .. } => sel_has_target(to),
             Effect::OnAttackedUntilYourNextTurn { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::ExileAllGraveyards { .. } => false,
@@ -1000,6 +1001,12 @@ impl Effect {
             | Effect::CounterUnlessPaid { .. }
             | Effect::CounterUnless { .. } => false,
             Effect::UnlessPlayerPays { then, .. } => then.accepts_player_target(),
+            // "Gain control of all creatures target PLAYER controls"
+            // (Emrakul, the World Anew) takes a player; the plain
+            // permanent-steal form doesn't.
+            Effect::GainControl { what, .. } => {
+                matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
+            }
             // Targets a card to recast (graveyard/exile), not a player.
             Effect::CastWithoutPayingImmediate { .. } => false,
             // Permanent-targeting effects: skip Player.
@@ -1019,7 +1026,6 @@ impl Effect {
             | Effect::SwitchPT { .. }
             | Effect::BecomeCreature { .. }
             | Effect::GrantKeyword { .. }
-            | Effect::GainControl { .. }
             | Effect::ResetCreature { .. }
             | Effect::BecomeBasicLand { .. }
             | Effect::Attach { .. }

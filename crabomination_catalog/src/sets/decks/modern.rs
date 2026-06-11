@@ -36699,7 +36699,7 @@ pub fn leyline_binding() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         static_abilities: vec![StaticAbility {
             description: "Domain — This spell costs {1} less to cast for each basic land type among lands you control.",
-            effect: StaticEffect::SelfCostReducedByDomain,
+            effect: StaticEffect::SelfCostReducedByDomain { per: 1 },
         }],
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(
@@ -45293,6 +45293,305 @@ pub fn tamiyo_inquisitive_student() -> CardDefinition {
             },
         ],
         back_face: Some(Box::new(scholar)),
+        ..Default::default()
+    }
+}
+
+// ── Modern staples batch 3: belcher, creativity, colorless bombs ─────────────
+
+/// Goblin Charbelcher — {4} Artifact. {3}, {T}: reveal until a land; that
+/// many nonland damage to any target (doubled on a Mountain); reveals to
+/// the bottom.
+pub fn goblin_charbelcher() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Charbelcher",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::RevealUntilLandDamage {
+                to: Selector::Target(0),
+                double_if: Some(LandType::Mountain),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Transmogrify — {3}{R} Sorcery. Exile target creature; its controller
+/// reveals until a creature card and puts it onto the battlefield, shuffling
+/// the rest in.
+pub fn transmogrify() -> CardDefinition {
+    use crate::effect::RevealMissDest;
+    CardDefinition {
+        name: "Transmogrify",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+                to: ZoneDest::Exile,
+            },
+            Effect::RevealUntilFind {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                find: SelectionRequirement::Creature,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+                cap: Value::Const(200),
+                life_per_revealed: 0,
+                miss_dest: RevealMissDest::ShuffleIntoLibrary,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Disruptor Flute — {2} Artifact, Flash. Names a card on enter: spells
+/// with that name cost {3} more; non-mana abilities of matching sources
+/// are locked (shared Pithing Needle machinery).
+pub fn disruptor_flute() -> CardDefinition {
+    CardDefinition {
+        name: "Disruptor Flute",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::NameCard { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Spells with the chosen name cost {3} more to cast.",
+            effect: StaticEffect::NamedSpellTax { amount: 3 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ral, Monsoon Mage // Ral, Leyline Prodigy — {1}{R} 1/3. Instants and
+/// sorceries cost {1} less; your-turn instant/sorcery casts flip a coin:
+/// lose → 1 damage to you, win → may transform.
+pub fn ral_monsoon_mage() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    let is_or_sorcery = SelectionRequirement::HasCardType(CardType::Instant)
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery));
+    let prodigy = CardDefinition {
+        name: "Ral, Leyline Prodigy",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        base_loyalty: 2,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                // "Until your next turn" cost break approximated for the turn.
+                effect: Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount: 1 },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(8),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    pay_any_color: false,
+                    uncast_penalty: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Ral, Monsoon Mage",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: is_or_sorcery.clone(), amount: 1 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: is_or_sorcery,
+                    },
+                ]),
+            ),
+            effect: Effect::FlipCoin {
+                count: Value::Const(1),
+                on_heads: Box::new(Effect::MayDo {
+                    description: "Exile Ral and return him transformed?".into(),
+                    body: Box::new(Effect::ExileSelfReturnTransformed),
+                }),
+                on_tails: Box::new(Effect::DealDamage {
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        back_face: Some(Box::new(prodigy)),
+        ..Default::default()
+    }
+}
+
+/// Emrakul, the World Anew — {12} 12/12 Eldrazi. Cast: steal all of target
+/// player's creatures. Flying, protection from spells; sacrifices your board
+/// on leave. Madness {C}{C}{C}{C}{C}{C}.
+pub fn emrakul_the_world_anew() -> CardDefinition {
+    CardDefinition {
+        name: "Emrakul, the World Anew",
+        cost: cost(&[generic(12)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 12,
+        toughness: 12,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::ProtectionFromSpells,
+            Keyword::Madness(ManaCost { symbols: vec![ManaSymbol::Colorless(1); 6] }),
+        ],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+                effect: Effect::GainControl {
+                    what: Selector::ControlledBy {
+                        who: PlayerRef::Target(0),
+                        filter: SelectionRequirement::Creature,
+                    },
+                    to: None,
+                    duration: Duration::Permanent,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::SacrificeAllMatching {
+                    who: Selector::Player(PlayerRef::You),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ugin, the Spirit Dragon — {8} planeswalker, loyalty 7. +2: 3 damage to
+/// any target. -X: exile each colored permanent with MV ≤ X. -10: gain 7,
+/// draw 7, put up to seven permanents from hand onto the battlefield.
+pub fn ugin_the_spirit_dragon() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    CardDefinition {
+        name: "Ugin, the Spirit Dragon",
+        cost: cost(&[generic(8)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        base_loyalty: 7,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                x_cost: true,
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(SelectionRequirement::Not(Box::new(
+                        SelectionRequirement::Colorless,
+                    ))),
+                    body: Box::new(Effect::If {
+                        cond: Predicate::ValueAtMost(
+                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                            Value::XFromCost,
+                        ),
+                        then: Box::new(Effect::Move {
+                            what: Selector::TriggerSource,
+                            to: ZoneDest::Exile,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -10,
+                effect: Effect::Seq(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(7) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+                    Effect::PutFromHandOntoBattlefield {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Permanent,
+                        count: Value::Const(7),
+                        tapped: false,
+                        haste: false,
+                        sacrifice_eot: false,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Scion of Draco — {12} 4/4 Artifact Dragon, Domain: {2} less per basic
+/// type. Flying; your creatures gain a keyword per color they are.
+pub fn scion_of_draco() -> CardDefinition {
+    let grant = |color: Color, kw: Keyword, desc: &'static str| StaticAbility {
+        description: desc,
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::HasColor(color)),
+            ),
+            keyword: kw,
+        },
+    };
+    CardDefinition {
+        name: "Scion of Draco",
+        cost: cost(&[generic(12)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Domain — this costs {2} less per basic land type.",
+                effect: StaticEffect::SelfCostReducedByDomain { per: 2 },
+            },
+            grant(Color::White, Keyword::Vigilance, "White creatures have vigilance."),
+            grant(Color::Blue, Keyword::Hexproof, "Blue creatures have hexproof."),
+            grant(Color::Black, Keyword::Lifelink, "Black creatures have lifelink."),
+            grant(Color::Red, Keyword::FirstStrike, "Red creatures have first strike."),
+            grant(Color::Green, Keyword::Trample, "Green creatures have trample."),
+        ],
         ..Default::default()
     }
 }

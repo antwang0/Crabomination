@@ -50838,3 +50838,171 @@ fn flare_of_duplication_copies_target_spell() {
     assert!(g.battlefield_find(pitch).is_none(), "red creature sacrificed");
     assert_eq!(g.players[1].life, 14, "bolt + copy = 6 damage");
 }
+
+/// Goblin Charbelcher counts nonland reveals, doubles on a Mountain, and
+/// bottoms the reveals.
+#[test]
+fn goblin_charbelcher_damage_doubles_on_mountain() {
+    let mut g = two_player_game();
+    // add_card_to_library appends bottom-up; top-down result: two
+    // nonlands, then a Mountain.
+    g.add_card_to_library(0, catalog::counterspell());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::mountain());
+    let lib_before = g.players[0].library.len();
+    let belcher = g.add_card_to_battlefield(0, catalog::goblin_charbelcher());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: belcher, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("belch");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "2 nonland × 2 (Mountain) = 4");
+    assert_eq!(g.players[0].library.len(), lib_before, "reveals bottomed, not lost");
+}
+
+/// Transmogrify exiles the target and flips its controller's next creature
+/// onto the battlefield.
+#[test]
+fn transmogrify_polymorphs_into_next_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::serra_angel());
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tm = g.add_card_to_hand(0, catalog::transmogrify());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_at(&mut g, tm, Target::Permanent(bear));
+    assert!(g.exile.iter().any(|c| c.id == bear), "target exiled");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Serra Angel" && c.controller == 0),
+        "revealed creature hits the battlefield"
+    );
+}
+
+/// Disruptor Flute taxes the named spell {3} and needles its abilities.
+#[test]
+fn disruptor_flute_taxes_named_spell() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(
+        "Lightning Bolt".into(),
+    )]));
+    let flute = g.add_card_to_hand(0, catalog::disruptor_flute());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: flute, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flute castable");
+    drain_stack(&mut g);
+    // Opponent's Bolt now costs {R} + {3}.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "taxed Bolt unaffordable on one red");
+    g.players[1].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("affordable with the {3} tax");
+}
+
+/// Ral flips a coin on your-turn instant casts: a win may transform him.
+#[test]
+fn ral_transforms_on_won_flip() {
+    let mut g = two_player_game();
+    let ral = g.add_card_to_battlefield(0, catalog::ral_monsoon_mage());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), // win the flip
+        DecisionAnswer::Bool(true), // choose to transform
+    ]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // {R} less {1} from Ral's discount → free? No: Bolt is {R}; colored pips
+    // aren't reduced. Pay it.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ral).is_none() || g.battlefield_find(ral).unwrap().transformed
+        || g.battlefield.iter().any(|c| c.definition.name == "Ral, Leyline Prodigy"),
+        "won flip → transformed planeswalker");
+    let flipped = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Ral, Leyline Prodigy")
+        .expect("Ral flipped");
+    assert_eq!(flipped.counter_count(crate::card::CounterType::Loyalty), 2);
+}
+
+/// Emrakul, the World Anew steals target player's creatures on cast and
+/// can't be targeted by spells.
+#[test]
+fn emrakul_world_anew_steals_and_has_spell_protection() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let emrakul = g.add_card_to_hand(0, catalog::emrakul_the_world_anew());
+    g.players[0].mana_pool.add_colorless(12);
+    g.perform_action(GameAction::CastSpell {
+        card_id: emrakul, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("emrakul castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stole the board");
+    // Protection from spells: opponent can't bolt it.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let em_id = g.battlefield.iter().find(|c| c.definition.name == "Emrakul, the World Anew").unwrap().id;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(em_id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "protection from spells blocks targeting");
+}
+
+/// Ugin's -X exiles each colored permanent with MV ≤ X.
+#[test]
+fn ugin_minus_x_exiles_colored_cheap_permanents() {
+    let mut g = two_player_game();
+    let ugin = g.add_card_to_battlefield(0, catalog::ugin_the_spirit_dragon());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());   // MV 2, green
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());    // MV 5, white
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());     // colorless
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ugin, ability_index: 1, target: None, x_value: Some(3),
+    }).expect("Ugin -3");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "MV 2 colored permanent exiled");
+    assert!(g.battlefield_find(angel).is_some(), "MV 5 survives X=3");
+    assert!(g.battlefield_find(stone).is_some(), "colorless ignored");
+    assert_eq!(
+        g.battlefield_find(ugin).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        4,
+        "7 - 3 loyalty"
+    );
+}
+
+/// Scion of Draco: domain discount and per-color keyword grants.
+#[test]
+fn scion_of_draco_domain_discount_and_color_grants() {
+    let mut g = two_player_game();
+    for f in [catalog::plains, catalog::island, catalog::swamp, catalog::mountain, catalog::forest] {
+        let l = g.add_card_to_battlefield(0, f());
+        let _ = l;
+    }
+    let scion = g.add_card_to_hand(0, catalog::scion_of_draco());
+    // {12} - 5 × {2} = {2}.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: scion, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("full domain → {2}");
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::Trample),
+        "green creature granted trample"
+    );
+}
+

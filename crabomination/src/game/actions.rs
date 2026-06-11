@@ -159,6 +159,11 @@ pub(crate) fn extra_cost_for_spell(
                 {
                     tax += amount;
                 }
+                StaticEffect::NamedSpellTax { amount }
+                    if src.named_card.as_deref() == Some(card.definition.name) =>
+                {
+                    tax += amount;
+                }
                 _ => {}
             }
         }
@@ -292,13 +297,10 @@ pub(crate) fn cost_reduction_for_spell(
     // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
     // — distinct basic land types among the caster's lands. Generic-only,
     // clamped by the caller via `ManaCost::reduce_generic`.
-    if card
-        .definition
-        .static_abilities
-        .iter()
-        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByDomain))
-    {
-        reduction = reduction.saturating_add(state.domain_count(caster) as u32);
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedByDomain { per } = sa.effect {
+            reduction = reduction.saturating_add(per * state.domain_count(caster) as u32);
+        }
     }
     // One-shot "the next instant or sorcery you cast this turn costs {N}
     // less" discounts (Thundertrap Trainer). Each was stamped with the
@@ -2879,6 +2881,11 @@ impl GameState {
                 if matches!(kw, Keyword::ProtectionFromColoredSpells)
                     && !spell_colors.is_empty()
                 {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // Protection from ALL spells (Emrakul, the World Anew).
+                if matches!(kw, Keyword::ProtectionFromSpells) {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }

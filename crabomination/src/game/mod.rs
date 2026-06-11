@@ -8246,6 +8246,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::NoMaximumHandSize
             | StaticEffect::OpponentsMaxHandSizeReduced(_)
             | StaticEffect::ControllerMaxHandSize(_)
+            | StaticEffect::NamedSpellTax { .. }
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard
@@ -8292,7 +8293,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // `cost_reduction_for_spell` off the spell being cast; no layer.
             | StaticEffect::SelfCostReducedByGreatestPower
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
-            | StaticEffect::SelfCostReducedByDomain
+            | StaticEffect::SelfCostReducedByDomain { .. }
             // SacrificeCostReduction (Awaken the Blood Avatar) — an optional
             // additional cost consulted by `cast_spell_sacrifice_reduce`; no
             // continuous-layer effect.

@@ -913,6 +913,9 @@ pub enum RevealMissDest {
     /// the bottom of the library in any deterministic way before the
     /// next shuffle.
     BottomRandom,
+    /// Misses are shuffled into the controller's library after the find
+    /// resolves (Transmogrify, Indomitable Creativity).
+    ShuffleIntoLibrary,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -2618,6 +2621,10 @@ pub enum Effect {
     /// Amount via `Decision::ChooseAmount`, capped at current life
     /// (AutoDecider pays 0). Necrodominance's end step.
     PayLifeDraw { who: PlayerRef },
+    /// Goblin Charbelcher: reveal from the top until a land; deal damage
+    /// equal to the nonland reveals to `to` (doubled when the land has
+    /// `double_if`'s subtype); all reveals go to the bottom.
+    RevealUntilLandDamage { to: Selector, double_if: Option<crate::card::LandType> },
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.

@@ -1507,7 +1507,8 @@ pub fn dina_soul_steeper() -> CardDefinition {
 // ── Zimone, Quandrix Prodigy ───────────────────────────────────────────────
 
 /// Zimone, Quandrix Prodigy — {G}{U}, 1/2 Legendary Human Wizard.
-/// {1}, {T}: Draw a card (approximation of land-from-hand + conditional draw).
+/// {1}, {T}: put a land from hand tapped. {4}, {T}: draw one (two with
+/// eight or more lands).
 pub fn zimone_quandrix_prodigy() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -1521,22 +1522,38 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: cost(&[generic(1)]),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land,
+                    count: Value::Const(1),
+                    tapped: true,
+                    haste: false,
+                    sacrifice_eot: false,
+                },
+                ..Default::default()
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            ..Default::default()
-        }],
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                tap_cost: true,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::IfAtLeast {
+                        value: Box::new(Value::count(Selector::EachPermanent(
+                            SelectionRequirement::Land
+                                .and(SelectionRequirement::ControlledByYou),
+                        ))),
+                        threshold: 8,
+                        then: Box::new(Value::Const(2)),
+                        else_: Box::new(Value::Const(1)),
+                    },
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

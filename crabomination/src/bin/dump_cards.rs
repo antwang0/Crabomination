@@ -124,7 +124,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Squad(_) => "Squad",
         Keyword::Replicate(_) => "Replicate",
         Keyword::Fortify(_) => "Fortify",
-        Keyword::Protection(_) | Keyword::ProtectionFromColoredSpells => "Protection",
+        Keyword::Protection(_)
+        | Keyword::ProtectionFromColoredSpells
+        | Keyword::ProtectionFromSpells => "Protection",
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));
         }

@@ -410,6 +410,9 @@ pub enum Keyword {
     /// Torn). Enforced as a cast-time targeting gate: a spell with one or
     /// more colors can't target this permanent.
     ProtectionFromColoredSpells,
+    /// CR 702.16 — "protection from spells" (Emrakul, the World Anew):
+    /// can't be targeted by any spell. Cast-time targeting gate.
+    ProtectionFromSpells,
     Hexproof,
     Shroud,
     CantBeCountered,

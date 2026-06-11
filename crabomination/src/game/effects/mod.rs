@@ -6736,6 +6736,39 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealUntilLandDamage { to, double_if } => {
+                let p = ctx.controller;
+                let mut nonland = 0u32;
+                let mut doubled = false;
+                let mut revealed: Vec<CardInstance> = Vec::new();
+                while !self.players[p].library.is_empty() {
+                    let card = self.players[p].library.remove(0);
+                    let is_land = card.definition.is_land();
+                    if is_land {
+                        doubled = double_if
+                            .is_some_and(|lt| card.definition.subtypes.land_types.contains(&lt));
+                    } else {
+                        nonland += 1;
+                    }
+                    revealed.push(card);
+                    if is_land {
+                        break;
+                    }
+                }
+                for c in revealed {
+                    self.players[p].library.push(c);
+                }
+                let dmg = if doubled { nonland * 2 } else { nonland };
+                if dmg > 0 {
+                    for ent in self.resolve_selector(to, ctx) {
+                        self.deal_damage_to_from(ent, dmg, ctx.source, events);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::PayLifeLookTake { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
@@ -7088,6 +7121,10 @@ impl GameState {
                             // before the next shuffle / reveal.
                             self.players[p].library.push(card);
                         }
+                        crate::effect::RevealMissDest::ShuffleIntoLibrary => {
+                            // Re-shuffled below once the find is placed.
+                            self.players[p].library.push(card);
+                        }
                     }
                 }
                 // If we found a match, take it off the (now-shifted) top
@@ -7101,6 +7138,10 @@ impl GameState {
                     let cid = card.id;
                     self.place_card_in_dest(card, p, &resolved_dest, events);
                     self.last_moved_cards.push(cid);
+                }
+                if matches!(miss_dest, crate::effect::RevealMissDest::ShuffleIntoLibrary) {
+                    use rand::seq::SliceRandom;
+                    self.players[p].library.shuffle(&mut rand::rng());
                 }
                 // Lose 1 life per revealed card (Spoils of the Vault rider).
                 let life = (revealed as u32).saturating_mul(*life_per_revealed);

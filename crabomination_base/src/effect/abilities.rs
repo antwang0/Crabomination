@@ -128,7 +128,7 @@ pub enum StaticEffect {
     /// off the *spell being cast*; the count is the distinct basic land types
     /// among the caster's lands (0–5). Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
-    SelfCostReducedByDomain,
+    SelfCostReducedByDomain { per: u32 },
     /// "This spell costs {N} less to cast for each card you've discarded
     /// this turn" (Hollow One). Card-intrinsic; read by
     /// `cost_reduction_for_spell` off `Player.cards_discarded_this_turn`.
@@ -571,6 +571,10 @@ pub enum StaticEffect {
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,
     /// Thought Vessel, Spellbook, Library of Leng-adjacent statics.
     NoMaximumHandSize,
+    /// "Spells with the chosen name cost {N} more to cast" — reads the
+    /// source's `named_card` (stamped at ETB via `Effect::NameCard`).
+    /// Disruptor Flute. Folded into `extra_cost_for_spell`.
+    NamedSpellTax { amount: u32 },
     /// "Each opponent's maximum hand size is reduced by N" (Jin-Gitaxias,
     /// Core Augur). Folded into `effective_max_hand_size` for every seat
     /// not on the source controller's team.
