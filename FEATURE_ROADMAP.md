@@ -608,10 +608,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    priority after your spell resolves).
 7. ⏳ **Stack visualization** with response affordances and "respond / let
    resolve" per item.
-8. 🟡 **Phase bar / step indicator** — the left-edge phase chart shows every
-   step with the current one highlighted and now carries clickable stop
-   markers (see #2). Remaining ⏳: click-to-advance ("pass until this
-   step").
+8. ✅ **Phase bar / step indicator** — the left-edge phase chart shows every
+   step with the current one highlighted, carries clickable stop markers
+   (see #2), and right-click arms click-to-advance ("pass until this
+   step", cleared on arrival or re-click).
 9. 🟡 **Resolution-time decision coverage for humans.** Most of these
    decisions used to be answered silently by the AutoDecider even for a
    `wants_ui` seat. Now shipped via the **stash-and-rerun suspend** (the

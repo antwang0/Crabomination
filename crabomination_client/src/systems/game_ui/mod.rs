@@ -225,6 +225,9 @@ pub struct FastForward {
     pub end_turn: bool,
     /// Pass until we're back in our own PreCombatMain with priority.
     pub next_turn: bool,
+    /// Pass until the game reaches this step (right-click a phase-chart
+    /// row — roadmap "click-to-advance"). Cleared on arrival.
+    pub pass_until: Option<TurnStep>,
 }
 
 // ── Marker components ─────────────────────────────────────────────────────────
@@ -1161,6 +1164,7 @@ const PHASE_ROW_ACTIVE_BG: Color = Color::srgba(0.18, 0.18, 0.28, 0.85);
 pub fn update_phase_chart(
     view: Res<CurrentView>,
     stops: Option<Res<crate::systems::phase_bar::StopConfig>>,
+    ff: Option<Res<FastForward>>,
     mut rows: Query<(&PhaseStepLabel, &Children, &mut BackgroundColor)>,
     mut texts: Query<(&mut Text, &mut TextColor)>,
 ) {
@@ -1168,6 +1172,7 @@ pub fn update_phase_chart(
     let Some(cv) = &view.0 else { return };
     let current = cv.step;
     let my_turn = cv.active_player == cv.your_seat;
+    let pass_target = ff.as_ref().and_then(|f| f.pass_until);
     for (label, children, mut bg) in &mut rows {
         let active = label.0 == current;
         let mode = stops
@@ -1181,7 +1186,13 @@ pub fn update_phase_chart(
         // `phase_bar::handle_phase_chart_clicks`).
         for child in children.iter() {
             if let Ok((mut text, mut color)) = texts.get_mut(child) {
-                let marker = if active { "▶ " } else { "   " };
+                let marker = if active {
+                    "▶ "
+                } else if pass_target == Some(label.0) {
+                    "⏩ "
+                } else {
+                    "   "
+                };
                 let stop_tag = match mode {
                     StopMode::Auto => "",
                     StopMode::Always => "  [stop]",
@@ -2925,10 +2936,17 @@ pub fn auto_advance_p0(
         .as_ref()
         .map(|s| s.mode(cv.active_player == your_seat, cv.step))
         .unwrap_or_default();
-    if stop_mode == StopMode::Always && !ff.end_turn && !ff.next_turn {
+    if stop_mode == StopMode::Always && !ff.end_turn && !ff.next_turn && ff.pass_until.is_none()
+    {
         return;
     }
 
+    // Click-to-advance: arrived at the requested step — disarm and hold.
+    if ff.pass_until == Some(cv.step) {
+        ff.pass_until = None;
+        return;
+    }
+    let passing_until = ff.pass_until.is_some();
     if ff.end_turn && cv.active_player != your_seat {
         ff.end_turn = false;
     }
@@ -2950,6 +2968,7 @@ pub fn auto_advance_p0(
         && cv.battlefield.iter().any(|c| c.attacking)
         && !ff.end_turn
         && !ff.next_turn
+        && !passing_until
         && stop_mode != StopMode::Skip
     {
         return;
@@ -2978,7 +2997,7 @@ pub fn auto_advance_p0(
         let nothing_to_block = !any_attacker || !any_blocker;
         // An explicit per-step Skip means "never stop here" — the player
         // opted out of blocking; everything else holds the window open.
-        if !(ff.next_turn && nothing_to_block) && stop_mode != StopMode::Skip {
+        if !((ff.next_turn || passing_until) && nothing_to_block) && stop_mode != StopMode::Skip {
             return;
         }
     }
@@ -3055,6 +3074,7 @@ pub fn auto_advance_p0(
     // always advances so those don't strand the player.
     let should_advance = ff.end_turn
         || ff.next_turn
+        || passing_until
         || cv.step == TurnStep::Untap
         || stack_is_own_triggers_only
         || stop_mode == StopMode::Skip

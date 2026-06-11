@@ -79,11 +79,33 @@ impl StopConfig {
 pub fn handle_phase_chart_clicks(
     view: Res<CurrentView>,
     mut stops: ResMut<StopConfig>,
+    mut ff: ResMut<crate::systems::game_ui::FastForward>,
     mut log: ResMut<crate::game::GameLog>,
+    mouse: Res<ButtonInput<MouseButton>>,
     clicked: Query<(&Interaction, &PhaseStepLabel), Changed<Interaction>>,
+    hovered: Query<(&Interaction, &PhaseStepLabel)>,
 ) {
     let Some(cv) = &view.0 else { return };
     let my_turn = cv.active_player == cv.your_seat;
+    // Right-click: click-to-advance — auto-pass priority until the game
+    // reaches the clicked step (cleared on arrival, or by re-clicking).
+    if mouse.just_pressed(MouseButton::Right) {
+        for (interaction, row) in &hovered {
+            if *interaction == Interaction::None {
+                continue;
+            }
+            if ff.pass_until == Some(row.0) {
+                ff.pass_until = None;
+                log.push(format!("Cancelled pass-until {:?}", row.0));
+            } else if row.0 == cv.step {
+                log.push(format!("Already at {:?}", row.0));
+            } else {
+                ff.pass_until = Some(row.0);
+                log.push(format!("Passing until {:?}", row.0));
+            }
+        }
+        return;
+    }
     for (interaction, row) in &clicked {
         if *interaction != Interaction::Pressed {
             continue;
