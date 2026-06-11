@@ -282,6 +282,18 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Noticed this run (follow-ups sweep):**
+  - **`Effect::MayPay` for a `wants_ui` seat** still answers through the
+    synchronous decider (Springheart's landfall pay) — the `MayDo`
+    stash-and-rerun suspend should be extended to cover it.
+  - **Nadu's granted ability** is modeled as a trigger on Nadu itself with
+    a per-subject cap (behaviorally equivalent); a true "creatures you
+    control have [triggered ability]" static grant framework is still open
+    (matters for ability-reading effects).
+  - **Karplusan Minotaur's lose-a-flip ping** lets the controller aim the
+    damage; printed text has an opponent choose the target.
+  - **`EventSpec::per_subject_cap`** only counts permanent subjects; a
+    player-subject cap would need an EntityRef-keyed map.
 - ⏳ **Noticed (modern_decks batches 4-6):** all the listed cards shipped
   (Nadu / Six / Ajani MDFC / Kozilek / Ulamog the Defiler / Springheart /
   Not Dead After All / Indomitable Creativity — each with its primitive).

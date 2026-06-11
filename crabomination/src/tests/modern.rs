@@ -51534,7 +51534,8 @@ fn six_grants_retrace_during_your_turn() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::six());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let land = g.add_card_to_hand(0, catalog::forest());
+    // A land stays in hand to fund the retrace discard cost.
+    g.add_card_to_hand(0, catalog::forest());
     g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 1;
@@ -51543,7 +51544,6 @@ fn six_grants_retrace_during_your_turn() {
     assert!(!g.effective_retrace(&bear_card, 0));
     g.active_player_idx = 0;
     assert!(g.effective_retrace(&bear_card, 0));
-    let _ = land;
     g.perform_action(GameAction::CastRetrace {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
