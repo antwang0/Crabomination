@@ -3120,7 +3120,7 @@ mod tests {
     #[test]
     fn spectate_match_does_not_deadlock_with_own_trigger_on_stack() {
         use crate::effect::Effect;
-        use crate::game::{StackItem, TurnStep};
+        use crate::game::TurnStep;
         use crate::server::{run_match, SeatOccupant};
         use std::sync::mpsc;
         use std::thread;
@@ -3174,7 +3174,6 @@ mod tests {
     #[test]
     fn bot_does_not_attempt_sorcery_when_stack_nonempty() {
         use crate::effect::Effect;
-        use crate::game::StackItem;
         let mut g = two_player_game();
         // Bot 0 has a tracker on the battlefield as the trigger source.
         let tracker = g.add_card_to_battlefield(0, catalog::tireless_tracker());
