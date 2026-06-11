@@ -178,6 +178,11 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
         let a_power = a.power.max(0);
         let lifelink = kw(a, &Keyword::Lifelink);
         if blockers.is_empty() {
+            // CR 510.1c — a blocked attacker whose blockers all left combat
+            // stays blocked: no face damage without trample.
+            if state.blocked_attackers().contains(&atk.attacker) && !kw(a, &Keyword::Trample) {
+                continue;
+            }
             // Unblocked: full damage to the defending player or planeswalker.
             match atk.target {
                 AttackTarget::Player(p) => {

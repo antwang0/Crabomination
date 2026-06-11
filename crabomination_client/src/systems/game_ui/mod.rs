@@ -232,6 +232,12 @@ pub struct FastForward {
 #[derive(Component)]
 pub struct TurnInfoText;
 
+/// Flex-row of per-step chips (the "phase bar"): one chip per turn step,
+/// the current one highlighted. Rebuilt by `update_phase_bar` when the
+/// step or active player changes.
+#[derive(Component)]
+pub struct PhaseBarRow;
+
 /// Flex-row container that holds the viewer's stat chips (name, life,
 /// hand, deck, graveyard). `update_player_stats_chips` rebuilds its
 /// children whenever the view changes — one tinted chip per stat,
@@ -450,6 +456,17 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 tf(16.0),
                 TextColor(theme::TEXT_PRIMARY),
                 TurnInfoText,
+                Pickable::IGNORE,
+            ));
+            // Phase bar: one chip per step, current step highlighted.
+            p.spawn((
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(2.0),
+                    ..default()
+                },
+                PhaseBarRow,
                 Pickable::IGNORE,
             ));
             // Stats row: small tinted chips for life / hand / deck / grave
@@ -954,6 +971,80 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
 }
 
 // ── HUD text update ───────────────────────────────────────────────────────────
+
+/// Rebuild the phase-bar chips when the step / active player changes.
+/// Combat steps are tinted red on the active chip so the combat phase
+/// reads at a glance; the viewer's own turn highlights gold.
+pub fn update_phase_bar(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
+    row_q: Query<Entity, With<PhaseBarRow>>,
+    mut last: Local<Option<(crabomination::TurnStep, usize)>>,
+) {
+    use crabomination::TurnStep as S;
+    let Some(cv) = &view.0 else { return };
+    let Ok(row) = row_q.single() else { return };
+    if *last == Some((cv.step, cv.active_player)) {
+        return;
+    }
+    *last = Some((cv.step, cv.active_player));
+    const STEPS: [(S, &str); 13] = [
+        (S::Untap, "UN"),
+        (S::Upkeep, "UP"),
+        (S::Draw, "DR"),
+        (S::PreCombatMain, "M1"),
+        (S::BeginCombat, "BC"),
+        (S::DeclareAttackers, "AT"),
+        (S::DeclareBlockers, "BL"),
+        (S::FirstStrikeDamage, "FS"),
+        (S::CombatDamage, "CD"),
+        (S::EndCombat, "EC"),
+        (S::PostCombatMain, "M2"),
+        (S::End, "EN"),
+        (S::Cleanup, "CL"),
+    ];
+    let is_combat = |s: S| {
+        matches!(
+            s,
+            S::BeginCombat
+                | S::DeclareAttackers
+                | S::DeclareBlockers
+                | S::FirstStrikeDamage
+                | S::CombatDamage
+                | S::EndCombat
+        )
+    };
+    commands.entity(row).despawn_children();
+    commands.entity(row).with_children(|p| {
+        for (step, label) in STEPS {
+            let current = step == cv.step;
+            let (bg, fg) = if current && is_combat(step) {
+                (Color::srgb(0.45, 0.15, 0.12), theme::TEXT_PRIMARY)
+            } else if current {
+                (Color::srgb(0.65, 0.52, 0.18), Color::srgb(0.08, 0.07, 0.03))
+            } else {
+                (Color::srgba(1.0, 1.0, 1.0, 0.06), Color::srgba(1.0, 1.0, 1.0, 0.45))
+            };
+            p.spawn((
+                Node {
+                    padding: UiRect::axes(Val::Px(3.0), Val::Px(1.0)),
+                    ..default()
+                },
+                BackgroundColor(bg),
+                Pickable::IGNORE,
+            ))
+            .with_children(|chip| {
+                chip.spawn((
+                    Text::new(label),
+                    ui_fonts.tf(9.0),
+                    TextColor(fg),
+                    Pickable::IGNORE,
+                ));
+            });
+        }
+    });
+}
 
 pub fn update_turn_text(
     view: Res<CurrentView>,

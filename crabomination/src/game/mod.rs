@@ -3869,6 +3869,12 @@ impl GameState {
     /// Snapshot of the current blocker → attacker assignments. Lets the
     /// view layer expose blocks per-permanent without making `block_map`
     /// public.
+    /// CR 510.1c — attackers that became blocked this combat (they stay
+    /// blocked even if every blocker has since left combat).
+    pub fn blocked_attackers(&self) -> &[CardId] {
+        &self.blocked_attackers
+    }
+
     pub fn block_map_snapshot(&self) -> Vec<(CardId, CardId)> {
         self.block_map.iter().map(|(b, a)| (*b, *a)).collect()
     }

@@ -754,9 +754,8 @@ impl GameState {
 
             // CR 705 — Flip a coin `count` times; for each flip ask the
             // controller's decider for heads/tails and dispatch to
-            // `on_heads` / `on_tails`. AutoDecider always picks heads;
-            // ScriptedDecider can override per-flip via DecisionAnswer::
-            // Bool(false) for tails.
+            // `on_heads` / `on_tails`. AutoDecider flips a real random coin;
+            // ScriptedDecider scripts per-flip outcomes for tests.
             Effect::FlipCoin { count, on_heads, on_tails } => {
                 // CR 705.3 — `flip_one_coin` applies Krark's-Thumb advantage
                 // (replay + treat as heads if any replay is heads).

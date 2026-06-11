@@ -62,7 +62,8 @@ use systems::game_ui::{
     position_log_below_opponents,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
-    update_player_stats_chips, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
+    update_phase_bar, update_player_stats_chips, update_stack_panel, update_turn_text,
+    ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
     draw_attack_plan_gizmos, draw_attacker_overlays, draw_blocking_gizmos,
@@ -433,6 +434,7 @@ fn main() {
             Update,
             (
                 update_turn_text,
+                update_phase_bar,
                 update_player_stats_chips,
                 update_mana_pips,
                 update_opponent_stats_rows,
