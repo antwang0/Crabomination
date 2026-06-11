@@ -51778,3 +51778,113 @@ fn karn_great_creator_locks_animates_and_wishes() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == wid), "wished to hand");
 }
+
+/// Not Dead After All: the granted die-trigger reanimates the creature
+/// tapped with a Wicked Role attached; the Role pumps +1/+1.
+#[test]
+fn not_dead_after_all_returns_with_wicked_role() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::not_dead_after_all());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    crate::game::cast_at(&mut g, spell, Target::Permanent(bear));
+    let mut evs = Vec::new();
+    g.sacrifice_one(bear, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("returned to the battlefield");
+    assert!(back.tapped, "returns tapped");
+    let role = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Wicked")
+        .expect("Wicked Role minted");
+    assert_eq!(role.attached_to, Some(bear), "attached to the returned creature");
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "Role grants +1/+1");
+    // The Role hitting the graveyard drains each opponent for 1.
+    let role_id = role.id;
+    g.remove_to_graveyard_with_triggers(role_id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "each opponent loses 1");
+}
+
+/// Ajani, Nacatl Pariah flips when another Cat dies; the Avenger's -4 makes
+/// each opponent keep one permanent of each type.
+#[test]
+fn ajani_nacatl_pariah_flips_and_cataclysms() {
+    use crate::card::CardType;
+    let mut g = two_player_game();
+    let ajani = g.add_card_to_hand(0, catalog::ajani_nacatl_pariah());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    crate::game::cast(&mut g, ajani);
+    let cat = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.name == "Cat Warrior")
+        .map(|c| c.id)
+        .expect("ETB Cat token");
+    // The token Cat dies → Ajani returns transformed as a planeswalker.
+    let mut evs = Vec::new();
+    g.sacrifice_one(cat, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let walker = g.battlefield_find(ajani).expect("Ajani back");
+    assert!(walker.transformed, "returned transformed");
+    assert!(walker.definition.is_planeswalker());
+    assert_eq!(walker.counter_count(crate::card::CounterType::Loyalty), 3);
+    // -4: opponent keeps one creature (their best), sacrifices the rest.
+    g.battlefield_find_mut(ajani).unwrap().add_counters(crate::card::CounterType::Loyalty, 2);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ajani, ability_index: 2, target: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let opp_creatures: Vec<&str> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 1 && c.definition.card_types.contains(&CardType::Creature))
+        .map(|c| c.definition.name)
+        .collect();
+    assert_eq!(opp_creatures, vec!["Serra Angel"], "kept the highest-MV creature");
+}
+
+/// Indomitable Creativity at X=2 destroys both targets; each controller
+/// polymorphs into their next artifact/creature.
+#[test]
+fn indomitable_creativity_polymorphs_destroyed_targets() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    g.players[1].library.clear();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::serra_angel());
+    g.add_card_to_library(1, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::indomitable_creativity());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None,
+        x_value: Some(2),
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Serra Angel"),
+        "my bear became the Angel (island shuffled back)"
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Mind Stone"),
+        "their bear became the rock"
+    );
+}

@@ -140,6 +140,9 @@ impl Effect {
                 sel_has_target(who) || value_has_target(count)
             }
             Effect::WishToHand { .. } => false,
+            Effect::SacrificeAllButOnePerType { who } => sel_has_target(who),
+            Effect::DestroyTargetsPolymorph { .. } => true,
+            Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
             Effect::ManifestDread { .. } => false,
             Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands => false,
@@ -508,7 +511,8 @@ impl Effect {
                 Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_filter(s),
                 _ => None,
             }),
-            Effect::DealDamageDivided { filter, .. } => Some(filter),
+            Effect::DealDamageDivided { filter, .. }
+            | Effect::DestroyTargetsPolymorph { filter } => Some(filter),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
@@ -1246,6 +1250,8 @@ impl Effect {
                 Effect::DealDamageDivided { filter, max_targets, .. } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
+                // X targets — every slot carries the filter.
+                Effect::DestroyTargetsPolymorph { filter } => Some(filter),
                 Effect::SupportCounters { filter, max_targets } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }

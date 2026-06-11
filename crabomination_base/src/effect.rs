@@ -2751,6 +2751,21 @@ pub enum Effect {
     /// controller draws one card per card manifested (Kozilek, the Broken
     /// Reality).
     ManifestFromHand { who: Selector, count: Value, controller_draws: bool },
+    /// Create a token and attach it to the resolved permanent (Role tokens
+    /// — Wicked Role; CR 111.10). The token must be an Aura-style
+    /// attachment; it enters attached.
+    CreateTokenAttachedTo { target: Selector, definition: crate::card::TokenDefinition },
+    /// Indomitable Creativity: destroy up to X chosen permanent targets
+    /// matching `filter` (slots `0..X` from the cast's target list); for
+    /// each destroyed this way its controller reveals from the top until an
+    /// artifact or creature card, puts it onto the battlefield, and
+    /// shuffles the rest in.
+    DestroyTargetsPolymorph { filter: SelectionRequirement },
+    /// Cataclysm-family: each resolved player keeps one artifact, one
+    /// creature, one enchantment, and one planeswalker from among the
+    /// nonland permanents they control (auto-pick keeps the highest mana
+    /// value of each) and sacrifices the rest (Ajani, Nacatl Avenger's -4).
+    SacrificeAllButOnePerType { who: Selector },
     /// "Wish" — put a card you own matching `filter` from your sideboard
     /// ("outside the game") or from exile into your hand (Karn, the Great
     /// Creator's -2). Chosen via `Decision::ChooseCards` for a `wants_ui`

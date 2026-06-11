@@ -46703,3 +46703,180 @@ pub fn karn_the_great_creator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Not Dead After All — {B} Instant. Until end of turn, target creature you
+/// control gains "When this dies, return it tapped and create a Wicked Role
+/// token attached to it" (+1/+1; on the Role hitting a graveyard, each
+/// opponent loses 1).
+pub fn not_dead_after_all() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::Duration;
+    let wicked_role = TokenDefinition {
+        name: "Wicked".into(),
+        card_types: vec![CardType::Enchantment],
+        colors: vec![Color::Black],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
+            ..Default::default()
+        },
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Not Dead After All",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantTriggeredAbility {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            trigger: Box::new(TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOfMoved,
+                            tapped: true,
+                        },
+                    },
+                    Effect::CreateTokenAttachedTo {
+                        target: Selector::This,
+                        definition: wicked_role,
+                    },
+                ]),
+            }),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Ajani, Nacatl Pariah — {1}{W} 1/2 Cat Warrior. ETB: a 2/1 white Cat
+/// Warrior. When other Cats you control die, exile and return transformed
+/// into Ajani, Nacatl Avenger (+2 Cat counters / 0 Cat token + conditional
+/// burn / -4 Cataclysm).
+pub fn ajani_nacatl_pariah() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    let cat_token = || TokenDefinition {
+        name: "Cat Warrior".into(),
+        power: 2,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Warrior],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let avenger = CardDefinition {
+        name: "Ajani, Nacatl Avenger",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ajani],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Cat)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: cat_token(),
+                    },
+                    Effect::If {
+                        cond: Predicate::SelectorExists(Selector::EachPermanent(
+                            SelectionRequirement::HasColor(Color::Red)
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::OtherThanSource),
+                        )),
+                        then: Box::new(Effect::DealDamage {
+                            to: crate::effect::shortcut::target_any(),
+                            amount: Value::CreatureCountControlledBy(PlayerRef::You),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::SacrificeAllButOnePerType {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Ajani, Nacatl Pariah",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: cat_token(),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Cat),
+                    }),
+                effect: Effect::ExileSelfReturnTransformed,
+            },
+        ],
+        back_face: Some(Box::new(avenger)),
+        ..Default::default()
+    }
+}
+
+/// Indomitable Creativity — {X}{R}{R}{R} Sorcery. Destroy X target
+/// artifacts/creatures; each controller polymorphs into their first
+/// revealed artifact or creature, then shuffles.
+pub fn indomitable_creativity() -> CardDefinition {
+    CardDefinition {
+        name: "Indomitable Creativity",
+        cost: cost(&[x(), r(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DestroyTargetsPolymorph {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}

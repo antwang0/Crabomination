@@ -5497,6 +5497,118 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CreateTokenAttachedTo { target, definition } => {
+                // CR 111.10 Role-style token Aura: mint, then attach.
+                let Some(tid) = self
+                    .resolve_selector(target, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                if self.battlefield_find(tid).is_none() {
+                    return Ok(());
+                }
+                let def = token_to_card_definition(definition);
+                let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
+                if let Some(c) = self.battlefield_find_mut(minted) {
+                    c.attached_to = Some(tid);
+                }
+                Ok(())
+            }
+
+            Effect::DestroyTargetsPolymorph { filter } => {
+                // Destroy up to X chosen targets, then each destroyed
+                // permanent's controller reveals to the first artifact or
+                // creature card, battlefields it, and shuffles the rest in.
+                use crate::effect::RevealMissDest;
+                let x = ctx.x_value as usize;
+                let mut victims: Vec<(u8, usize)> = Vec::new();
+                let mut seen = std::collections::HashSet::new();
+                for (i, t) in ctx.targets.iter().enumerate().take(x) {
+                    if let Target::Permanent(id) = t
+                        && seen.insert(*id)
+                        && self.evaluate_requirement_static(filter, t, ctx.controller, ctx.source)
+                        && let Some(c) = self.battlefield_find(*id)
+                    {
+                        victims.push((i as u8, c.controller));
+                    }
+                }
+                let mut owed: Vec<usize> = Vec::new();
+                for (slot, controller) in victims {
+                    let before = self.permanents_destroyed_this_resolution;
+                    self.run_effect(
+                        &Effect::Destroy { what: crate::effect::Selector::Target(slot) },
+                        ctx,
+                        events,
+                    )?;
+                    if self.permanents_destroyed_this_resolution > before {
+                        owed.push(controller);
+                    }
+                }
+                let find = crate::card::SelectionRequirement::Artifact
+                    .or(crate::card::SelectionRequirement::Creature);
+                for p in owed {
+                    self.run_effect(
+                        &Effect::RevealUntilFind {
+                            who: crate::effect::PlayerRef::Seat(p),
+                            find: find.clone(),
+                            to: crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::Seat(p),
+                                tapped: false,
+                            },
+                            cap: crate::effect::Value::Const(500),
+                            life_per_revealed: 0,
+                            miss_dest: RevealMissDest::ShuffleIntoLibrary,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeAllButOnePerType { who } => {
+                use crate::card::CardType;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let mut keep: Vec<CardId> = Vec::new();
+                    for ty in [
+                        CardType::Artifact,
+                        CardType::Creature,
+                        CardType::Enchantment,
+                        CardType::Planeswalker,
+                    ] {
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && !c.definition.is_land()
+                                    && c.definition.card_types.contains(&ty)
+                                    && !keep.contains(&c.id)
+                            })
+                            .max_by_key(|c| c.definition.cost.cmc())
+                            .map(|c| c.id);
+                        if let Some(id) = pick {
+                            keep.push(id);
+                        }
+                    }
+                    let to_sac: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p && !c.definition.is_land() && !keep.contains(&c.id)
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    for id in to_sac {
+                        self.sacrifice_one(id, p, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::WishToHand { filter } => {
                 // Sideboard first ("outside the game"), then own exiled
                 // cards; a wants_ui controller picks via ChooseCards.
