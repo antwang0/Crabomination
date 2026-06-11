@@ -414,6 +414,7 @@ impl GameState {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == cid) {
             let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(cid);
+            self.collect_leaver_counters(&card);
             // CR 708.10 — a face-down permanent is turned face up as it leaves
             // the battlefield (no-op unless it carries a stashed real def).
             card.turn_face_up();

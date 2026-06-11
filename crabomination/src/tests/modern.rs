@@ -51549,3 +51549,66 @@ fn six_grants_retrace_during_your_turn() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "bear retraced onto the battlefield");
 }
+
+/// Student of Warfare's level bands set base P/T and grant keywords
+/// (CR 702.87); level up is sorcery-speed.
+#[test]
+fn student_of_warfare_levels_up() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let student = g.add_card_to_battlefield(0, catalog::student_of_warfare());
+    g.step = TurnStep::PreCombatMain;
+    let c = g.computed_permanent(student).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 1));
+    for _ in 0..2 {
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: student, ability_index: 0, target: None, x_value: None,
+        }).unwrap();
+        drain_stack(&mut g);
+    }
+    let c = g.computed_permanent(student).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "level 2 band");
+    assert!(c.keywords.contains(&Keyword::FirstStrike));
+    // Jump to level 7.
+    g.battlefield_find_mut(student).unwrap().add_counters(CounterType::Level, 5);
+    let c = g.computed_permanent(student).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "level 7+ band");
+    assert!(c.keywords.contains(&Keyword::DoubleStrike));
+    // Level up is sorcery-speed only.
+    g.step = TurnStep::DeclareBlockers;
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: student, ability_index: 0, target: None, x_value: None,
+    }).is_err());
+}
+
+/// The Ozolith catches a leaver's counters and unloads at begin combat.
+#[test]
+fn the_ozolith_collects_and_unloads_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let ozo = g.add_card_to_battlefield(0, catalog::the_ozolith());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    let mut evs = Vec::new();
+    g.sacrifice_one(bear, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ozo).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "counters caught"
+    );
+    // Begin combat on our turn: move them onto a creature.
+    let target = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "counters delivered"
+    );
+    assert_eq!(g.battlefield_find(ozo).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}

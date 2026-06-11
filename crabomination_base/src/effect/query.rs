@@ -342,6 +342,7 @@ impl Effect {
             | Effect::RemoveKeywordCounter { what, amount, .. } => {
                 sel_has_target(what) || value_has_target(amount)
             }
+            Effect::MoveAllCounters { from, to } => sel_has_target(from) || sel_has_target(to),
             Effect::MoveCounter { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
@@ -649,7 +650,7 @@ impl Effect {
             | Effect::NameCreatureType { what }
             | Effect::NameCard { what }
             | Effect::Explore { who: what } => sel_filter(what),
-            Effect::MoveCounter { from, to, .. } => {
+            Effect::MoveAllCounters { from, to } | Effect::MoveCounter { from, to, .. } => {
                 sel_filter(from).or_else(|| sel_filter(to))
             }
             Effect::Tribute { otherwise, .. } => otherwise.primary_target_filter(),
@@ -1348,7 +1349,8 @@ impl Effect {
                 | Effect::NameCard { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),
-                Effect::MoveCounter { from, to, .. } => {
+                Effect::MoveAllCounters { from, to }
+                | Effect::MoveCounter { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::BecomeCopyOf { what, source, .. }

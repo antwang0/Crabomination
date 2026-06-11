@@ -389,6 +389,10 @@ pub enum StaticEffect {
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,
+    /// The Ozolith: when a creature its controller controls leaves the
+    /// battlefield with counters on it, those counters move onto this
+    /// permanent (applied at the leave funnels).
+    CollectsLeaverCounters,
     /// CR 614.10 — skip-step replacement: "[players/you] skip [their/your]
     /// <step> step(s)." The skipped step never occurs — no turn-based
     /// actions, step triggers, or priority (a skipped untap also skips

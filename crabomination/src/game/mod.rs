@@ -2503,6 +2503,32 @@ impl GameState {
             })
     }
 
+    /// The Ozolith — when a creature leaves the battlefield with counters,
+    /// move them onto a `CollectsLeaverCounters` permanent its controller
+    /// controls. Called at the leave funnels with the just-removed card.
+    pub(crate) fn collect_leaver_counters(&mut self, card: &crate::card::CardInstance) {
+        use crate::effect::StaticEffect;
+        if !card.definition.is_creature() || card.counters.values().all(|&n| n == 0) {
+            return;
+        }
+        let collector = self.battlefield.iter().find(|c| {
+            c.controller == card.controller
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::CollectsLeaverCounters))
+        });
+        let Some(cid) = collector.map(|c| c.id) else { return };
+        let counters = card.counters.clone();
+        if let Some(c) = self.battlefield_find_mut(cid) {
+            for (kind, n) in counters {
+                if n > 0 {
+                    c.add_counters(kind, n);
+                }
+            }
+        }
+    }
+
     /// True when a static forbids casting `def` from `zone` (Cage: any
     /// spell from graveyards/libraries; Jailer: noncreature spells from
     /// graveyards or exile).
@@ -3415,6 +3441,42 @@ impl GameState {
                 duration: EffectDuration::WhileSourceOnBattlefield,
                 modification: Modification::SetPowerToughness(power, toughness),
             });
+        }
+        // CR 702.87 — Level up: the band matching the creature's level-counter
+        // count sets its base P/T (layer 7a CDA) and grants its keywords.
+        for card in &self.battlefield {
+            if card.definition.level_bands.is_empty() {
+                continue;
+            }
+            let lvl = card.counter_count(crate::card::CounterType::Level);
+            let Some(band) = card
+                .definition
+                .level_bands
+                .iter()
+                .find(|b| lvl >= b.min && b.max.is_none_or(|m| lvl <= m))
+            else {
+                continue;
+            };
+            all_effects.push(ContinuousEffect {
+                timestamp: card.object_timestamp(),
+                source: card.id,
+                affected: AffectedPermanents::Source,
+                layer: Layer::L7PowerTough,
+                sublayer: Some(PtSublayer::CharDefining),
+                duration: EffectDuration::WhileSourceOnBattlefield,
+                modification: Modification::SetPowerToughness(band.power, band.toughness),
+            });
+            for kw in &band.keywords {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(kw.clone()),
+                });
+            }
         }
         for card in &self.battlefield {
             let name = card.definition.name;
@@ -8358,6 +8420,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GraveyardExileLockdown
             | StaticEffect::GraveyardCardsHaveEscape { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
+            | StaticEffect::CollectsLeaverCounters
             // SkipStep — consulted by `advance_step` (CR 614.10); no layer.
             | StaticEffect::SkipStep { .. }
             // AttackPowerCapByControllerHand — consulted in declare_attackers.

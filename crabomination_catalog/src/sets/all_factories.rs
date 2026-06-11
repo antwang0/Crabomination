@@ -1841,6 +1841,8 @@ static DECKS: &[Factory] = &[
     super::decks::karplusan_minotaur,
     super::decks::underworld_breach,
     super::decks::six,
+    super::decks::student_of_warfare,
+    super::decks::the_ozolith,
     super::decks::spikefield_hazard,
     super::decks::malakir_rebirth,
     super::decks::bala_ged_recovery,

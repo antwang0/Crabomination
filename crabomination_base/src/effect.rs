@@ -2201,6 +2201,9 @@ pub enum Effect {
     /// When you do, move X +1/+1 counters from this creature onto
     /// another target creature" combat trigger.
     MoveCounter   { from: Selector, to: Selector, kind: CounterType, amount: Value },
+    /// Move every counter (all kinds) from `from` onto `to` (The Ozolith's
+    /// begin-combat transfer). Relocation, not creation — no doublers.
+    MoveAllCounters { from: Selector, to: Selector },
     /// CR 701.34a — Proliferate. "Choose any number of permanents and/or
     /// players that have a counter, then give each another counter of a
     /// kind already there." The auto-decider implements a strategic

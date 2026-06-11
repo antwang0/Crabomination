@@ -46417,3 +46417,65 @@ pub fn six() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Student of Warfare — {W} 1/1 Human Knight. Level up {W}. LEVEL 2-6:
+/// 3/3 first strike. LEVEL 7+: 4/4 double strike.
+pub fn student_of_warfare() -> CardDefinition {
+    use crate::card::LevelBand;
+    CardDefinition {
+        name: "Student of Warfare",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        level_bands: vec![
+            LevelBand { min: 2, max: Some(6), power: 3, toughness: 3, keywords: vec![Keyword::FirstStrike] },
+            LevelBand { min: 7, max: None, power: 4, toughness: 4, keywords: vec![Keyword::DoubleStrike] },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Level,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Ozolith — {1} Legendary Artifact. A creature you control leaving the
+/// battlefield drops its counters here; at the beginning of combat on your
+/// turn, move them all onto target creature.
+pub fn the_ozolith() -> CardDefinition {
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "The Ozolith",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Whenever a creature you control leaves the battlefield, if it had counters on it, put those counters on The Ozolith.",
+            effect: StaticEffect::CollectsLeaverCounters,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                kind: EventKind::StepBegins(TurnStep::BeginCombat),
+                scope: EventScope::YourControl,
+                filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
+                once_per_turn: false,
+            },
+            effect: Effect::MoveAllCounters {
+                from: Selector::This,
+                to: target_filtered(SelectionRequirement::Creature),
+            },
+        }],
+        ..Default::default()
+    }
+}

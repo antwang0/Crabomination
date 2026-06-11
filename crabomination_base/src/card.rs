@@ -756,6 +756,20 @@ impl CumulativeUpkeepCost {
     }
 }
 
+/// CR 702.87 — one "LEVEL N-M / P/T / abilities" band of a leveler card.
+/// While the creature's level-counter count falls in `[min, max]` (`max`
+/// `None` = open-ended "N+"), the band's P/T replaces the printed base
+/// (layer 7a CDA) and its keywords are granted (layer 6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LevelBand {
+    pub min: u32,
+    pub max: Option<u32>,
+    pub power: i32,
+    pub toughness: i32,
+    #[serde(default)]
+    pub keywords: Vec<Keyword>,
+}
+
 /// Composable filter for valid targets of a spell or ability.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SelectionRequirement {
@@ -1207,6 +1221,10 @@ pub struct CardDefinition {
     pub effect: Effect,
     pub activated_abilities: Vec<ActivatedAbility>,
     pub triggered_abilities: Vec<TriggeredAbility>,
+    /// CR 702.87 — Level-up bands (Student of Warfare). Empty for
+    /// non-leveler cards.
+    #[serde(default)]
+    pub level_bands: Vec<LevelBand>,
     pub loyalty_abilities: Vec<LoyaltyAbility>,
     /// CR 606.3 override — "You may activate the loyalty abilities of [this]
     /// twice each turn rather than only once." (Urza, Planeswalker.)

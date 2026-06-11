@@ -2355,6 +2355,7 @@ impl GameState {
             let card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
+            self.collect_leaver_counters(&card);
             // CR 122.1h — Finality counters redirect Battlefield →
             // Graveyard to Battlefield → Exile. Wilt in the Heat's "if
             // that creature would die this turn, exile it instead" rides
@@ -2440,6 +2441,7 @@ impl GameState {
             let card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
+            self.collect_leaver_counters(&card);
             let resolved = self.resolve_zone_change(
                 id,
                 crate::card::Zone::Battlefield,

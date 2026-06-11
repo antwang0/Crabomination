@@ -4178,6 +4178,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MoveAllCounters { from, to } => {
+                // CR 122.5 — relocation, not creation (no doublers).
+                let src = self.resolve_selector(from, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                let dst = self.resolve_selector(to, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                if let (Some(src), Some(dst)) = (src, dst)
+                    && src != dst
+                {
+                    let taken = self
+                        .battlefield_find_mut(src)
+                        .map(|c| std::mem::take(&mut c.counters))
+                        .unwrap_or_default();
+                    if let Some(d) = self.battlefield_find_mut(dst) {
+                        for (kind, n) in taken {
+                            if n > 0 {
+                                d.add_counters(kind, n);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: dst,
+                                    counter_type: kind,
+                                    count: n,
+                                });
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MoveCounter { from, to, kind, amount } => {
                 // CR 122.5: moving counters is a single zone-internal
                 // transfer, not a remove-then-add (DoubleCounters does
