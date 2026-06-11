@@ -45620,3 +45620,335 @@ pub fn recross_the_paths() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Modern staples batch 4: removal, energy, vampires, fish ─────────────────
+
+/// Shoot the Sheriff — {1}{B} Instant. Destroy target non-outlaw creature.
+pub fn shoot_the_sheriff() -> CardDefinition {
+    let outlaw = SelectionRequirement::HasCreatureType(CreatureType::Assassin)
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Mercenary))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Pirate))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Rogue))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Warlock));
+    CardDefinition {
+        name: "Shoot the Sheriff",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::Not(Box::new(outlaw))),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Meltdown — {X}{R} Sorcery. Destroy each artifact with mana value X or less.
+pub fn meltdown() -> CardDefinition {
+    CardDefinition {
+        name: "Meltdown",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Artifact),
+            body: Box::new(Effect::If {
+                cond: Predicate::ValueAtMost(
+                    Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    Value::XFromCost,
+                ),
+                then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sterling Grove — {G}{W} Enchantment. Other enchantments you control have
+/// shroud; {1}, Sacrifice: search an enchantment to the top of your library.
+pub fn sterling_grove() -> CardDefinition {
+    CardDefinition {
+        name: "Sterling Grove",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Other enchantments you control have shroud.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Enchantment
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Shroud,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Enchantment,
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: crate::effect::LibraryPosition::Top,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vein Ripper — {3}{B}{B}{B} 6/5 Vampire Assassin. Flying, Ward—sacrifice a
+/// creature. Any creature death drains target opponent for 2.
+pub fn vein_ripper() -> CardDefinition {
+    CardDefinition {
+        name: "Vein Ripper",
+        cost: cost(&[generic(3), b(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::SacrificeCreature)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sorin, Imperious Bloodlord — {2}{B} planeswalker, loyalty 4.
+pub fn sorin_imperious_bloodlord() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    let vampire = SelectionRequirement::HasCreatureType(CreatureType::Vampire);
+    CardDefinition {
+        name: "Sorin, Imperious Bloodlord",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        },
+                        keyword: Keyword::Deathtouch,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::Target(0),
+                            filter: vampire.clone(),
+                        },
+                        then: Box::new(Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::MayDo {
+                    description: "Sacrifice a Vampire for 3 damage + 3 life?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice {
+                            who: Selector::Player(PlayerRef::You),
+                            count: Value::Const(1),
+                            filter: SelectionRequirement::Creature.and(vampire.clone()),
+                        },
+                        Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    ])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature.and(vampire),
+                    count: Value::Const(1),
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Floodpits Drowner — {1}{U} 2/1 Merfolk, Flash, Vigilance. ETB: tap + stun
+/// an opposing creature. {1}{U}, {T}: shuffle this and a stunned creature
+/// into their owners' libraries.
+pub fn floodpits_drowner() -> CardDefinition {
+    CardDefinition {
+        name: "Floodpits Drowner",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::WithCounter(CounterType::Stun)),
+                    },
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOfMoved,
+                        pos: crate::effect::LibraryPosition::Shuffled,
+                    },
+                },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOfMoved,
+                        pos: crate::effect::LibraryPosition::Shuffled,
+                    },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tune the Narrative — {U} Instant. Draw a card; get {E}{E}.
+pub fn tune_the_narrative() -> CardDefinition {
+    CardDefinition {
+        name: "Tune the Narrative",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::AddEnergy(Value::Const(2)),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Leyline Axe — {4} Equipment; free start if in the opening hand.
+/// +1/+1, double strike, trample; Equip {3}.
+pub fn leyline_axe() -> CardDefinition {
+    use crate::card::EquipBonus;
+    use crate::effect::OpeningHandEffect;
+    CardDefinition {
+        name: "Leyline Axe",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::DoubleStrike, Keyword::Trample],
+            ..Default::default()
+        }),
+        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        ..Default::default()
+    }
+}
+
+/// Questing Druid // Seek the Beast — {1}{G} 1/1 with a {1}{R} Adventure
+/// (impulse two until your next end step); grows on non-green spells.
+pub fn questing_druid() -> CardDefinition {
+    CardDefinition {
+        name: "Questing Druid",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::Any(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasColor(Color::White),
+                    },
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasColor(Color::Blue),
+                    },
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasColor(Color::Black),
+                    },
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasColor(Color::Red),
+                    },
+                ]),
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        adventure: Some(Box::new(Adventure {
+            name: "Seek the Beast",
+            cost: cost(&[generic(1), r()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+        })),
+        ..Default::default()
+    }
+}

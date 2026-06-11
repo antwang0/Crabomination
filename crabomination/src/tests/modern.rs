@@ -51034,3 +51034,196 @@ fn cr_701_30_recross_the_paths_clash_win_returns_to_hand() {
         "won clash (5 vs 2) returns the spell to hand"
     );
 }
+
+// ── Modern staples batch 4 ───────────────────────────────────────────────────
+
+/// Shoot the Sheriff can't hit outlaws.
+#[test]
+fn shoot_the_sheriff_rejects_outlaws() {
+    let mut g = two_player_game();
+    let rogue = g.add_card_to_battlefield(1, catalog::brazen_borrower()); // Rogue
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sts = g.add_card_to_hand(0, catalog::shoot_the_sheriff());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: sts, target: Some(Target::Permanent(rogue)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "outlaw is protected");
+    cast_at(&mut g, sts, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "non-outlaw destroyed");
+}
+
+/// Meltdown X=1 clears cheap artifacts only.
+#[test]
+fn meltdown_destroys_artifacts_up_to_x() {
+    let mut g = two_player_game();
+    let cheap = g.add_card_to_battlefield(1, catalog::ornithopter());   // MV 0
+    let pricey = g.add_card_to_battlefield(1, catalog::mind_stone());   // MV 2
+    let melt = g.add_card_to_hand(0, catalog::meltdown());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: melt, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
+    }).expect("Meltdown X=1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cheap).is_none(), "MV 0 destroyed");
+    assert!(g.battlefield_find(pricey).is_some(), "MV 2 survives X=1");
+}
+
+/// Sterling Grove gives OTHER enchantments shroud (not itself) and tutors
+/// an enchantment to the library top.
+#[test]
+fn sterling_grove_shroud_and_tutor() {
+    let mut g = two_player_game();
+    let grove = g.add_card_to_battlefield(0, catalog::sterling_grove());
+    let other = g.add_card_to_battlefield(0, catalog::necrodominance());
+    assert!(
+        g.computed_permanent(other).unwrap().keywords.contains(&crate::card::Keyword::Shroud),
+        "other enchantment shrouded"
+    );
+    assert!(
+        !g.computed_permanent(grove).unwrap().keywords.contains(&crate::card::Keyword::Shroud),
+        "grove itself is not shrouded"
+    );
+    g.add_card_to_library(0, catalog::leyline_of_the_void());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: grove, ability_index: 0, target: None, x_value: None,
+    }).expect("tutor");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(grove).is_none(), "grove sacrificed");
+    assert_eq!(
+        g.players[0].library.first().map(|c| c.definition.name),
+        Some("Leyline of the Void"),
+        "enchantment on top"
+    );
+}
+
+/// Vein Ripper drains on any creature death.
+#[test]
+fn vein_ripper_drains_on_creature_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vein_ripper());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.sacrifice_one(bear, 1, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "opponent drained 2");
+    assert_eq!(g.players[0].life, 22, "controller gained 2");
+}
+
+/// Sorin, Imperious Bloodlord -3 cheats a Vampire into play.
+#[test]
+fn sorin_bloodlord_minus_three_deploys_vampire() {
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_imperious_bloodlord());
+    let vamp = g.add_card_to_hand(0, catalog::vein_ripper());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![vamp])]));
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: sorin, ability_index: 2, target: None, x_value: None,
+    }).expect("Sorin -3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vamp).is_some(), "Vampire deployed from hand");
+    assert_eq!(
+        g.battlefield_find(sorin).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        1,
+        "4 - 3 loyalty"
+    );
+}
+
+/// Floodpits Drowner stuns on entry and shuffles itself + the stunned
+/// creature away.
+#[test]
+fn floodpits_drowner_stuns_then_shuffles_both_away() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let fish = g.add_card_to_hand(0, catalog::floodpits_drowner());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, fish, Target::Permanent(bear));
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped && b.counter_count(crate::card::CounterType::Stun) == 1, "tapped + stunned");
+
+    let fish_id = g.battlefield.iter().find(|c| c.definition.name == "Floodpits Drowner").unwrap().id;
+    g.battlefield_find_mut(fish_id).unwrap().summoning_sick = false;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fish_id, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("shuffle ability");
+    drain_stack(&mut g);
+    assert!(g.players[1].library.iter().any(|c| c.id == bear), "bear shuffled in");
+    assert!(g.players[0].library.iter().any(|c| c.id == fish_id), "drowner shuffled in");
+}
+
+/// Tune the Narrative draws and banks two energy.
+#[test]
+fn tune_the_narrative_draws_and_adds_energy() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let tn = g.add_card_to_hand(0, catalog::tune_the_narrative());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: tn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+    assert_eq!(g.players[0].energy, 2, "two energy banked");
+}
+
+/// Leyline Axe may start on the battlefield from the opening hand.
+#[test]
+fn leyline_axe_starts_in_play_from_opening_hand() {
+    let mut g = two_player_game();
+    let axe = g.add_card_to_hand(0, catalog::leyline_axe());
+    g.fire_start_of_game_effects();
+    assert!(g.battlefield_find(axe).is_some(), "leyline drop");
+}
+
+/// Questing Druid grows on a non-green-colored spell; its Adventure
+/// impulses two cards.
+#[test]
+fn questing_druid_grows_and_adventure_impulses() {
+    let mut g = two_player_game();
+    let druid = g.add_card_to_hand(0, catalog::questing_druid());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: druid, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("creature half");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("red spell");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(druid).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
+        1,
+        "red spell grew the druid"
+    );
+
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let druid = g.add_card_to_hand(0, catalog::questing_druid());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: druid, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Seek the Beast");
+    drain_stack(&mut g);
+    // The adventuring card itself also sits in exile (CR 715.3d).
+    assert_eq!(
+        g.exile.iter().filter(|c| c.owner == 0 && c.id != druid).count(),
+        2,
+        "impulsed two"
+    );
+}
