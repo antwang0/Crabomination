@@ -1898,3 +1898,22 @@ fn cr_704_5y_different_controllers_roles_coexist() {
     let n = g.battlefield.iter().filter(|c| c.definition.name == "Cursed").count();
     assert_eq!(n, 2, "one Role per controller may stay");
 }
+
+/// Nylea, Keen-Eyed's nonland miss offers "put it into your graveyard";
+/// accepting bins the reveal, declining leaves it on top.
+#[test]
+fn nylea_reveal_miss_may_go_to_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let top = g.add_card_to_library(0, catalog::lightning_bolt()); // not a creature
+    let nylea = g.add_card_to_battlefield(0, catalog::nylea_keen_eyed());
+    g.clear_sickness(nylea);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nylea, ability_index: 0, target: None, x_value: None,
+    }).expect("activate the reveal");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "miss binned by choice");
+}

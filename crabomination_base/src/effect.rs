@@ -2754,7 +2754,14 @@ pub enum Effect {
 
     // ── Misc atomic operations needed by existing cards ──────────────────────
     /// Reveal the top card of `who`'s library; if `reveal_filter` matches, draw it.
-    RevealTopAndDrawIf { who: PlayerRef, reveal_filter: SelectionRequirement },
+    RevealTopAndDrawIf {
+        who: PlayerRef,
+        reveal_filter: SelectionRequirement,
+        /// On a miss, the player may put the revealed card into their
+        /// graveyard instead of leaving it on top (Nylea, Keen-Eyed).
+        #[serde(default)]
+        may_graveyard_miss: bool,
+    },
 
     /// Reveal the top card of `who`'s library (fires `TopCardRevealed` event for
     /// the animation) without moving it. Used by Chaos Warp's "reveal top card"

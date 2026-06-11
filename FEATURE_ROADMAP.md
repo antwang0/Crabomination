@@ -31,7 +31,7 @@ and the rules-coverage audit in `TODO.md`.
   Monstrosity/Devour/Amass); cast-mode + alt-cost (Kicker/Casualty/Connive/
   Offspring/Plot/Saddle/Blitz/Spectacle/Escalate/Buyback/Bestow/Foretell/
   Suspend/Flashback/Madness/Escape/Adventure/Cascade/Storm/Convoke/Delve);
-  plus Phasing-adjacent Fading/Vanishing, Cumulative Upkeep, Echo, Dredge,
+  Absorb; plus Phasing-adjacent Fading/Vanishing, Cumulative Upkeep, Echo, Dredge,
   Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift, Unleash,
   Devoid (CDA colorless), Ingest.
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
@@ -641,11 +641,15 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    ✅ `ChooseAmount` (sacrifice-any-number / pay-life), ✅ creature-type
    choices incl. the Crippling Fear sweep (+ engine-ranked `suggestions`
    on the wire; this also fixes the `ChooseCreatureType` client softlock —
-   the engine suspended but no modal existed). Remaining ⏳:
-   `CommanderRedirect` and `ChooseLegendToKeep` (raised inside damage
-   application / SBA processing, outside the effect-resolution suspend
-   machinery), and modal triggers with *targeting* modes (target slots are
-   assigned at push time, so those still pick synchronously).
+   the engine suspended but no modal existed), ✅ **seat-routed yes/no
+   asks** (`ask_seat_bool` + the replayable answer log — rhystic taxes,
+   Tribute, Browbeat/Tempting Offer, Clash bottoming, MayPay all prompt
+   the right `wants_ui` seat). Remaining ⏳: `CommanderRedirect` and
+   `ChooseLegendToKeep` (raised inside damage application / SBA
+   processing, outside the effect-resolution suspend machinery), modal
+   triggers with *targeting* modes (target slots are assigned at push
+   time, so those still pick synchronously), and non-Bool opponent-owned
+   picks (searches, Fateseal).
 
 ## Tier 8 — UI / UX quality-of-life
 
@@ -719,8 +723,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 - 🟡 **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
   The per-action rope ships server-side (`CRAB_ACTION_TIMEOUT_SECS` →
   `run_match_inner`'s `action_timeout`; on expiry the actor auto-answers
-  the pending decision via AutoDecider or passes priority, with a notice
-  to the seat). Remaining: per-game chess clock, client-side rope UI.
+  the pending decision via AutoDecider or passes priority). The seat now
+  sees it: `ServerMsg::Rope` on arming + a client countdown banner at
+  ≤15s and a "server acted for you" notice. Remaining: per-game chess
+  clock.
 - ⏳ **Friends / invites / ratings / leaderboards** (server-side).
 - ⏳ **Free-for-all politics** UI (deals, voting, monarch/initiative
   passing) for 3+ player tables.

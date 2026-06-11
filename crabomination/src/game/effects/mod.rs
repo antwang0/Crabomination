@@ -6710,7 +6710,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopAndDrawIf { who, reveal_filter } => {
+            Effect::RevealTopAndDrawIf { who, reveal_filter, may_graveyard_miss } => {
                 // Each resolved player reveals the top card of their library;
                 // if it matches `reveal_filter`, that player puts it into
                 // their hand (otherwise it stays on top).
@@ -6727,6 +6727,7 @@ impl GameState {
                 // listen to *all* library→hand moves, but no current
                 // card needs that; if/when one lands, add the event
                 // here in front of the silent move.
+                let mut cursor = 0;
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else {
                         continue;
@@ -6738,6 +6739,22 @@ impl GameState {
                     // here since the card is in the library).
                     let matches =
                         self.evaluate_requirement_on_card(reveal_filter, top, ctx.controller);
+                    // On a miss the revealer may bin the card instead of
+                    // leaving it on top (Nylea, Keen-Eyed). Seat-routed; the
+                    // only carded users resolve a single player, so the
+                    // pre-ask reveal event can't double-emit on re-run.
+                    let bin = !matches
+                        && *may_graveyard_miss
+                        && match self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            format!("Revealed {card_name} — put it into your graveyard?"),
+                            ctx.source.unwrap_or(CardId(0)),
+                            effect,
+                        ) {
+                            Some(b) => b,
+                            None => return Ok(()),
+                        };
                     events.push(GameEvent::TopCardRevealed {
                         player: p,
                         card_name,
@@ -6747,8 +6764,12 @@ impl GameState {
                         let card = self.players[p].library.remove(0);
                         self.players[p].hand.push(card);
                         // Intentionally no CardDrawn event (CR 121.5).
+                    } else if bin {
+                        let card = self.players[p].library.remove(0);
+                        self.route_to_graveyard(card, events);
                     }
                 }
+                self.clear_answer_log();
                 Ok(())
             }
 

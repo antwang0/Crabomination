@@ -308,23 +308,34 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     (escape-with-counters + fight activation), **Elspeth Conquers Death**
     (saga + cost tax + reanimate chapter) — all primitives exist in parts;
     just card work.
-- ⏳ **Noticed this run (gods / rope / split-second batch):**
-  - **Rope client UI** — the server's `CRAB_ACTION_TIMEOUT_SECS` rope sends
-    only an `ActionError` notice when it acts for a stalled seat; a visible
-    countdown / "the server passed for you" toast would surface it properly.
-  - **Opponent-owned `MayDo`/`Search` decisions** still answer through the
+- ⏳ **Noticed this run (gods / rope / split-second batch):** Rope client
+  UI ✅ (`ServerMsg::Rope` + countdown banner), Nylea's may-bin reveal ✅,
+  `AutoDecider` empty-`ChooseTarget` fallback ✅. Remaining:
+  - **Opponent-owned `Search` decisions** still answer through the
     resolving controller's decider (Boseiju's "that player may search",
-    Karametra's fetch under a `wants_ui` opponent) — same family as the
-    existing per-seat decider-routing note.
-  - **Nylea, Keen-Eyed's nonland branch** omits the optional "you may put it
-    into your graveyard" (the reveal stays on top instead).
-  - **`AutoDecider::decide` panics on an empty `ChooseTarget.legal` set** —
-    unreachable today (the engine never raises an empty-choice decision),
-    but the rope path now calls it server-side; a graceful fallback would
-    be cheap insurance.
+    Karametra's fetch under a `wants_ui` opponent). Yes/no questions are
+    seat-routed now (`ask_seat_bool`); searches/pickers are not.
   - **`Selector::LastCreatedTokens` + `GrantKeyword`** (Sokenzan) grants
     haste only to tokens minted in the same resolution — fine today; a
     "they gain haste" rider on `CreateToken` would be tidier.
+
+- ⏳ **Noticed this run (slivers / seat-routed asks batch):**
+  - **Homing Sliver** — needs statics that grant cycling to *hand* cards
+    ("Each Sliver card in each player's hand has slivercycling {3}").
+  - **Sedge Sliver / Sliver Legion** — granting *conditional statics*
+    ("+1/+1 while you control a Swamp") and per-count anthems ("+1/+1 for
+    each other Sliver") to a class of permanents isn't modeled.
+  - **Opaline Sliver** fires on any targeting spell (printed: an
+    opponent's); `EventKind::BecameTarget` doesn't carry a caster gate
+    for SelfSource scopes.
+  - **TemptingOffer ordering** — opponents now answer before the body
+    runs (re-run idempotency); printed timing shows them the
+    controller's result first.
+  - **Statics-granted triggers from died-LKI snapshots** — the
+    died-card Enrage walk only reads printed triggers; a granted
+    "when this is dealt damage" wouldn't fire on lethal damage.
+  - **Answer-log nesting** — `ask_seat_bool` users can't nest another
+    log-using effect inside their own ask sequence (single shared log).
 
 - ⏳ **Noticed (Modern staples batch, 2026-06-11):** 38 staples shipped
   across three waves (see git). The "deferred, each wanting one primitive"
@@ -348,12 +359,13 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **Spellskite** ability-on-stack targets (only spell targets redirect).
 
 - ⏳ **Noticed this run (claude/modern_decks, 2026-06-11 second pass):**
-  - **Per-seat decider routing** — `UnlessPlayerPays` (rhystic/Kataki taxes),
-    `RevealTopToHandLoseLifeRepeat`, and the new Seek library pick all answer
-    through the single global decider; a networked `wants_ui` seat should get
-    a stash-and-rerun suspend (same family as the existing MayPay/Fateseal
-    notes). Kataki under AutoDecider always declines → bots sacrifice their
-    artifacts even with open mana.
+  `UnlessPlayerPays` per-seat routing ✅ (rhystic/Kataki taxes now prompt
+  the taxed `wants_ui` seat via `ask_seat_bool`). Remaining:
+  - **`RevealTopToHandLoseLifeRepeat` + Seek library pick** still answer
+    through the single global decider (non-Bool decisions; the
+    `ask_seat_bool` replay-log only covers yes/no questions).
+    Kataki under AutoDecider still declines → bots sacrifice their
+    artifacts even with open mana (needs a bot heuristic, not routing).
   - **`SacrificeOrPay` chooser** — the auto rule (sacrifice when a match
     exists, else fold the pay into the cost) is deterministic; a wants_ui
     "which half?" picker would make Bayou Groff interactive.
@@ -363,10 +375,8 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **Vizier of Many Faces** — embalm clone still wants an
     embalm-copy-any-creature path.
 
-- ⏳ **Noticed this run (follow-ups sweep):**
-  - **`Effect::MayPay` for a `wants_ui` seat** still answers through the
-    synchronous decider (Springheart's landfall pay) — the `MayDo`
-    stash-and-rerun suspend should be extended to cover it.
+- ⏳ **Noticed this run (follow-ups sweep):** `Effect::MayPay` wants_ui
+  suspend ✅ (seat-routed). Remaining:
   - **Nadu's granted ability** is modeled as a trigger on Nadu itself with
     a per-subject cap (behaviorally equivalent); a true "creatures you
     control have [triggered ability]" static grant framework is still open
@@ -378,8 +388,8 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ⏳ **Noticed (modern_decks batches 4-6):** all the listed cards shipped
   (Nadu / Six / Ajani MDFC / Kozilek / Ulamog the Defiler / Springheart /
   Not Dead After All / Indomitable Creativity — each with its primitive).
-  Remaining: **Clash** (CR 701.30) is synchronous-decider only; a
-  `wants_ui` seat should get the bottom-or-keep prompt.
+  Remaining: none — Clash (CR 701.30) now prompts each `wants_ui` seat
+  to bottom or keep via the seat-routed answer log.
 
 - ⏳ **Noticed (staples expansion / audit):** The Ozolith, Soulless Jailer,
   Underworld Breach, Karn the Great Creator, and Sunken Citadel all shipped
@@ -1561,6 +1571,18 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.64 — Absorb** — `Keyword::Absorb(n)` soaks N per damage event
+  at the shared prevention funnel (combat + non-combat). Lymph Sliver
+  (grant via `GrantKeyword`). Tests `cr_702_64_*`.
+- ✅ **CR 704.5y — Role uniqueness SBA** — same-controller duplicate Roles
+  on one host: all but the newest (battlefield timestamp) hit the
+  graveyard. Tests `cr_704_5y_*`.
+- ✅ **CR 701.30 — Clash, seat-routed** — both clashing `wants_ui` players
+  get the bottom-or-keep prompt via the resolution answer log
+  (`ask_seat_bool`); reveal events and zone moves stay after the asks so
+  the suspend re-run is idempotent. Test `clash_prompts_each_ui_seat_to_bottom`.
+- ✅ **CR 702.104 — Tribute, seat-routed** — the opponent (not the global
+  decider) answers the tribute question. Test `tribute_question_routes_to_the_opponent`.
 - ✅ **CR 700.4 — "dies" under graveyard→exile replacements** — a creature
   whose death-placement is redirected to exile (Rest in Peace, Leyline,
   void/finality, Kalitas) never dies: self/equipment dies triggers, watcher
@@ -1718,8 +1740,9 @@ picking an item up.
   final chapter → sacrifice, unless a chapter ability is still on the stack);
   spell-copy-off-stack identity ✅ (704.5d/e — the token-purge SBA sweeps
   copies from every non-stack zone; test
-  `cr_704_5e_countered_spell_copy_ceases_to_exist`). Battle / Role / Dungeon
-  / Speed SBAs remain; multi-SBA "collapse into one replacement" (704.7).
+  `cr_704_5e_countered_spell_copy_ceases_to_exist`); Role uniqueness ✅
+  (704.5y). Battle / Dungeon / Speed SBAs remain; multi-SBA "collapse into
+  one replacement" (704.7).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed.)
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. ⚠️ Audit 2026-06-11: the replacements apply inside `adjust_life` but callers still emit `LifeGained` with the pre-replacement amount (triggers fire on suppressed gains), and `SetLifeTotal`/`ExchangeLifeTotals` bypass `adjust_life` entirely — see audit P1.

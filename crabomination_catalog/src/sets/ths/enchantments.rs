@@ -812,6 +812,7 @@ pub fn nylea_keen_eyed() -> CardDefinition {
             effect: Effect::RevealTopAndDrawIf {
                 who: PlayerRef::You,
                 reveal_filter: SelectionRequirement::Creature,
+                may_graveyard_miss: true,
             },
             ..Default::default()
         }],
