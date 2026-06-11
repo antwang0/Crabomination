@@ -48428,3 +48428,138 @@ pub fn alpine_moon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── AKH embalm pair + Bring to Light + Conspicuous Snoop ────────────────────
+
+/// Heart-Piercer Manticore — {2}{R}{R} 4/3 Manticore. ETB: may sacrifice
+/// another creature — deal damage equal to its power to any target.
+/// Embalm {5}{R}.
+pub fn heart_piercer_manticore() -> CardDefinition {
+    CardDefinition {
+        name: "Heart-Piercer Manticore",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Manticore],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Sacrifice another creature to deal its power in damage?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Any),
+                    amount: Value::SacrificedPower,
+                },
+            ])),
+        })],
+        activated_abilities: vec![crate::effect::shortcut::embalm(cost(&[generic(5), r()]))],
+        ..Default::default()
+    }
+}
+
+/// Aven Wind Guide — {2}{W}{U} 2/3 Bird Warrior, flying + vigilance.
+/// Creature tokens you control have flying and vigilance. Embalm {4}{W}{U}.
+pub fn aven_wind_guide() -> CardDefinition {
+    let tokens = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::IsToken)
+                .and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Aven Wind Guide",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creature tokens you control have flying.",
+                effect: StaticEffect::GrantKeyword { applies_to: tokens(), keyword: Keyword::Flying },
+            },
+            StaticAbility {
+                description: "Creature tokens you control have vigilance.",
+                effect: StaticEffect::GrantKeyword { applies_to: tokens(), keyword: Keyword::Vigilance },
+            },
+        ],
+        activated_abilities: vec![crate::effect::shortcut::embalm(cost(&[generic(4), w(), u()]))],
+        ..Default::default()
+    }
+}
+
+/// Bring to Light — {3}{G}{U} Sorcery, Converge. Search for a creature,
+/// instant, sorcery, or planeswalker with MV ≤ colors of mana spent, exile
+/// it, cast it free.
+pub fn bring_to_light() -> CardDefinition {
+    CardDefinition {
+        name: "Bring to Light",
+        cost: cost(&[generic(3), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCardType(CardType::Creature)
+                    .or(SelectionRequirement::HasCardType(CardType::Instant))
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .or(SelectionRequirement::HasCardType(CardType::Planeswalker))
+                    .and(SelectionRequirement::ManaValueAtMostConverged),
+                to: ZoneDest::Exile,
+            },
+            Effect::CastWithoutPayingImmediate {
+                what: Selector::LastMoved,
+                source_zone: crate::card::Zone::Exile,
+                exile_after: false,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Conspicuous Snoop — {R}{R} 2/2 Goblin Rogue. Top of library revealed;
+/// may cast Goblin spells from the top; has all activated abilities of the
+/// top card while it's a Goblin.
+pub fn conspicuous_snoop() -> CardDefinition {
+    CardDefinition {
+        name: "Conspicuous Snoop",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Play with the top card of your library revealed.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may cast Goblin spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                },
+            },
+            StaticAbility {
+                description: "While your library's top card is a Goblin, this has its activated abilities.",
+                effect: StaticEffect::HasActivatedAbilitiesOfLibraryTop {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

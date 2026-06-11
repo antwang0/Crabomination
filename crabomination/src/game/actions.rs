@@ -6287,6 +6287,27 @@ impl GameState {
                 }
             }
         }
+        // Conspicuous Snoop — while the controller's library top matches the
+        // static's filter, the source has all of that card's battlefield-
+        // usable activated abilities (the top card is revealed by the
+        // companion `TopOfLibraryRevealed` static).
+        if let Some(c) = self.battlefield_find(card_id) {
+            for sa in &c.definition.static_abilities {
+                let StaticEffect::HasActivatedAbilitiesOfLibraryTop { filter } = &sa.effect else {
+                    continue;
+                };
+                if let Some(top) = self.players[c.controller].library.first()
+                    && self.evaluate_requirement_on_card(filter, top, c.controller)
+                {
+                    for ab in &top.definition.activated_abilities {
+                        if ab.from_graveyard || ab.exile_self_cost || ab.from_hand {
+                            continue;
+                        }
+                        out.push(ab.clone());
+                    }
+                }
+            }
+        }
         // Agatha's Soul Cauldron — a creature you control with a +1/+1
         // counter has all activated abilities of creature cards exiled
         // with any Cauldron its controller controls.

@@ -379,6 +379,11 @@ pub enum StaticEffect {
     /// source]." Agatha's Soul Cauldron — the exile-zone sibling of
     /// `HasActivatedAbilitiesOfGraveyardCreatures`.
     CounteredCreaturesHaveAbilitiesOfExiledWithSource,
+    /// "As long as the top card of your library is a [filter] card, this
+    /// creature has all activated abilities of that card" (Conspicuous
+    /// Snoop). A self-only grant surfaced by `granted_abilities_for`,
+    /// reading the controller's live library top.
+    HasActivatedAbilitiesOfLibraryTop { filter: SelectionRequirement },
     /// Grafdigger's Cage: creature cards in graveyards and libraries can't
     /// enter the battlefield, and players can't cast spells from graveyards
     /// or libraries.

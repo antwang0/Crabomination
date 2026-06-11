@@ -99,6 +99,8 @@ pub enum CreatureType {
     Spike,
     // Ravnica Weird (Turn // Burn's 0/1).
     Weird,
+    // Amonkhet (Heart-Piercer Manticore).
+    Manticore,
     // Artifact-creature token subtypes (Hangarback Walker's Thopters,
     // Kaladesh Fabricate Servos).
     Thopter,
@@ -920,6 +922,11 @@ pub enum SelectionRequirement {
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.
     ManaValueAtMostXFromCost,
+    /// Mana value ≤ the resolving spell's converge count (distinct colors of
+    /// mana spent — CR 702.86). Resolved to a concrete `ManaValueAtMost(n)`
+    /// by `resolve_converge` at search-resolution time (Bring to Light);
+    /// unresolved instances evaluate false.
+    ManaValueAtMostConverged,
     ManaValueAtLeast(u32),
     /// True when the card's mana value (CMC) is exactly `n`. Useful for
     /// effects that want a precise CMC gate (Fix What's Broken returns
@@ -1076,6 +1083,23 @@ impl SelectionRequirement {
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),
+            other => other.clone(),
+        }
+    }
+
+    /// Replace `ManaValueAtMostConverged` with a concrete
+    /// `ManaValueAtMost(n)` for the resolving spell's converge count
+    /// (Bring to Light), recursing through And/Or/Not.
+    pub fn resolve_converge(&self, n: u32) -> Self {
+        match self {
+            Self::ManaValueAtMostConverged => Self::ManaValueAtMost(n),
+            Self::And(a, b) => {
+                Self::And(Box::new(a.resolve_converge(n)), Box::new(b.resolve_converge(n)))
+            }
+            Self::Or(a, b) => {
+                Self::Or(Box::new(a.resolve_converge(n)), Box::new(b.resolve_converge(n)))
+            }
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_converge(n))),
             other => other.clone(),
         }
     }

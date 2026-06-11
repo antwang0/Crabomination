@@ -8479,6 +8479,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GrantActivatedAbility { .. }
             // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
+            | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }
             | StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::ActivationCostReduction { .. }

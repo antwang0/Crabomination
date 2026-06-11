@@ -1165,7 +1165,7 @@ impl GameState {
                     )),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
                     // Unresolved X-relative filter (no X in scope here).
-                    R::ManaValueAtMostXFromCost => false,
+                    R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
                     R::ManaValueEqualsSacrificedPlus(off) => {
@@ -1355,7 +1355,7 @@ impl GameState {
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
-            R::ManaValueAtMostXFromCost => false,
+            R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             // Unresolved source-counter MV gate (concretized at resolution

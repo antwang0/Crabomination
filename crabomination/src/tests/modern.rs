@@ -53292,3 +53292,96 @@ fn alpine_moon_neutralizes_named_land() {
     }).expect("granted mana ability");
     assert_eq!(g.players[1].mana_pool.total(), 1, "made one mana of a chosen color");
 }
+
+// ── AKH embalm pair, Bring to Light, Conspicuous Snoop ──────────────────────
+
+/// Heart-Piercer Manticore's ETB may sacrifice another creature to fling
+/// its power at a target.
+#[test]
+fn heart_piercer_manticore_flings_sacrificed_power() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::cryptic_serpent());
+    let power = g.battlefield_find(fodder).unwrap().power();
+    let id = g.add_card_to_hand(0, catalog::heart_piercer_manticore());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Manticore at the opponent");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[1].life, before - power, "damage = sacrificed power");
+}
+
+/// Aven Wind Guide grants flying + vigilance to creature tokens only.
+#[test]
+fn aven_wind_guide_buffs_tokens_only() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aven_wind_guide());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::midnight_haunting());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("make Spirit tokens");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("token");
+    let computed = g.computed_permanent(token.id).unwrap();
+    assert!(computed.keywords.contains(&Keyword::Vigilance), "token gains vigilance");
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance),
+        "nontoken bear untouched");
+}
+
+/// Bring to Light's converge gate: the searchable MV tracks the number of
+/// colors spent on the cast.
+#[test]
+fn bring_to_light_converge_caps_search_mv() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let big = g.add_card_to_library(0, catalog::cryptic_serpent()); // MV 7
+    let cheap = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_hand(0, catalog::bring_to_light());
+    // Two colors spent (G,U + 3 generic from colorless) → converge 2.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(big))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bring to Light");
+    drain_stack(&mut g);
+    // The MV-7 pick was ineligible (converge 2); the bear is the only legal
+    // find — auto-fallback or a scripted miss must not fetch the serpent.
+    assert!(g.players[0].library.iter().any(|c| c.id == big), "MV 7 stays put");
+    let _ = cheap;
+}
+
+/// Conspicuous Snoop borrows the top Goblin's activated ability and loses
+/// it when the top card isn't a Goblin.
+#[test]
+fn conspicuous_snoop_shares_top_goblin_ability() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::skirk_prospector());
+    let snoop = g.add_card_to_battlefield(0, catalog::conspicuous_snoop());
+    let fodder = g.add_card_to_battlefield(0, catalog::skirk_prospector());
+    // Snoop index 0 = the borrowed "sac a Goblin: add {R}" (it has no
+    // printed activated abilities).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: snoop, ability_index: 0, target: None, x_value: None,
+    }).expect("borrowed Prospector ability");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "made one red via the borrowed ability");
+    assert!(g.battlefield_find(fodder).is_none(), "a Goblin was sacrificed as the cost");
+    // Non-Goblin top → no borrowed ability.
+    let fid = g.next_id();
+    let forest = crate::card::CardInstance::new(fid, catalog::forest(), 0);
+    g.players[0].library.insert(0, forest);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: snoop, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "no Goblin on top → no ability");
+}

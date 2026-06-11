@@ -5552,7 +5552,7 @@ impl GameState {
                 // Collect candidates from the library using definition-level evaluation
                 // (cards are not on the battlefield so battlefield_find would fail).
                 // X-dependent filters concretize against the paid X (Chord of Calling).
-                let filter = filter.resolve_x(ctx.x_value);
+                let filter = filter.resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
                 let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
                     .library
                     .iter()
