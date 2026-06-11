@@ -63,7 +63,12 @@ and the rules-coverage audit in `TODO.md`.
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant (+ teams);
   singleplayer vs. bot, networked TCP multiplayer, draft + cube, Learn/Lessons
   sideboard, full-state serde snapshots (save/restore + replay foundation).
-- **Ability/trigger riders:** once-per-turn triggers (`EventSpec::once_per_turn`,
+- **Ability/trigger riders:** statics-granted triggered abilities
+  (`StaticEffect::GrantTriggeredAbility` — "all artifacts have …", Kataki;
+  wired in both trigger dispatchers), conditional aura riders
+  (`EquipBonus.conditional` — Shield of the Oversoul), rhystic taxes
+  (`UnlessPlayerPays` + `WardCost::GenericSourcePower` — Esper Sentinel),
+  once-per-turn triggers (`EventSpec::once_per_turn`,
   CR 603.3d), opponents-only activations (`ActivatedAbility.opponents_only`, CR
   602.5), discard-self activation cost (`discard_self_cost`), counter-to-exile
   (`CounterUnlessPaid.exile`), `Predicate::PlayerSacrificedThisResolution`,
@@ -612,8 +617,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    primary target plus every `additional_targets` slot (dimmer secondary
    arrows), and resolves stack→stack targets so counter magic points at the
    spell it counters.
-6. ⏳ **Hold-priority toggle** ("F" key auto-pass; shift-hold to keep
-   priority after your spell resolves).
+6. ✅ **Hold-priority toggle** — `H` key / "Auto-pass" toolbar button flips
+   `FastForward::manual_priority`; while on, `auto_advance_p0` never passes
+   for the player (explicit End Turn / Next Turn / click-to-advance still
+   override). Shift-hold-after-your-spell remains ⏳.
 7. ⏳ **Stack visualization** with response affordances and "respond / let
    resolve" per item.
 8. ✅ **Phase bar / step indicator** — the left-edge phase chart shows every

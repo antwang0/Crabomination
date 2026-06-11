@@ -270,12 +270,14 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `DiscardChosen` / `ManaClash` holes; ChooseN gets a cast-time fallback
   filter). Remaining: the two `evaluate_requirement` evaluators and
   printed-vs-computed combat checks still lack guards.
-- ⏳ **Card-name-keyed hack tables inside a ~720-line god function**
-  (`gather_continuous_effects_inner`, `mod.rs:2742-3463`; tables at
-  `mod.rs:7583-7681`). `&'static str` lookups break silently under the
-  engine's own copy machinery and duplicate what
-  `StaticEffect::PumpSelfIf`/`PumpTeamIf` already express; same applies to
-  `dynamic_pt_for_name` (already flagged below in the Eldrazi notes).
+- 🟡 **Card-name-keyed hack tables inside a ~720-line god function**
+  (`gather_continuous_effects_inner`). Four of the five tables are retired —
+  Werebear / Elvish Reclaimer / Honor Troll / Tenured Concocter / Ulna Alley
+  Shopkeep ride `PumpSelfIf`, Thornfist Striker / Comforting Counsel ride
+  `PumpTeamIf` (which now carries conditional keyword grants) — so copies of
+  these cards keep their statics. Remaining: `graveyard_anthem_for_name`
+  (the Judgment Incarnation cycle — genuinely zone-special: statics active
+  from the graveyard) and `dynamic_pt_for_name` CDA rows.
 - ✅ **`StackItem::Trigger` literal push sites** — `TriggerPush` builder
   (`types.rs`) replaces all 26 hand-written 11-field literals; rider
   fields default and are set only where the site has a value.
@@ -283,29 +285,25 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 ## Follow-ups noticed (not yet done)
 
 - ⏳ **Noticed (Modern staples batch, 2026-06-11):** 38 staples shipped
-  across three waves (see git). Deferred, each wanting one primitive:
-  - **Conspicuous Snoop** — "has all activated abilities of the top Goblin
-    card" needs a live ability-sharing static over a non-battlefield zone.
-  - **Alpine Moon** — name-keyed land-ability stripping wants a named
-    variant of `LandTypeChanger` / `AffectedPermanents` name filter.
-  - **Bring to Light** — search→exile→cast-free with a converge-scaled MV
-    gate (`ManaValueAtMost(ConvergedValue)` filter doesn't exist).
-  - **Ad Nauseam** — repeat-any-number-of-times reveal loop with a
-    per-iteration stop decision.
-  - ✅ **Spellskite** shipped (`Effect::RedirectSpellTargetToSelf`, {U/P}
-    activation; CR 115.7 legality re-check). Ability-on-stack targets ⏳.
-  - **Kataki, War's Wage** — "all artifacts have [upkeep sac tax]" needs
-    the granted-triggered-ability static framework (same gap as Nadu).
-  - **Porphyry Nodes** — "destroy the creature with the least power" wants
-    a least-power-any-controller selector.
-  - **Shield of the Oversoul / Steel of the Godhead** — conditional-on-host-
-    color aura bonuses (EquipBonus is unconditional).
+  across three waves (see git). The "deferred, each wanting one primitive"
+  list is now almost fully shipped: Conspicuous Snoop ✅
+  (`HasActivatedAbilitiesOfLibraryTop` + Goblin `PlayFromLibraryTop`),
+  Alpine Moon ✅ (`NamedLandsNeutralized` + `NamedBySource` ability grant),
+  Bring to Light ✅ (`ManaValueAtMostConverged` resolved in `Search`),
+  Ad Nauseam ✅ (`RevealTopToHandLoseLifeRepeat`), Kataki ✅
+  (`StaticEffect::GrantTriggeredAbility` — statics-granted triggers in both
+  dispatchers), Porphyry Nodes ✅ (`Selector::LeastPowerAmongAll`),
+  Shield of the Oversoul / Steel of the Godhead ✅
+  (`EquipBonus.conditional`), Ravenous Trap ✅
+  (`Player.cards_to_graveyard_this_turn` +
+  `Predicate::CardsToGraveyardThisTurnAtLeast`), Spellskite ✅. Remaining:
   - **Pyxis of Pandemonium / Ojer Taq** — face-down exile piles / DFC god.
   - **Witchbane Orb** ships without the destroy-Curses ETB (player-attached
     Curses unmodeled). **Counterbalance**'s reveal is a MayDo (bots decline
     by default).
-  - **Lightning Storm / Ravenous Trap** — any-player stack activations and
-    a per-player cards-into-graveyard-this-turn tally, respectively.
+  - **Lightning Storm** — any-player stack activations (the "discard a land,
+    choose new targets" response loop).
+  - **Spellskite** ability-on-stack targets (only spell targets redirect).
 
 - ⏳ **Noticed this run (follow-ups sweep):**
   - **`Effect::MayPay` for a `wants_ui` seat** still answers through the
@@ -730,10 +728,9 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **Before adding a "new" card, grep the catalog for its name** — Omnath
     already existed in `decks/modern.rs`; nearly duplicated it.
 - ⏳ **Discovered this run (STX sweep / extras_17):**
-  - **"Sacrifice X or pay {N}" OR additional cost** — an `AdditionalCastCost`
-    variant (or a `Vec<AdditionalCastCost>` "choose one" wrapper). Makes Bayou
-    Groff faithful (today the pay-{3} alternative is dropped) and unblocks the
-    Eldraine/STX "sac or pay" cycle.
+  - ✅ **"Sacrifice X or pay {N}" OR additional cost** —
+    `AdditionalCastCost::SacrificeOrPay` (Bayou Groff faithful; a wants_ui
+    "which half?" chooser is a follow-up).
   - ✅ **Generic `CardExiled` event** — `EventKind::CardExiled` maps to the
     `GameEvent::PermanentExiled` emitted by the central exile-placement funnel.
     Pair with `once_per_turn` + `IsTurnOf(You)` for "whenever one or more cards
@@ -745,8 +742,9 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     stamped centrally at every ETB (also at the movement ETB site so
     Emergent Sequence counts the land it just searched mid-resolution);
     Shaile // Embrose.
-  - **X-scaled MV target filter** (`ManaValueAtMost(Value)`) — Confront the
-    Past's "planeswalker with mana value X or less" reanimate mode.
+  - ✅ **X-scaled MV target filter** — `ManaValueAtMostXFromCost` is now
+    resolved with the cast's X at cast-time validation and the CR 608.2b
+    re-check; Confront the Past's MV≤X reanimate gate is faithful.
   - ✅ **Mastery alt-cost rider** — handled by the existing
     `AlternativeCost.effect_override` (the alt cast runs a different effect).
     Ships **Fervent Mastery** and **Verdant Mastery** (✅ this run — its
@@ -960,10 +958,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     there's no modal to pick *which* half (left vs right vs fuse) — the click
     path only submits the left (`CastSpell`). Needs a small half-picker, like
     the MDFC face chooser.
-  - **More split cards.** Easy faithful adds on the primitive: Dusk // Dawn
-    (Dawn needs mass return-from-graveyard), Never // Return (needs targeted
-    graveyard-card exile), Turn // Burn (Turn needs "becomes base 0/1, loses
-    abilities"), Boom // Bust, Hide // Seek.
+  - ✅ **More split cards.** Dusk // Dawn, Never // Return, Turn // Burn
+    (`ResetCreature` + `BecomeColor`), Hide // Seek (Seek =
+    `Search{Target opp, → Exile}` + `GainLife(ManaValueOf(LastMoved))`;
+    the searched player's decider answers the pick) all ship; Boom // Bust
+    already existed.
   - **Fused targeting** currently assumes each half is single-target (left →
     `target`, right → `additional_targets[0]`); a fusable card with a
     multi-target half would need the slot convention generalized.
@@ -988,10 +987,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   copy keeps the original's color and printed mana cost rather than becoming
   "white/black with no mana cost." Add `token_color: Option<Color>` +
   `strip_cost: bool` to `Effect::CreateTokenCopyOf` to make it faithful.
-- **More AKH/HOU Embalm cards.** Vizier of Many Faces (embalm clone — needs the
-  embalm-copy-any-creature path), Aven Wind Guide (token-anthem static),
-  Heart-Piercer Manticore (ETB sac→ping). The existing `fanatic_of_rhonas`
-  (decks::modern) is missing its real Eternalize {2}{G}{G} — upgrade it.
+- **More AKH/HOU Embalm cards.** Aven Wind Guide ✅ (token-scoped
+  `GrantKeyword` anthems), Heart-Piercer Manticore ✅ (`MayDo` →
+  `SacrificeAndRemember` → fling). Remaining: Vizier of Many Faces (embalm
+  clone — needs the embalm-copy-any-creature path); `fanatic_of_rhonas`
+  is missing its real Eternalize {2}{G}{G} — upgrade it.
 - **Earthshaker Khenra's "≤ its power" filter is fixed at 2.** The ETB
   can't-block uses `PowerAtMost(2)` (the printed power); the eternalized 4/4
   token still reads 2. A source-relative `PowerAtMostSource` requirement would
@@ -1499,6 +1499,14 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 700.4 — "dies" under graveyard→exile replacements** — a creature
+  whose death-placement is redirected to exile (Rest in Peace, Leyline,
+  void/finality, Kalitas) never dies: self/equipment dies triggers, watcher
+  triggers, Persist/Undying, and the died tally are all suppressed. Tests
+  `cr_700_4_*`.
+- ✅ **CR 702.31 — Horsemanship** — block gate was wired; now carded
+  (Sun Quan / Liu Bei / Zhang Fei / Guan Yu) and tested
+  (`cr_702_31_horsemanship_blocks_only_horsemanship`).
 - ✅ **CR 701.30 — Clash** — `Effect::ClashWithOpponent` (both reveal top,
   may bottom via the synchronous decider, higher MV wins → `on_win`).
   Recross the Paths. Test `cr_701_30_recross_the_paths_clash_win_returns_to_hand`.
@@ -1646,8 +1654,10 @@ picking an item up.
 - 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.)
 - 🟡 **CR 704 — State-Based Actions** — Saga SBA ✅ (`saga_chapters` reach
   final chapter → sacrifice, unless a chapter ability is still on the stack);
-  Battle / Role / Dungeon / Speed SBAs remain; multi-SBA "collapse into one
-  replacement" (704.7); strict spell-copy-off-stack identity (704.5e).
+  spell-copy-off-stack identity ✅ (704.5d/e — the token-purge SBA sweeps
+  copies from every non-stack zone; test
+  `cr_704_5e_countered_spell_copy_ceases_to_exist`). Battle / Role / Dungeon
+  / Speed SBAs remain; multi-SBA "collapse into one replacement" (704.7).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3); EOT keyword grants still merge outside the layer walk (see audit P1 row).
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. ⚠️ Audit 2026-06-11: the replacements apply inside `adjust_life` but callers still emit `LifeGained` with the pre-replacement amount (triggers fire on suppressed gains), and `SetLifeTotal`/`ExchangeLifeTotals` bypass `adjust_life` entirely — see audit P1.
@@ -1771,8 +1781,8 @@ picking an item up.
   already-faithful (stale notes): Frost Trickster (Bird Wizard, ETB tap+stun),
   Eager First-Year (magecraft self-pump), Owlin Shieldmage (Flying + Ward 3
   life), Promising Duskmage (death-draw if +1/+1 counter).
-  Bayou Groff's drop is the missing **"sacrifice X or pay {N}" OR additional
-  cost** — an `AdditionalCastCost` variant worth adding for a faithful version.
+  Bayou Groff is now faithful — `AdditionalCastCost::SacrificeOrPay`
+  auto-sacrifices when a match exists, else folds the pay into the cost.
 - ✅ **Remaining real STX (Strixhaven 2021) cards — complete.** A Scryfall
   `set:stx` diff vs the registered catalog now shows 0 unimplemented
   non-Arena cards (the last 13 — Deans, Culling Ritual, Professor Onyx,
@@ -1843,9 +1853,9 @@ picking an item up.
     Drone (drains on a Devoid creature entering). Full color-setting effects
     (rare type/color changers) still read cost pips — a deeper follow-up.
 - ⏳ **Discovered this run (modern_decks card pass), not yet done:**
-  - **Rhystic "draw unless they pay X" rider** (Esper Sentinel, Mystic
-    Remora) — needs a "first noncreature spell each turn" trigger + a
-    pay-or-draw decision where X reads the source's power.
+  - ✅ **Rhystic "draw unless they pay X" rider** — Esper Sentinel ships
+    faithful (`WardCost::GenericSourcePower` + `once_per_turn` first-spell
+    gate, exact in 2P); Mystic Remora already rode `UnlessPlayerPays`.
   - **Power-gated keyword anthems** (Temur Ascendancy "creatures with power
     4+ have haste") — `affected_from_requirement` drops `PowerAtLeast` (it's
     layer-7 computed); needs a second-pass / CR 613.8 dependency in
@@ -1860,9 +1870,9 @@ picking an item up.
     Abomination/Skirk. Follow-up: a UI search-prompt to choose *which* land
     among multiple matches (today auto-fetches the first match), and
     nonbasic-type cycling (e.g. Mistcycling) once those land types exist.
-  - **"Discard unless they discard an artifact" conditional discard**
-    (Wrench Mind) — needs a discard whose count flexes on the discarder's
-    revealed choice; today only fixed-count `Discard` ships.
+  - ✅ **"Discard unless they discard an artifact" conditional discard** —
+    `Effect::DiscardUnlessKind` (auto-keeps the lowest-MV matching card);
+    Wrench Mind is faithful.
   - ✅ **Fixed different-damage to N distinct targets** (Cone of Flame: 1/2/3
     to three targets) — already expressible as a `Seq` of
     `DealDamage { to: TargetFiltered { slot } }` (the Arc Trail shape extended
