@@ -2554,7 +2554,8 @@ impl CardInstance {
     }
 
     pub fn has_protection_from(&self, color: Color) -> bool {
-        self.definition.keywords.contains(&Keyword::Protection(color))
+        // Granted/stripped EOT keywords count, same as `has_keyword`.
+        self.has_keyword(&Keyword::Protection(color))
     }
 
     /// CR 708 — flip this permanent face down: stash the real definition in
@@ -2639,14 +2640,26 @@ impl CardInstance {
         self.definition.is_creature() && !self.tapped
     }
 
-    pub fn ward_cost(&self) -> Option<u32> {
+    /// The full Ward cost, if any (CR 702.21). Engine ward enforcement
+    /// matches on the `WardCost` variants directly; this is the inspection
+    /// helper.
+    pub fn ward(&self) -> Option<&WardCost> {
         self.definition.keywords.iter().find_map(|kw| {
-            if let Keyword::Ward(WardCost::Mana(cost)) = kw {
-                Some(cost.cmc())
+            if let Keyword::Ward(cost) = kw {
+                Some(cost)
             } else {
                 None
             }
         })
+    }
+
+    /// Mana-Ward mana value, `None` for no ward or a non-mana ward. Colored
+    /// pips count via cmc — use [`Self::ward`] when the exact cost matters.
+    pub fn ward_cost(&self) -> Option<u32> {
+        match self.ward() {
+            Some(WardCost::Mana(cost)) => Some(cost.cmc()),
+            _ => None,
+        }
     }
 
     /// CR 702.146e — true for a transformed Disturb card (a back face whose

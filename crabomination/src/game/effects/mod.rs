@@ -1575,16 +1575,15 @@ impl GameState {
                 let new_total = self.evaluate_value(amount, ctx);
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
+                        // CR 119.7 — setting a life total is a gain/loss of
+                        // the difference, so replacements (cannot-gain,
+                        // Tainted Remedy) apply through the life funnel.
                         let delta = new_total - self.effective_life(p);
-                        self.set_life(p, new_total);
-                        if delta > 0 {
-                            let amt = delta as u32;
-                            self.players[p].life_gained_this_turn =
-                                self.players[p].life_gained_this_turn.saturating_add(amt);
-                            events.push(GameEvent::LifeGained { player: p, amount: amt });
-                        } else if delta < 0 {
-                            let amt = (-delta) as u32;
-                            events.push(GameEvent::LifeLost { player: p, amount: amt });
+                        let applied = self.adjust_life_applied(p, delta);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+                        } else if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                         }
                     }
                 }
@@ -1608,15 +1607,13 @@ impl GameState {
                     let la = self.effective_life(pa);
                     let lb = self.effective_life(pb);
                     for (p, new_total, old) in [(pa, lb, la), (pb, la, lb)] {
-                        let delta = new_total - old;
-                        self.set_life(p, new_total);
-                        if delta > 0 {
-                            let amt = delta as u32;
-                            self.players[p].life_gained_this_turn =
-                                self.players[p].life_gained_this_turn.saturating_add(amt);
-                            events.push(GameEvent::LifeGained { player: p, amount: amt });
-                        } else if delta < 0 {
-                            events.push(GameEvent::LifeLost { player: p, amount: (-delta) as u32 });
+                        // CR 119.7 — the exchange is a gain/loss of the
+                        // difference; route it through the life funnel.
+                        let applied = self.adjust_life_applied(p, new_total - old);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+                        } else if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
                         }
                     }
                     let mut sba = self.check_state_based_actions();
@@ -2348,12 +2345,17 @@ impl GameState {
                         self.players[controller].hand.push(card);
                     } else {
                         // Nonland revealed (or empty library): +1/+1 counter.
+                        // CR 614.1c — Hardened Scales-style doublers apply.
+                        let mut n = 1u32;
+                        for _ in 0..self.counter_doublers_for(controller) {
+                            n = n.saturating_mul(2);
+                        }
                         if let Some(c) = self.battlefield_find_mut(cid) {
-                            c.add_counters(CounterType::PlusOnePlusOne, 1);
+                            c.add_counters(CounterType::PlusOnePlusOne, n);
                             events.push(GameEvent::CounterAdded {
                                 card_id: cid,
                                 counter_type: CounterType::PlusOnePlusOne,
-                                count: 1,
+                                count: n,
                             });
                             self.permanents_gained_counter_this_turn.insert(cid);
                         }
