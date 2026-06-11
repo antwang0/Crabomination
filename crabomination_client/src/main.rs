@@ -48,7 +48,8 @@ use systems::animate::{
 };
 use systems::game_ui::{
     apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
-    handle_export_keypress, handle_game_input, poll_action_buttons, poll_player_chip_clicks,
+    handle_auto_pass_toggle, handle_export_keypress, handle_game_input, poll_action_buttons,
+    poll_player_chip_clicks,
     setup_game_hud,
     spawn_ability_menu, spawn_alt_cast_modal, sync_command_zone, sync_flipped_hand_cards,
     sync_game_visuals,
@@ -606,6 +607,7 @@ fn main() {
             Update,
             (
                 handle_export_keypress,
+                handle_auto_pass_toggle,
                 systems::export_prompt::handle_export_prompt_input,
                 systems::export_prompt::sync_export_prompt_ui,
             )

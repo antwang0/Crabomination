@@ -1918,8 +1918,6 @@ static DECKS: &[Factory] = &[
     super::decks::never_return,
     super::decks::turn_burn,
     super::decks::hide_seek,
-    super::decks::esper_sentinel,
-    super::decks::mystic_remora,
     super::decks::ad_nauseam,
     super::decks::kataki_wars_wage,
     super::decks::alpine_moon,

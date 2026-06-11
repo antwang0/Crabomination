@@ -10,7 +10,8 @@ mod player_stats;
 mod popups;
 
 pub use buttons::{
-    handle_audit_buttons, handle_export_keypress, handle_surrender_leave_buttons,
+    handle_audit_buttons, handle_auto_pass_toggle, handle_export_keypress,
+    handle_surrender_leave_buttons,
     poll_action_buttons, poll_player_chip_clicks, pulse_urgent_pass_button, sync_audit_buttons,
     update_attack_all_visibility, update_attack_button_label, update_pass_button,
 };
@@ -229,6 +230,11 @@ pub struct FastForward {
     /// Pass until the game reaches this step (right-click a phase-chart
     /// row — roadmap "click-to-advance"). Cleared on arrival.
     pub pass_until: Option<TurnStep>,
+    /// Auto-pass disabled (the "hold priority" toggle — H key / toolbar
+    /// button): `auto_advance_p0` never passes for the player, every
+    /// priority window is stepped through manually. Explicit fast-forwards
+    /// (End Turn / Next Turn / click-to-advance) still override.
+    pub manual_priority: bool,
 }
 
 // ── Marker components ─────────────────────────────────────────────────────────
@@ -327,6 +333,13 @@ pub struct PlayerHudPanel {
 
 #[derive(Component)]
 pub struct EndTurnButton;
+
+/// Toolbar toggle for `FastForward::manual_priority` ("Auto-pass: On/Off").
+#[derive(Component)]
+pub struct AutoPassButton;
+
+#[derive(Component)]
+pub struct AutoPassButtonLabel;
 
 #[derive(Component)]
 pub struct NextTurnButton;
@@ -738,6 +751,26 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         Text::new("Next Turn (N)"),
                         tf(13.0),
                         TextColor(theme::TEXT_PRIMARY),
+                    ));
+                });
+
+                p.spawn((
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    Button,
+                    AutoPassButton,
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Auto-pass: On (H)"),
+                        tf(13.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        AutoPassButtonLabel,
                     ));
                 });
 
@@ -2945,6 +2978,11 @@ pub fn auto_advance_p0(
     // during mulligan).
     if cv.pending_decision.is_some() { return; }
     if cv.priority != cv.your_seat { return; }
+    // "Hold priority" toggle: step through every window manually. Explicit
+    // fast-forwards still win (the player asked for them after toggling).
+    if ff.manual_priority && !ff.end_turn && !ff.next_turn && ff.pass_until.is_none() {
+        return;
+    }
 
     let your_seat = cv.your_seat;
 

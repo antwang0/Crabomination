@@ -20,9 +20,9 @@ use crate::theme::{self, HoverTint};
 
 use super::{
     AttackAllButton, AttackAllPanel, AttackButtonLabel, AuditMarkVerifiedButton, AuditSkipButton,
-    ButtonState, EndTurnButton, ExportStateButton, LeaveButton, NextTurnButton, PassButtonLabel,
-    PassButtonUrgent, PassPriorityButton, PlayerHudPanel, SurrenderButton, SurrenderButtonLabel,
-    SurrenderConfirm,
+    AutoPassButton, AutoPassButtonLabel, ButtonState, EndTurnButton, ExportStateButton,
+    FastForward, LeaveButton, NextTurnButton, PassButtonLabel, PassButtonUrgent,
+    PassPriorityButton, PlayerHudPanel, SurrenderButton, SurrenderButtonLabel, SurrenderConfirm,
 };
 
 /// How long (seconds) an armed Surrender stays armed waiting for the confirm
@@ -255,6 +255,31 @@ pub fn handle_audit_buttons(
     // HUD buttons hide on the next sync.
     target.0 = None;
     next_state.set(crate::menu::AppState::Audit);
+}
+
+// ── Auto-pass toggle ─────────────────────────────────────────────────────────
+
+/// Toggle `FastForward::manual_priority` from the toolbar button or the `H`
+/// key ("hold priority"). While on, `auto_advance_p0` never passes for the
+/// player and every priority window is manual.
+pub fn handle_auto_pass_toggle(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
+    mut ff: ResMut<FastForward>,
+    btn: Query<&Interaction, (Changed<Interaction>, With<AutoPassButton>)>,
+    mut label_q: Query<&mut Text, With<AutoPassButtonLabel>>,
+) {
+    let key = !debug_console.card_input_focused && keyboard.just_pressed(KeyCode::KeyH);
+    let pressed = btn.iter().any(|i| *i == Interaction::Pressed);
+    if key || pressed {
+        ff.manual_priority = !ff.manual_priority;
+    }
+    let want = if ff.manual_priority { "Auto-pass: Off (H)" } else { "Auto-pass: On (H)" };
+    if let Ok(mut t) = label_q.single_mut()
+        && t.0 != want
+    {
+        t.0 = want.to_string();
+    }
 }
 
 // ── Export hotkey ────────────────────────────────────────────────────────────

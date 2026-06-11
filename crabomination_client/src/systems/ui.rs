@@ -423,6 +423,7 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
             ("N", "Next turn (skip to your main)"),
             ("A", "Attack all · confirm attackers"),
             ("P", "Pass · skip · proceed"),
+            ("H", "Hold priority (auto-pass on/off)"),
         ],
     ),
     (

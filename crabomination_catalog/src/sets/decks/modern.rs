@@ -48314,58 +48314,7 @@ pub fn hide_seek() -> CardDefinition {
     }
 }
 
-// ── Rhystic riders + Ad Nauseam ─────────────────────────────────────────────
-
-/// Esper Sentinel — {W} 1/1 Artifact Human Soldier. An opponent's first
-/// noncreature spell each turn: draw unless they pay {X} = its power
-/// (once-per-turn stands in for "their first … each turn"; exact in 2P).
-pub fn esper_sentinel() -> CardDefinition {
-    CardDefinition {
-        name: "Esper Sentinel",
-        cost: cost(&[w()]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 1,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
-                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature))
-                .once_per_turn(),
-            effect: Effect::UnlessPlayerPays {
-                who: PlayerRef::Triggerer,
-                cost: crate::card::WardCost::GenericSourcePower,
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
-            },
-        }],
-        ..Default::default()
-    }
-}
-
-/// Mystic Remora — {U} Enchantment, cumulative upkeep {1}. An opponent casts
-/// a noncreature spell: you draw unless they pay {4} (the printed "may draw"
-/// is mandatory here).
-pub fn mystic_remora() -> CardDefinition {
-    use crate::card::{CumulativeUpkeepCost, WardCost};
-    CardDefinition {
-        name: "Mystic Remora",
-        cost: cost(&[u()]),
-        card_types: vec![CardType::Enchantment],
-        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
-                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
-            effect: Effect::UnlessPlayerPays {
-                who: PlayerRef::Triggerer,
-                cost: WardCost::generic(4),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
-            },
-        }],
-        ..Default::default()
-    }
-}
+// ── Ad Nauseam ──────────────────────────────────────────────────────────────
 
 /// Ad Nauseam — {3}{B}{B} Instant. Repeatedly reveal the top card into your
 /// hand, losing its mana value in life, until you stop.
