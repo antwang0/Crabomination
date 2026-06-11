@@ -49106,6 +49106,545 @@ pub fn destiny_spinner() -> CardDefinition {
                 keywords: vec![Keyword::Trample, Keyword::Haste],
                 duration: Duration::EndOfTurn,
             },
+// ── modern_decks: Sliver tribal expansion + tribute / clash / tempting offer ──
+
+/// Sidewinder Sliver — {W} 1/1. All Sliver creatures have flanking.
+pub fn sidewinder_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have flanking.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: all_slivers(),
+                keyword: Keyword::Flanking,
+            },
+        }],
+        ..sliver("Sidewinder Sliver", cost(&[w()]), 1, 1)
+    }
+}
+
+/// Plated Sliver — {W} 1/1. All Sliver creatures get +0/+1.
+pub fn plated_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers get +0/+1.",
+            effect: StaticEffect::PumpPT { applies_to: all_slivers(), power: 0, toughness: 1 },
+        }],
+        ..sliver("Plated Sliver", cost(&[w()]), 1, 1)
+    }
+}
+
+/// Might Sliver — {4}{G} 2/2. All Sliver creatures get +2/+2.
+pub fn might_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers get +2/+2.",
+            effect: StaticEffect::PumpPT { applies_to: all_slivers(), power: 2, toughness: 2 },
+        }],
+        ..sliver("Might Sliver", cost(&[generic(4), g()]), 2, 2)
+    }
+}
+
+/// Bonesplitter Sliver — {3}{R} 2/2. All Sliver creatures get +2/+0.
+pub fn bonesplitter_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers get +2/+0.",
+            effect: StaticEffect::PumpPT { applies_to: all_slivers(), power: 2, toughness: 0 },
+        }],
+        ..sliver("Bonesplitter Sliver", cost(&[generic(3), r()]), 2, 2)
+    }
+}
+
+/// Cleaving Sliver — {3}{R} 2/2. Sliver creatures you control get +2/+0.
+pub fn cleaving_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control get +2/+0.",
+            effect: StaticEffect::PumpPT { applies_to: your_slivers(), power: 2, toughness: 0 },
+        }],
+        ..sliver("Cleaving Sliver", cost(&[generic(3), r()]), 2, 2)
+    }
+}
+
+/// Fury Sliver — {5}{R} 3/3. All Sliver creatures have double strike.
+pub fn fury_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have double strike.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: all_slivers(),
+                keyword: Keyword::DoubleStrike,
+            },
+        }],
+        ..sliver("Fury Sliver", cost(&[generic(5), r()]), 3, 3)
+    }
+}
+
+/// Virulent Sliver — {G} 1/1. All Sliver creatures have poisonous 1.
+pub fn virulent_sliver() -> CardDefinition {
+    use crate::effect::shortcut::poisonous;
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have poisonous 1.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                ability: Box::new(poisonous(1)),
+            },
+        }],
+        ..sliver("Virulent Sliver", cost(&[g()]), 1, 1)
+    }
+}
+
+/// Groundshaker Sliver — {6}{G} 5/5. Sliver creatures you control have trample.
+pub fn groundshaker_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: your_slivers(),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..sliver("Groundshaker Sliver", cost(&[generic(6), g()]), 5, 5)
+    }
+}
+
+/// Cloudshredder Sliver — {R}{W} 1/1. Slivers you control have flying and haste.
+pub fn cloudshredder_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Slivers you control have flying.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: your_slivers(),
+                    keyword: Keyword::Flying,
+                },
+            },
+            StaticAbility {
+                description: "Slivers you control have haste.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: your_slivers(),
+                    keyword: Keyword::Haste,
+                },
+            },
+        ],
+        ..sliver("Cloudshredder Sliver", cost(&[r(), w()]), 1, 1)
+    }
+}
+
+/// Hunter Sliver — {1}{R} 1/1. All Sliver creatures have provoke.
+pub fn hunter_sliver() -> CardDefinition {
+    use crate::effect::shortcut::provoke;
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have provoke.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                ability: Box::new(provoke()),
+            },
+        }],
+        ..sliver("Hunter Sliver", cost(&[generic(1), r()]), 1, 1)
+    }
+}
+
+/// Tempered Sliver — {2}{G} 2/2. Slivers you control have "Whenever this
+/// creature deals combat damage to a player, put a +1/+1 counter on it."
+pub fn tempered_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control grow on combat damage to a player.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver)
+                    .and(SelectionRequirement::ControlledByYou),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::DealsCombatDamageToPlayer,
+                        EventScope::SelfSource,
+                    ),
+                    effect: Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                }),
+            },
+        }],
+        ..sliver("Tempered Sliver", cost(&[generic(2), g()]), 2, 2)
+    }
+}
+
+/// Thorncaster Sliver — {4}{R} 2/2. Slivers you control have "Whenever this
+/// creature attacks, it deals 1 damage to any target."
+pub fn thorncaster_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control ping on attack.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver)
+                    .and(SelectionRequirement::ControlledByYou),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                    effect: Effect::DealDamage {
+                        to: Selector::Target(0),
+                        amount: Value::Const(1),
+                    },
+                }),
+            },
+        }],
+        ..sliver("Thorncaster Sliver", cost(&[generic(4), r()]), 2, 2)
+    }
+}
+
+/// Lavabelly Sliver — {1}{R}{W} 2/2. Slivers you control have "When this
+/// creature enters, it deals 1 damage to target player and you gain 1 life."
+pub fn lavabelly_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control ping a player + gain 1 on entry.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver)
+                    .and(SelectionRequirement::ControlledByYou),
+                ability: Box::new(etb(Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: target_filtered(SelectionRequirement::Player),
+                        amount: Value::Const(1),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                ]))),
+            },
+        }],
+        ..sliver("Lavabelly Sliver", cost(&[generic(1), r(), w()]), 2, 2)
+    }
+}
+
+/// Spiteful Sliver — {2}{R} 2/2. Slivers you control have "Whenever this
+/// creature is dealt damage, it deals that much damage to target player."
+pub fn spiteful_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control reflect damage at a player.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver)
+                    .and(SelectionRequirement::ControlledByYou),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+                    effect: Effect::DealDamage {
+                        to: target_filtered(SelectionRequirement::Player),
+                        amount: Value::TriggerEventAmount,
+                    },
+                }),
+            },
+        }],
+        ..sliver("Spiteful Sliver", cost(&[generic(2), r()]), 2, 2)
+    }
+}
+
+/// First Sliver's Chosen — {4}{W} 3/3. Slivers you control have exalted.
+pub fn first_slivers_chosen() -> CardDefinition {
+    use crate::effect::shortcut::exalted;
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have exalted.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver)
+                    .and(SelectionRequirement::ControlledByYou),
+                ability: Box::new(exalted()),
+            },
+        }],
+        ..sliver("First Sliver's Chosen", cost(&[generic(4), w()]), 3, 3)
+    }
+}
+
+/// Clot Sliver — {1}{B} 1/1. All Slivers have "{2}: Regenerate this permanent."
+pub fn clot_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have {2}: Regenerate.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    mana_cost: cost(&[generic(2)]),
+                    effect: Effect::Regenerate { what: Selector::This },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Clot Sliver", cost(&[generic(1), b()]), 1, 1)
+    }
+}
+
+/// Quilled Sliver — {1}{W} 1/1. All Slivers have "{T}: This permanent deals
+/// 1 damage to target attacking or blocking creature."
+pub fn quilled_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have {T}: 1 damage to an attacker/blocker.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::DealDamage {
+                        to: target_filtered(
+                            SelectionRequirement::Creature.and(
+                                SelectionRequirement::IsAttacking
+                                    .or(SelectionRequirement::IsBlocking),
+                            ),
+                        ),
+                        amount: Value::Const(1),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Quilled Sliver", cost(&[generic(1), w()]), 1, 1)
+    }
+}
+
+/// Gemhide Sliver — {1}{G} 1/1. All Slivers have "{T}: Add one mana of any
+/// color." (Manaweft Sliver's older "all Slivers" printing.)
+pub fn gemhide_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have {T}: Add one mana of any color.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_slivers(),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Gemhide Sliver", cost(&[generic(1), g()]), 1, 1)
+    }
+}
+
+/// Diffusion Sliver — {1}{U} 1/1. Opponents' spells/abilities targeting your
+/// Slivers are taxed {2} — modeled as granting your Slivers ward {2}.
+pub fn diffusion_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have ward {2}.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: your_slivers(),
+                keyword: Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+            },
+        }],
+        ..sliver("Diffusion Sliver", cost(&[generic(1), u()]), 1, 1)
+    }
+}
+
+/// Pharagax Giant — {4}{R} 3/3 Giant. Tribute 2; if not paid, 5 damage to
+/// each opponent.
+pub fn pharagax_giant() -> CardDefinition {
+    use crate::effect::shortcut::tribute;
+    CardDefinition {
+        name: "Pharagax Giant",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![tribute(
+            2,
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(5),
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Nessian Demolok — {3}{G}{G} 3/3 Beast. Tribute 3; if not paid, destroy
+/// target noncreature permanent.
+pub fn nessian_demolok() -> CardDefinition {
+    use crate::effect::shortcut::tribute;
+    CardDefinition {
+        name: "Nessian Demolok",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![tribute(
+            3,
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Noncreature),
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Thunder Brute — {4}{R}{R} 5/5 Cyclops, trample. Tribute 3; if not paid,
+/// haste until end of turn.
+pub fn thunder_brute() -> CardDefinition {
+    use crate::effect::shortcut::tribute;
+    CardDefinition {
+        name: "Thunder Brute",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cyclops], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![tribute(
+            3,
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Snake of the Golden Grove — {4}{G} 4/4 Snake. Tribute 3; if not paid,
+/// you gain 4 life.
+pub fn snake_of_the_golden_grove() -> CardDefinition {
+    use crate::effect::shortcut::tribute;
+    CardDefinition {
+        name: "Snake of the Golden Grove",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![tribute(
+            3,
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Lash Out — {1}{R} Instant. 3 damage to target creature; clash — win:
+/// 3 damage to that creature's controller.
+pub fn lash_out() -> CardDefinition {
+    CardDefinition {
+        name: "Lash Out",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::ClashWithOpponent {
+                on_win: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(3),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tempt with Glory — {5}{W} Sorcery. Tempting offer: a +1/+1 counter on
+/// each creature you control (opponents may copy; repeat per acceptor).
+pub fn tempt_with_glory() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    CardDefinition {
+        name: "Tempt with Glory",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::TemptingOffer {
+            body: Box::new(Effect::AddCounter {
+                what: each_your_creature(),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Tempt with Vengeance — {X}{R} Sorcery. Tempting offer: X 1/1 red
+/// Elemental tokens with haste.
+pub fn tempt_with_vengeance() -> CardDefinition {
+    CardDefinition {
+        name: "Tempt with Vengeance",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::TemptingOffer {
+            body: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                definition: TokenDefinition {
+                    name: "Elemental".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    keywords: vec![Keyword::Haste],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Elemental],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Tempt with Reflections — {3}{U} Sorcery. Tempting offer: a token copy of
+/// target creature you control.
+pub fn tempt_with_reflections() -> CardDefinition {
+    CardDefinition {
+        name: "Tempt with Reflections",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::TemptingOffer {
+            body: Box::new(Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                extra_creature_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Vexing Shusher — {R/G}{R/G} 2/2 Goblin Shaman. Can't be countered;
+/// {R/G}: target spell can't be countered.
+pub fn vexing_shusher() -> CardDefinition {
+    use crate::mana::ManaSymbol;
+    CardDefinition {
+        name: "Vexing Shusher",
+        cost: ManaCost {
+            symbols: vec![
+                ManaSymbol::Hybrid(Color::Red, Color::Green),
+                ManaSymbol::Hybrid(Color::Red, Color::Green),
+            ],
+        },
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::CantBeCountered],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost {
+                symbols: vec![ManaSymbol::Hybrid(Color::Red, Color::Green)],
+            },
+            effect: Effect::MakeSpellUncounterable {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -801,6 +801,21 @@ impl GameState {
                             .unwrap_or_default();
                     }
 
+                    // Statics-granted ETBs ("Slivers you control have 'When
+                    // this enters…'" — Lavabelly) fire as though printed;
+                    // gathered now that the entrant is on the battlefield.
+                    if let Some(c) = self.battlefield_find(card_id) {
+                        etb_triggers.extend(
+                            self.statics_granted_triggers_for(c)
+                                .into_iter()
+                                .filter(|t| {
+                                    t.event.kind == EventKind::EntersBattlefield
+                                        && matches!(t.event.scope, EventScope::SelfSource)
+                                })
+                                .map(|t| t.effect),
+                        );
+                    }
+
                     events.push(GameEvent::PermanentEntered { card_id });
 
                     // CR 702.146e — a daybound permanent entering while it's

@@ -1699,6 +1699,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MakeSpellUncounterable { what } => {
+                use crate::game::types::StackItem;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    for item in self.stack.iter_mut().rev() {
+                        if let StackItem::Spell { card, uncounterable, .. } = item
+                            && card.id == cid
+                        {
+                            *uncounterable = true;
+                            break;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CantCastNoncreatureThisTurn { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {

@@ -1166,9 +1166,13 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .map(|c| {
+                // Printed + statics-granted ETBs ("Slivers you control have
+                // 'When this enters…'" — Lavabelly) fire alike.
+                let static_granted = self.statics_granted_triggers_for(c);
                 c.definition
                     .triggered_abilities
                     .iter()
+                    .chain(static_granted.iter())
                     .filter(|t| t.event.kind == EventKind::EntersBattlefield
                         && matches!(t.event.scope, EventScope::SelfSource))
                     .map(|t| t.effect.clone())

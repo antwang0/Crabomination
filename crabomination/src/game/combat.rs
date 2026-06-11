@@ -264,6 +264,15 @@ impl GameState {
 
         for atk in attacks {
             let id = atk.attacker;
+            // Statics-granted triggers ("Slivers you control have
+            // '…attacks…'" — Thorncaster) fire as though printed. Gathered
+            // before the mutable borrow below.
+            let static_granted = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| self.statics_granted_triggers_for(c))
+                .unwrap_or_default();
             // Validated above — commit only. Filter by *controller*, not
             // *owner*: a stolen creature (Threaten / Mind Control) attacks
             // for its current controller.
@@ -309,7 +318,13 @@ impl GameState {
                 .get(&id)
                 .map(Vec::as_slice)
                 .unwrap_or(&[]);
-            for t in card.definition.triggered_abilities.iter().chain(granted) {
+            for t in card
+                .definition
+                .triggered_abilities
+                .iter()
+                .chain(granted)
+                .chain(static_granted.iter())
+            {
                 // Only SelfSource Attacks triggers are hardcoded here.
                 // YourControl-scoped Attacks triggers (Exalted via
                 // `Predicate::AttackingAlone`, Battle Banner, …) are
@@ -1903,9 +1918,13 @@ impl GameState {
             .iter()
             .find(|c| c.id == source)
             .map(|c| {
+                // Printed + statics-granted ("Slivers you control have
+                // '…combat damage…'" — Tempered/Virulent) fire alike.
+                let static_granted = self.statics_granted_triggers_for(c);
                 c.definition
                     .triggered_abilities
                     .iter()
+                    .chain(static_granted.iter())
                     .filter(|t| {
                         t.event.kind == kind
                             && matches!(

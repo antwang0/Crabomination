@@ -330,7 +330,8 @@ impl Effect {
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
-            | Effect::CounterUnless { what, .. } => sel_has_target(what),
+            | Effect::CounterUnless { what, .. }
+            | Effect::MakeSpellUncounterable { what } => sel_has_target(what),
             Effect::UnlessPlayerPays { then, .. } => then.requires_target(),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
@@ -564,6 +565,7 @@ impl Effect {
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
+            | Effect::MakeSpellUncounterable { what }
             | Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellMayChooseTargets { what, .. }
@@ -1039,7 +1041,8 @@ impl Effect {
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterAbility { .. }
             | Effect::CounterUnlessPaid { .. }
-            | Effect::CounterUnless { .. } => false,
+            | Effect::CounterUnless { .. }
+            | Effect::MakeSpellUncounterable { .. } => false,
             Effect::UnlessPlayerPays { then, .. } => then.accepts_player_target(),
             // "Gain control of all creatures target PLAYER controls"
             // (Emrakul, the World Anew) takes a player; the plain
@@ -1323,6 +1326,7 @@ impl Effect {
                 | Effect::CounterAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
+                | Effect::MakeSpellUncounterable { what }
                 | Effect::Suspect { what }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),

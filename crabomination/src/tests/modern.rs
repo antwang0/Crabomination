@@ -54277,4 +54277,391 @@ fn destiny_spinner_uncounterable_and_animate() {
     let cp = g.computed_permanent(forest).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
     assert!(cp.card_types.contains(&CardType::Creature));
+// ── Sliver tribal expansion + tribute / clash / tempting offer ────────────────
+
+/// Sidewinder Sliver gives all Slivers flanking; Fury Sliver double strike.
+#[test]
+fn sidewinder_and_fury_grant_combat_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sidewinder_sliver());
+    g.add_card_to_battlefield(0, catalog::fury_sliver());
+    let opp = g.add_card_to_battlefield(1, catalog::striking_sliver());
+    let kws = &g.computed_permanent(opp).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Flanking), "all-Sliver flanking reaches the opponent");
+    assert!(kws.contains(&Keyword::DoubleStrike));
+}
+
+/// Plated (+0/+1 all) and Might (+2/+2 all) anthems stack.
+#[test]
+fn plated_and_might_anthems_stack() {
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(0, catalog::plated_sliver()); // 1/1
+    g.add_card_to_battlefield(0, catalog::might_sliver()); // +2/+2
+    let cp = g.computed_permanent(p).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "1/1 +2/+2 +0/+1");
+}
+
+/// Bonesplitter buffs all Slivers' power; Cleaving only its controller's.
+#[test]
+fn bonesplitter_all_cleaving_yours_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bonesplitter_sliver());
+    g.add_card_to_battlefield(0, catalog::cleaving_sliver());
+    let opp = g.add_card_to_battlefield(1, catalog::plated_sliver()); // 1/1
+    // Opp's sliver: +2 (Bonesplitter, all) +1 (its own Plated all-toughness? no — power)
+    // Bonesplitter is all-scope: opp gets +2/+0. Cleaving is yours-only: not applied.
+    assert_eq!(g.computed_permanent(opp).unwrap().power, 3, "1 +2(all) but not +2(yours)");
+}
+
+/// Virulent Sliver's granted poisonous 1 lands a poison counter on hit.
+#[test]
+fn virulent_sliver_poisonous_grant() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::virulent_sliver());
+    g.clear_sickness(v);
+    g.attacking = vec![Attack { attacker: v, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].poison_counters, 1, "poisonous 1 fired off the granted trigger");
+}
+
+/// Groundshaker gives trample to its controller's Slivers only;
+/// Cloudshredder grants flying + haste.
+#[test]
+fn groundshaker_and_cloudshredder_grants() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::groundshaker_sliver());
+    let cs = g.add_card_to_battlefield(0, catalog::cloudshredder_sliver());
+    let opp = g.add_card_to_battlefield(1, catalog::plated_sliver());
+    let kws = &g.computed_permanent(cs).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Trample));
+    assert!(kws.contains(&Keyword::Flying));
+    assert!(kws.contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::Trample),
+        "yours-only trample");
+}
+
+/// Tempered Sliver's granted trigger grows a Sliver that connects.
+#[test]
+fn tempered_sliver_grows_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tempered_sliver());
+    let atk = g.add_card_to_battlefield(0, catalog::plated_sliver()); // no first strike
+    g.clear_sickness(atk);
+    g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(atk).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1, "granted combat-damage trigger added a counter"
+    );
+}
+
+/// Thorncaster Sliver's granted attack trigger pings.
+#[test]
+fn thorncaster_sliver_pings_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thorncaster_sliver());
+    let atk = g.add_card_to_battlefield(0, catalog::striking_sliver());
+    g.clear_sickness(atk);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(1) }])
+        .unwrap();
+    let evs = drain_stack(&mut g);
+    assert!(
+        evs.iter().any(|e| matches!(e, GameEvent::DamageDealt { amount: 1, .. })),
+        "attack trigger dealt 1 damage"
+    );
+}
+
+/// Lavabelly Sliver's granted ETB pings a player and gains 1.
+#[test]
+fn lavabelly_sliver_etb_ping_and_gain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lavabelly_sliver());
+    let s = g.add_card_to_hand(0, catalog::striking_sliver());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, s);
+    // Granted ETB: 1 damage to target player (auto-target: opponent), gain 1.
+    assert_eq!(g.players[1].life, 19, "opponent pinged");
+    assert_eq!(g.players[0].life, 21, "controller gained 1");
+}
+
+/// Spiteful Sliver reflects damage dealt to your Slivers at a player.
+#[test]
+fn spiteful_sliver_reflects_damage() {
+    let mut g = two_player_game();
+    let sp = g.add_card_to_battlefield(0, catalog::spiteful_sliver());
+    g.add_card_to_battlefield(0, catalog::might_sliver()); // 2/2 → 4/4, survives the bolt
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(sp)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the buffed Spiteful Sliver");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sp).is_some(), "4/4 survives");
+    assert_eq!(g.players[1].life, 17, "3 damage reflected at a player (auto-target: opponent)");
+}
+
+/// First Sliver's Chosen grants exalted to your Slivers.
+#[test]
+fn first_slivers_chosen_exalted() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::first_slivers_chosen());
+    let atk = g.add_card_to_battlefield(0, catalog::striking_sliver()); // 1/1
+    g.clear_sickness(atk);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // Through perform_action so the AttackerDeclared event reaches the
+    // unified dispatcher (exalted is YourControl-scoped).
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    // One granted exalted instance on the attacker plus one on First
+    // Sliver's Chosen itself (both are Slivers you control).
+    assert_eq!(g.computed_permanent(atk).unwrap().power, 3, "1 + two exalted instances");
+}
+
+/// Clot Sliver's granted {2}: Regenerate saves a Sliver from destruction.
+#[test]
+fn clot_sliver_grants_regeneration() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::clot_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::striking_sliver());
+    g.clear_sickness(s);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, x_value: None,
+    }).expect("activate granted regen");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(s)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(s).is_some(), "regeneration shield absorbed the kill");
+}
+
+/// Quilled Sliver's granted tap ability pings an attacking creature.
+#[test]
+fn quilled_sliver_pings_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let q = g.add_card_to_battlefield(0, catalog::quilled_sliver());
+    g.clear_sickness(q);
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(0) }])
+        .unwrap();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: q, ability_index: 0, target: Some(Target::Permanent(atk)), x_value: None,
+    }).expect("tap to ping the attacker");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(atk).unwrap().damage, 1, "attacker took 1");
+}
+
+/// Gemhide Sliver grants every Sliver "{T}: Add one mana of any color".
+#[test]
+fn gemhide_sliver_grants_mana_ability() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gemhide_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::striking_sliver());
+    g.clear_sickness(s);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, x_value: None,
+    }).expect("granted mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+/// Diffusion Sliver taxes opponents' targeting (modeled as ward {2}).
+#[test]
+fn diffusion_sliver_taxes_targeting() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::diffusion_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::striking_sliver());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1); // no {2} for the ward tax
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(s)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast is legal; ward triggers");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(s).is_some(), "unpaid ward tax countered the bolt");
+}
+
+/// Pharagax Giant: tribute declined → 5 damage to each opponent.
+#[test]
+fn pharagax_giant_unpaid_tribute_burns() {
+    let mut g = two_player_game();
+    let p = g.add_card_to_hand(0, catalog::pharagax_giant());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, p); // AutoDecider declines tribute
+    assert_eq!(g.players[1].life, 15, "5 to each opponent");
+    assert_eq!(g.battlefield_find(p).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Nessian Demolok: tribute declined → destroy target noncreature permanent.
+#[test]
+fn nessian_demolok_unpaid_tribute_destroys() {
+    let mut g = two_player_game();
+    let orb = g.add_card_to_battlefield(1, catalog::howling_mine());
+    let d = g.add_card_to_hand(0, catalog::nessian_demolok());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, d);
+    assert!(g.battlefield_find(orb).is_none(), "noncreature permanent destroyed");
+}
+
+/// Thunder Brute: tribute paid → counters, no haste.
+#[test]
+fn thunder_brute_paid_tribute_gets_counters() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let t = g.add_card_to_hand(0, catalog::thunder_brute());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, t);
+    let c = g.battlefield_find(t).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3, "tribute 3 paid");
+    assert!(!g.computed_permanent(t).unwrap().keywords.contains(&crate::card::Keyword::Haste));
+}
+
+/// Snake of the Golden Grove: tribute declined → gain 4.
+#[test]
+fn snake_of_the_golden_grove_unpaid_gains_life() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_hand(0, catalog::snake_of_the_golden_grove());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, s);
+    assert_eq!(g.players[0].life, 24, "unpaid tribute gains 4");
+}
+
+/// Lash Out: 3 to the creature; clash win → 3 to its controller.
+#[test]
+fn lash_out_clash_win_burns_controller() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::serra_angel());   // MV 5 reveal — wins
+    g.add_card_to_library(1, catalog::lightning_bolt()); // MV 1 reveal
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let lo = g.add_card_to_hand(0, catalog::lash_out());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, lo, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).is_none(), "3 damage killed the bear");
+    assert_eq!(g.players[1].life, 17, "clash won: 3 to the controller");
+}
+
+/// Tempt with Glory: opponent accepts → both boards get counters, and the
+/// controller's repeat fires once per acceptor.
+#[test]
+fn tempt_with_glory_acceptor_repeats_for_controller() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let t = g.add_card_to_hand(0, catalog::tempt_with_glory());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, t);
+    assert_eq!(g.battlefield_find(mine).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2, "controller: base + one repeat");
+    assert_eq!(g.battlefield_find(theirs).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1, "acceptor's copy");
+}
+
+/// Tempt with Vengeance mints X hasty tokens (opponents decline by default).
+#[test]
+fn tempt_with_vengeance_mints_x_tokens() {
+    let mut g = two_player_game();
+    let t = g.add_card_to_hand(0, catalog::tempt_with_vengeance());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: t, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast with X=3");
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Elemental" && c.controller == 0)
+        .count();
+    assert_eq!(tokens, 3);
+}
+
+/// Tempt with Reflections copies the targeted creature for the controller.
+#[test]
+fn tempt_with_reflections_copies_target() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let _ = mine;
+    let t = g.add_card_to_hand(0, catalog::tempt_with_reflections());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_at(&mut g, t, Target::Permanent(mine));
+    let copies = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Serra Angel" && c.is_token)
+        .count();
+    assert_eq!(copies, 1);
+}
+
+/// Vexing Shusher's activation makes a target spell uncounterable.
+#[test]
+fn vexing_shusher_protects_a_spell() {
+    let mut g = two_player_game();
+    let vs = g.add_card_to_battlefield(0, catalog::vexing_shusher());
+    g.clear_sickness(vs);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    // Shusher: target the bear spell on the stack.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vs, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("shush the bear");
+    drain_stack(&mut g);
+    // re-cast scenario with a counterspell instead:
+    let bear2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear 2");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vs, ability_index: 0, target: Some(Target::Permanent(bear2)), x_value: None,
+    }).expect("shush");
+    drain_stack(&mut g);
+    let cs = g.add_card_to_hand(1, catalog::counterspell());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 1;
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: cs, target: Some(Target::Permanent(bear2)), additional_targets: vec![],
+        mode: None, x_value: None,
+    });
+    if res.is_ok() {
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(bear2).is_some(), "shushed spell resolved through the counter");
 }

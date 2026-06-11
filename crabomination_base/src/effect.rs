@@ -1625,6 +1625,9 @@ pub enum Effect {
     /// "spells you control can't be countered for the rest of this turn"
     /// (Veil of Summer). Cleared at the next untap.
     GrantSpellsUncounterableThisTurn { who: Selector },
+    /// Stamp `uncounterable` on a target spell already on the stack —
+    /// "Target spell can't be countered" (Vexing Shusher's activation).
+    MakeSpellUncounterable { what: Selector },
     /// Set `Player.cant_cast_noncreature_this_turn` on each resolved player —
     /// "those players can't cast noncreature spells this turn"
     /// (Ranger-Captain of Eos). Cleared at the next untap.
