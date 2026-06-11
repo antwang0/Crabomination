@@ -318,6 +318,51 @@ impl EntityRef {
 }
 
 impl GameState {
+    /// Ask `seat` a yes/no question inside a (possibly multi-question)
+    /// resolution effect, replaying `resolution_answer_log` first. Returns
+    /// `None` when the effect must suspend for a `wants_ui` seat (the
+    /// originating `effect` is re-queued; the resume re-runs it with the
+    /// log one answer longer). `cursor` is the caller's per-run ask index —
+    /// start it at 0 and pass the same variable to every ask in the arm.
+    /// The caller must keep all side effects *after* its final ask (the
+    /// re-run repeats everything before the suspension point) and call
+    /// `clear_answer_log()` on every completing path.
+    pub(crate) fn ask_seat_bool(
+        &mut self,
+        cursor: &mut usize,
+        seat: usize,
+        description: String,
+        source: CardId,
+        effect: &Effect,
+    ) -> Option<bool> {
+        use crate::decision::{Decision, DecisionAnswer};
+        if let Some(a) = self.resolution_answer_log.get(*cursor) {
+            *cursor += 1;
+            return Some(matches!(a, DecisionAnswer::Bool(true)));
+        }
+        let decision = Decision::OptionalTrigger { source, description };
+        if self.players.get(seat).is_some_and(|p| p.wants_ui) {
+            self.suspend_signal = Some((
+                decision,
+                PendingEffectState::SeatBoolAnswerPending { player: seat },
+                effect.clone(),
+            ));
+            return None;
+        }
+        let b = matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true));
+        // Log synchronous answers too, so a later suspend's re-run replays
+        // them instead of re-asking the decider.
+        self.resolution_answer_log.push(DecisionAnswer::Bool(b));
+        *cursor += 1;
+        Some(b)
+    }
+
+    /// Drop the multi-question replay log — call when a log-using effect
+    /// reaches any completing path (see `ask_seat_bool`).
+    pub(crate) fn clear_answer_log(&mut self) {
+        self.resolution_answer_log.clear();
+    }
+
     /// CR 707.10 — push `n` copies of the spell `cid` (if it's on the
     /// stack and copyable) directly above it. Copies inherit the
     /// original's target / mode / x / converged value and are flagged
@@ -1172,7 +1217,6 @@ impl GameState {
             Effect::Process { count, then } => {
                 // Process N exile cards an opponent owns → their graveyards;
                 // run `then` only if at least one was processed.
-                use crate::decision::{Decision, DecisionAnswer};
                 let opponents = self.opponents_of(ctx.controller);
                 let eligible: Vec<CardId> = self
                     .exile
@@ -1185,11 +1229,18 @@ impl GameState {
                     return Ok(());
                 }
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    format!("Process up to {count} card(s) from exile?"),
                     source,
-                    description: format!("Process up to {count} card(s) from exile?"),
-                });
-                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if !yes {
                     return Ok(());
                 }
                 for id in eligible {
@@ -1237,14 +1288,21 @@ impl GameState {
                 // The cost is deducted from the controller's already-
                 // floated mana pool — we don't auto-tap lands inside an
                 // effect (mana abilities aren't activatable mid-resolve
-                // by default).
-                use crate::decision::{Decision, DecisionAnswer};
+                // by default). A `wants_ui` controller gets the yes/no
+                // modal via the seat-routed suspend.
                 let source = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
                     source,
-                    description: description.clone(),
-                });
-                let pay = matches!(answer, DecisionAnswer::Bool(true))
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let pay = yes
                     && self.players[ctx.controller].mana_pool.pay(mana_cost).is_ok();
                 if pay {
                     self.run_effect(body, ctx, events)?;
@@ -4982,20 +5040,25 @@ impl GameState {
                 // Rhystic-tax rider: resolve the taxed player, ask them yes/no
                 // whether to pay `cost`, and resolve `then` if they don't (or
                 // can't). `then` runs in this same context, so its
-                // `PlayerRef::You` is the rider's controller.
+                // `PlayerRef::You` is the rider's controller. The question is
+                // seat-routed: a `wants_ui` payer (who may be an opponent of
+                // the resolving controller) gets the yes/no modal.
                 use crate::card::WardCost;
-                use crate::decision::{Decision, DecisionAnswer};
                 let Some(payer) = self.resolve_player(who, ctx) else {
                     return self.run_effect(then, ctx, events);
                 };
                 // AutoDecider declines (false) — let the effect resolve.
-                let wants_to_pay = matches!(
-                    self.decider.decide(&Decision::OptionalTrigger {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        description: "Pay the tax to prevent the triggered effect?".to_string(),
-                    }),
-                    DecisionAnswer::Bool(true),
-                );
+                let mut cursor = 0;
+                let Some(wants_to_pay) = self.ask_seat_bool(
+                    &mut cursor,
+                    payer,
+                    "Pay the tax to prevent the triggered effect?".to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
                 let paid = wants_to_pay
                     && match cost {
                         WardCost::Mana(mc) => {
@@ -5858,37 +5921,56 @@ impl GameState {
             }
 
             Effect::TemptingOffer { body } => {
-                // Run for the controller, offer each opponent a copy, then
-                // re-run for the controller once per acceptor.
-                self.run_effect(body, ctx, events)?;
-                let mut accepted = 0;
+                // Offer each opponent a copy (seat-routed yes/no, so a
+                // networked human actually chooses), then run the body for
+                // the controller, each acceptor, and once more per acceptor.
+                // All asks precede every body run so the suspend re-run is
+                // idempotent; opponents therefore answer before seeing the
+                // controller's result — a minor ordering approximation.
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                let mut cursor = 0;
+                let mut acceptors = Vec::new();
                 for opp in self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx) {
-                    let answer = self.decider.decide(&crate::decision::Decision::OptionalTrigger {
-                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                        description: "Accept the tempting offer?".to_string(),
-                    });
-                    if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
-                        accepted += 1;
-                        let opp_ctx = EffectContext { controller: opp, ..ctx.clone() };
-                        self.run_effect(body, &opp_ctx, events)?;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        opp,
+                        "Accept the tempting offer?".to_string(),
+                        source,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if yes {
+                        acceptors.push(opp);
                     }
                 }
-                for _ in 0..accepted {
+                self.clear_answer_log();
+                self.run_effect(body, ctx, events)?;
+                for &opp in &acceptors {
+                    let opp_ctx = EffectContext { controller: opp, ..ctx.clone() };
+                    self.run_effect(body, &opp_ctx, events)?;
+                }
+                for _ in 0..acceptors.len() {
                     self.run_effect(body, ctx, events)?;
                 }
                 Ok(())
             }
 
             Effect::PlayersMayAccept { who, description, on_accept, otherwise } => {
-                // Ask each resolved player in APNAP order; the first to
+                // Ask each resolved player in APNAP order (seat-routed —
+                // each player answers their own offer); the first to
                 // accept runs `on_accept` with themselves in slot 0 and the
                 // offer closes. Nobody accepting runs `otherwise`.
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                let mut cursor = 0;
                 for p in self.resolve_players(who, ctx) {
-                    let answer = self.decider.decide(&crate::decision::Decision::OptionalTrigger {
-                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                        description: description.clone(),
-                    });
-                    if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
+                    let Some(yes) =
+                        self.ask_seat_bool(&mut cursor, p, description.clone(), source, effect)
+                    else {
+                        return Ok(());
+                    };
+                    if yes {
+                        self.clear_answer_log();
                         let mut acc_ctx = ctx.clone();
                         if acc_ctx.targets.is_empty() {
                             acc_ctx.targets.push(Target::Player(p));
@@ -5898,6 +5980,7 @@ impl GameState {
                         return self.run_effect(on_accept, &acc_ctx, events);
                     }
                 }
+                self.clear_answer_log();
                 self.run_effect(otherwise, ctx, events)
             }
 
@@ -7038,30 +7121,41 @@ impl GameState {
 
             Effect::ClashWithOpponent { on_win } => {
                 // CR 701.30 — both reveal the top card; each may bottom it
-                // (synchronous decider; AutoDecider keeps it on top). The
-                // controller wins on a strictly higher mana value.
-                use crate::decision::{Decision, DecisionAnswer};
+                // (seat-routed yes/no, so a networked human gets the prompt;
+                // AutoDecider keeps it on top). The controller wins on a
+                // strictly higher mana value of the *revealed* cards. All
+                // asks precede the zone moves / reveal events so the suspend
+                // re-run is idempotent.
                 let me = ctx.controller;
                 let Some(opp) = self.opponents_of(me).first().copied() else {
                     return Ok(());
                 };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
                 let mut mv = [0i64; 2];
+                let mut bottoms = [false; 2];
                 for (i, p) in [me, opp].into_iter().enumerate() {
                     let Some(top) = self.players[p].library.first() else { continue };
                     mv[i] = top.definition.cost.cmc() as i64;
+                    let prompt = format!(
+                        "Clash: you revealed {}. Put it on the bottom?",
+                        top.definition.name
+                    );
+                    let Some(b) = self.ask_seat_bool(&mut cursor, p, prompt, source, effect)
+                    else {
+                        return Ok(());
+                    };
+                    bottoms[i] = b;
+                }
+                self.clear_answer_log();
+                for (i, p) in [me, opp].into_iter().enumerate() {
+                    let Some(top) = self.players[p].library.first() else { continue };
                     events.push(GameEvent::TopCardRevealed {
                         player: p,
                         card_name: top.definition.name,
                         is_land: top.definition.is_land(),
                     });
-                    let bottom = matches!(
-                        self.decider.decide(&Decision::OptionalTrigger {
-                            source: ctx.source.unwrap_or(CardId(0)),
-                            description: "Put the revealed card on the bottom?".into(),
-                        }),
-                        DecisionAnswer::Bool(true)
-                    );
-                    if bottom {
+                    if bottoms[i] {
                         let card = self.players[p].library.remove(0);
                         self.players[p].library.push(card);
                     }
@@ -8720,14 +8814,26 @@ impl GameState {
             Effect::Tribute { n, otherwise } => {
                 // CR 702.104 — an opponent may put N +1/+1 counters on the
                 // source; if they decline, the "if tribute wasn't paid"
-                // trigger half runs.
-                use crate::decision::{Decision, DecisionAnswer};
+                // trigger half runs. Seat-routed to the opponent, so a
+                // networked human answers their own tribute prompt.
                 let Some(source) = ctx.source else { return Ok(()) };
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                let opp = self
+                    .opponents_of(ctx.controller)
+                    .first()
+                    .copied()
+                    .unwrap_or(ctx.controller);
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    opp,
+                    format!("Pay tribute: put {n} +1/+1 counter(s) on it?"),
                     source,
-                    description: format!("Pay tribute: put {n} +1/+1 counter(s) on it?"),
-                });
-                if matches!(answer, DecisionAnswer::Bool(true)) {
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes {
                     self.run_effect(
                         &Effect::AddCounter {
                             what: Selector::This,

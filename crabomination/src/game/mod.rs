@@ -605,6 +605,16 @@ pub struct GameState {
     /// `submit_decision` call, so it never crosses a serialization boundary.
     #[serde(skip, default)]
     pub(crate) stashed_resolution_answer: Option<DecisionAnswer>,
+    /// Replay log for multi-question resolution effects (Clash,
+    /// `PlayersMayAccept`, `TemptingOffer`, `UnlessPlayerPays`, `MayPay`):
+    /// each suspend re-queues the *originating effect*, whose re-run replays
+    /// the logged answers in ask order (via a local cursor) before reaching
+    /// the next unanswered question. `apply_pending_effect_answer` appends
+    /// the validated answer; the effect clears the log on every completing
+    /// path (`ask_bool_logged` / `clear_answer_log`). Serialized so a
+    /// snapshot taken between two questions of the same effect round-trips.
+    #[serde(default)]
+    pub(crate) resolution_answer_log: Vec<DecisionAnswer>,
     /// Life-payment events (Phyrexian pips, "pay N life" costs) queued by
     /// `pay_receipt_life` mid-cast and drained into the action's event batch
     /// at the end of `perform_action`, so paid life fires life-loss triggers
@@ -972,6 +982,7 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             stashed_resolution_answer: self.stashed_resolution_answer.clone(),
+            resolution_answer_log: self.resolution_answer_log.clone(),
             pending_cost_events: self.pending_cost_events.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             mana_production_doublers: self.mana_production_doublers,
@@ -1097,6 +1108,7 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             stashed_resolution_answer: None,
+            resolution_answer_log: Vec::new(),
             pending_cost_events: Vec::new(),
             prevent_combat_damage_this_turn: false,
             mana_production_doublers: 0,
@@ -6671,10 +6683,13 @@ impl GameState {
                 x_value,
                 converged_value,
                 mana_spent,
+                trigger_source_ent,
+                event_amount,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more = self.continue_trigger_resolution(
-                    source, controller, remaining, target, mode, x_value, converged_value, mana_spent,
+                let mut more = self.continue_trigger_resolution_with_source(
+                    source, controller, remaining, target, mode, x_value, converged_value,
+                    mana_spent, trigger_source_ent, event_amount,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -7591,6 +7606,13 @@ impl GameState {
                 self.stashed_resolution_answer = Some(DecisionAnswer::Bool(*b));
                 Ok(Vec::new())
             }
+            PendingEffectState::SeatBoolAnswerPending { .. } => {
+                let DecisionAnswer::Bool(b) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                self.resolution_answer_log.push(DecisionAnswer::Bool(*b));
+                Ok(Vec::new())
+            }
             PendingEffectState::DivisionAnswerPending => {
                 let DecisionAnswer::DamageDivision(v) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -8077,6 +8099,8 @@ impl GameState {
                     x_value,
                     converged_value,
                     mana_spent,
+                    trigger_source_ent,
+                    event_amount,
                 },
             });
         }

@@ -583,13 +583,14 @@ impl PendingDecision {
 
 impl PendingEffectState {
     /// The player who must answer this suspended decision, when it isn't the
-    /// owning spell's caster / ability's controller. Currently only a forced
-    /// sacrifice (CR 701.16) re-points the answer to the sacrificing player
-    /// (an Edict's target). Everything else returns `None` (answered by the
-    /// resume's owner).
+    /// owning spell's caster / ability's controller: a forced sacrifice
+    /// (CR 701.16 — the Edict's target chooses) and seat-routed yes/no
+    /// questions (rhystic taxes, Tempting Offer, Clash). Everything else
+    /// returns `None` (answered by the resume's owner).
     pub(crate) fn answering_player(&self) -> Option<usize> {
         match self {
             PendingEffectState::SacrificePending { player } => Some(*player),
+            PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
             _ => None,
         }
     }
@@ -717,6 +718,15 @@ pub(crate) enum ResumeContext {
         /// `Value::CastSpellManaSpent`.
         #[serde(default)]
         mana_spent: u32,
+        /// The trigger's subject (`ctx.trigger_source` — the just-cast
+        /// spell, the taxed caster, the dying creature). Threaded so a
+        /// suspended trigger that reads `PlayerRef::Triggerer` /
+        /// `Selector::TriggerSource` still resolves it on resume.
+        #[serde(default)]
+        trigger_source_ent: Option<crate::game::effects::EntityRef>,
+        /// The firing event's amount (`Value::TriggerEventAmount`).
+        #[serde(default)]
+        event_amount: u32,
     },
     Ability {
         source: CardId,
@@ -996,6 +1006,12 @@ pub enum PendingEffectState {
     /// Suspended on the `OptionalTrigger` raised by `Effect::MayDo`. The
     /// yes/no answer is stashed for the re-run.
     MayDoAnswerPending,
+    /// Suspended on a yes/no question routed to `player` (who may differ
+    /// from the resolving controller — rhystic taxes, Tempting Offer,
+    /// Browbeat, Clash). The validated answer is *appended* to
+    /// `GameState.resolution_answer_log`; the re-run replays the log in
+    /// ask order to reach the next unanswered question.
+    SeatBoolAnswerPending { player: usize },
     /// Suspended on a `DivideDamage` split. The raw division is stashed;
     /// the re-run renormalises a malformed answer (wrong length / sum).
     DivisionAnswerPending,
