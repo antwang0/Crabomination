@@ -45952,3 +45952,195 @@ pub fn questing_druid() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── ZNR modal double-faced spell//land cycle ─────────────────────────────────
+
+/// Back face for the ZNR MDFC commons: a tapped land with `{T}: Add {c}`.
+fn znr_mdfc_land(name: &'static str, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![crate::catalog::sets::tap_add(color)],
+        ..Default::default()
+    }
+}
+
+/// Spikefield Hazard // Spikefield Cave — {R} Instant: 1 damage to any
+/// target; a permanent it would kill this turn is exiled instead.
+pub fn spikefield_hazard() -> CardDefinition {
+    CardDefinition {
+        name: "Spikefield Hazard",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        ]),
+        back_face: Some(Box::new(znr_mdfc_land("Spikefield Cave", Color::Red))),
+        ..Default::default()
+    }
+}
+
+/// Malakir Rebirth // Malakir Mire — {B} Instant: lose 2 life; the target
+/// returns tapped when it dies this turn.
+pub fn malakir_rebirth() -> CardDefinition {
+    CardDefinition {
+        name: "Malakir Rebirth",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::WhenTargetDiesThisTurn {
+                body: Box::new(Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: true },
+                }),
+                slot: 0,
+            },
+        ]),
+        back_face: Some(Box::new(znr_mdfc_land("Malakir Mire", Color::Black))),
+        ..Default::default()
+    }
+}
+
+/// Bala Ged Recovery // Bala Ged Sanctuary — {2}{G} Sorcery: regrowth.
+pub fn bala_ged_recovery() -> CardDefinition {
+    CardDefinition {
+        name: "Bala Ged Recovery",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::InYourGraveyard,
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Bala Ged Sanctuary", Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Hagra Mauling // Hagra Broodpit — {2}{B}{B} Instant: destroy target
+/// creature (the no-basics discount is dropped).
+pub fn hagra_mauling() -> CardDefinition {
+    CardDefinition {
+        name: "Hagra Mauling",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        back_face: Some(Box::new(znr_mdfc_land("Hagra Broodpit", Color::Black))),
+        ..Default::default()
+    }
+}
+
+/// Beyeen Veil // Beyeen Coast — {1}{U} Instant: opposing creatures get
+/// -2/-0 this turn.
+pub fn beyeen_veil() -> CardDefinition {
+    CardDefinition {
+        name: "Beyeen Veil",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Beyeen Coast", Color::Blue))),
+        ..Default::default()
+    }
+}
+
+/// Silundi Vision // Silundi Isle — {2}{U} Instant: dig six for an instant
+/// or sorcery; rest to the bottom.
+pub fn silundi_vision() -> CardDefinition {
+    use crate::effect::RevealMissDest;
+    CardDefinition {
+        name: "Silundi Vision",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            to: ZoneDest::Hand(PlayerRef::You),
+            cap: Value::Const(6),
+            life_per_revealed: 0,
+            miss_dest: RevealMissDest::BottomRandom,
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Silundi Isle", Color::Blue))),
+        ..Default::default()
+    }
+}
+
+/// Kazandu Mammoth // Kazandu Valley — {1}{G}{G} 3/3; landfall +2/+2.
+pub fn kazandu_mammoth() -> CardDefinition {
+    CardDefinition {
+        name: "Kazandu Mammoth",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        back_face: Some(Box::new(znr_mdfc_land("Kazandu Valley", Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Tangled Florahedron // Tangled Vale — {1}{G} 1/1; {T}: Add {G}.
+pub fn tangled_florahedron() -> CardDefinition {
+    CardDefinition {
+        name: "Tangled Florahedron",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![crate::catalog::sets::tap_add(Color::Green)],
+        back_face: Some(Box::new(znr_mdfc_land("Tangled Vale", Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Skyclave Cleric // Skyclave Basilica — {1}{W} 1/3; ETB gain 2.
+pub fn skyclave_cleric() -> CardDefinition {
+    CardDefinition {
+        name: "Skyclave Cleric",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        back_face: Some(Box::new(znr_mdfc_land("Skyclave Basilica", Color::White))),
+        ..Default::default()
+    }
+}

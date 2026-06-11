@@ -51227,3 +51227,80 @@ fn questing_druid_grows_and_adventure_impulses() {
         "impulsed two"
     );
 }
+
+// ── ZNR MDFC spell//land cycle ───────────────────────────────────────────────
+
+/// The MDFC back face is playable as a tapped land.
+#[test]
+fn znr_mdfc_back_face_plays_as_tapped_land() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_hand(0, catalog::malakir_rebirth());
+    g.perform_action(GameAction::PlayLandBack(card)).expect("land half playable");
+    let c = g.battlefield_find(card).expect("on battlefield");
+    assert_eq!(c.definition.name, "Malakir Mire");
+    assert!(c.tapped, "enters tapped");
+}
+
+/// Spikefield Hazard's kill is an exile instead.
+#[test]
+fn spikefield_hazard_exiles_what_it_kills() {
+    let mut g = two_player_game();
+    let thopter = g.add_card_to_battlefield(1, catalog::ornithopter()); // 0/2
+    let spike = g.add_card_to_hand(0, catalog::spikefield_hazard());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // 1 damage doesn't kill a 0/2 — use a damaged target instead.
+    g.battlefield_find_mut(thopter).unwrap().damage = 1;
+    cast_at(&mut g, spike, Target::Permanent(thopter));
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == thopter), "died this turn → exiled instead");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != thopter));
+}
+
+/// Malakir Rebirth costs 2 life and returns the dying creature tapped.
+#[test]
+fn malakir_rebirth_returns_creature_for_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mr = g.add_card_to_hand(0, catalog::malakir_rebirth());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, mr, Target::Permanent(bear));
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+    let mut evs = Vec::new();
+    g.sacrifice_one(bear, 0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("returned");
+    assert!(back.tapped);
+}
+
+/// Kazandu Mammoth grows on land drops.
+#[test]
+fn kazandu_mammoth_landfall_pump() {
+    let mut g = two_player_game();
+    let mammoth = g.add_card_to_battlefield(0, catalog::kazandu_mammoth());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mammoth).unwrap().power, 5, "3 + 2 landfall");
+}
+
+/// Silundi Vision digs six for an instant or sorcery.
+#[test]
+fn silundi_vision_digs_for_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let sv = g.add_card_to_hand(0, catalog::silundi_vision());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sv, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "found the instant"
+    );
+}
