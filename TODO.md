@@ -4,7 +4,301 @@ Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status),
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`
-(prioritized engine functionality).
+(prioritized engine functionality). **The correctness-audit section below
+outranks everything else in this file** — its P0 tier is game-deciding or
+state-corrupting in ordinary play.
+
+## Engine correctness audit — 2026-06-11
+
+Five-reviewer deep pass over the engine core (`game/mod.rs`, `effects/`,
+`actions.rs`/`affordances.rs`, `stack.rs`/`combat.rs`/`layers.rs`/`types.rs`,
+`crabomination_base`). Every finding was verified against call sites; known
+approximations already logged elsewhere in this file were excluded. Line
+numbers are as of commit `683d1416` — re-grep before fixing.
+
+Two recurring failure modes generated most of these (see the P3 root-cause
+items): effect arms **bypassing the rich centralized funnels** (death /
+discard / zone-move / damage) for a bare cheaper helper, and **parallel
+hand-maintained walkers drifting apart** with no exhaustiveness guard.
+
+### P0 — game-deciding / state corruption
+
+- ⏳ **Blocked attackers become unblocked when their blockers die**
+  (`combat.rs:1337-1372` + `stack.rs:2250`). `remove_from_combat` erases the
+  `block_map` entry when a blocker dies and any attacker with empty
+  `blocker_ids` routes to the unblocked branch — full damage to the face.
+  There is no "remains blocked" flag (CR 510.1c). Mis-resolves **every
+  double-strike-vs-blocker combat** (blocker dies in the first-strike step)
+  and every kill-the-blocker-after-blocks line. Coincidentally correct only
+  for trample (CR 702.19g).
+- ⏳ **Triggered abilities re-target instead of fizzling** (`mod.rs:7228`).
+  `continue_trigger_resolution_with_source` calls
+  `auto_target_for_effect` when the stored target is illegal at resolution
+  and silently aims the trigger at a *new* target — a global CR 608.2b
+  violation patched in for Elesh-Norn-doubled ETB copies. Correct fix:
+  per-copy target choice at push time; the trigger must fizzle otherwise.
+- ⏳ **Target filters unenforced for ~20 targeted effect variants**
+  (`crabomination_base/src/effect/query.rs:1106-1256`).
+  `target_filter_for_slot_in_mode_kicked` (`eff_find`) is the *only*
+  cast-time filter enforcement and ends in `_ => None`; missing arms include
+  `Detain`, `Regenerate`, `Goad`, `Transform`, `LoseAllAbilities`,
+  `LoseKeywordThisTurn`, `ExileUntilSourceLeaves`, `GrantTriggeredAbility`,
+  `MoveCounter`, `SetLoyalty`, `BecomeChosenColor`, … For all of them a
+  client can submit any target (Lyev Skyknight can detain the caster's own
+  land). CR 115.1a/601.2c. Add an exhaustiveness guard across the three
+  sibling walkers (`requires_target` / `primary_target_filter` / `eff_find`).
+- ⏳ **Cast pipeline is not atomic — partial state on rejected actions**
+  (all reachable from network client input, CR 601.2h rewind):
+  - Squad / Multikicker / Replicate (`actions.rs:1418/1461/1502`) commit the
+    base `cast_spell` *first*, then try to pay the extra cost — failure
+    leaves the spell on the stack at base cost (deliberate under-pay cheat).
+  - Casualty / sacrifice-reduce / Bargain (`actions.rs:1377/1556/1605`)
+    sacrifice *before* the base cast can still fail — creature dies (with
+    death triggers), no spell.
+  - `declare_attackers` (`combat.rs:157-298`) spends the attack tax and taps
+    attackers mid-loop before validation finishes — one illegal attacker
+    corrupts the whole declaration. `declare_blockers` pays the block tax
+    before Menace/Lure/Provoke validation (`combat.rs:593`).
+  - `play_land_with_face` (`actions.rs:872`) restores a rejected back-face
+    land with the *back* definition still installed — card permanently
+    corrupted in hand.
+  - Madness (`mod.rs:4327`) pays the madness cost before
+    `cast_card_for_free` can fail — mana lost, no refund.
+  - London mulligan bottoming (`mod.rs:6080`) never validates that
+    `mulligans_taken` cards actually left the hand — a hostile client
+    mulligans to a free fresh 7 (CR 103.5a). Use the `CleanupDiscard`
+    re-pose-until-satisfied pattern (`mod.rs:6179`).
+- ⏳ **`Effect::PumpPT` discards its duration** (`effects/mod.rs:3040`).
+  Always writes the EOT-cleared `power_bonus`/`toughness_bonus` fields, so
+  `Duration::Permanent` pumps expire at cleanup (Wall of Roots's cumulative
+  -0/-1 resets every turn — its mana is free forever) and `EndOfCombat`
+  pumps last the whole turn.
+
+### P1 — rules-visible bugs
+
+- ⏳ **Death-funnel bypass family** — arms that route battlefield→graveyard
+  around `remove_to_graveyard_with_triggers`, silently dropping dies
+  triggers, Persist/Undying, `died_card_snapshots`, and tallies (CR 700.4):
+  - `Effect::LivingEnd` sacrifice-all step (`effects/mod.rs:2824-2834`) —
+    no death triggers at all for the swept board.
+  - `Effect::SacrificeAndRemember` (`effects/mod.rs:6262-6297`) — Kitchen
+    Finks sacrificed to Tribute to Hunger drops Persist.
+  - Ward costs (`effects/mod.rs:4570-4595`): `SacrificeCreature` discards
+    the returned event vec; `Discard(n)` pushes hand→graveyard directly so
+    no `CardDiscarded` fires (Madness skipped, CR 702.35).
+  - Fading/Vanishing + cumulative upkeep turn-based sacrifices
+    (`mod.rs:1863-1876`, `1948-1955`) emit no `CreatureDied`;
+    `process_attacking_token_cleanup` (`mod.rs:3630`) emits it but skips the
+    snapshot — three diverged copies of `sacrifice_one`.
+- ⏳ **Hybrid/Phyrexian permanents read as colorless on the battlefield**
+  (`effects/eval.rs:1040-1045`). `evaluate_requirement_static::HasColor`
+  scans bare `Colored` pips only; the sibling evaluator at `eval.rs:1284`
+  already uses `ManaCost::colors()` with a comment warning about exactly
+  this. CR 105.2/202.2.
+- ⏳ **"Each player discards" stops at the first `wants_ui` seat**
+  (`effects/mod.rs:1816`, also `1925`, `5903`, `6171`, `6211`, `6246`).
+  The loop suspends with continuation `Noop` mid-iteration, dropping every
+  remaining player — in human-vs-bot a symmetric discard hits only the
+  human. `Effect::Sacrifice` (`effects/mod.rs:4731`) shows the correct
+  auto-pick-first / defer-one-suspension pattern.
+- ⏳ **`OneSpellPerTurn` reads a stale counter** (`mod.rs:3932`).
+  `spells_cast_this_turn` resets at the player's *own* untap
+  (`stack.rs:1308`), so under Rule of Law a non-active player is locked out
+  of all spells on opponents' turns based on their previous turn's casts.
+  Needs a turn-scoped (not owner-untap-scoped) count.
+- ⏳ **Animated lands / crewed Vehicles can't block** (`combat.rs:487`,
+  also the Lure/MustBlock able-blocker scans at `665-778`). Blocker
+  legality reads printed `CardInstance::can_block()`; attacker legality
+  already reads the computed view (comment at `combat.rs:241`). CR 509.1a.
+- ⏳ **Lifegain events ignore replacements** (`mod.rs:1350-1399` +
+  `effects/mod.rs:1325`). `adjust_life` applies can't-gain / Tainted Remedy
+  / `LifeGainBonus` internally but returns only the new total; callers emit
+  `LifeGained` with the *requested* amount, so lifegain triggers fire on
+  gains that never happened (CR 119.10) and `TriggerEventAmount` payoffs
+  read pre-bonus values. Return the applied delta (the `DoubleLife` arm at
+  `effects/mod.rs:1346` shows the recompute pattern). Related:
+  `SetLifeTotal`/`ExchangeLifeTotals` (`effects/mod.rs:1474-1526`) bypass
+  `adjust_life` entirely (CR 119.7) and never set `lost_life_this_turn`.
+- ⏳ **Every coin flip is heads** (`mod.rs:2563` +
+  `decision.rs:481`). `AutoDecider` answers constant `Bool(true)` for
+  `Decision::CoinFlip` despite the doc promising engine RNG, and no live
+  path installs another decider — deterministic and exploitable.
+- ⏳ **Non-combat damage funnel missing Infect/Wither/deathtouch**
+  (`effects/movement.rs:248-302`). Permanent-branch damage is always
+  `c.damage += amount` (CR 702.90e/702.80a) and `dealt_deathtouch_damage`
+  is never set (CR 702.2c — `Effect::Fight` hand-rolls the flag because of
+  this). `Effect::Fight` itself (`effects/mod.rs:1295-1314`) passes
+  `source: None`, dropping lifelink, protection prevention, and
+  infect/wither for both fight halves.
+- ⏳ **Combat damage aggregation across sources** (`combat.rs:1506-1562`,
+  `1568-1597`). All blockers' strike-back is summed once: any infect
+  blocker converts the *whole* sum to counters (CR 702.90 is per-source),
+  prevention shields and Torbran-style scaling apply once with
+  `dealing_blocker_ids.first()` as the source, and per-blocker
+  `creature_damage` records log full power even when partially prevented.
+- ⏳ **Excess non-trample damage vanishes / lethal ignores marked damage**
+  (`combat.rs:996-1010`, `1063-1082`, `1146-1194`). `default_damage_split`
+  caps at lethal and discards the remainder; `resolve_damage_assignment`
+  accepts under-assignment whenever all blockers are at lethal (CR 510.1d);
+  `combat_lethals` ignores damage already marked (CR 510.1c — double-strike
+  tramplers under-tramp in the regular step).
+- ⏳ **Layer timestamps are incoherent** (`layers.rs:124-127` —
+  static-ability effects stamp `timestamp: card.id.0` (`mod.rs:2809` + ~25
+  sites) while resolved-spell effects use `next_effect_timestamp`
+  (`mod.rs:3527`)). Cross-comparison is arbitrary (CR 613.7), and a
+  bounced-and-recast permanent keeps its original low CardId "timestamp"
+  (re-cast Blood Moon orders before an older Urborg). Also outside the
+  timestamp system entirely: `granted_keywords_eot` merges *before* the
+  layer walk so a later "gains flying" loses to an earlier
+  `RemoveAllAbilities` (`layers.rs:309-325`, `437`).
+- ⏳ **Step triggers skip APNAP** (`stack.rs:309-485`). `fire_step_triggers`
+  queues in battlefield-`Vec` order despite the comment claiming
+  "APNAP-ordered" (CR 603.3b) and bypasses the same-controller
+  `TriggerOrder` choice; the unified event dispatcher does it right
+  (`apnap_rank`, `mod.rs:5432`).
+- ⏳ **`drain_trigger_queue` drops trigger batches** (`mod.rs:5697`) —
+  silently discards an entire batch when a decision is already pending,
+  despite its comment claiming auto-target fallback.
+- ⏳ **`GainControl` doesn't set summoning sickness**
+  (`effects/mod.rs:3979-4013`). A Control-Magic-style steal attacks the
+  same turn without haste (CR 302.6); Act-of-Treason effects mask it with
+  redundant haste grants.
+- ⏳ **Fizzled flashback/Aftermath spells go to the graveyard**
+  (`mod.rs:6958-6996`). The CR 608.2b fizzle paths call
+  `route_to_graveyard` directly, bypassing the `cast_via_flashback` exile
+  rider consumed only on the success path (`mod.rs:7091`, `7149`) —
+  re-flashbackable (CR 702.34d).
+- ⏳ **Mass exilers bypass `move_card_to`** (`effects/mod.rs:2782-2915`,
+  `1118-1124` — `ExileAllGraveyards`, `LivingEnd` exile half,
+  `ExilePlayerGraveyard`, `ExileHand`, `ExileSameNameAsTarget`, `Process`).
+  `CardLeftGraveyard` / `cards_left_graveyard_this_turn` never fire (the
+  shipped Witherbloom payoffs go dead vs Rest in Peace / Go Blank);
+  `Process` skips `route_to_graveyard` redirects (CR 614.6).
+- ⏳ **`DigToHandLoseLife` emits fake draws** (`effects/mod.rs:2110-2158`).
+  Cards put into hand emit `CardDrawn` (CR 121.5 — Sheoldred/Bowmasters
+  fire spuriously) while `cards_drawn_this_turn` is *not* bumped; the
+  rest-to-graveyard branch bypasses `route_to_graveyard`. The engine's own
+  `RevealTopAndDrawIf` (`mod.rs:6037`) cites the rule correctly.
+- ⏳ **Hybrid mana payment solver rejects payable costs**
+  (`crabomination_base/src/mana.rs:606-675`). Greedy forced-pip-first
+  resolution fails e.g. `{W/U}{W/G}{W/G}` vs {W,U,G} and
+  `{W/U}{2/W}` vs {W,U} (hybrid pass commits before mono-hybrid). Failure
+  is atomic but castable spells report unpayable — needs real bipartite
+  matching over pips×colors.
+- ⏳ **`CardInstanceWire` drops six persistent fields**
+  (`crabomination_base/src/card.rs:2649-2959`): `kick_count`,
+  `squad_count`, `bargained`, `encoded_on`, `granted_activated_abilities`,
+  `cast_target_was_battlefield`. Snapshots with spells on the stack restore
+  them zeroed (Everflowing Chalice enters with 0 counters; Urza's Saga
+  grants vanish; the 608.2b fizzle flag clears). Related:
+  `TokenDefinition.static_abilities` is `#[serde(skip)]` with no rebuild
+  path (`card.rs:1127`) — Karn's Construct deserializes vanilla.
+- ⏳ **ETB control replacement fires triggers for the wrong controller**
+  (`effects/movement.rs:649-742`). `apply_etb_control_replacement` may
+  reassign `card.controller` (Gather Specimens) but
+  `fire_self_etb_triggers(cid, p)` still passes the stale pre-replacement
+  controller (CR 603.3d); the token funnel does it right (`mod.rs:2402`).
+- ⏳ **Cleanup priority is wrong both ways** (`stack.rs:284-294`,
+  `1421-1435`). An unconditional priority window every cleanup (CR 514.3
+  grants one only when SBAs/triggers happen), and when the cleanup discard
+  *does* fire triggers, `finish_cleanup` advances the turn anyway, stranding
+  them past the EOT wipe (CR 514.3a repeat loop unimplemented).
+- ⏳ **Batch-relative block validation** (`combat.rs:597-641`, `793-833`).
+  Menace counts only the current `assignments` batch while the
+  CantBeBlockedExceptByN/ByMoreThanOne checks merge `block_map` (CR
+  702.110b breaks under incremental multi-defender submission); a duplicate
+  blocker in one batch silently un-blocks the first attacker while keeping
+  both Flanking/Bushido/Rampage deltas.
+- ⏳ **Counter handling inconsistencies** (`effects/mod.rs:2011`, `2208`,
+  `2522`, `3773`, `3814`; `eval.rs:1115`). `Monstrosity`/`Explore` skip CR
+  614.16 doublers that `AddCounter`/`Support`/`Amass` apply;
+  `AddKeywordCounter` emits no `CounterAdded` and applies no doubler
+  despite its comment; `RemoveAllCounters` leaves `keyword_counters`
+  (CR 122.1b); shield-counter depletion leaves a 0-count map entry that
+  makes `R::IsModified` true forever (CR 700.9).
+- ⏳ **Soulshift fetches from any graveyard**
+  (`crabomination_base/src/effect/shortcut.rs:2048-2062`). The desugar's
+  `InGraveyard` matches all players and routes to the card's owner's hand —
+  can return an opponent's Spirit to the opponent (CR 702.47a is "your
+  graveyard … your hand"). Similarly **Graft** (`shortcut.rs:2825-2844`)
+  scopes to `YourControl` but printed Graft is *any* entering creature
+  (CR 702.58a).
+- ⏳ **Detained planeswalkers can still activate loyalty abilities**
+  (`mod.rs:5808`). `activate_loyalty_ability` lacks the `detained_by` gate
+  the regular activation path has (`actions.rs:6387`).
+- ⏳ **Day/Night flips wrong on extra turns** (`mod.rs:1130`). During an
+  extra turn `do_untap` resets `spells_cast_this_turn` *before*
+  `check_day_night_transition` reads it — always reads 0, flips Day→Night
+  regardless of casts (CR 502.2).
+- ⏳ **Skulk compares computed power to raw power** (`mod.rs:8218`).
+  Blocker side uses layer-computed power, attacker side raw
+  `CardInstance::power()` — anthem-pumped Skulk attackers evaluated
+  unbuffed (CR 702.72a).
+- ⏳ **Blood token discard is resolution, not cost**
+  (`crabomination_base/src/tokens.rs:194-242`). Activates with an empty
+  hand and still draws (CR 602.2b). The "isn't expressible as a cost"
+  comment is stale — `ActivatedAbility.discard_cost` exists and Fauna
+  Shaman uses it.
+- ⏳ **Inconsistent `CardInstance` helpers**
+  (`crabomination_base/src/card.rs:2486-2508`, `2592-2600`).
+  `has_protection_from` ignores `granted_keywords_eot`/
+  `removed_keywords_eot` (unlike `has_keyword`); `ward_cost()` collapses
+  colored Ward to generic and returns `None` for Life/Discard/Sacrifice
+  Wards. Currently test-only but public API traps.
+- ⏳ **`CopySpellUnlessPaid` duplicates the spell-copy block**
+  (`effects/mod.rs:7028-7134`) and has already diverged from
+  `copy_stack_spell`: missing the `CantBeCopied` guard (CR 707) and the
+  choose-new-targets path.
+
+### P2 — performance
+
+- ⏳ **Uncached layer recomputation is the dominant engine cost.**
+  `compute_battlefield()` / `computed_permanent()` rebuild the full
+  continuous-effect set per call (`gather_continuous_effects_inner`,
+  `mod.rs:2742`, clone-heavy). Called per SBA pass (`stack.rs:1823`), twice
+  each in `declare_attackers`/`declare_blockers`, per blocker in
+  `legal_blockers` and per blocker×attacker pair in the bot's
+  `pick_blocks`, per candidate in every `EachPermanent` filter
+  (`eval.rs:1016`), twice per protection check (`mod.rs:3506`), and twice
+  per non-combat damage event — O(N²·statics) per resolution. **A
+  generation-counter dirty-flag cache (invalidate on battlefield /
+  continuous-effects mutation) is the single highest-leverage perf change
+  in the codebase.** Helpers like `blocker_can_block_attacker` should also
+  take a precomputed `&[ComputedPermanent]` snapshot.
+- ⏳ **`static_str_serde::intern` leaks unboundedly**
+  (`crabomination_base/src/static_str_serde.rs:38` via `tokens.rs:47`).
+  Bare `Box::leak` with no dedup table, called once per token mint —
+  including bot dry-run simulations — despite the module doc claiming the
+  leak is bounded by unique names. Add the `HashSet<&'static str>` table.
+- ⏳ **Affordance probing clones the world per candidate**
+  (`affordances.rs:871`). ~22 categories × hand size template clones +
+  `perform_action` dry-runs per view broadcast; share one template clone
+  per category and pre-filter categories with no matching hand cards.
+
+### P3 — structural root causes (fix once, prevent the class)
+
+- ⏳ **Three battlefield→graveyard exits with divergent semantics**
+  (`remove_to_graveyard_with_triggers` / bare
+  `remove_from_battlefield_to_graveyard` / `move_card_to`→
+  `route_to_graveyard`), chosen ad hoc per effect arm — the direct cause of
+  the P1 death-funnel family. Make the bare helper private to the rich one
+  so new arms can't pick wrong.
+- ⏳ **Parallel hand-maintained walkers with no exhaustiveness guard**:
+  `eff_find` vs `requires_target` vs `primary_target_filter` (the P0
+  targeting hole), the two `evaluate_requirement` evaluators (the hybrid
+  color bug), printed-vs-computed checks in combat (the blocker bug). Each
+  pair has already diverged at least once; unify or add compile-time/test
+  exhaustiveness checks.
+- ⏳ **Card-name-keyed hack tables inside a ~720-line god function**
+  (`gather_continuous_effects_inner`, `mod.rs:2742-3463`; tables at
+  `mod.rs:7583-7681`). `&'static str` lookups break silently under the
+  engine's own copy machinery and duplicate what
+  `StaticEffect::PumpSelfIf`/`PumpTeamIf` already express; same applies to
+  `dynamic_pt_for_name` (already flagged below in the Eldrazi notes).
+- ⏳ **`StackItem::Trigger` is an 11-field literal at ~12 push sites**
+  (`stack.rs:2025`, `2322`, `2560`, …) — field-drift bugs (several sites
+  pass `event_amount: 0` where an amount is available). Add a
+  `TriggerPush` builder.
 
 ## Follow-ups noticed (not yet done)
 
@@ -14,9 +308,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     (Aberration approximates as mill 3).
   - **Sphinx's Tutelage** — mill-2-with-repeat-while-colors-match needs a
     loop-until predicate over the milled pair.
-  - **MayDo wants_ui suspend** — `Effect::MayDo` still answers via the
-    synchronous decider; a networked human gets the AutoDecider decline
-    (bit Phyrexian Scriptures I / Luminarch Ascension in tests).
+  - **MayDo wants_ui suspend** ✅ — `Effect::MayDo` now suspends for a
+    `wants_ui` controller via the stash-and-rerun path
+    (`PendingEffectState::MayDoAnswerPending`); the client's existing
+    OptionalTrigger yes/no modal answers it. Bots/tests still use the
+    synchronous decider.
   - **Level up (CR 702.87)** — Student of Warfare-style level counters with
     banded P/T/keywords are unmodeled.
   - **Squad/Replicate/Multikicker stepper cap** — the bot probes kick counts
@@ -54,7 +350,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     `SelectionRequirement::EnteredFromGraveyardThisTurn`; the return rides
     `DelayUntil(NextEndStep)` with an in-graveyard re-check.
   - ✅ **One-spell-per-turn lock** (`StaticEffect::OneSpellPerTurn` — Rule
-    of Law, Eidolon of Rhetoric, Archon of Emeria).
+    of Law, Eidolon of Rhetoric, Archon of Emeria). ⚠️ Audit 2026-06-11:
+    reads the owner-untap-scoped `spells_cast_this_turn`, wrongly locking
+    non-active players — see audit P1.
   - **Chord of Calling** ✅ — `SelectionRequirement::ManaValueAtMostXFromCost`
     concretized via `resolve_x(ctx.x_value)` in `Effect::Search`.
   - **Shadowspear** ✅ — `Effect::LoseKeywordThisTurn` +
@@ -210,7 +508,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   keep the bare filter re-check. **Multi-target all-illegal fizzle ✅** —
   battlefield-aimed multi-target spells fizzle only when every slot is
   illegal (Arc Trail tests). Remaining ⏳: Aura spells (permanent path) and
-  protection-from-color on resolution.
+  protection-from-color on resolution. ⚠️ Audit 2026-06-11: **triggered
+  abilities** still re-target via `auto_target_for_effect` instead of
+  fizzling (`mod.rs:7228`), and the fizzle path sends flashbacked spells to
+  the graveyard instead of exile — see audit P0/P1.
 - ⏳ **Demonstrate "you may" + opponent choice (CR 702.150).** `Effect::
   Demonstrate` always copies (the optional "you may" collapses) and auto-picks
   the lowest-seat opponent rather than prompting the caster. Fine for bots;
@@ -1278,7 +1579,7 @@ picking an item up.
 - ✅ **CR 702.95 — Soulbond** (auto-pairs lowest-CardId partner; a controller "may"/decline prompt still ⏳).
 - ✅ **CR 702.134 — Mentor** (`shortcut::mentor`).
 - ✅ **CR 702.105 — Dethrone** (primitive only; no simple printed card exists yet).
-- ✅ **CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift** (carded + tested).
+- ✅ **CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift** (carded + tested). ⚠️ Audit 2026-06-11: the Soulshift desugar fetches from *any* graveyard (should be yours only, CR 702.47a) and Graft only watches your own entering creatures — see audit P1.
 - ✅ **CR 702.68 / 702.69 / 702.70 — Frenzy / Gravestorm / Poisonous**.
 - ✅ **CR 702.139 — Revolt**.
 - ✅ **CR 702.79 / 702.92 — Persist / Undying** (return on *any* death, not just lethal-damage SBA).
@@ -1311,9 +1612,9 @@ picking an item up.
   final chapter → sacrifice, unless a chapter ability is still on the stack);
   Battle / Role / Dungeon / Speed SBAs remain; multi-SBA "collapse into one
   replacement" (704.7); strict spell-copy-off-stack identity (704.5e).
-- 🟡 **CR 613 — Interaction of Continuous Effects** — no dependency analyzer (613.8); CDA-first pre-pass (613.3); Aura re-stamp on enchant (613.7e).
+- 🟡 **CR 613 — Interaction of Continuous Effects** — no dependency analyzer (613.8); CDA-first pre-pass (613.3); Aura re-stamp on enchant (613.7e). ⚠️ Audit 2026-06-11: 613.7 timestamp assignment itself is broken — statics stamp `card.id.0` while spell effects use a separate counter, and EOT keyword grants live outside the timestamp system — see audit P1.
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
-- 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth.
+- 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. ⚠️ Audit 2026-06-11: the replacements apply inside `adjust_life` but callers still emit `LifeGained` with the pre-replacement amount (triggers fire on suppressed gains), and `SetLifeTotal`/`ExchangeLifeTotals` bypass `adjust_life` entirely — see audit P1.
 - 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded). Remaining: choose-to-draw (121.3); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - 🟡 **CR 502 — Untap Step** — Phasing (502.1 / 702.26) ✅: `do_phasing`
   runs as a turn-based action at the top of the untap step, moving the active
@@ -1325,7 +1626,8 @@ picking an item up.
   CR 712 below.
   `StaticEffect::PreventUntap` honors `Selector::This` (Basalt/Grim Monolith)
   and `Selector::AttachedTo(This)` (Claustrophobia/Dehydration).
-- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).
+- 🟡 **CR 510 — Combat Damage Step** (added by audit 2026-06-11) — a blocked attacker whose blockers all left combat deals full damage to the player (no "remains blocked" state, 510.1c — breaks every double-strike-vs-blocker combat); excess non-trample damage is discarded instead of assigned (510.1d); lethal ignores damage already marked (510.1c); blocker strike-back is aggregated across sources (infect/deathtouch/prevention leak, 702.90). See audit P0/P1.
+- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ⚠️ Audit 2026-06-11: blocker legality reads *printed* characteristics, so animated manlands / crewed Vehicles can't block (509.1a) — see audit P1. ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); full ability removal (113.10b); "can't have" anti-grant (113.11). Counter-target-ability (113.9) ✅ — `Effect::CounterAbility` (Consign to Memory, Stifle) with precise targeting via `SelectionRequirement::HasAbilityOnStack`.
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.
@@ -1333,7 +1635,7 @@ picking an item up.
   `GameAction::CompanionToHand`, {3} sorcery-speed sideboard→hand; deck
   validation ⏳). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
-- ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur).
+- ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). ⚠️ Audit 2026-06-11: in live games **every flip is heads** — `AutoDecider` answers constant `Bool(true)` for `Decision::CoinFlip` and nothing installs an RNG-backed decider — see audit P1.
 - 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
@@ -1356,9 +1658,9 @@ picking an item up.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
 - ✅ **CR 701.12 — Exchange (control)** — `Effect::ExchangeControl { a, b }` swaps the controllers of two resolved permanents simultaneously (Switcheroo). Exchange-life-totals + exchange-hand/graveyard already ✅. Remaining ⏳: an *until-end-of-turn* exchange variant and multi-target ETB delivery (Vedalken Plotter — see Follow-ups).
-- ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker.
+- ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker. ⚠️ Audit 2026-06-11: several arms bypass the funnel entirely (Living End, SacrificeAndRemember, Ward sac costs, Fading/Vanishing/cumulative upkeep) — dies triggers and Persist/Undying silently dropped; see audit P1 death-funnel family.
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
-- ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics.
+- ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics. ⚠️ Audit 2026-06-11: `activate_loyalty_ability` lacks the `detained_by` gate, and `Effect::Detain`'s target filter is one of the ~20 unenforced `eff_find` arms — see audit P0/P1.
 - ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
 - ✅ **CR 701.57 — Discover N** — `Effect::Discover { n }`: exile from top until a nonland MV≤N, cast it free or put in hand (controller's choice), bottom the rest. Ships Geological Appraiser, Trumpeting Carnosaur. (Cascade-adjacent; shares the bottom-the-rest tail.)
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
@@ -1404,6 +1706,11 @@ picking an item up.
   ability-text color words beyond keywords.
 
 ## Suggested next-up tasks
+
+> **Reprioritized 2026-06-11:** the correctness-audit section at the top of
+> this file outranks everything below. New-card/primitive work should wait
+> behind at least the audit P0 tier (and the P3 root-cause refactors, which
+> make every subsequent card batch safer to land).
 
 - ⚠️ **Fabricated real-name STX cards (correctness sweep).** Many STX factories
   reuse *real* STX card names but carry invented cost/types/oracle text (the
@@ -2298,7 +2605,8 @@ verified; client-only edits (e.g. `keyword_label`) are reviewed by hand.
 Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
 deal noncombat damage to a creature, it deals that much in -1/-1 counters
 instead" needs a damage-replacement hook. Soul-Scar Mage ships as 1/2 Prowess
-without it.
+without it. ⚠️ Audit 2026-06-11: native Infect/Wither are *also* missing from
+the non-combat damage funnel (`movement.rs:248`) — fix together; see audit P1.
 
 ### Phyrexian mana
 Mutagenic Growth ({G/P}), Gut Shot, Dismember, etc. — a mana symbol payable
@@ -2543,6 +2851,82 @@ per-card primitive + tests). Still open:
 
 ---
 
+## Engine — Rollback / Undo system (plan)
+
+Two deliverables share one mechanism: (a) **transactional action
+application** inside the engine — every rejected `GameAction` restores the
+exact pre-action state, structurally killing the audit-P0 partial-mutation
+family (Squad/Casualty under-pay, `declare_attackers` mid-loop corruption,
+back-face land corruption, madness mana loss); (b) **player-facing
+undo/take-back** — instant in single-player vs the bot (the main UX win),
+consent-gated in multiplayer. The same checkpoint recorder later feeds the
+replay scrubber (Client UX Tier 3) and crash recovery.
+
+**Approach: whole-state snapshots, not inverse commands.** `GameState` has
+a hand-written `Clone` (`game/mod.rs:859`) and full serde; the affordance
+prober and bot dry-runs already clone the state per candidate action, so
+the cost profile is known-acceptable. Inverse ops for a ~9k-line effect
+resolver would be unmaintainable and would inherit every funnel-bypass bug
+the audit found.
+
+### Phase 0 — prerequisites
+- ⏳ **Seeded, serialized RNG.** Shuffles call thread-local `rand::rng()`
+  inline (`game/mod.rs:2462`, `4495`, `5968`, `7239`; grep for stragglers).
+  Add `GameState.rng` (e.g. `Pcg64`, serde via seed+stream state) and route
+  every random site through it — otherwise undo lets a player re-roll
+  shuffles/flips until they like the outcome, and bit-exact replay is
+  impossible. Fold in the audit-P1 coin-flip fix (`Decision::CoinFlip`
+  must draw from this RNG, not constant heads) while touching it.
+- ⏳ **Serde fidelity.** Not needed for in-memory undo (which uses `Clone`),
+  but required before any persisted history/replay: fix the audit-P1
+  `CardInstanceWire` six dropped fields + `TokenDefinition.static_abilities`,
+  and land the property-based round-trip test (see Infrastructure →
+  Snapshot Round-Trip Test).
+
+### Phase 1 — transactional `perform_action`
+- ⏳ Checkpoint at the top of the action entry point: clone the state,
+  restore on `Err`. Start with a full clone per *human-submitted* action
+  (bots/tests can opt out); optimize later only if profiling demands it.
+- ⏳ **Suspension is not failure**: `suspend_signal`/`pending_decision`
+  mid-action are legitimate non-`Err` exits — the checkpoint must restore
+  only on `Err`, and a checkpoint taken before a multi-step suspended
+  action must survive until the resume chain completes or errors.
+- Keep the targeted P0 fixes anyway (validate-before-mutate is still
+  better); the transaction is the backstop that makes the *class*
+  unexploitable.
+
+### Phase 2 — engine history ring
+- ⏳ `UndoHistory { ring: VecDeque<(UndoPoint, Box<GameState>)> }` on the
+  server-side game session (not inside `GameState` — snapshots must not
+  contain the history). Push at decision boundaries: before each accepted
+  human `GameAction` and before each `Decision` answer. `UndoPoint` carries
+  seat + monotonic id + a human label ("cast Lightning Bolt", "declared
+  blockers") for the UI.
+- ⏳ Cap (e.g. 32 entries) and measure real `GameState` sizes; if memory
+  matters, serialize+compress entries older than the last few.
+
+### Phase 3 — server protocol + consent
+- ⏳ Wire actions: `RequestUndo { to: UndoPointId }` /
+  `RespondUndo { accept }` + a pending-request broadcast. On accept:
+  swap in the snapshot, bump a view generation, re-broadcast full per-seat
+  views (the existing per-seat projection path is the resync mechanism).
+- ⏳ Policy: single-player undo is unconditional and instant. Multiplayer
+  requires every opponent's consent. Bot policy: auto-accept (configurable
+  later). Optionally restrict to "within the current priority window /
+  before new hidden information was revealed" as a server setting.
+- **Hidden-information stance (documented, not solved):** information a
+  player already saw stays seen (the casual-play standard). The Phase-0
+  seeded RNG guarantees a restored pre-shuffle state re-shuffles
+  identically, so undo cannot be used to fish randomness; it *can* still
+  be used to act on glimpsed information — consent is the mitigation.
+
+### Phase 4 — client UX
+- ⏳ Undo button + keybind, greyed when no eligible `UndoPoint`; opponent
+  banner with accept/decline; game-log entry ("Eric took back: cast …").
+  Supersedes the bare "Undo / Take-Back" stub under Client — UX.
+
+---
+
 ## Client — Visualization
 
 ### Counter Display
@@ -2713,7 +3097,9 @@ indicator + click target. Slims the 2-D chip strip.
 
 ### Undo / Take-Back
 A "request take-back" action the opponent can approve would reduce frustration
-from misclicks, especially during the targeting flow.
+from misclicks, especially during the targeting flow. **Full plan now lives at
+"Engine — Rollback / Undo system (plan)"** (snapshot-based, four phases;
+Phase 4 is this UI).
 
 ### Responsive Stack Display
 The stack panel (bottom-center) is a fixed-width overlay.  On narrow windows

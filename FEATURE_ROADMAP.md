@@ -599,14 +599,41 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 7. ⏳ **Stack visualization** with response affordances and "respond / let
    resolve" per item.
 8. ⏳ **Phase bar / step indicator** with click-to-advance and stop markers.
+9. 🟡 **Resolution-time decision coverage for humans.** Most of these
+   decisions used to be answered silently by the AutoDecider even for a
+   `wants_ui` seat. Now shipped via the **stash-and-rerun suspend** (the
+   suspend re-queues the originating effect as its continuation;
+   `apply_pending_effect_answer` validates and stashes the answer in
+   `GameState.stashed_resolution_answer` for the re-run to consume):
+   ✅ `ChooseModes` (choose-N / Escalate, with `mode_texts` labels on the
+   wire), ✅ `ChooseMode` for modal *triggers* (deferred to resolution via
+   the `MODE_PICK_DEFERRED` sentinel when no mode targets — Riot/Fabricate
+   humans actually choose now), ✅ `Effect::MayDo` (yes/no modal instead of
+   auto-decline), ✅ `DivideDamage` (per-target stepper modal),
+   ✅ `ChooseAmount` (sacrifice-any-number / pay-life), ✅ creature-type
+   choices incl. the Crippling Fear sweep (+ engine-ranked `suggestions`
+   on the wire; this also fixes the `ChooseCreatureType` client softlock —
+   the engine suspended but no modal existed). Remaining ⏳:
+   `CommanderRedirect` and `ChooseLegendToKeep` (raised inside damage
+   application / SBA processing, outside the effect-resolution suspend
+   machinery), and modal triggers with *targeting* modes (target slots are
+   assigned at push time, so those still pick synchronously).
 
 ## Tier 8 — UI / UX quality-of-life
 
-- ⏳ Browsable **graveyard / exile / library-count** zoom per player.
-- ⏳ **Search / Scry / Surveil / Mulligan** dedicated picker UIs (drag,
-  reorder, bottom).
-- ⏳ Confirm **London mulligan** bottoming + scry-on-keep.
-- ⏳ **Floating life deltas** + per-turn life-history graph.
+- ✅ Browsable **graveyard / exile** zones — click any player's graveyard
+  pile for a scrollable browser overlay (`systems::ui::graveyard_browser`);
+  `V` toggles the exile browser with per-card source annotations (linked
+  exile, cipher, foretell…). Library shows a count chip only (by design —
+  hidden zone).
+- ✅ **Search / Scry / Surveil / Mulligan** dedicated picker UIs —
+  grid pickers with top/bottom toggles and ← → reorder buttons
+  (`systems::decision_ui`: `spawn_scry_modal`, `spawn_search_modal`,
+  `spawn_mulligan_modal`). Remaining ⏳: drag-and-drop reordering.
+- ✅ **London mulligan** bottoming — after Keep, the `PutOnLibrary` picker
+  collects the N cards to bottom; Serum Powder gets its own button.
+- 🟡 **Floating life deltas** ✅ (rising/fading +N/−N numerals next to each
+  life total — `game_ui::player_stats`); per-turn life-history graph ⏳.
 - ✅ **Commander-damage HUD readout** (CR 903.10a) — `PlayerView.
   commander_damage_taken` (projected in `server::view`) drives a per-source
   `⚔ <commander> N/21` chip next to each player's life in the stat strip,
@@ -616,8 +643,14 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 - ✅ **Squad / Replicate pay-N-times stepper** — right-click modal feeding
   `CastSpellSquad`/`CastSpellReplicate`; impending countdown badge; NameCard
   picker modal with engine-ranked suggestions.
-- ⏳ **Reminder text & rules tooltips** on keywords; **oracle text panel**.
-- ⏳ **Hotkey legend / help overlay**; remappable keys.
+- 🟡 **Reminder text & rules tooltips** — the hover preview now carries an
+  info panel resolved from the catalog by name (`ui::hover_info_lines`):
+  type line, P/T, and each printed keyword with CR reminder text, reusing
+  the Alt-peek's `keyword_reminder` table (~60 keywords). Battlefield
+  Alt-peek already showed computed-keyword reminders. Remaining ⏳: a full
+  oracle-text panel (triggered/activated ability text).
+- 🟡 **Hotkey legend / help overlay** ✅ (F1 / `?` toggles a two-column
+  shortcut reference — `systems::ui`); remappable keys ⏳.
 - 🟡 **Highlight legal plays** (castable cards, legal attackers/blockers,
   legal targets) — `ClientView` now carries `castable_hand`,
   `pitchable_hand`, `kickable_hand`, **`activatable_permanents`**, and
@@ -633,9 +666,25 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 
 ## Tier 9 — Multiplayer & social
 
-- ⏳ **Lobby / matchmaking** (host, join-by-code, quick-match).
-- ⏳ **Reconnect / resume** a dropped game (snapshots make this feasible).
-- ⏳ **Spectator mode** (read-only `ClientView` stream).
+- ✅ **Lobby / matchmaking** — LAN lobby browser (`systems::lobby_ui`):
+  create with format selection (Modern/Cube/SoS/Commander), join, spectate
+  running matches, host-side bot add/remove. Remaining ⏳: join-by-code over
+  the internet, quick-match.
+- ✅ **Reconnect / resume** — resume tokens + exponential-backoff retry
+  (up to 10 attempts) with full `GameSnapshot` state restore
+  (`net_plugin.rs`). Remaining ⏳: surface it — a "reconnecting (N/10)…"
+  banner instead of today's silent background retries.
+- ✅ **Spectator mode** — read-only `ClientView` stream via the lobby's
+  spectate list, with a "Spectating: …" banner.
+- ✅ **Player identity** — the menu's display name (editable, seeded from
+  the OS username) now reaches every entry point: local vs-bot / audit /
+  host-LAN seats are stamped via `menu::name_seats` (bots labeled "Bot" /
+  "Bot N", spectated matches "Bot 1/2", rematches re-stamped), the draft
+  match uses it for the human seat, and the LAN lobby already carried it
+  via `JoinMatch`. The log formatter (`GameEventWire::fmt_for_log`) takes
+  a seat-name resolver, so log lines read "Alice drew…" instead of "P0
+  drew…". Remaining ⏳: persist the name in the config file (today it
+  resets to the OS username each launch).
 - ⏳ **Chat + emotes** (Arena's canned phrases; XMage free chat).
 - ⏳ **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
 - ⏳ **Friends / invites / ratings / leaderboards** (server-side).
