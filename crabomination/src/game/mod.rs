@@ -1907,18 +1907,9 @@ impl GameState {
                 had <= 1
             };
             if sacrifice {
-                events.push(crate::game::GameEvent::PermanentSacrificed {
-                    card_id: id,
-                    who: active,
-                });
-                if self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false) {
-                    events.push(crate::game::GameEvent::CreatureSacrificed {
-                        card_id: id,
-                        who: active,
-                    });
-                }
-                let mut die = self.remove_to_graveyard_with_triggers(id);
-                events.append(&mut die);
+                // CR 700.4 — the shared sacrifice helper emits the full
+                // event set (CreatureDied included) + die snapshot.
+                self.sacrifice_one(id, active, &mut events);
             }
         }
         events
@@ -1992,12 +1983,7 @@ impl GameState {
                 }
             };
             if !paid {
-                events.push(crate::game::GameEvent::PermanentSacrificed { card_id: id, who: active });
-                if self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false) {
-                    events.push(crate::game::GameEvent::CreatureSacrificed { card_id: id, who: active });
-                }
-                let mut die = self.remove_to_graveyard_with_triggers(id);
-                events.append(&mut die);
+                self.sacrifice_one(id, active, &mut events);
             }
         }
         events
@@ -4361,9 +4347,9 @@ impl GameState {
         let is_land = !was_nonland;
         match madness {
             None => {
-                let owner = card.owner;
-                self.players[p].graveyard.push(card);
-                events.push(GameEvent::CardPutIntoGraveyard { player: owner, card_id, is_land });
+                // CR 614.6 — through the graveyard funnel so Rest in Peace /
+                // Leyline hate redirects the discard to exile.
+                self.route_to_graveyard(card, events);
             }
             Some(cost) => {
                 // CR 702.35a — exile instead of graveyard, then offer the

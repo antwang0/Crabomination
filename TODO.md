@@ -76,20 +76,17 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ### P1 — rules-visible bugs
 
-- ⏳ **Death-funnel bypass family** — arms that route battlefield→graveyard
+- 🟡 **Death-funnel bypass family** — arms that route battlefield→graveyard
   around `remove_to_graveyard_with_triggers`, silently dropping dies
   triggers, Persist/Undying, `died_card_snapshots`, and tallies (CR 700.4):
-  - `Effect::LivingEnd` sacrifice-all step (`effects/mod.rs:2824-2834`) —
-    no death triggers at all for the swept board.
-  - `Effect::SacrificeAndRemember` (`effects/mod.rs:6262-6297`) — Kitchen
-    Finks sacrificed to Tribute to Hunger drops Persist.
-  - Ward costs (`effects/mod.rs:4570-4595`): `SacrificeCreature` discards
-    the returned event vec; `Discard(n)` pushes hand→graveyard directly so
-    no `CardDiscarded` fires (Madness skipped, CR 702.35).
-  - Fading/Vanishing + cumulative upkeep turn-based sacrifices
-    (`mod.rs:1863-1876`, `1948-1955`) emit no `CreatureDied`;
-    `process_attacking_token_cleanup` (`mod.rs:3630`) emits it but skips the
-    snapshot — three diverged copies of `sacrifice_one`.
+  Fixed this run: `LivingEnd` + `SacrificeAndRemember` route through
+  `remove_to_graveyard_with_triggers` with the full event set;
+  Fading/Vanishing + cumulative upkeep use the shared `sacrifice_one`;
+  Ward `Discard(n)` goes through `discard_card` (CardDiscarded + Madness),
+  and `discard_card` itself now routes the graveyard placement through
+  `route_to_graveyard` (CR 614.6). Remaining: Ward `SacrificeCreature`
+  discards the returned event vec; `process_attacking_token_cleanup`
+  skips the die snapshot.
 - ✅ **Hybrid/Phyrexian permanents read as colorless on the battlefield**
   (`effects/eval.rs:1040-1045`). `evaluate_requirement_static::HasColor`
   scans bare `Colored` pips only; the sibling evaluator at `eval.rs:1284`

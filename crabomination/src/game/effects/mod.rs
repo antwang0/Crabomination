@@ -2968,8 +2968,16 @@ impl GameState {
                     .map(|c| (c.id, c.controller))
                     .collect();
                 for (id, who) in dying {
+                    // CR 700.4 — the swept board still dies properly: dies
+                    // triggers, Persist/Undying, snapshots, tallies.
+                    if let Some(c) = self.battlefield_find(id) {
+                        self.died_card_snapshots.insert(id, c.clone());
+                    }
+                    events.push(GameEvent::CreatureSacrificed { card_id: id, who });
+                    events.push(GameEvent::CreatureDied { card_id: id });
                     events.push(GameEvent::PermanentSacrificed { card_id: id, who });
-                    self.remove_from_battlefield_to_graveyard(id);
+                    let mut die = self.remove_to_graveyard_with_triggers(id);
+                    events.append(&mut die);
                 }
                 // …then puts the exiled cards onto the battlefield.
                 for id in returning {
@@ -4742,26 +4750,19 @@ impl GameState {
                         // surface should prompt.
                         let n = *n as usize;
                         if self.players[affected_controller].hand.len() >= n {
+                            // Through the shared discard funnel so
+                            // CardDiscarded fires and Madness applies
+                            // (CR 702.35).
                             for _ in 0..n {
-                                let card = self.players[affected_controller].hand.remove(0);
-                                let card_id = card.id;
-                                // CR 614.6 — graveyard-hate exiles the discard.
-                                let (redirects, void) = self.graveyard_exile_redirects(&card);
-                                if redirects {
-                                    let mut card = card;
-                                    if void {
-                                        card.add_counters(crate::card::CounterType::Void, 1);
-                                    }
-                                    self.exile.push(card);
-                                } else {
-                                    self.players[affected_controller].graveyard.push(card);
-                                }
-                                self.cards_discarded_this_resolution =
-                                    self.cards_discarded_this_resolution.saturating_add(1);
-                                *self.cards_discarded_per_player_this_resolution
-                                    .entry(affected_controller)
-                                    .or_insert(0) += 1;
-                                self.discarded_card_ids_this_resolution.push(card_id);
+                                let Some(card_id) = self
+                                    .players[affected_controller]
+                                    .hand
+                                    .first()
+                                    .map(|c| c.id)
+                                else {
+                                    break;
+                                };
+                                self.discard_card(affected_controller, card_id, events);
                             }
                             true
                         } else {
@@ -6501,7 +6502,11 @@ impl GameState {
                         events.push(GameEvent::CreatureDied { card_id: cid });
                     }
                     events.push(GameEvent::PermanentSacrificed { card_id: cid, who: p });
-                    self.remove_from_battlefield_to_graveyard(cid);
+                    // CR 700.4 — through the rich funnel so dies/LTB triggers
+                    // and Persist/Undying fire (Kitchen Finks sacrificed to
+                    // Tribute to Hunger).
+                    let mut die = self.remove_to_graveyard_with_triggers(cid);
+                    events.append(&mut die);
                 }
                 Ok(())
             }
