@@ -1925,6 +1925,7 @@ static DECKS: &[Factory] = &[
     super::decks::aven_wind_guide,
     super::decks::bring_to_light,
     super::decks::conspicuous_snoop,
+    super::decks::cao_cao_lord_of_wei,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,

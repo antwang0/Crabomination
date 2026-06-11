@@ -2486,45 +2486,48 @@ pub fn memnite() -> CardDefinition {
     }
 }
 
-/// Fanatic of Rhonas — {G} Creature — Snake. 1/1. "{G}, {T}: Add {G}{G}."
-///
-/// One-mana ramper that nets +{G} per activation. Modeled as a single
-/// activated ability with `tap_cost: true` + `mana_cost: {G}` and
-/// `Effect::AddMana(Colors([Green, Green]))`. Net production after the
-/// activation cost is +{G}, so the card is gameplay-equivalent to
-/// "Llanowar Elves with an extra {G} pump button".
+/// Fanatic of Rhonas — {1}{G} 1/4 Snake Druid. `{T}: Add {G}`; Ferocious —
+/// `{T}: Add {G}{G}{G}{G}`, only with a power-4+ creature; Eternalize
+/// {2}{G}{G}.
 pub fn fanatic_of_rhonas() -> CardDefinition {
     use crate::card::ActivatedAbility;
+    let ferocious = Predicate::SelectorExists(Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::PowerAtLeast(4)),
+    ));
     CardDefinition {
         name: "Fanatic of Rhonas",
-        cost: cost(&[g()]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Snake],
+            creature_types: vec![CreatureType::Snake, CreatureType::Druid],
             ..Default::default()
         },
         power: 1,
-        toughness: 1,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: cost(&[g()]),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![Color::Green, Color::Green]),
+        toughness: 4,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Green]),
+                },
+                ..Default::default()
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(ferocious),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![
+                        Color::Green, Color::Green, Color::Green, Color::Green,
+                    ]),
+                },
+                ..Default::default()
+            },
+            crate::effect::shortcut::eternalize(cost(&[generic(2), g(), g()])),
+        ],
         ..Default::default()
     }
 }
@@ -48560,6 +48563,45 @@ pub fn conspicuous_snoop() -> CardDefinition {
                 },
             },
         ],
+        ..Default::default()
+    }
+}
+
+// ── Cao Cao ─────────────────────────────────────────────────────────────────
+
+/// Cao Cao, Lord of Wei — {3}{B}{B} 3/3 Legendary Human Soldier. {T}: target
+/// opponent discards two. Only during your turn, before combat.
+pub fn cao_cao_lord_of_wei() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Cao Cao, Lord of Wei",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::Any(vec![
+                    Predicate::CurrentStepIs(TurnStep::Upkeep),
+                    Predicate::CurrentStepIs(TurnStep::Draw),
+                    Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+                ]),
+            ])),
+            effect: Effect::Discard {
+                who: target_filtered(SelectionRequirement::OpponentPlayer),
+                amount: Value::Const(2),
+                random: false,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

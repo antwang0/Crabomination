@@ -8454,21 +8454,16 @@ fn memnite_casts_for_zero_mana() {
     assert!(card.definition.card_types.contains(&CardType::Creature));
 }
 
-/// Fanatic of Rhonas: {G},{T} produces {G}{G} (net +{G}).
+/// Fanatic of Rhonas: {T} adds {G}.
 #[test]
-fn fanatic_of_rhonas_taps_for_two_green_after_paying_one() {
+fn fanatic_of_rhonas_taps_for_green() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::fanatic_of_rhonas());
     g.clear_sickness(id);
-    g.players[0].mana_pool.add(Color::Green, 1);
-
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Fanatic activates for {{G}},{{T}}");
-    // Activated mana abilities resolve immediately (no stack), so no drain.
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2,
-        "Net production: paid {{G}} + ability adds {{G}}{{G}} = +{{G}} pool");
-    let card = g.battlefield_find(id).expect("still on battlefield");
-    assert!(card.tapped, "Tap cost taps the source");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap for green");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+    assert!(g.battlefield_find(id).unwrap().tapped, "Tap cost taps the source");
 }
 
 /// Greasewrench Goblin: vanilla 2/2 haste body.
@@ -53384,4 +53379,46 @@ fn conspicuous_snoop_shares_top_goblin_ability() {
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: snoop, ability_index: 0, target: None, x_value: None,
     }).is_err(), "no Goblin on top → no ability");
+}
+
+// ── Fanatic of Rhonas (faithful) + Cao Cao ──────────────────────────────────
+
+/// Fanatic of Rhonas's Ferocious mana ability needs a power-4 creature.
+#[test]
+fn fanatic_of_rhonas_ferocious_gates_big_mana() {
+    let mut g = two_player_game();
+    let snake = g.add_card_to_battlefield(0, catalog::fanatic_of_rhonas());
+    g.clear_sickness(snake);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: snake, ability_index: 1, target: None, x_value: None,
+    }).is_err(), "no power-4 creature → Ferocious off");
+    g.add_card_to_battlefield(0, catalog::cryptic_serpent());
+    g.battlefield_find_mut(snake).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: snake, ability_index: 1, target: None, x_value: None,
+    }).expect("Ferocious on with a 6-power creature");
+    assert_eq!(g.players[0].mana_pool.total(), 4, "added four green");
+}
+
+/// Cao Cao taps for a two-card opponent discard, but only precombat on
+/// your own turn.
+#[test]
+fn cao_cao_discards_two_precombat_only() {
+    let mut g = two_player_game();
+    let cao = g.add_card_to_battlefield(0, catalog::cao_cao_lord_of_wei());
+    g.clear_sickness(cao);
+    g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_hand(1, catalog::forest());
+    g.step = TurnStep::PostCombatMain;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: cao, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).is_err(), "after combat → can't activate");
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cao, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("precombat on your turn");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "opponent discarded two");
 }
