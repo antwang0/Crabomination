@@ -196,6 +196,88 @@ fn cr_702_2_fight_with_deathtouch_kills_larger_creature() {
     assert!(g.battlefield_find(big).is_none(), "4/4 dies to 1 deathtouch damage");
 }
 
+// ── CR 702.80a / 702.90e / 702.2c — keyworded NON-combat damage ───────────────
+
+/// Test-only fixture: a creature with the given keywords.
+fn kw_creature(
+    name: &'static str,
+    p: i32,
+    t: i32,
+    kws: &[crate::card::Keyword],
+) -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType};
+    CardDefinition {
+        name,
+        cost: crate::mana::cost(&[crate::mana::g()]),
+        card_types: vec![CardType::Creature],
+        power: p,
+        toughness: t,
+        keywords: kws.to_vec(),
+        ..Default::default()
+    }
+}
+
+/// Non-combat damage from a wither source lands as -1/-1 counters, not
+/// marked damage (CR 702.80a; infect does the same to creatures, 702.90e).
+#[test]
+fn cr_702_80a_noncombat_wither_damage_is_minus_counters() {
+    use crate::card::Keyword;
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, kw_creature("Withertest", 2, 2, &[Keyword::Wither]));
+    let tgt = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(tgt)));
+    g.resolve_effect(
+        &Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        &ctx,
+    )
+    .unwrap();
+    let c = g.battlefield_find(tgt).unwrap();
+    assert_eq!(c.counter_count(crate::card::CounterType::MinusOneMinusOne), 2);
+    assert_eq!(c.damage, 0, "wither damage is not marked damage");
+}
+
+/// A nonzero non-combat ping from a deathtouch source destroys the damaged
+/// creature at the next SBA check (CR 702.2c).
+#[test]
+fn cr_702_2c_noncombat_deathtouch_ping_destroys() {
+    use crate::card::Keyword;
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, kw_creature("Touchtest", 1, 1, &[Keyword::Deathtouch]));
+    let tgt = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let ctx = EffectContext::for_ability(src, 0, Some(Target::Permanent(tgt)));
+    g.resolve_effect(
+        &Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        &ctx,
+    )
+    .unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(tgt).is_none(), "4/4 dies to 1 deathtouch ping");
+}
+
+/// Fight halves carry their source: a lifelink fighter's controller gains
+/// life equal to the damage it deals (CR 701.12b / 702.15).
+#[test]
+fn cr_701_12_fight_applies_lifelink_from_each_half() {
+    use crate::card::Keyword;
+    use crate::effect::{Effect, Selector};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, kw_creature("Lifetest", 3, 5, &[Keyword::Lifelink]));
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let life = g.players[0].life;
+    let ctx = EffectContext::for_ability(mine, 0, Some(Target::Permanent(theirs)));
+    g.resolve_effect(
+        &Effect::Fight { attacker: Selector::This, defender: Selector::Target(0) },
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(g.players[0].life, life + 3, "lifelink fighter gains its damage dealt");
+}
+
 // ── CR 509.2 / 603.2 — "a creature you control attacks" binds defending player ──
 
 /// Leeching Sliver's "whenever a Sliver you control attacks, defending player

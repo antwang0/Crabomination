@@ -1381,25 +1381,26 @@ impl GameState {
                 let (Some(atk_id), Some(def_id)) = (atk_id, def_id) else {
                     return Ok(());
                 };
-                let atk_power = self.battlefield_find(atk_id).map(|c| c.power()).unwrap_or(0);
-                let atk_deathtouch = self.battlefield_find(atk_id)
-                    .map(|c| c.has_keyword(&Keyword::Deathtouch)).unwrap_or(false);
-                let def_power = self.battlefield_find(def_id).map(|c| c.power()).unwrap_or(0);
-                let def_deathtouch = self.battlefield_find(def_id)
-                    .map(|c| c.has_keyword(&Keyword::Deathtouch)).unwrap_or(false);
+                // Layer-computed powers; each half carries its own source so
+                // the funnel applies lifelink / deathtouch / wither / infect
+                // and protection-based prevention (CR 701.12b).
+                let atk_power = self.computed_permanent(atk_id).map(|cp| cp.power).unwrap_or(0);
+                let def_power = self.computed_permanent(def_id).map(|cp| cp.power).unwrap_or(0);
                 if atk_power > 0 {
-                    self.deal_damage_to(EntityRef::Permanent(def_id), atk_power as u32, events);
-                    if atk_deathtouch
-                        && let Some(c) = self.battlefield_find_mut(def_id) {
-                        c.dealt_deathtouch_damage = true;
-                    }
+                    self.deal_damage_to_from(
+                        EntityRef::Permanent(def_id),
+                        atk_power as u32,
+                        Some(atk_id),
+                        events,
+                    );
                 }
                 if def_power > 0 {
-                    self.deal_damage_to(EntityRef::Permanent(atk_id), def_power as u32, events);
-                    if def_deathtouch
-                        && let Some(c) = self.battlefield_find_mut(atk_id) {
-                        c.dealt_deathtouch_damage = true;
-                    }
+                    self.deal_damage_to_from(
+                        EntityRef::Permanent(atk_id),
+                        def_power as u32,
+                        Some(def_id),
+                        events,
+                    );
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);

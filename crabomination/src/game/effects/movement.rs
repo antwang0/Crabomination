@@ -199,10 +199,17 @@ impl GameState {
         // equal to that damage. We check the source's effective
         // keywords via `computed_permanent` so layered grants (e.g.
         // Triumph of the Hordes-style anthems) are honored.
-        let source_has_infect = source
+        let src_kws: Vec<crate::card::Keyword> = source
             .and_then(|s| self.computed_permanent(s))
-            .map(|cp| cp.keywords.contains(&crate::card::Keyword::Infect))
-            .unwrap_or(false);
+            .map(|cp| cp.keywords.clone())
+            .unwrap_or_default();
+        let source_has_infect = src_kws.contains(&crate::card::Keyword::Infect);
+        // CR 702.80a / 702.90e — wither/infect damage to a creature lands as
+        // -1/-1 counters instead of marked damage; CR 702.2c — nonzero
+        // deathtouch damage flags the creature for the destroy SBA.
+        let source_has_wither =
+            source_has_infect || src_kws.contains(&crate::card::Keyword::Wither);
+        let source_has_deathtouch = src_kws.contains(&crate::card::Keyword::Deathtouch);
         match ent {
             EntityRef::Player(p) => {
                 // Bloodthirst (CR 702.54) window: any damage to a player
@@ -294,7 +301,19 @@ impl GameState {
                         });
                     }
                 } else if let Some(c) = self.battlefield_find_mut(cid) {
-                    c.damage += amount;
+                    if source_has_wither && c.definition.is_creature() {
+                        c.add_counters(CounterType::MinusOneMinusOne, amount);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid,
+                            counter_type: CounterType::MinusOneMinusOne,
+                            count: amount,
+                        });
+                    } else {
+                        c.damage += amount;
+                        if source_has_deathtouch && c.definition.is_creature() {
+                            c.dealt_deathtouch_damage = true;
+                        }
+                    }
                     events.push(GameEvent::DamageDealt {
                         amount,
                         to_player: None,
