@@ -3867,14 +3867,16 @@ impl GameState {
         let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
             return false;
         };
-        if !blocker.can_block() {
-            return false;
-        }
         let computed = self.compute_battlefield();
         let blocker_computed = computed.iter().find(|c| c.id == blocker_id);
         let Some(blocker_cp) = blocker_computed else {
             return false;
         };
+        // CR 509.1a — creature-ness from the computed view (animated lands /
+        // crewed Vehicles can block).
+        if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
+            return false;
+        }
         // Honor `Keyword::CantBlock` from the computed keyword set —
         // transient grants from pump spells (Duel Tactics) and static
         // restrictions (Postmortem Professor) both surface here.
@@ -3914,6 +3916,9 @@ impl GameState {
         let Some(blocker_cp) = blocker_cp else {
             return false;
         };
+        if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
+            return false;
+        }
         if blocker_cp.keywords.contains(&Keyword::CantBlock) {
             return false;
         }
@@ -7109,10 +7114,17 @@ impl GameState {
             };
             if fizzled {
                 // A fizzled token copy ceases to exist (already off the
-                // stack); a real card is countered into its owner's graveyard.
+                // stack); a real card is countered into its owner's
+                // graveyard — except a flashbacked/aftermath cast, whose
+                // CR 702.34d exile rider applies wherever it leaves the
+                // stack, so a fizzle can't make it re-flashbackable.
                 let mut events = Vec::new();
                 if !card.is_token {
-                    self.route_to_graveyard(card, &mut events);
+                    if card.cast_via_flashback {
+                        self.exile.push(card);
+                    } else {
+                        self.route_to_graveyard(card, &mut events);
+                    }
                 }
                 return Ok(events);
             }
@@ -7142,7 +7154,11 @@ impl GameState {
             if all_illegal {
                 let mut events = Vec::new();
                 if !card.is_token {
-                    self.route_to_graveyard(card, &mut events);
+                    if card.cast_via_flashback {
+                        self.exile.push(card); // CR 702.34d
+                    } else {
+                        self.route_to_graveyard(card, &mut events);
+                    }
                 }
                 return Ok(events);
             }

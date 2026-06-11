@@ -484,7 +484,13 @@ impl GameState {
                 return Err(GameError::BlockerWrongDefender { blocker: blocker_id });
             }
 
-            if !blocker.can_block() {
+            // CR 509.1a — blocker legality reads the computed view, so an
+            // animated land or crewed Vehicle (layer-4 Creature) can block
+            // while an uncrewed Vehicle can't.
+            let blocker_is_creature = cp_of(blocker_id)
+                .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                .unwrap_or(false);
+            if !blocker_is_creature || blocker.tapped {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
@@ -665,9 +671,9 @@ impl GameState {
             let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
             let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let idle_able_blocker = self.battlefield.iter().any(|b| {
-                b.definition.is_creature()
+                cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
                     && self.same_team(b.controller, defender_idx)
-                    && b.can_block()
+                    && !b.tapped
                     && !kws_of(b.id).contains(&Keyword::CantBlock)
                     && !self.block_map.contains_key(&b.id)
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
@@ -697,9 +703,9 @@ impl GameState {
             let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
             let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let unmet = self.battlefield.iter().any(|b| {
-                b.definition.is_creature()
+                cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
                     && self.same_team(b.controller, defender_idx)
-                    && b.can_block()
+                    && !b.tapped
                     && !kws_of(b.id).contains(&Keyword::CantBlock)
                     && cp_of(b.id).is_some_and(|bcp| {
                         super::can_block_attacker_computed(
@@ -723,10 +729,9 @@ impl GameState {
             let Some(required) = b.must_block else { continue };
             // The provoker must still be attacking for the requirement to bind.
             if !self.attacking.iter().any(|a| a.attacker == required) { continue; }
-            if !b.definition.is_creature()
-                || !b.can_block()
-                || kws_of(b.id).contains(&Keyword::CantBlock)
-            {
+            let b_is_creature = cp_of(b.id)
+                .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
+            if !b_is_creature || b.tapped || kws_of(b.id).contains(&Keyword::CantBlock) {
                 continue;
             }
             let Some(attacker) = self.battlefield_find(required) else { continue };
@@ -751,9 +756,11 @@ impl GameState {
         // carrying the keyword that can legally block at least one declared
         // attacker must be assigned to block one of them.
         for b in &self.battlefield {
+            let b_is_creature = cp_of(b.id)
+                .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
             if !kws_of(b.id).contains(&Keyword::MustBlock)
-                || !b.definition.is_creature()
-                || !b.can_block()
+                || !b_is_creature
+                || b.tapped
                 || kws_of(b.id).contains(&Keyword::CantBlock)
             {
                 continue;

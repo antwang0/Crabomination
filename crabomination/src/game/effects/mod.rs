@@ -2213,18 +2213,20 @@ impl GameState {
                     _ => vec![],
                 };
                 let mut taken = 0i32;
-                // Take chosen → hand (top-down), rest of the revealed set → graveyard.
+                // Take chosen → hand (top-down), rest of the revealed set →
+                // graveyard. Putting a card into hand this way is NOT a draw
+                // (CR 121.5 — no CardDrawn event, no draw-trigger fire), and
+                // the leftovers honor graveyard replacements (CR 614.6).
                 for (cid, _) in &top {
                     if chosen.contains(cid) {
                         if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
                             let card = self.players[p].library.remove(pos);
                             self.players[p].hand.push(card);
-                            events.push(GameEvent::CardDrawn { player: p, card_id: *cid });
                             taken += 1;
                         }
                     } else if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
                         let card = self.players[p].library.remove(pos);
-                        self.players[p].graveyard.push(card);
+                        self.route_to_graveyard(card, events);
                     }
                 }
                 let life = taken * per;

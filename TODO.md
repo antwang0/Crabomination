@@ -23,7 +23,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ### P0 — game-deciding / state corruption
 
-- ⏳ **Blocked attackers become unblocked when their blockers die**
+- ✅ **Blocked attackers become unblocked when their blockers die**
   (`combat.rs:1337-1372` + `stack.rs:2250`). `remove_from_combat` erases the
   `block_map` entry when a blocker dies and any attacker with empty
   `blocker_ids` routes to the unblocked branch — full damage to the face.
@@ -31,13 +31,13 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   double-strike-vs-blocker combat** (blocker dies in the first-strike step)
   and every kill-the-blocker-after-blocks line. Coincidentally correct only
   for trample (CR 702.19g).
-- ⏳ **Triggered abilities re-target instead of fizzling** (`mod.rs:7228`).
+- ✅ **Triggered abilities re-target instead of fizzling** (`mod.rs:7228`).
   `continue_trigger_resolution_with_source` calls
   `auto_target_for_effect` when the stored target is illegal at resolution
   and silently aims the trigger at a *new* target — a global CR 608.2b
   violation patched in for Elesh-Norn-doubled ETB copies. Correct fix:
   per-copy target choice at push time; the trigger must fizzle otherwise.
-- ⏳ **Target filters unenforced for ~20 targeted effect variants**
+- ✅ **Target filters unenforced for ~20 targeted effect variants**
   (`crabomination_base/src/effect/query.rs:1106-1256`).
   `target_filter_for_slot_in_mode_kicked` (`eff_find`) is the *only*
   cast-time filter enforcement and ends in `_ => None`; missing arms include
@@ -68,7 +68,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     `mulligans_taken` cards actually left the hand — a hostile client
     mulligans to a free fresh 7 (CR 103.5a). Use the `CleanupDiscard`
     re-pose-until-satisfied pattern (`mod.rs:6179`).
-- ⏳ **`Effect::PumpPT` discards its duration** (`effects/mod.rs:3040`).
+- ✅ **`Effect::PumpPT` discards its duration** (`effects/mod.rs:3040`).
   Always writes the EOT-cleared `power_bonus`/`toughness_bonus` fields, so
   `Duration::Permanent` pumps expire at cleanup (Wall of Roots's cumulative
   -0/-1 resets every turn — its mana is free forever) and `EndOfCombat`
@@ -90,7 +90,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     (`mod.rs:1863-1876`, `1948-1955`) emit no `CreatureDied`;
     `process_attacking_token_cleanup` (`mod.rs:3630`) emits it but skips the
     snapshot — three diverged copies of `sacrifice_one`.
-- ⏳ **Hybrid/Phyrexian permanents read as colorless on the battlefield**
+- ✅ **Hybrid/Phyrexian permanents read as colorless on the battlefield**
   (`effects/eval.rs:1040-1045`). `evaluate_requirement_static::HasColor`
   scans bare `Colored` pips only; the sibling evaluator at `eval.rs:1284`
   already uses `ManaCost::colors()` with a comment warning about exactly
@@ -101,12 +101,12 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   remaining player — in human-vs-bot a symmetric discard hits only the
   human. `Effect::Sacrifice` (`effects/mod.rs:4731`) shows the correct
   auto-pick-first / defer-one-suspension pattern.
-- ⏳ **`OneSpellPerTurn` reads a stale counter** (`mod.rs:3932`).
+- ✅ **`OneSpellPerTurn` reads a stale counter** (`mod.rs:3932`).
   `spells_cast_this_turn` resets at the player's *own* untap
   (`stack.rs:1308`), so under Rule of Law a non-active player is locked out
   of all spells on opponents' turns based on their previous turn's casts.
   Needs a turn-scoped (not owner-untap-scoped) count.
-- ⏳ **Animated lands / crewed Vehicles can't block** (`combat.rs:487`,
+- ✅ **Animated lands / crewed Vehicles can't block** (`combat.rs:487`,
   also the Lure/MustBlock able-blocker scans at `665-778`). Blocker
   legality reads printed `CardInstance::can_block()`; attacker legality
   already reads the computed view (comment at `combat.rs:241`). CR 509.1a.
@@ -119,7 +119,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `effects/mod.rs:1346` shows the recompute pattern). Related:
   `SetLifeTotal`/`ExchangeLifeTotals` (`effects/mod.rs:1474-1526`) bypass
   `adjust_life` entirely (CR 119.7) and never set `lost_life_this_turn`.
-- ⏳ **Every coin flip is heads** (`mod.rs:2563` +
+- ✅ **Every coin flip is heads** (`mod.rs:2563` +
   `decision.rs:481`). `AutoDecider` answers constant `Bool(true)` for
   `Decision::CoinFlip` despite the doc promising engine RNG, and no live
   path installs another decider — deterministic and exploitable.
@@ -159,11 +159,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ⏳ **`drain_trigger_queue` drops trigger batches** (`mod.rs:5697`) —
   silently discards an entire batch when a decision is already pending,
   despite its comment claiming auto-target fallback.
-- ⏳ **`GainControl` doesn't set summoning sickness**
+- ✅ **`GainControl` doesn't set summoning sickness**
   (`effects/mod.rs:3979-4013`). A Control-Magic-style steal attacks the
   same turn without haste (CR 302.6); Act-of-Treason effects mask it with
   redundant haste grants.
-- ⏳ **Fizzled flashback/Aftermath spells go to the graveyard**
+- ✅ **Fizzled flashback/Aftermath spells go to the graveyard**
   (`mod.rs:6958-6996`). The CR 608.2b fizzle paths call
   `route_to_graveyard` directly, bypassing the `cast_via_flashback` exile
   rider consumed only on the success path (`mod.rs:7091`, `7149`) —
@@ -174,7 +174,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `CardLeftGraveyard` / `cards_left_graveyard_this_turn` never fire (the
   shipped Witherbloom payoffs go dead vs Rest in Peace / Go Blank);
   `Process` skips `route_to_graveyard` redirects (CR 614.6).
-- ⏳ **`DigToHandLoseLife` emits fake draws** (`effects/mod.rs:2110-2158`).
+- ✅ **`DigToHandLoseLife` emits fake draws** (`effects/mod.rs:2110-2158`).
   Cards put into hand emit `CardDrawn` (CR 121.5 — Sheoldred/Bowmasters
   fire spuriously) while `cards_drawn_this_turn` is *not* bumped; the
   rest-to-graveyard branch bypasses `route_to_graveyard`. The engine's own
@@ -185,12 +185,12 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `{W/U}{2/W}` vs {W,U} (hybrid pass commits before mono-hybrid). Failure
   is atomic but castable spells report unpayable — needs real bipartite
   matching over pips×colors.
-- ⏳ **`CardInstanceWire` drops six persistent fields**
+- ✅ **`CardInstanceWire` drops six persistent fields**
   (`crabomination_base/src/card.rs:2649-2959`): `kick_count`,
   `squad_count`, `bargained`, `encoded_on`, `granted_activated_abilities`,
   `cast_target_was_battlefield`. Snapshots with spells on the stack restore
   them zeroed (Everflowing Chalice enters with 0 counters; Urza's Saga
-  grants vanish; the 608.2b fizzle flag clears). Related:
+  grants vanish; the 608.2b fizzle flag clears). Still ⏳:
   `TokenDefinition.static_abilities` is `#[serde(skip)]` with no rebuild
   path (`card.rs:1127`) — Karn's Construct deserializes vanilla.
 - ⏳ **ETB control replacement fires triggers for the wrong controller**
@@ -216,25 +216,25 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   despite its comment; `RemoveAllCounters` leaves `keyword_counters`
   (CR 122.1b); shield-counter depletion leaves a 0-count map entry that
   makes `R::IsModified` true forever (CR 700.9).
-- ⏳ **Soulshift fetches from any graveyard**
+- ✅ **Soulshift fetches from any graveyard**
   (`crabomination_base/src/effect/shortcut.rs:2048-2062`). The desugar's
   `InGraveyard` matches all players and routes to the card's owner's hand —
   can return an opponent's Spirit to the opponent (CR 702.47a is "your
   graveyard … your hand"). Similarly **Graft** (`shortcut.rs:2825-2844`)
   scopes to `YourControl` but printed Graft is *any* entering creature
   (CR 702.58a).
-- ⏳ **Detained planeswalkers can still activate loyalty abilities**
+- ✅ **Detained planeswalkers can still activate loyalty abilities**
   (`mod.rs:5808`). `activate_loyalty_ability` lacks the `detained_by` gate
   the regular activation path has (`actions.rs:6387`).
-- ⏳ **Day/Night flips wrong on extra turns** (`mod.rs:1130`). During an
+- ✅ **Day/Night flips wrong on extra turns** (`mod.rs:1130`). During an
   extra turn `do_untap` resets `spells_cast_this_turn` *before*
   `check_day_night_transition` reads it — always reads 0, flips Day→Night
   regardless of casts (CR 502.2).
-- ⏳ **Skulk compares computed power to raw power** (`mod.rs:8218`).
+- ✅ **Skulk compares computed power to raw power** (`mod.rs:8218`).
   Blocker side uses layer-computed power, attacker side raw
   `CardInstance::power()` — anthem-pumped Skulk attackers evaluated
   unbuffed (CR 702.72a).
-- ⏳ **Blood token discard is resolution, not cost**
+- ✅ **Blood token discard is resolution, not cost**
   (`crabomination_base/src/tokens.rs:194-242`). Activates with an empty
   hand and still draws (CR 602.2b). The "isn't expressible as a cost"
   comment is stale — `ActivatedAbility.discard_cost` exists and Fauna
@@ -265,7 +265,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   continuous-effects mutation) is the single highest-leverage perf change
   in the codebase.** Helpers like `blocker_can_block_attacker` should also
   take a precomputed `&[ComputedPermanent]` snapshot.
-- ⏳ **`static_str_serde::intern` leaks unboundedly**
+- ✅ **`static_str_serde::intern` leaks unboundedly**
   (`crabomination_base/src/static_str_serde.rs:38` via `tokens.rs:47`).
   Bare `Box::leak` with no dedup table, called once per token mint —
   including bot dry-run simulations — despite the module doc claiming the

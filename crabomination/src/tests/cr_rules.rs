@@ -985,3 +985,38 @@ fn cr_702_47a_soulshift_only_fetches_own_graveyard() {
         "soulshift must not steal an opponent's Spirit"
     );
 }
+
+/// CR 509.1a — an animated land (layer-4 Creature) can block; legality reads
+/// the computed view, not printed types.
+#[test]
+fn cr_509_1a_animated_land_can_block() {
+    use crate::effect::{Duration, Effect, Selector, Value};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    // Animate the land into a 3/3 creature for the turn.
+    let eff = Effect::BecomeCreature {
+        what: Selector::This,
+        power: Value::Const(3),
+        toughness: Value::Const(3),
+        creature_types: vec![],
+        keywords: vec![],
+        duration: Duration::EndOfTurn,
+    };
+    let ctx = EffectContext::for_ability(land, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(land, attacker)]))
+        .expect("animated land is a legal blocker");
+    assert_eq!(g.block_map.get(&land), Some(&attacker));
+}

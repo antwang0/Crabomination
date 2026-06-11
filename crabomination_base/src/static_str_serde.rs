@@ -11,17 +11,19 @@
 //!    for a debug-replay workflow that loads a handful of states per
 //!    session).
 //!
-//! We pick option 2: every restored snapshot leaks a few hundred bytes
-//! per non-catalog string, which is acceptable for the debug-export
-//! lifecycle. Catalog-sourced strings (card names) are deduped via
-//! `name_index` in `catalog::lookup_by_name`, so the leak is bounded by
-//! the catalog size on first load and zero thereafter.
+//! We pick option 1: a global dedup table. Each unique string leaks once
+//! (`Box::leak`) and every later request for the same text returns the
+//! cached `&'static str`, so the total leak is bounded by the number of
+//! *unique* names — token mints in bot dry-run simulations no longer grow
+//! memory per mint.
 //!
 //! Use as `#[serde(with = "crate::static_str_serde")]` on a
 //! `&'static str` field.
 
 use serde::de::Deserialize;
 use serde::{Deserializer, Serializer};
+use std::collections::HashSet;
+use std::sync::Mutex;
 
 pub fn serialize<S: Serializer>(s: &&'static str, ser: S) -> Result<S::Ok, S::Error> {
     ser.serialize_str(s)
@@ -32,9 +34,19 @@ pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<&'static str, D::
     Ok(intern(s))
 }
 
-/// Re-export of the leaking interner so non-serde callers (e.g. snapshot
-/// restore that builds `&'static str` fields from owned strings) can use
-/// the same memory-management contract.
+static INTERN_TABLE: Mutex<Option<HashSet<&'static str>>> = Mutex::new(None);
+
+/// Deduplicating interner: leaks each unique string once, returns the
+/// cached `&'static str` thereafter. Shared by serde restores and every
+/// non-serde caller that widens an owned string to `'static` (token
+/// minting, snapshot restore).
 pub fn intern(s: String) -> &'static str {
-    Box::leak(s.into_boxed_str())
+    let mut guard = INTERN_TABLE.lock().unwrap_or_else(|e| e.into_inner());
+    let table = guard.get_or_insert_with(HashSet::new);
+    if let Some(existing) = table.get(s.as_str()) {
+        return existing;
+    }
+    let leaked: &'static str = Box::leak(s.into_boxed_str());
+    table.insert(leaked);
+    leaked
 }
