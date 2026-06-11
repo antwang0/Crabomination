@@ -1496,6 +1496,7 @@ static DECKS: &[Factory] = &[
     super::decks::ward_sliver,
     super::decks::cautery_sliver,
     super::decks::crystalline_crawler,
+    super::decks::sliver_legion,
     super::decks::elvish_champion,
     super::decks::dwynen_gilt_leaf_daen,
     super::decks::legion_lieutenant,

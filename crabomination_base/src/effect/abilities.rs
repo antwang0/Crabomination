@@ -93,6 +93,15 @@ pub enum StaticEffect {
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
     /// until the choice is made.
     GrantProtectionFromChosenColor { applies_to: Selector },
+    /// "Each [creature_type] creature gets +P/+T for each *other*
+    /// [creature_type] on the battlefield" (Sliver Legion). State-aware:
+    /// gathered with the live battlefield count, one effect per matching
+    /// permanent.
+    PumpPTPerOtherOfType {
+        creature_type: crate::card::CreatureType,
+        power: i32,
+        toughness: i32,
+    },
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.

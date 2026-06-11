@@ -322,9 +322,9 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ⏳ **Noticed this run (slivers / seat-routed asks batch):**
   - **Homing Sliver** — needs statics that grant cycling to *hand* cards
     ("Each Sliver card in each player's hand has slivercycling {3}").
-  - **Sedge Sliver / Sliver Legion** — granting *conditional statics*
-    ("+1/+1 while you control a Swamp") and per-count anthems ("+1/+1 for
-    each other Sliver") to a class of permanents isn't modeled.
+  - **Sedge Sliver** — granting *conditional statics* ("+1/+1 while you
+    control a Swamp") to a class of permanents isn't modeled. (Sliver
+    Legion's per-count anthem ✅ via `StaticEffect::PumpPTPerOtherOfType`.)
   - **Opaline Sliver** fires on any targeting spell (printed: an
     opponent's); `EventKind::BecameTarget` doesn't carry a caster gate
     for SelfSource scopes.

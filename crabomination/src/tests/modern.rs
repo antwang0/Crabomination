@@ -54882,3 +54882,20 @@ fn crystalline_crawler_counter_mana_loop() {
         3
     );
 }
+
+/// Sliver Legion: each Sliver grows by +1/+1 per OTHER Sliver in play —
+/// including opponents' Slivers, and excluding itself from its own count.
+#[test]
+fn sliver_legion_per_other_sliver_anthem() {
+    let mut g = two_player_game();
+    let legion = g.add_card_to_battlefield(0, catalog::sliver_legion()); // 7/7
+    let a = g.add_card_to_battlefield(0, catalog::plated_sliver()); // 1/1 (+0/+1 anthem)
+    let b_ = g.add_card_to_battlefield(1, catalog::venom_sliver()); // 1/1
+    // Three slivers: each counts the other two.
+    let cp = g.computed_permanent(legion).unwrap();
+    assert_eq!((cp.power, cp.toughness), (9, 10), "7/7 +2/+2 legion, +0/+1 plated");
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "1/1 +2/+2 +0/+1");
+    let cp = g.computed_permanent(b_).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "opponent's Sliver counts and benefits");
+}

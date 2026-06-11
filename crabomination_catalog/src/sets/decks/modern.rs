@@ -49936,3 +49936,20 @@ pub fn crystalline_crawler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sliver Legion — {W}{U}{B}{R}{G} Legendary 7/7. All Sliver creatures get
+/// +1/+1 for each other Sliver on the battlefield.
+pub fn sliver_legion() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers get +1/+1 for each other Sliver.",
+            effect: StaticEffect::PumpPTPerOtherOfType {
+                creature_type: CreatureType::Sliver,
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..sliver("Sliver Legion", cost(&[w(), u(), b(), r(), g()]), 7, 7)
+    }
+}

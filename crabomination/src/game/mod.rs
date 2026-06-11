@@ -3373,6 +3373,46 @@ impl GameState {
                 }
             }
         }
+        // Sliver Legion — "each [type] gets +P/+T for each OTHER [type]".
+        // The bonus differs per affected permanent (it excludes itself), so
+        // this is gathered state-aware: one Specific effect per matching
+        // permanent, scaled by the live count minus one.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpPTPerOtherOfType {
+                    creature_type,
+                    power,
+                    toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let matching: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.subtypes.creature_types.contains(creature_type))
+                    .map(|c| c.id)
+                    .collect();
+                let others = matching.len().saturating_sub(1) as i32;
+                if others == 0 {
+                    continue;
+                }
+                for id in matching {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![id]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            others * power,
+                            others * toughness,
+                        ),
+                    });
+                }
+            }
+        }
         // CR 702.183 — Impending: a permanent with the Impending keyword isn't
         // a creature while it has a time counter. Emit a layer-4
         // RemoveCardType(Creature) self-effect while counters remain.
@@ -8684,6 +8724,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PumpSelfByControlledPermanents — needs a live battlefield
             // count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpSelfByControlledPermanents { .. }
+            // PumpPTPerOtherOfType — needs the live type count; resolved in
+            // `gather_continuous_effects`.
+            | StaticEffect::PumpPTPerOtherOfType { .. }
             // PumpSelfIf — needs live predicate evaluation; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpSelfIf { .. }
