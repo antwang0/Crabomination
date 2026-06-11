@@ -52,11 +52,42 @@ pub struct GameplayConfig {
     /// Sort your hand client-side (lands first, then by mana value, then
     /// name) instead of keeping draw order. Default: true.
     pub sort_hand: bool,
+    /// Display name shown to other players. Empty = seed from the OS
+    /// username. Persisted when edited in the menu.
+    pub player_name: String,
+    /// Last-used "join address" menu field. Empty = default.
+    pub join_addr: String,
+    /// Last-used decklist path for "Play Deck vs Bot". Empty = default.
+    pub deck_path: String,
 }
 
 impl Default for GameplayConfig {
     fn default() -> Self {
-        Self { sort_hand: true }
+        Self {
+            sort_hand: true,
+            player_name: String::new(),
+            join_addr: String::new(),
+            deck_path: String::new(),
+        }
+    }
+}
+
+/// Load the config, apply `f`, and write it back. Used by the menu to
+/// persist edited fields (player name, join address, deck path).
+pub fn update(f: impl FnOnce(&mut Config)) {
+    let mut cfg = load();
+    f(&mut cfg);
+    let path = config_path();
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    match toml::to_string_pretty(&cfg) {
+        Ok(text) => {
+            if let Err(e) = fs::write(&path, &text) {
+                eprintln!("Could not persist config to {}: {e}", path.display());
+            }
+        }
+        Err(e) => eprintln!("Config serialization failed: {e}"),
     }
 }
 

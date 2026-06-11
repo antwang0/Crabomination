@@ -18,6 +18,9 @@
 //! - `CRAB_MAX_CONNS_PER_IP` — concurrent connections from a single remote
 //!   IP (default 5). `0` = unlimited. Operates on the raw peer address, so
 //!   clients behind a NAT or load balancer share one counter.
+//! - `CRAB_DECK` / `CRAB_BOT_DECK` — paths to Arena/MTGO-format decklists
+//!   for seat 0 / seat 1 of demo-format matches (Modern construction rules
+//!   enforced at boot). Unset seats keep the stock BRG / Goryo's decks.
 
 use std::collections::HashMap;
 use std::env;
@@ -63,7 +66,27 @@ impl Format {
     }
     fn build(&self) -> GameState {
         match self {
-            Self::Demo => build_demo_state(),
+            Self::Demo => {
+                let overrides = deck_overrides();
+                if overrides.seat0.is_some() || overrides.seat1.is_some() {
+                    let seat0 = overrides
+                        .seat0
+                        .clone()
+                        .unwrap_or_else(|| crabomination::demo::brg_combo_deck().to_vec());
+                    let seat1 = overrides
+                        .seat1
+                        .clone()
+                        .unwrap_or_else(|| crabomination::demo::goryos_vengeance_deck().to_vec());
+                    crabomination::draft::build_draft_match_state(
+                        seat0,
+                        seat1,
+                        "Player 1".into(),
+                        "Player 2".into(),
+                    )
+                } else {
+                    build_demo_state()
+                }
+            }
             Self::Cube => build_cube_state(),
             Self::Sos => crabomination::sos_mode::build_sos_state(),
             Self::Commander => build_commander_state(),
@@ -87,6 +110,49 @@ impl Format {
             LobbyFormat::Commander => Self::Commander,
         }
     }
+}
+
+/// Decklist overrides for demo-format matches, loaded once at boot from
+/// `CRAB_DECK` (seat 0) / `CRAB_BOT_DECK` (seat 1).
+#[derive(Default)]
+struct DeckOverrides {
+    seat0: Option<Vec<crabomination::cube::CardFactory>>,
+    seat1: Option<Vec<crabomination::cube::CardFactory>>,
+}
+
+fn deck_overrides() -> &'static DeckOverrides {
+    static OVERRIDES: std::sync::OnceLock<DeckOverrides> = std::sync::OnceLock::new();
+    OVERRIDES.get_or_init(|| DeckOverrides {
+        seat0: load_deck_env("CRAB_DECK"),
+        seat1: load_deck_env("CRAB_BOT_DECK"),
+    })
+}
+
+/// Read, parse, and Modern-validate the decklist at `$key`. Exits the
+/// process on a bad list — a misconfigured server shouldn't serve the
+/// wrong deck silently.
+fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFactory>> {
+    let path = env::var(key).ok()?;
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+        eprintln!("{key}: can't read {path}: {e}");
+        std::process::exit(1);
+    });
+    let parsed = crabomination::decklist::parse_decklist(&text);
+    if !parsed.unknown.is_empty() {
+        eprintln!("{key}: {} card(s) not in the catalog: {}", parsed.unknown.len(),
+            parsed.unknown.join(", "));
+        std::process::exit(1);
+    }
+    let defs: Vec<_> = parsed.main.iter().map(|f| f()).collect();
+    if let Err(errs) = crabomination::format::validate_deck(&defs, crabomination::format::Format::Modern) {
+        eprintln!("{key}: deck is not Modern-legal:");
+        for e in &errs {
+            eprintln!("  - {e}");
+        }
+        std::process::exit(1);
+    }
+    eprintln!("{key}: loaded {} cards from {path}", parsed.main.len());
+    Some(parsed.main)
 }
 
 /// Default time the first client of a pair waits for an opponent before
@@ -1028,6 +1094,8 @@ fn main() {
     // Format is `Copy`, so each match thread captures a fresh copy via the
     // `move` closure — no Arc needed.
     let format = Format::from_env();
+    // Validate CRAB_DECK / CRAB_BOT_DECK at boot (exits on a bad list).
+    let _ = deck_overrides();
     let pairing_timeout = pairing_timeout_from_env();
     let slots = SlotManager::new(
         usize_from_env("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS),

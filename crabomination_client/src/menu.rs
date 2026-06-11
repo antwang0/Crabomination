@@ -232,17 +232,33 @@ pub(crate) struct MenuFields {
 
 impl Default for MenuFields {
     fn default() -> Self {
+        // Text fields persist across launches via the config file; empty
+        // config values fall back to the out-of-the-box defaults.
+        let saved = crate::config::load().gameplay;
+        let player_name = if saved.player_name.trim().is_empty() {
+            // Seeded from the OS username so it's meaningful out of the box.
+            default_player_name()
+        } else {
+            saved.player_name.chars().take(MAX_PLAYER_NAME_LEN).collect()
+        };
+        let join_addr = if saved.join_addr.trim().is_empty() {
+            std::env::var("CRAB_SERVER").unwrap_or_else(|_| "127.0.0.1:7777".to_string())
+        } else {
+            saved.join_addr
+        };
+        let deck_path = if saved.deck_path.trim().is_empty() {
+            "deck.txt".to_string()
+        } else {
+            saved.deck_path
+        };
         Self {
-            // Display name shown to other players in lobbies. Seeded from the
-            // OS username when available so it's meaningful out of the box.
-            player_name: default_player_name(),
+            player_name,
             // Default to the same port the standalone `crabomination_server`
             // binary uses, so a remote client can run the standalone server
             // on the same port and these defaults work out-of-the-box.
             host_port: "7777".to_string(),
-            join_addr: std::env::var("CRAB_SERVER")
-                .unwrap_or_else(|_| "127.0.0.1:7777".to_string()),
-            deck_path: "deck.txt".to_string(),
+            join_addr,
+            deck_path,
             focused: FocusedField::None,
             format: MatchFormat::default(),
         }
@@ -739,6 +755,22 @@ fn handle_text_input(
             FocusedField::JoinAddr => fields.join_addr = buf,
             FocusedField::DeckPath => fields.deck_path = buf,
             FocusedField::None => {}
+        }
+        // Persist the edited field so it survives relaunches.
+        match fields.focused {
+            FocusedField::PlayerName => {
+                let v = fields.player_name.clone();
+                crate::config::update(|c| c.gameplay.player_name = v);
+            }
+            FocusedField::JoinAddr => {
+                let v = fields.join_addr.clone();
+                crate::config::update(|c| c.gameplay.join_addr = v);
+            }
+            FocusedField::DeckPath => {
+                let v = fields.deck_path.clone();
+                crate::config::update(|c| c.gameplay.deck_path = v);
+            }
+            _ => {}
         }
     }
     fields.focused = next_focused;
