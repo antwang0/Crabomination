@@ -1588,98 +1588,73 @@ impl GameState {
                     .filter(|&bid| !self.damage_prevented_by_protection(bid, atk.id))
                     .collect();
 
-                let blocker_damage_to_attacker: i32 = if prevent_combat_damage
+                let attacker_takes_strike_back = !prevent_combat_damage
                     // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
-                    || self.combat_damage_prevented_creatures.contains(&atk.id)
-                {
-                    0
-                } else {
-                    dealing_blocker_ids
-                        .iter()
-                        .filter_map(|&bid| computed_of(bid))
-                        .map(|c| c.power)
-                        .sum()
-                };
+                    && !self.combat_damage_prevented_creatures.contains(&atk.id);
 
-                if blocker_damage_to_attacker > 0 {
-                    let any_deathtouch_blocker = dealing_blocker_ids
-                        .iter()
-                        .filter_map(|&bid| computed_of(bid))
-                        .any(|c| c.keywords.contains(&Keyword::Deathtouch));
-                    let any_infect_blocker = dealing_blocker_ids
-                        .iter()
-                        .filter_map(|&bid| computed_of(bid))
-                        .any(|c| {
-                            c.keywords.contains(&Keyword::Infect)
-                                || c.keywords.contains(&Keyword::Wither)
-                        });
-                    // CR 615 — route blocker→attacker combat damage through
-                    // the attacker's prevention shields before marking it.
-                    // CR 614.2 doubling also applies to the blocker's strike.
-                    let dmg = self.apply_prevention_shields(
-                        crate::game::effects::EntityRef::Permanent(atk.id),
-                        self.scale_damage_to(
-                            dealing_blocker_ids.first().copied(),
-                            crate::game::effects::EntityRef::Permanent(atk.id),
-                            blocker_damage_to_attacker.max(0) as u32,
-                        ),
-                        dealing_blocker_ids.first().copied(),
-                        &mut events,
-                    );
-                    if dmg > 0 && let Some(attacker) = self.battlefield_find_mut(atk.id) {
-                        if any_infect_blocker {
-                            attacker.add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
-                            events.push(GameEvent::CounterAdded {
-                                card_id: atk.id,
-                                counter_type: crate::card::CounterType::MinusOneMinusOne,
-                                count: dmg,
-                            });
-                        } else {
-                            attacker.damage += dmg;
-                            if any_deathtouch_blocker {
-                                attacker.dealt_deathtouch_damage = true;
-                            }
-                            events.push(GameEvent::DamageDealt {
-                                amount: dmg,
-                                to_player: None,
-                                to_card: Some(atk.id),
-                            });
-                        }
-                    }
-                    // Each blocker that struck the attacker dealt combat damage
-                    // to a creature (CR 510.2). Record per-blocker (its own
-                    // power as the amount) so each blocker's to-creature
-                    // triggers fire; only when some damage got through.
-                    if dmg > 0 {
-                        for &bid in &dealing_blocker_ids {
-                            let p = computed_of(bid).map(|c| c.power.max(0) as u32).unwrap_or(0);
-                            if p > 0 {
-                                creature_damage.push((bid, atk.id, p));
-                            }
-                        }
-                    }
-
-                    // Blocker lifelink — gained by each blocker's controller
-                    // (different blockers can have different controllers in
-                    // multiplayer). Only blockers actually striking back in
-                    // this step gain life from it. CR 702.15a: lifelink
-                    // scales off damage actually dealt, so a fully-prevented
-                    // attacker (shield) yields no blocker lifelink.
+                if attacker_takes_strike_back {
+                    // CR 702.90 / 615.6 — each blocker's strike-back is its
+                    // own damage event: scaling (CR 614.2), prevention
+                    // shields, infect/wither, deathtouch, and lifelink all
+                    // apply per source, not to the summed total.
                     let mut lifelink_by_controller: std::collections::HashMap<usize, i32> =
                         std::collections::HashMap::new();
-                    for &bid in dealing_blocker_ids.iter().filter(|_| dmg > 0) {
+                    for &bid in &dealing_blocker_ids {
                         let Some(bc) = computed_of(bid) else { continue };
-                        if !bc.keywords.contains(&Keyword::Lifelink) {
+                        let power = bc.power.max(0) as u32;
+                        if power == 0 {
                             continue;
                         }
-                        let controller = self
-                            .battlefield
-                            .iter()
-                            .find(|c| c.id == bid)
-                            .map(|c| c.controller)
-                            .unwrap_or(atk.defender_player);
-                        *lifelink_by_controller.entry(controller).or_insert(0) +=
-                            self.scale_damage_to(Some(bid), crate::game::effects::EntityRef::Permanent(atk.id), bc.power.max(0) as u32) as i32;
+                        let dmg = self.apply_prevention_shields(
+                            crate::game::effects::EntityRef::Permanent(atk.id),
+                            self.scale_damage_to(
+                                Some(bid),
+                                crate::game::effects::EntityRef::Permanent(atk.id),
+                                power,
+                            ),
+                            Some(bid),
+                            &mut events,
+                        );
+                        if dmg == 0 {
+                            continue;
+                        }
+                        let infect = bc.keywords.contains(&Keyword::Infect)
+                            || bc.keywords.contains(&Keyword::Wither);
+                        if let Some(attacker) = self.battlefield_find_mut(atk.id) {
+                            if infect {
+                                attacker
+                                    .add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: atk.id,
+                                    counter_type: crate::card::CounterType::MinusOneMinusOne,
+                                    count: dmg,
+                                });
+                            } else {
+                                attacker.damage += dmg;
+                                if bc.keywords.contains(&Keyword::Deathtouch) {
+                                    attacker.dealt_deathtouch_damage = true;
+                                }
+                                events.push(GameEvent::DamageDealt {
+                                    amount: dmg,
+                                    to_player: None,
+                                    to_card: Some(atk.id),
+                                });
+                            }
+                        }
+                        // CR 510.2 — this blocker dealt combat damage to a
+                        // creature (post-prevention amount).
+                        creature_damage.push((bid, atk.id, dmg));
+                        // CR 702.15a — lifelink scales off damage actually
+                        // dealt; credited to the blocker's controller.
+                        if bc.keywords.contains(&Keyword::Lifelink) {
+                            let controller = self
+                                .battlefield
+                                .iter()
+                                .find(|c| c.id == bid)
+                                .map(|c| c.controller)
+                                .unwrap_or(atk.defender_player);
+                            *lifelink_by_controller.entry(controller).or_insert(0) += dmg as i32;
+                        }
                     }
                     // Sort by seat for deterministic event ordering;
                     // life-gain math is commutative but the event log
@@ -1689,9 +1664,13 @@ impl GameState {
                     lifelink_entries.sort_by_key(|(p, _)| *p);
                     for (player, gained) in lifelink_entries {
                         if gained > 0 {
-                            let amt = gained as u32;
-                            self.adjust_life(player, gained);
-                            events.push(GameEvent::LifeGained { player, amount: amt });
+                            let applied = self.adjust_life_applied(player, gained);
+                            if applied > 0 {
+                                events.push(GameEvent::LifeGained {
+                                    player,
+                                    amount: applied as u32,
+                                });
+                            }
                         }
                     }
                 }

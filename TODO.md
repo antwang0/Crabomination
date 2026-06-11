@@ -119,12 +119,11 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   routes both halves through the funnel with their sources (lifelink,
   protection, computed power). Tests `cr_702_80a_*`, `cr_702_2c_*`,
   `cr_701_12_fight_applies_lifelink_from_each_half`.
-- ⏳ **Combat damage aggregation across sources** (`combat.rs:1506-1562`,
-  `1568-1597`). All blockers' strike-back is summed once: any infect
-  blocker converts the *whole* sum to counters (CR 702.90 is per-source),
-  prevention shields and Torbran-style scaling apply once with
-  `dealing_blocker_ids.first()` as the source, and per-blocker
-  `creature_damage` records log full power even when partially prevented.
+- ✅ **Combat damage aggregation across sources** — blocker strike-back is
+  now per-source (CR 702.90 / 615.6): each dealing blocker's power is
+  scaled, shielded, and landed (counters vs marked damage, deathtouch,
+  lifelink, `creature_damage` records) as its own event. Tests
+  `cr_702_90_*`.
 - ✅ **Excess non-trample damage vanishes / lethal ignores marked damage** —
   default split now assigns the full power (excess to the last blocker
   without trample) and lethal subtracts marked damage at both lethal sites.
@@ -1654,7 +1653,7 @@ picking an item up.
   CR 712 below.
   `StaticEffect::PreventUntap` honors `Selector::This` (Basalt/Grim Monolith)
   and `Selector::AttachedTo(This)` (Claustrophobia/Dehydration).
-- 🟡 **CR 510 — Combat Damage Step** — remains-blocked ✅ (`blocked_attackers`, 510.1c); excess non-trample damage assigned to the last blocker ✅ (510.1d); lethal accounts for marked damage ✅ (510.1c, double-strike tramplers). Remaining: blocker strike-back aggregated across sources (infect/deathtouch/prevention leak, 702.90) — see audit P1.
+- ✅ **CR 510 — Combat Damage Step** — remains-blocked ✅ (`blocked_attackers`, 510.1c); excess non-trample damage assigned to the last blocker ✅ (510.1d); lethal accounts for marked damage ✅ (510.1c, double-strike tramplers); blocker strike-back per-source ✅ (702.90 / 615.6 — infect/deathtouch/scaling/shields/lifelink apply per blocker event, tests `cr_702_90_*`).
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); full ability removal (113.10b); "can't have" anti-grant (113.11). Counter-target-ability (113.9) ✅ — `Effect::CounterAbility` (Consign to Memory, Stifle) with precise targeting via `SelectionRequirement::HasAbilityOnStack`.

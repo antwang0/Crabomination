@@ -1300,3 +1300,61 @@ fn cr_122_1b_remove_all_counters_clears_keyword_counters() {
     assert!(c.counters.is_empty(), "regular counters cleared");
     assert!(c.keyword_counters.is_empty(), "keyword counters cleared (CR 122.1b)");
 }
+
+// ── CR 702.90 / 615.6 — per-source blocker strike-back ───────────────────────
+
+/// Each blocker's strike-back is its own damage event: only the infect
+/// blocker's share becomes -1/-1 counters; the vanilla blocker's share is
+/// marked damage (CR 702.90e is per source, not per step total).
+#[test]
+fn cr_702_90_infect_blocker_share_is_counters_only() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, kw_creature("Brute", 4, 20, &[]));
+    g.clear_sickness(atk);
+    let infect = g.add_card_to_battlefield(1, kw_creature("Sting", 2, 5, &[Keyword::Infect]));
+    let vanilla = g.add_card_to_battlefield(1, kw_creature("Bear", 3, 5, &[]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(infect, atk), (vanilla, atk)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    let a = g.battlefield_find(atk).unwrap();
+    assert_eq!(a.counter_count(crate::card::CounterType::MinusOneMinusOne), 2,
+        "only the infect blocker's 2 power lands as counters");
+    assert_eq!(a.damage, 3, "the vanilla blocker's 3 power is marked damage");
+}
+
+/// Source-scoped damage scaling (Torbran) applies per strike-back event,
+/// not once to the summed total (CR 614.5).
+#[test]
+fn cr_702_90_strike_back_scaling_is_per_source() {
+    use crate::card::{CardDefinition, CardType};
+    let red_body = |name: &'static str, p: i32, t: i32| CardDefinition {
+        name,
+        cost: crate::mana::cost(&[crate::mana::r()]),
+        card_types: vec![CardType::Creature],
+        power: p,
+        toughness: t,
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, kw_creature("Brute", 0, 20, &[]));
+    g.clear_sickness(atk);
+    g.add_card_to_battlefield(1, catalog::torbran_thane_of_red_fell());
+    let b1 = g.add_card_to_battlefield(1, red_body("Ember A", 2, 4));
+    let b2 = g.add_card_to_battlefield(1, red_body("Ember B", 3, 4));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    // Torbran adds +2 to each red source's event: (2+2) + (3+2) = 9.
+    assert_eq!(g.battlefield_find(atk).unwrap().damage, 9);
+}
