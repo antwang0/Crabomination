@@ -116,6 +116,105 @@ impl GameState {
             }
         }
 
+        // CR 601.2h-style atomicity: validate the entire declaration before
+        // any state is spent (attack tax) or mutated (tapping attackers) —
+        // one illegal attacker must not corrupt the batch.
+        {
+            let attack_power_caps: Vec<usize> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::AttackPowerCapByControllerHand
+                        )
+                    })
+                })
+                .map(|c| self.players[c.controller].hand.len())
+                .collect();
+            let mut seen = std::collections::HashSet::new();
+            for atk in &attacks {
+                let id = atk.attacker;
+                if !seen.insert(id) {
+                    return Err(GameError::CannotAttack(id));
+                }
+                // Ensnaring Bridge cap (computed power, CR 613).
+                if !attack_power_caps.is_empty() {
+                    let power = self.computed_permanent(id).map(|c| c.power).unwrap_or(0);
+                    if attack_power_caps.iter().any(|cap| power > *cap as i32) {
+                        return Err(GameError::CannotAttack(id));
+                    }
+                }
+                // "Can't attack unless defending player controls a [filter]"
+                // (Dandân).
+                if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
+                    Keyword::CanAttackOnlyIfDefenderControls(r) => Some(r.clone()),
+                    _ => None,
+                }) {
+                    let defender = self.defender_for(atk.target);
+                    let satisfied = defender.is_some_and(|d| {
+                        self.battlefield.iter().any(|c| {
+                            c.controller == d && self.evaluate_requirement_on_card(&req, c, d)
+                        })
+                    });
+                    if !satisfied {
+                        return Err(GameError::CannotAttack(id));
+                    }
+                }
+                // "Can't attack unless you control a [filter]" (Lovestruck Beast).
+                if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
+                    Keyword::CanAttackOnlyIfYouControl(r) => Some(r.clone()),
+                    _ => None,
+                }) {
+                    let satisfied = self.battlefield.iter().any(|c| {
+                        c.controller == p && self.evaluate_requirement_on_card(&req, c, p)
+                    });
+                    if !satisfied {
+                        return Err(GameError::CannotAttack(id));
+                    }
+                }
+                // "Even number of counters" gate (Sab-Sunen). Zero is even.
+                if computed_kw(id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+                    && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
+                    && c.counters.values().sum::<u32>() % 2 != 0
+                {
+                    return Err(GameError::CannotAttack(id));
+                }
+                // Controller (not owner) must be the active player.
+                let card = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == id && c.controller == p)
+                    .ok_or(GameError::CardNotOnBattlefield(id))?;
+                let is_creature_now = computed
+                    .iter()
+                    .find(|c| c.id == id)
+                    .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                    .unwrap_or_else(|| card.definition.is_creature());
+                let kws = computed_kw(id);
+                let can_attack = is_creature_now
+                    && !card.tapped
+                    && card.detained_by.is_none()
+                    && !kws.contains(&Keyword::Defender)
+                    && !kws.contains(&Keyword::CantAttack)
+                    && (!card.summoning_sick || kws.contains(&Keyword::Haste));
+                if !can_attack {
+                    if card.tapped {
+                        return Err(GameError::CardIsTapped(id));
+                    }
+                    // CR 701.35 — a detained permanent can't attack.
+                    if card.detained_by.is_some()
+                        || kws.contains(&Keyword::Defender)
+                        || kws.contains(&Keyword::CantAttack)
+                    {
+                        return Err(GameError::CannotAttack(id));
+                    }
+                    return Err(GameError::SummoningSickness(id));
+                }
+            }
+        }
+
         // CR 508.1g — attack tax (Ghostly Prison / Propaganda). Sum {amount}
         // for each attacker hitting a player who controls an
         // `AttackTaxToController` static (copies stack), then auto-pay it from
@@ -161,112 +260,16 @@ impl GameState {
             self.players[p].mana_pool.spend_generic(total_tax);
         }
 
-        // Ensnaring Bridge — creatures with power greater than the bridge
-        // controller's hand size can't attack. Collect the live caps once.
-        let attack_power_caps: Vec<usize> = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::AttackPowerCapByControllerHand)
-                })
-            })
-            .map(|c| self.players[c.controller].hand.len())
-            .collect();
-
         for atk in attacks {
             let id = atk.attacker;
-            // Ensnaring Bridge cap (computed power, CR 613).
-            if !attack_power_caps.is_empty() {
-                let power = self.computed_permanent(id).map(|c| c.power).unwrap_or(0);
-                if attack_power_caps.iter().any(|cap| power > *cap as i32) {
-                    return Err(GameError::CannotAttack(id));
-                }
-            }
-            // "Can't attack unless defending player controls a [filter]"
-            // (Dandân). Resolved before the mutable attacker binding to keep
-            // the borrows disjoint: require ≥1 matching permanent under the
-            // attack's defending player's control.
-            if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
-                Keyword::CanAttackOnlyIfDefenderControls(r) => Some(r.clone()),
-                _ => None,
-            }) {
-                let defender = self.defender_for(atk.target);
-                let satisfied = defender.is_some_and(|d| {
-                    self.battlefield
-                        .iter()
-                        .any(|c| c.controller == d && self.evaluate_requirement_on_card(&req, c, d))
-                });
-                if !satisfied {
-                    return Err(GameError::CannotAttack(id));
-                }
-            }
-            // "Can't attack unless you control a [filter]" (Lovestruck Beast):
-            // require ≥1 matching permanent under the attacker's controller.
-            if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
-                Keyword::CanAttackOnlyIfYouControl(r) => Some(r.clone()),
-                _ => None,
-            }) {
-                let satisfied = self
-                    .battlefield
-                    .iter()
-                    .any(|c| c.controller == p && self.evaluate_requirement_on_card(&req, c, p));
-                if !satisfied {
-                    return Err(GameError::CannotAttack(id));
-                }
-            }
-            // "Can't attack unless it has an even number of counters on it"
-            // (Sab-Sunen). Zero is even. Sum every counter kind on the card.
-            if computed_kw(id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
-                && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
-                && c.counters.values().sum::<u32>() % 2 != 0
-            {
-                return Err(GameError::CannotAttack(id));
-            }
-            // Filter by *controller*, not *owner* — a creature you've
-            // stolen (Threaten / Mind Control) attacks for you, even
-            // though its `owner` field still points at the original
-            // player. Captured at
-            // `debug/deadlock-t9-1777413906-987970800.json` where
-            // bot 0 controlled a Cosmogoyf with `owner=1, controller=0`
-            // and `declare_attackers` rejected the cast with
-            // `CardNotOnBattlefield(93)`.
+            // Validated above — commit only. Filter by *controller*, not
+            // *owner*: a stolen creature (Threaten / Mind Control) attacks
+            // for its current controller.
             let card = self
                 .battlefield
                 .iter_mut()
                 .find(|c| c.id == id && c.controller == p)
                 .ok_or(GameError::CardNotOnBattlefield(id))?;
-
-            // Creature-ness is read from the computed view so a crewed
-            // Vehicle (CR 702.122 — animated to an artifact creature via a
-            // layer-4 AddCardType) can attack, while an uncrewed one can't.
-            // Defender / Haste are likewise read post-layer so granted
-            // variants are honored.
-            let is_creature_now = computed
-                .iter()
-                .find(|c| c.id == id)
-                .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
-                .unwrap_or_else(|| card.definition.is_creature());
-            let kws = computed_kw(id);
-            let can_attack = is_creature_now
-                && !card.tapped
-                && card.detained_by.is_none()
-                && !kws.contains(&Keyword::Defender)
-                && !kws.contains(&Keyword::CantAttack)
-                && (!card.summoning_sick || kws.contains(&Keyword::Haste));
-            if !can_attack {
-                if card.tapped {
-                    return Err(GameError::CardIsTapped(id));
-                }
-                // CR 701.35 — a detained permanent can't attack.
-                if card.detained_by.is_some()
-                    || kws.contains(&Keyword::Defender)
-                    || kws.contains(&Keyword::CantAttack)
-                {
-                    return Err(GameError::CannotAttack(id));
-                }
-                return Err(GameError::SummoningSickness(id));
-            }
             if !computed_kw(id).contains(&Keyword::Vigilance) {
                 card.tapped = true;
                 // CR 508.1f — attacking taps the creature; surface a
@@ -462,7 +465,14 @@ impl GameState {
 
         // Validate ALL assignments before mutating any state. Each blocker's
         // controller must equal the defender of the attacker it's blocking.
+        // A blocker may appear once: `block_map` is a single blocker→attacker
+        // mapping, so a duplicate would silently un-block the first attacker
+        // while keeping both Flanking/Bushido/Rampage deltas.
+        let mut seen_blockers = std::collections::HashSet::new();
         for &(blocker_id, attacker_id) in &assignments {
+            if !seen_blockers.insert(blocker_id) || self.block_map.contains_key(&blocker_id) {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
             let atk = self
                 .attack_for(attacker_id)
                 .ok_or(GameError::CardNotOnBattlefield(attacker_id))?;
@@ -583,32 +593,36 @@ impl GameState {
             }
             sum
         };
+        // Affordability is validated here; the actual spend is deferred to
+        // after every block-legality check so a rejected declaration never
+        // costs mana (CR 601.2h-style atomicity).
+        let mut block_tax_by_controller: std::collections::HashMap<usize, u32> =
+            std::collections::HashMap::new();
         if block_tax_per > 0 {
-            let mut tax_by_controller: std::collections::HashMap<usize, u32> =
-                std::collections::HashMap::new();
             for &(blocker_id, _) in &assignments {
                 if let Some(b) = self.battlefield_find(blocker_id) {
-                    *tax_by_controller.entry(b.controller).or_insert(0) += block_tax_per;
+                    *block_tax_by_controller.entry(b.controller).or_insert(0) += block_tax_per;
                 }
             }
-            for (&player, &owed) in &tax_by_controller {
+            for (&player, &owed) in &block_tax_by_controller {
                 if self.players[player].mana_pool.total() < owed {
                     return Err(GameError::CannotBlock(assignments[0].0));
                 }
             }
-            for (player, owed) in tax_by_controller {
-                self.players[player].mana_pool.spend_generic(owed);
-            }
         }
 
-        // Menace: attackers with Menace must be blocked by 2+ creatures or not at all.
+        // Menace: attackers with Menace must be blocked by 2+ creatures or
+        // not at all (CR 702.110b). Counts the merged block set (existing
+        // blocks plus this batch) so incremental multi-defender submissions
+        // compose, same as the CantBeBlockedExceptByN check below.
         for atk in &self.attacking {
             let has_menace = kws_of(atk.attacker).contains(&Keyword::Menace);
             if has_menace {
                 let blocker_count = assignments
                     .iter()
                     .filter(|(_, aid)| *aid == atk.attacker)
-                    .count();
+                    .count()
+                    + self.block_map.values().filter(|&&aid| aid == atk.attacker).count();
                 if blocker_count == 1 {
                     return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
                 }
@@ -791,6 +805,11 @@ impl GameState {
             if could_block {
                 return Err(GameError::MustBeBlockedIfAble(b.id));
             }
+        }
+
+        // All validation passed — pay the block tax (CR 509.1d).
+        for (player, owed) in block_tax_by_controller {
+            self.players[player].mana_pool.spend_generic(owed);
         }
 
         // Combat-keyword P/T adjustments applied on block declaration:
