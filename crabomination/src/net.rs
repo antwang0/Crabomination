@@ -209,6 +209,10 @@ pub enum ServerMsg {
     /// client stores it and, if its connection drops mid-match, opens a fresh
     /// connection and sends `ClientMsg::Resume { token }` to re-claim the seat.
     ResumeToken { token: String },
+    /// The per-action rope (`CRAB_ACTION_TIMEOUT_SECS`) armed for *your*
+    /// seat: act within `seconds` or the server auto-acts for you. Sent
+    /// once per arming; every accepted action re-arms (and re-sends).
+    Rope { seconds: u32 },
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────

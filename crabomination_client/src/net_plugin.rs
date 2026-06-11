@@ -201,6 +201,7 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<PendingManaCast>()
             .init_resource::<LobbyState>()
             .init_resource::<ResumeInfo>()
+            .init_resource::<RopeClock>()
             .add_systems(PreUpdate, poll_net)
             .add_systems(
                 Update,
@@ -209,6 +210,7 @@ impl Plugin for SinglePlayerPlugin {
                     update_pending_cast_banner,
                     update_spectator_banner,
                     update_reconnect_banner,
+                    update_rope_banner,
                 ),
             )
             // Reconnect runs only when a reconnectable match's link has dropped.
@@ -231,6 +233,8 @@ pub fn poll_net(
     mut pending_cast: ResMut<PendingManaCast>,
     mut lobby: ResMut<LobbyState>,
     mut resume: ResMut<ResumeInfo>,
+    mut rope: ResMut<RopeClock>,
+    time: Res<Time>,
 ) {
     let Some(inbox) = inbox else { return };
     events.0.clear();
@@ -254,6 +258,9 @@ pub fn poll_net(
             ServerMsg::View(v) => {
                 view.0 = Some(*v);
                 got_game_msg = true;
+                // Any accepted action resets the server's rope; a fresh
+                // `Rope` follows if a clock is still running for us.
+                rope.deadline = None;
             }
             ServerMsg::Events(evs) => events.0 = evs,
             // Combined per-action frame: apply the events (for animation)
@@ -262,6 +269,12 @@ pub fn poll_net(
                 events.0 = evs;
                 view.0 = Some(*v);
                 got_game_msg = true;
+                rope.deadline = None;
+            }
+            // The per-action rope armed for this seat — start the local
+            // countdown (rendered by `update_rope_banner`).
+            ServerMsg::Rope { seconds } => {
+                rope.deadline = Some(time.elapsed_secs_f64() + seconds as f64);
             }
             ServerMsg::ActionError(e) => {
                 // `ManualTapRequired`: the player has a choice of which mana
@@ -279,6 +292,10 @@ pub fn poll_net(
                             .unwrap_or(0);
                         pending_cast.0 = Some(PendingCast { action, last_pool_total: total, hint: e });
                     }
+                } else if e.contains("action timeout") {
+                    // The rope fired and the server acted for us — show a
+                    // transient notice instead of a silent log line.
+                    rope.fired_until = Some(time.elapsed_secs_f64() + 4.0);
                 } else {
                     eprintln!("net: server rejected action: {e}");
                 }
@@ -657,6 +674,91 @@ fn update_reconnect_banner(
             }
         }
         (false, Some(e)) => {
+            commands.entity(e).despawn();
+        }
+        _ => {}
+    }
+}
+
+/// Local mirror of the server's per-action rope (`ServerMsg::Rope`):
+/// `deadline` is in `Time::elapsed_secs_f64` terms; `fired_until` shows the
+/// "server acted for you" notice briefly after the rope expires.
+#[derive(Resource, Default)]
+pub struct RopeClock {
+    pub deadline: Option<f64>,
+    pub fired_until: Option<f64>,
+}
+
+/// Marker for the rope-countdown banner.
+#[derive(Component)]
+struct RopeBanner;
+
+/// Marker for the banner's text node (updated in place each tick).
+#[derive(Component)]
+struct RopeBannerText;
+
+/// Countdown toast for the per-action rope: appears when ≤ 15s remain
+/// ("act or the server acts for you"), and shows a short "time's up"
+/// notice after the rope fires.
+fn update_rope_banner(
+    mut commands: Commands,
+    rope: Res<RopeClock>,
+    time: Res<Time>,
+    fonts: Option<Res<crate::theme::UiFonts>>,
+    existing: Query<Entity, With<RopeBanner>>,
+    mut text_q: Query<&mut Text, With<RopeBannerText>>,
+) {
+    let now = time.elapsed_secs_f64();
+    let label = if rope.fired_until.is_some_and(|u| now < u) {
+        Some("⏱ Time's up — the server acted for you".to_string())
+    } else {
+        rope.deadline
+            .map(|d| d - now)
+            .filter(|&rem| rem > 0.0 && rem <= 15.0)
+            .map(|rem| format!("⏱ Auto-act in {}s", rem.ceil() as u32))
+    };
+    match (label, existing.iter().next()) {
+        (Some(label), None) => {
+            let Some(fonts) = fonts else { return };
+            commands
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(86.0),
+                        left: Val::Px(0.0),
+                        width: Val::Percent(100.0),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    RopeBanner,
+                    crate::systems::game_ui::InGameRoot,
+                    Pickable::IGNORE,
+                    GlobalZIndex(45),
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(label),
+                        RopeBannerText,
+                        fonts.tf(16.0),
+                        TextColor(crate::theme::ACCENT_ORANGE),
+                        BackgroundColor(crate::theme::HUD_BG_DANGER),
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                            ..default()
+                        },
+                        Pickable::IGNORE,
+                    ));
+                });
+        }
+        (Some(label), Some(_)) => {
+            for mut text in &mut text_q {
+                if text.0 != label {
+                    text.0 = label.clone();
+                }
+            }
+        }
+        (None, Some(e)) => {
             commands.entity(e).despawn();
         }
         _ => {}
