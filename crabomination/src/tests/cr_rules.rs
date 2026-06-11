@@ -784,3 +784,89 @@ fn cr_702_19g_trample_attacker_hits_player_after_blocker_dies() {
         "all regular-step damage tramples through once the blocker is gone"
     );
 }
+
+// ── CR 601.2c — cast-time target filters enforced for every targeted effect ──
+
+/// Detain was one of ~20 targeted effects whose filter wasn't surfaced by
+/// `target_filter_for_slot`, letting a client submit any target (the caster's
+/// own land). The filter must reject illegal targets at cast time.
+#[test]
+fn cr_601_2c_detain_filter_rejects_own_land() {
+    use crate::card::{CardDefinition, CardType, SelectionRequirement};
+    use crate::effect::{Effect, Selector};
+    fn detain_spell() -> CardDefinition {
+        CardDefinition {
+            name: "Test Detain",
+            cost: crate::mana::cost(&[crate::mana::u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Detain {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            ..Default::default()
+        }
+    }
+    let mut g = two_player_game();
+    let own_land = g.add_card_to_battlefield(0, catalog::island());
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, detain_spell());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(own_land)),
+            additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "own land fails the detain filter"
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("opponent's creature is a legal detain target");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(opp_creature).unwrap().detained_by, Some(0));
+}
+
+/// CR 608.2b — a triggered ability whose stored sole target is illegal at
+/// resolution fizzles; it must not re-aim at a fresh target.
+#[test]
+fn cr_608_2b_trigger_with_illegal_target_fizzles() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear_a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let source = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Push a trigger aimed at bear_a, then remove bear_a before resolution.
+    g.stack.push(crate::game::types::StackItem::Trigger {
+        source,
+        controller: 0,
+        effect: Box::new(Effect::DealDamage {
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: crate::card::SelectionRequirement::Creature,
+            },
+            amount: Value::Const(2),
+        }),
+        target: Some(Target::Permanent(bear_a)),
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        intervening_if: None,
+    });
+    let mut events = Vec::new();
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    g.move_card_to(bear_a, &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(1)), &ctx, &mut events);
+    g.resolve_top_of_stack().unwrap();
+    let b = g.battlefield_find(bear_b).expect("untouched");
+    assert_eq!(b.damage, 0, "fizzled trigger must not re-aim at another creature");
+}

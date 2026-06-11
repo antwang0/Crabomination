@@ -34,6 +34,23 @@ impl GameState {
         controller: usize,
         avoid_source: Option<CardId>,
     ) -> Option<Target> {
+        self.auto_target_for_effect_avoiding_set(
+            eff,
+            controller,
+            avoid_source.as_slice(),
+        )
+    }
+
+    /// Like [`auto_target_for_effect_avoiding`] but with a set of avoided
+    /// permanents — used when a doubled trigger batch picks per-copy targets
+    /// at push time (CR 603.3d) so the second copy prefers a fresh target.
+    pub fn auto_target_for_effect_avoiding_set(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        avoid: &[CardId],
+    ) -> Option<Target> {
+        let avoid_source = avoid.first().copied();
         // Effects with a bare `Selector::Target(0)` (e.g. Lightning Bolt's
         // "deal 3 damage to any target") have no surfaced primary filter —
         // they accept any legal entity. Fall back to `Any` so the picker
@@ -137,9 +154,7 @@ impl GameState {
         // doc comment): when caller asked us to avoid the trigger source,
         // skip the source on the first pass and only fall back to it if
         // no other legal candidate exists.
-        let is_avoided = |cid: CardId| -> bool {
-            avoid_source.map(|s| s == cid).unwrap_or(false)
-        };
+        let is_avoided = |cid: CardId| -> bool { avoid.contains(&cid) };
         // For friendly pumps (Magecraft / Repartee +1/+1 fan-out, transient
         // PumpPT spells), prefer the highest-power friendly creature so the
         // buff lands on the bot's biggest threat — improves expected value

@@ -3179,3 +3179,7 @@ pub use abilities::*;
 // ── Helpers / shortcut constructors ──────────────────────────────────────────
 
 pub mod shortcut;
+
+#[cfg(test)]
+#[path = "tests/effect_query.rs"]
+mod tests;

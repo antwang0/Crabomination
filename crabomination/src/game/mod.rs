@@ -5731,6 +5731,11 @@ impl GameState {
         // 603.3b. Using an iterator lets us collect the unconsumed
         // tail into `remaining` when we suspend mid-batch.
         let mut iter = queue.into_iter();
+        // Per-copy target choice for doubled triggers (CR 603.3d): track the
+        // targets already auto-picked for each source in this batch so an
+        // Elesh-Norn-doubled ETB aims its second copy at a fresh target
+        // instead of duplicating (and later fizzling on) the first pick.
+        let mut picked_this_batch: Vec<(CardId, CardId)> = Vec::new();
         while let Some(pending) = iter.next() {
             // Event-amount-relative target filters (Scrap Trawler's
             // "lesser mana value than that artifact") read this scratch
@@ -5777,11 +5782,21 @@ impl GameState {
             // plain "target creature" trigger reads better picking a different
             // permanent (a self-target trigger uses `Selector::This`, not a
             // target slot). Falls back to the source if it's the only legal pick.
-            let auto = self.auto_target_for_effect_avoiding(
+            let mut avoid = vec![pending.source];
+            avoid.extend(
+                picked_this_batch
+                    .iter()
+                    .filter(|(src, _)| *src == pending.source)
+                    .map(|(_, t)| *t),
+            );
+            let auto = self.auto_target_for_effect_avoiding_set(
                 &pending.effect,
                 pending.controller,
-                Some(pending.source),
+                &avoid,
             );
+            if let Some(Target::Permanent(tid)) = &auto {
+                picked_this_batch.push((pending.source, *tid));
+            }
             self.push_pending_trigger(pending, auto);
         }
     }
@@ -7349,13 +7364,16 @@ impl GameState {
         // Event-amount-relative filters re-checked at resolution
         // (ManaValueLessThanEventAmount) read this scratch.
         self.trigger_event_amount_scratch = event_amount;
-        // If the trigger has a stored target that's no longer legal (e.g.
-        // an Elesh-Norn-doubled Solitude ETB whose first target was just
-        // exiled by the prior copy), re-pick a fresh target on resolution.
+        // CR 608.2b — if the trigger's stored sole target is no longer legal
+        // at resolution (left the zone, stopped matching the filter), the
+        // ability doesn't resolve: none of its effects happen. It must NOT
+        // re-aim at a fresh target.
         let resolved_target = match target.as_ref() {
             Some(t) => match effect.target_filter_for_slot(0) {
-                Some(filter) if !self.evaluate_requirement_static(filter, t, controller, Some(source)) => {
-                    self.auto_target_for_effect(&effect, controller)
+                Some(filter)
+                    if !self.evaluate_requirement_static(filter, t, controller, Some(source)) =>
+                {
+                    return Ok(vec![]);
                 }
                 _ => Some(t.clone()),
             },

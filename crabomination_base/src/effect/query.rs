@@ -615,6 +615,43 @@ impl Effect {
             Effect::MayPay { body, .. } => body.primary_target_filter(),
             Effect::PayEnergy { then, .. } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
+            Effect::CollectEvidence { then, .. } | Effect::Forage { then } => {
+                then.primary_target_filter()
+            }
+            Effect::WithSacrificedPt { body, .. }
+            | Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::Repeat { body, .. }
+            | Effect::ForEach { body, .. } => body.primary_target_filter(),
+            Effect::Endure { target, .. } => sel_filter(target),
+            Effect::Goad { what }
+            | Effect::Transform { what }
+            | Effect::LoseAllAbilities { what, .. }
+            | Effect::LoseKeywordThisTurn { what, .. }
+            | Effect::SkipNextUntap { what }
+            | Effect::GrantTriggeredAbility { what, .. }
+            | Effect::GainActivatedAbility { what, .. }
+            | Effect::AddCardTypeIndefinitely { what, .. }
+            | Effect::BecomeChosenColor { what, .. }
+            | Effect::BecomeColor { what, .. }
+            | Effect::GrantMayPlay { what, .. }
+            | Effect::DoubleCountersOnEach { what, .. }
+            | Effect::NameCreatureType { what }
+            | Effect::NameCard { what }
+            | Effect::Explore { who: what } => sel_filter(what),
+            Effect::MoveCounter { from, to, .. } => {
+                sel_filter(from).or_else(|| sel_filter(to))
+            }
+            Effect::Tribute { otherwise, .. } => otherwise.primary_target_filter(),
+            Effect::TemptingOffer { body } => body.primary_target_filter(),
+            Effect::PlayersMayAccept { otherwise, .. } => otherwise.primary_target_filter(),
+            Effect::Punisher { options, otherwise, .. } => options
+                .iter()
+                .find_map(|e| e.primary_target_filter())
+                .or_else(|| otherwise.primary_target_filter()),
+            Effect::NthResolutionThisTurn { branches } => {
+                branches.iter().find_map(|e| e.primary_target_filter())
+            }
+            Effect::SacrificeAnyNumber { per_each, .. } => per_each.primary_target_filter(),
             Effect::IfRevealFromHand { then, else_, .. } => then
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
@@ -1252,6 +1289,82 @@ impl Effect {
                     sel_find(who, slot)
                 }
                 Effect::AddPoison { who, .. } => sel_find(who, slot),
+                // Single-selector targeted effects (cast-time filter
+                // enforcement, CR 115.1a/601.2c). Keep in sync with
+                // `requires_target` / `primary_target_filter` — the
+                // `targeted_effects_carry_slot_filters` test guards this set.
+                Effect::Regenerate { what }
+                | Effect::ExileWithSource { what }
+                | Effect::ExileSameNameAsTarget { what }
+                | Effect::ExileTaggedWithSource { what }
+                | Effect::ExileUntilSourceLeaves { what, .. }
+                | Effect::ExileReturnNextEndStep { what }
+                | Effect::RemoveAllCountersDiscountNextSpell { what }
+                | Effect::Goad { what }
+                | Effect::Detain { what }
+                | Effect::Provoke { what }
+                | Effect::Transform { what }
+                | Effect::LoseAllAbilities { what, .. }
+                | Effect::LoseKeywordThisTurn { what, .. }
+                | Effect::SkipNextUntap { what }
+                | Effect::GrantTriggeredAbility { what, .. }
+                | Effect::GainActivatedAbility { what, .. }
+                | Effect::AddCardTypeIndefinitely { what, .. }
+                | Effect::SetLoyalty { what, .. }
+                | Effect::BecomeChosenColor { what, .. }
+                | Effect::BecomeColor { what, .. }
+                | Effect::ReplaceColorWord { what, .. }
+                | Effect::ReplaceBasicLandType { what, .. }
+                | Effect::GrantMayPlay { what, .. }
+                | Effect::CastWithoutPayingImmediate { what, .. }
+                | Effect::DoubleCountersOnEach { what, .. }
+                | Effect::NameCreatureType { what }
+                | Effect::NameCard { what }
+                | Effect::Explore { who: what } => sel_find(what, slot),
+                Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),
+                Effect::MoveCounter { from, to, .. } => {
+                    sel_find(from, slot).or_else(|| sel_find(to, slot))
+                }
+                Effect::BecomeCopyOf { what, source, .. }
+                | Effect::BecomeCopyOfFor { what, source, .. } => {
+                    sel_find(what, slot).or_else(|| sel_find(source, slot))
+                }
+                Effect::CreateTokenCopyOf { source, .. } => sel_find(source, slot),
+                Effect::Endure { target, .. } => sel_find(target, slot),
+                Effect::LifeGainLockThisTurn { who }
+                | Effect::GrantSpellsUncounterableThisTurn { who }
+                | Effect::CantCastNoncreatureThisTurn { who } => sel_find(who, slot),
+                Effect::ExchangeLifeTotals { a, b } => {
+                    sel_find(a, slot).or_else(|| sel_find(b, slot))
+                }
+                Effect::DoubleLife { who } => sel_find(who, slot),
+                // Wrappers that defer their target to an inner body.
+                Effect::Forage { then } | Effect::Process { then, .. } => {
+                    eff_find(then, slot, mode, kicked)
+                }
+                Effect::WithSacrificedPt { body, .. }
+                | Effect::OnYourNextSpellCastThisTurn { body }
+                | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
+                Effect::PayEnergy { then, .. } => eff_find(then, slot, mode, kicked),
+                Effect::PayEnergyOrElse { otherwise, .. }
+                | Effect::PayManaOrElse { otherwise, .. } => {
+                    eff_find(otherwise, slot, mode, kicked)
+                }
+                Effect::Tribute { otherwise, .. } => eff_find(otherwise, slot, mode, kicked),
+                Effect::TemptingOffer { body } => eff_find(body, slot, mode, kicked),
+                Effect::PlayersMayAccept { otherwise, .. } => {
+                    eff_find(otherwise, slot, mode, kicked)
+                }
+                Effect::Punisher { options, otherwise, .. } => options
+                    .iter()
+                    .find_map(|e| eff_find(e, slot, mode, kicked))
+                    .or_else(|| eff_find(otherwise, slot, mode, kicked)),
+                Effect::NthResolutionThisTurn { branches } => branches
+                    .iter()
+                    .find_map(|e| eff_find(e, slot, mode, kicked)),
+                Effect::SacrificeAnyNumber { per_each, .. } => {
+                    eff_find(per_each, slot, mode, kicked)
+                }
                 _ => None,
             }
         }

@@ -867,16 +867,24 @@ impl GameState {
                             // Source sacrificed; remaining ETB triggers moot.
                             break;
                         }
-                        let auto_target = self.auto_target_for_effect_avoiding(
-                            &effect,
-                            caster,
-                            Some(card_id),
-                        );
                         // CR 700.2b — modal ETB trigger mode pick at
                         // push-time (Biblioplex Tomekeeper's "choose up
                         // to one — prepare / unprepare").
                         let mode = self.pick_trigger_mode(&effect, card_id, caster);
+                        // Per-copy target choice for doubled fires
+                        // (CR 603.3d): each copy prefers a target the prior
+                        // copies didn't pick, so the second Solitude exile
+                        // under Elesh Norn aims at a fresh creature.
+                        let mut avoid = vec![card_id];
                         for _ in 0..etb_multiplier {
+                            let auto_target = self.auto_target_for_effect_avoiding_set(
+                                &effect,
+                                caster,
+                                &avoid,
+                            );
+                            if let Some(Target::Permanent(tid)) = &auto_target {
+                                avoid.push(*tid);
+                            }
                             self.stack.push(StackItem::Trigger {
                                 source: card_id,
                                 controller: caster,
