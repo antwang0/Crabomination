@@ -7325,44 +7325,10 @@ impl GameState {
                         }
                         // Couldn't afford; fall through to copy.
                     }
-                    // Unpaid (declined or unaffordable) → copy `n` times.
-                    let (orig_card_def, caster, target, additional_targets, mode, x_value, converged_value)
-                        = if let crate::game::types::StackItem::Spell {
-                            card, caster, target, additional_targets, mode, x_value, converged_value, ..
-                        } = &self.stack[idx] {
-                            (
-                                card.definition.clone(),
-                                *caster,
-                                target.clone(),
-                                additional_targets.clone(),
-                                *mode,
-                                *x_value,
-                                *converged_value,
-                            )
-                        } else {
-                            continue;
-                        };
-                    for _ in 0..n {
-                        let new_id = self.next_id();
-                        let mut copy_inst =
-                            crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
-                        copy_inst.is_token = true;
-                        self.stack.push(crate::game::types::StackItem::Spell {
-                            card: Box::new(copy_inst),
-                            caster,
-                            target: target.clone(),
-                            additional_targets: additional_targets.clone(),
-                            mode,
-                            x_value,
-                            converged_value,
-                            mana_spent: 0,
-                            uncounterable: true,
-                        });
-                    }
-                    events.push(GameEvent::SpellsCopied {
-                        original: cid,
-                        count: n as u32,
-                    });
+                    // Unpaid (declined or unaffordable) → copy `n` times
+                    // through the shared copy funnel (CR 707 CantBeCopied
+                    // guard, copy bookkeeping, SpellsCopied event).
+                    self.copy_stack_spell(cid, n, false, events);
                 }
                 Ok(())
             }

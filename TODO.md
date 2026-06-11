@@ -146,7 +146,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   timestamp system entirely: `granted_keywords_eot` merges *before* the
   layer walk so a later "gains flying" loses to an earlier
   `RemoveAllAbilities` (`layers.rs:309-325`, `437`).
-- ⏳ **Step triggers skip APNAP** (`stack.rs:309-485`). `fire_step_triggers`
+- ✅ **Step triggers skip APNAP** (`stack.rs:309-485`). `fire_step_triggers`
   queues in battlefield-`Vec` order despite the comment claiming
   "APNAP-ordered" (CR 603.3b) and bypasses the same-controller
   `TriggerOrder` choice; the unified event dispatcher does it right
@@ -188,7 +188,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   grants vanish; the 608.2b fizzle flag clears). Still ⏳:
   `TokenDefinition.static_abilities` is `#[serde(skip)]` with no rebuild
   path (`card.rs:1127`) — Karn's Construct deserializes vanilla.
-- ⏳ **ETB control replacement fires triggers for the wrong controller**
+- ✅ **ETB control replacement fires triggers for the wrong controller**
   (`effects/movement.rs:649-742`). `apply_etb_control_replacement` may
   reassign `card.controller` (Gather Specimens) but
   `fire_self_etb_triggers(cid, p)` still passes the stale pre-replacement
@@ -239,7 +239,7 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   `removed_keywords_eot` (unlike `has_keyword`); `ward_cost()` collapses
   colored Ward to generic and returns `None` for Life/Discard/Sacrifice
   Wards. Currently test-only but public API traps.
-- ⏳ **`CopySpellUnlessPaid` duplicates the spell-copy block**
+- ✅ **`CopySpellUnlessPaid` duplicates the spell-copy block**
   (`effects/mod.rs:7028-7134`) and has already diverged from
   `copy_stack_spell`: missing the `CantBeCopied` guard (CR 707) and the
   choose-new-targets path.

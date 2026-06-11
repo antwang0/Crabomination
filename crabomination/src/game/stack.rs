@@ -452,8 +452,8 @@ impl GameState {
         }
         self.delayed_triggers = keep;
 
-        // Build a single APNAP-ordered queue (delayed triggers first,
-        // then step triggers) so `drain_trigger_queue` can surface
+        // Build a single queue (delayed triggers first, then step
+        // triggers; APNAP-sorted below) so `drain_trigger_queue` can surface
         // `Decision::ChooseTarget` for wants_ui controllers instead of
         // silently auto-targeting them.
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
@@ -503,6 +503,14 @@ impl GameState {
                 intervening_if,
             });
         }
+        // CR 603.3b — APNAP order: the active player's triggers push first
+        // (resolving last). Battlefield-Vec order is otherwise preserved as
+        // each controller's chosen same-controller order (stable sort).
+        let n_players = self.players.len();
+        let apnap_rank = |seat: usize| -> usize {
+            (seat + n_players - active) % n_players.max(1)
+        };
+        queue.sort_by_key(|t| apnap_rank(t.controller));
         self.drain_trigger_queue(queue);
     }
 

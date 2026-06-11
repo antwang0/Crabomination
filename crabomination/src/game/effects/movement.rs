@@ -743,8 +743,17 @@ impl GameState {
                 events.push(GameEvent::PermanentEntered { card_id: cid });
                 // Fire self-source ETB triggers so reanimate / flicker /
                 // search-to-battlefield paths trigger creature ETBs the same
-                // way casting does.
-                self.fire_self_etb_triggers(cid, p);
+                // way casting does. CR 603.3d — the trigger's controller is
+                // the permanent's controller AFTER any ETB control
+                // replacement (Gather Specimens), not the pre-replacement
+                // destination seat.
+                let etb_ctrl = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == cid)
+                    .map(|c| c.controller)
+                    .unwrap_or(p);
+                self.fire_self_etb_triggers(cid, etb_ctrl);
             }
         }
     }
