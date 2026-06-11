@@ -1965,60 +1965,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::MillUntilLands { who, lands } => {
-                // Reveal from the top until `lands` land cards, then put all
-                // revealed cards into the graveyard (Mind Grind).
-                let want = self.evaluate_value(lands, ctx).max(0) as usize;
-                for ent in self.resolve_selector(who, ctx) {
-                    if let EntityRef::Player(p) = ent {
-                        let mut found = 0usize;
-                        while found < want && !self.players[p].library.is_empty() {
-                            let card = self.players[p].library.remove(0);
-                            if card.definition.is_land() {
-                                found += 1;
-                            }
-                            let cid = card.id;
-                            if !self.route_to_graveyard(card, events) {
-                                events.push(GameEvent::CardMilled { player: p, card_id: cid });
-                            }
-                            self.last_moved_cards.push(cid);
-                        }
-                    }
-                }
-                Ok(())
-            }
+            Effect::MillUntilLands { who, lands } => self.resolve_mill_until_lands(who, lands, ctx, events),
 
-            Effect::MillTwoRepeatSharedColor { who } => {
-                // Mill two; repeat while two nonland milled cards share a
-                // color (Sphinx's Tutelage). Capped at the library size so a
-                // degenerate loop always terminates.
-                for ent in self.resolve_selector(who, ctx) {
-                    if let EntityRef::Player(p) = ent {
-                        loop {
-                            let mut milled_colors: Vec<Vec<crate::mana::Color>> = Vec::new();
-                            for _ in 0..2 {
-                                if self.players[p].library.is_empty() {
-                                    break;
-                                }
-                                let card = self.players[p].library.remove(0);
-                                if !card.definition.is_land() {
-                                    milled_colors.push(card.definition.cost.colors());
-                                }
-                                let cid = card.id;
-                                if !self.route_to_graveyard(card, events) {
-                                    events.push(GameEvent::CardMilled { player: p, card_id: cid });
-                                }
-                            }
-                            let repeat = milled_colors.len() == 2
-                                && milled_colors[0].iter().any(|c| milled_colors[1].contains(c));
-                            if !repeat || self.players[p].library.is_empty() {
-                                break;
-                            }
-                        }
-                    }
-                }
-                Ok(())
-            }
+
+            Effect::MillTwoRepeatSharedColor { who } => self.resolve_mill_two_repeat_shared_color(who, ctx, events),
+
 
             Effect::ExileTopOfLibrary { who, amount, link_to_source, face_down } => {
                 // CR 702.115 Ingest etc. — like Mill but routes to exile.
@@ -4379,69 +4330,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExchangeControlChoosing { filter, with } => {
-                // CR 701.12 — the controller picks one of their own matching
-                // permanents, then swaps controllers with the resolved
-                // target (Vedalken Plotter).
-                use crate::decision::{Decision, DecisionAnswer};
-                let Some(target) = self
-                    .resolve_selector(with, ctx)
-                    .into_iter()
-                    .find_map(|e| e.as_permanent_id())
-                else {
-                    return Ok(());
-                };
-                let mine = crate::effect::Selector::EachPermanent(
-                    filter.clone().and(crate::card::SelectionRequirement::ControlledByYou),
-                );
-                let candidates: Vec<CardId> = self
-                    .resolve_selector(&mine, ctx)
-                    .into_iter()
-                    .filter_map(|e| e.as_permanent_id())
-                    .filter(|&id| id != target)
-                    .collect();
-                let Some(first) = candidates.first().copied() else { return Ok(()) };
-                let chosen = if candidates.len() > 1 {
-                    let cands = candidates
-                        .iter()
-                        .filter_map(|&id| {
-                            self.battlefield_find(id)
-                                .map(|c| (id, c.definition.name.to_string()))
-                        })
-                        .collect();
-                    match self.decider.decide(&Decision::ChooseCards {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: "Exchange control of which permanent?".into(),
-                        candidates: cands,
-                        min: 1,
-                        max: 1,
-                    }) {
-                        DecisionAnswer::Cards(ids) => {
-                            ids.into_iter().find(|id| candidates.contains(id)).unwrap_or(first)
-                        }
-                        _ => first,
-                    }
-                } else {
-                    first
-                };
-                // CR 701.12 / 302.6 — simultaneous swap; both sides pick up
-                // summoning sickness under their new controller.
-                let ctrl_a = self.battlefield_find(chosen).map(|c| c.controller);
-                let ctrl_b = self.battlefield_find(target).map(|c| c.controller);
-                if let (Some(ctrl_a), Some(ctrl_b)) = (ctrl_a, ctrl_b)
-                    && ctrl_a != ctrl_b
-                {
-                    if let Some(c) = self.battlefield_find_mut(chosen) {
-                        c.controller = ctrl_b;
-                        c.summoning_sick = true;
-                    }
-                    if let Some(c) = self.battlefield_find_mut(target) {
-                        c.controller = ctrl_a;
-                        c.summoning_sick = true;
-                    }
-                }
-                Ok(())
-            }
+            Effect::ExchangeControlChoosing { filter, with } => self.resolve_exchange_control_choosing(filter, with, ctx, events),
+
 
             Effect::CreateToken { who, count, definition } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
@@ -5474,208 +5364,20 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ManifestFromHand { who, count, controller_draws } => {
-                // CR 701.34 from the hand (Kozilek): the resolved player
-                // manifests `count` cards from their hand (their choice —
-                // auto-picks from the front for bots/tests); the effect's
-                // controller draws one per card manifested.
-                let n = self.evaluate_value(count, ctx).max(0) as u32;
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
-                    let mut manifested = 0u32;
-                    for _ in 0..n {
-                        let Some(cid) = self.players[p].hand.first().map(|c| c.id) else { break };
-                        self.manifest_card(cid, p, ctx, events);
-                        manifested += 1;
-                    }
-                    if *controller_draws {
-                        for _ in 0..manifested {
-                            self.draw_one(ctx.controller, events);
-                        }
-                    }
-                }
-                Ok(())
-            }
+            Effect::ManifestFromHand { who, count, controller_draws } => self.resolve_manifest_from_hand(who, count, *controller_draws, ctx, events),
 
-            Effect::CreateTokenAttachedTo { target, definition } => {
-                // CR 111.10 Role-style token Aura: mint, then attach.
-                let Some(tid) = self
-                    .resolve_selector(target, ctx)
-                    .into_iter()
-                    .find_map(|e| e.as_permanent_id())
-                else {
-                    return Ok(());
-                };
-                if self.battlefield_find(tid).is_none() {
-                    return Ok(());
-                }
-                let def = token_to_card_definition(definition);
-                let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
-                if let Some(c) = self.battlefield_find_mut(minted) {
-                    c.attached_to = Some(tid);
-                }
-                Ok(())
-            }
 
-            Effect::DestroyTargetsPolymorph { filter } => {
-                // Destroy up to X chosen targets, then each destroyed
-                // permanent's controller reveals to the first artifact or
-                // creature card, battlefields it, and shuffles the rest in.
-                use crate::effect::RevealMissDest;
-                let x = ctx.x_value as usize;
-                let mut victims: Vec<(u8, usize)> = Vec::new();
-                let mut seen = std::collections::HashSet::new();
-                for (i, t) in ctx.targets.iter().enumerate().take(x) {
-                    if let Target::Permanent(id) = t
-                        && seen.insert(*id)
-                        && self.evaluate_requirement_static(filter, t, ctx.controller, ctx.source)
-                        && let Some(c) = self.battlefield_find(*id)
-                    {
-                        victims.push((i as u8, c.controller));
-                    }
-                }
-                let mut owed: Vec<usize> = Vec::new();
-                for (slot, controller) in victims {
-                    let before = self.permanents_destroyed_this_resolution;
-                    self.run_effect(
-                        &Effect::Destroy { what: crate::effect::Selector::Target(slot) },
-                        ctx,
-                        events,
-                    )?;
-                    if self.permanents_destroyed_this_resolution > before {
-                        owed.push(controller);
-                    }
-                }
-                let find = crate::card::SelectionRequirement::Artifact
-                    .or(crate::card::SelectionRequirement::Creature);
-                for p in owed {
-                    self.run_effect(
-                        &Effect::RevealUntilFind {
-                            who: crate::effect::PlayerRef::Seat(p),
-                            find: find.clone(),
-                            to: crate::effect::ZoneDest::Battlefield {
-                                controller: crate::effect::PlayerRef::Seat(p),
-                                tapped: false,
-                            },
-                            cap: crate::effect::Value::Const(500),
-                            life_per_revealed: 0,
-                            miss_dest: RevealMissDest::ShuffleIntoLibrary,
-                        },
-                        ctx,
-                        events,
-                    )?;
-                }
-                Ok(())
-            }
+            Effect::CreateTokenAttachedTo { target, definition } => self.resolve_create_token_attached_to(target, definition, ctx, events),
 
-            Effect::SacrificeAllButOnePerType { who } => {
-                use crate::card::CardType;
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue };
-                    let mut keep: Vec<CardId> = Vec::new();
-                    for ty in [
-                        CardType::Artifact,
-                        CardType::Creature,
-                        CardType::Enchantment,
-                        CardType::Planeswalker,
-                    ] {
-                        let pick = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| {
-                                c.controller == p
-                                    && !c.definition.is_land()
-                                    && c.definition.card_types.contains(&ty)
-                                    && !keep.contains(&c.id)
-                            })
-                            .max_by_key(|c| c.definition.cost.cmc())
-                            .map(|c| c.id);
-                        if let Some(id) = pick {
-                            keep.push(id);
-                        }
-                    }
-                    let to_sac: Vec<CardId> = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == p && !c.definition.is_land() && !keep.contains(&c.id)
-                        })
-                        .map(|c| c.id)
-                        .collect();
-                    for id in to_sac {
-                        self.sacrifice_one(id, p, events);
-                    }
-                }
-                Ok(())
-            }
 
-            Effect::WishToHand { filter } => {
-                // Sideboard first ("outside the game"), then own exiled
-                // cards; a wants_ui controller picks via ChooseCards.
-                use crate::decision::{Decision, DecisionAnswer};
-                let p = ctx.controller;
-                let mut candidates: Vec<(CardId, bool)> = self.players[p]
-                    .sideboard
-                    .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                    .map(|c| (c.id, true))
-                    .collect();
-                candidates.extend(
-                    self.exile
-                        .iter()
-                        .filter(|c| {
-                            c.owner == p && self.evaluate_requirement_on_card(filter, c, p)
-                        })
-                        .map(|c| (c.id, false)),
-                );
-                let Some(&(first, _)) = candidates.first() else { return Ok(()) };
-                let chosen = if candidates.len() > 1 && self.players[p].wants_ui {
-                    let cands = candidates
-                        .iter()
-                        .filter_map(|&(id, sb)| {
-                            let name = if sb {
-                                self.players[p].sideboard.iter().find(|c| c.id == id)
-                            } else {
-                                self.exile.iter().find(|c| c.id == id)
-                            }
-                            .map(|c| c.definition.name.to_string())?;
-                            Some((id, name))
-                        })
-                        .collect();
-                    match self.decider.decide(&Decision::ChooseCards {
-                        source: ctx.source.unwrap_or(CardId(0)),
-                        prompt: "Put which card into your hand?".into(),
-                        candidates: cands,
-                        min: 1,
-                        max: 1,
-                    }) {
-                        DecisionAnswer::Cards(ids) => ids
-                            .first()
-                            .copied()
-                            .filter(|id| candidates.iter().any(|(c, _)| c == id))
-                            .unwrap_or(first),
-                        _ => first,
-                    }
-                } else {
-                    first
-                };
-                let card = if let Some(pos) =
-                    self.players[p].sideboard.iter().position(|c| c.id == chosen)
-                {
-                    Some(self.players[p].sideboard.remove(pos))
-                } else {
-                    self.exile
-                        .iter()
-                        .position(|c| c.id == chosen)
-                        .map(|pos| self.exile.remove(pos))
-                };
-                if let Some(card) = card {
-                    let cid = card.id;
-                    self.players[p].hand.push(card);
-                    events.push(GameEvent::CardDrawn { player: p, card_id: cid });
-                }
-                Ok(())
-            }
+            Effect::DestroyTargetsPolymorph { filter } => self.resolve_destroy_targets_polymorph(filter, ctx, events),
+
+
+            Effect::SacrificeAllButOnePerType { who } => self.resolve_sacrifice_all_but_one_per_type(who, ctx, events),
+
+
+            Effect::WishToHand { filter } => self.resolve_wish_to_hand(filter, ctx, events),
+
 
             Effect::Manifest { who, amount } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
@@ -9654,3 +9356,393 @@ fn requirement_mentions_other_than_source(req: &crate::card::SelectionRequiremen
     }
 }
 
+
+// ── Out-of-line resolver arm bodies ──────────────────────────────────────────
+// These rarely-hit arms live in their own functions so their locals don't
+// inflate `run_effect`'s (already enormous) debug-build stack frame —
+// deep effect recursion overflows the default test stack otherwise.
+impl GameState {
+
+    #[inline(never)]
+    fn resolve_exchange_control_choosing(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        with: &crate::effect::Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                // CR 701.12 — the controller picks one of their own matching
+                // permanents, then swaps controllers with the resolved
+                // target (Vedalken Plotter).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(target) = self
+                    .resolve_selector(with, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let mine = crate::effect::Selector::EachPermanent(
+                    filter.clone().and(crate::card::SelectionRequirement::ControlledByYou),
+                );
+                let candidates: Vec<CardId> = self
+                    .resolve_selector(&mine, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|&id| id != target)
+                    .collect();
+                let Some(first) = candidates.first().copied() else { return Ok(()) };
+                let chosen = if candidates.len() > 1 {
+                    let cands = candidates
+                        .iter()
+                        .filter_map(|&id| {
+                            self.battlefield_find(id)
+                                .map(|c| (id, c.definition.name.to_string()))
+                        })
+                        .collect();
+                    match self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Exchange control of which permanent?".into(),
+                        candidates: cands,
+                        min: 1,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(ids) => {
+                            ids.into_iter().find(|id| candidates.contains(id)).unwrap_or(first)
+                        }
+                        _ => first,
+                    }
+                } else {
+                    first
+                };
+                // CR 701.12 / 302.6 — simultaneous swap; both sides pick up
+                // summoning sickness under their new controller.
+                let ctrl_a = self.battlefield_find(chosen).map(|c| c.controller);
+                let ctrl_b = self.battlefield_find(target).map(|c| c.controller);
+                if let (Some(ctrl_a), Some(ctrl_b)) = (ctrl_a, ctrl_b)
+                    && ctrl_a != ctrl_b
+                {
+                    if let Some(c) = self.battlefield_find_mut(chosen) {
+                        c.controller = ctrl_b;
+                        c.summoning_sick = true;
+                    }
+                    if let Some(c) = self.battlefield_find_mut(target) {
+                        c.controller = ctrl_a;
+                        c.summoning_sick = true;
+                    }
+                }
+                Ok(())
+            }
+
+
+    #[inline(never)]
+    fn resolve_mill_until_lands(
+        &mut self,
+        who: &crate::effect::Selector,
+        lands: &crate::effect::Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                // Reveal from the top until `lands` land cards, then put all
+                // revealed cards into the graveyard (Mind Grind).
+                let want = self.evaluate_value(lands, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        let mut found = 0usize;
+                        while found < want && !self.players[p].library.is_empty() {
+                            let card = self.players[p].library.remove(0);
+                            if card.definition.is_land() {
+                                found += 1;
+                            }
+                            let cid = card.id;
+                            if !self.route_to_graveyard(card, events) {
+                                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            }
+                            self.last_moved_cards.push(cid);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+
+    #[inline(never)]
+    fn resolve_mill_two_repeat_shared_color(
+        &mut self,
+        who: &crate::effect::Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                // Mill two; repeat while two nonland milled cards share a
+                // color (Sphinx's Tutelage). Capped at the library size so a
+                // degenerate loop always terminates.
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        loop {
+                            let mut milled_colors: Vec<Vec<crate::mana::Color>> = Vec::new();
+                            for _ in 0..2 {
+                                if self.players[p].library.is_empty() {
+                                    break;
+                                }
+                                let card = self.players[p].library.remove(0);
+                                if !card.definition.is_land() {
+                                    milled_colors.push(card.definition.cost.colors());
+                                }
+                                let cid = card.id;
+                                if !self.route_to_graveyard(card, events) {
+                                    events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                                }
+                            }
+                            let repeat = milled_colors.len() == 2
+                                && milled_colors[0].iter().any(|c| milled_colors[1].contains(c));
+                            if !repeat || self.players[p].library.is_empty() {
+                                break;
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+
+    #[inline(never)]
+    fn resolve_manifest_from_hand(
+        &mut self,
+        who: &crate::effect::Selector,
+        count: &crate::effect::Value,
+        controller_draws: bool,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                // CR 701.34 from the hand (Kozilek): the resolved player
+                // manifests `count` cards from their hand (their choice —
+                // auto-picks from the front for bots/tests); the effect's
+                // controller draws one per card manifested.
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let mut manifested = 0u32;
+                    for _ in 0..n {
+                        let Some(cid) = self.players[p].hand.first().map(|c| c.id) else { break };
+                        self.manifest_card(cid, p, ctx, events);
+                        manifested += 1;
+                    }
+                    if controller_draws {
+                        for _ in 0..manifested {
+                            self.draw_one(ctx.controller, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+
+    #[inline(never)]
+    fn resolve_create_token_attached_to(
+        &mut self,
+        target: &crate::effect::Selector,
+        definition: &crate::card::TokenDefinition,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                // CR 111.10 Role-style token Aura: mint, then attach.
+                let Some(tid) = self
+                    .resolve_selector(target, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                if self.battlefield_find(tid).is_none() {
+                    return Ok(());
+                }
+                let def = token_to_card_definition(definition);
+                let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
+                if let Some(c) = self.battlefield_find_mut(minted) {
+                    c.attached_to = Some(tid);
+                }
+                Ok(())
+            }
+
+
+    #[inline(never)]
+    fn resolve_destroy_targets_polymorph(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                // Destroy up to X chosen targets, then each destroyed
+                // permanent's controller reveals to the first artifact or
+                // creature card, battlefields it, and shuffles the rest in.
+                use crate::effect::RevealMissDest;
+                let x = ctx.x_value as usize;
+                let mut victims: Vec<(u8, usize)> = Vec::new();
+                let mut seen = std::collections::HashSet::new();
+                for (i, t) in ctx.targets.iter().enumerate().take(x) {
+                    if let Target::Permanent(id) = t
+                        && seen.insert(*id)
+                        && self.evaluate_requirement_static(filter, t, ctx.controller, ctx.source)
+                        && let Some(c) = self.battlefield_find(*id)
+                    {
+                        victims.push((i as u8, c.controller));
+                    }
+                }
+                let mut owed: Vec<usize> = Vec::new();
+                for (slot, controller) in victims {
+                    let before = self.permanents_destroyed_this_resolution;
+                    self.run_effect(
+                        &Effect::Destroy { what: crate::effect::Selector::Target(slot) },
+                        ctx,
+                        events,
+                    )?;
+                    if self.permanents_destroyed_this_resolution > before {
+                        owed.push(controller);
+                    }
+                }
+                let find = crate::card::SelectionRequirement::Artifact
+                    .or(crate::card::SelectionRequirement::Creature);
+                for p in owed {
+                    self.run_effect(
+                        &Effect::RevealUntilFind {
+                            who: crate::effect::PlayerRef::Seat(p),
+                            find: find.clone(),
+                            to: crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::Seat(p),
+                                tapped: false,
+                            },
+                            cap: crate::effect::Value::Const(500),
+                            life_per_revealed: 0,
+                            miss_dest: RevealMissDest::ShuffleIntoLibrary,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+
+    #[inline(never)]
+    fn resolve_sacrifice_all_but_one_per_type(
+        &mut self,
+        who: &crate::effect::Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                use crate::card::CardType;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let mut keep: Vec<CardId> = Vec::new();
+                    for ty in [
+                        CardType::Artifact,
+                        CardType::Creature,
+                        CardType::Enchantment,
+                        CardType::Planeswalker,
+                    ] {
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && !c.definition.is_land()
+                                    && c.definition.card_types.contains(&ty)
+                                    && !keep.contains(&c.id)
+                            })
+                            .max_by_key(|c| c.definition.cost.cmc())
+                            .map(|c| c.id);
+                        if let Some(id) = pick {
+                            keep.push(id);
+                        }
+                    }
+                    let to_sac: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p && !c.definition.is_land() && !keep.contains(&c.id)
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    for id in to_sac {
+                        self.sacrifice_one(id, p, events);
+                    }
+                }
+                Ok(())
+            }
+
+
+    #[inline(never)]
+    fn resolve_wish_to_hand(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+                // Sideboard first ("outside the game"), then own exiled
+                // cards; a wants_ui controller picks via ChooseCards.
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let mut candidates: Vec<(CardId, bool)> = self.players[p]
+                    .sideboard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, true))
+                    .collect();
+                candidates.extend(
+                    self.exile
+                        .iter()
+                        .filter(|c| {
+                            c.owner == p && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .map(|c| (c.id, false)),
+                );
+                let Some(&(first, _)) = candidates.first() else { return Ok(()) };
+                let chosen = if candidates.len() > 1 && self.players[p].wants_ui {
+                    let cands = candidates
+                        .iter()
+                        .filter_map(|&(id, sb)| {
+                            let name = if sb {
+                                self.players[p].sideboard.iter().find(|c| c.id == id)
+                            } else {
+                                self.exile.iter().find(|c| c.id == id)
+                            }
+                            .map(|c| c.definition.name.to_string())?;
+                            Some((id, name))
+                        })
+                        .collect();
+                    match self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Put which card into your hand?".into(),
+                        candidates: cands,
+                        min: 1,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(ids) => ids
+                            .first()
+                            .copied()
+                            .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                            .unwrap_or(first),
+                        _ => first,
+                    }
+                } else {
+                    first
+                };
+                let card = if let Some(pos) =
+                    self.players[p].sideboard.iter().position(|c| c.id == chosen)
+                {
+                    Some(self.players[p].sideboard.remove(pos))
+                } else {
+                    self.exile
+                        .iter()
+                        .position(|c| c.id == chosen)
+                        .map(|pos| self.exile.remove(pos))
+                };
+                if let Some(card) = card {
+                    let cid = card.id;
+                    self.players[p].hand.push(card);
+                    events.push(GameEvent::CardDrawn { player: p, card_id: cid });
+                }
+                Ok(())
+            }
+
+}
