@@ -233,7 +233,10 @@ def compare(local: dict, sf: dict) -> list[str]:
                 "echo", "cumulative upkeep", "morph", "megamorph", "fortify",
                 "dredge", "annihilator", "regenerate",
                 # Modeled as triggers/effects rather than Keyword variants.
-                "ascend", "mobilize"}
+                "ascend", "mobilize",
+                # Modeled structurally: Attach effect / LandPlayed trigger /
+                # Keyword::UmbraArmor (skipped by dump_cards).
+                "enchant", "landfall", "umbra armor"}
     our_kws_check = our_kws - skip_kws
     sf_kws_check = sf_kws - skip_kws
 
