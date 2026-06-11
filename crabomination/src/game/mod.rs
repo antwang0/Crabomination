@@ -2455,6 +2455,20 @@ impl GameState {
         id
     }
 
+    /// Bookkeeping for a card leaving `p`'s graveyard: bumps the per-turn
+    /// tally and emits `CardLeftGraveyard` so leaves-graveyard payoffs see
+    /// mass exilers too (Rest in Peace, Go Blank, Surgical Extraction).
+    pub(crate) fn note_left_graveyard(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        self.players[p].cards_left_graveyard_this_turn =
+            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        events.push(crate::game::GameEvent::CardLeftGraveyard { player: p, card_id });
+    }
+
     /// Place `card` into its owner's graveyard, or exile it instead when a
     /// graveyard-hate static (Rest in Peace / Leyline of the Void) is active
     /// for that owner. Pushes a `PermanentExiled` event and returns `true`
@@ -5757,22 +5771,10 @@ impl GameState {
     /// queue once the user picks.
     pub(crate) fn drain_trigger_queue(&mut self, queue: Vec<PendingTriggerPush>) {
         // Don't stack up multiple pending decisions — if the engine
-        // already suspended on something else, leave the queue alone.
-        // Trigger queues are episodic per event batch and we have
-        // nowhere outside `ResumeContext::TriggerTargetPick` to park
-        // them, so this matches the pre-fix behaviour (auto-target
-        // everything) for the rare case where a pending decision
-        // races a trigger batch.
-        if self.pending_decision.is_some() {
-            if !queue.is_empty() {
-                eprintln!(
-                    "engine: dropping {} pending trigger(s) — a decision was already \
-                     pending when the trigger batch arrived",
-                    queue.len()
-                );
-            }
-            return;
-        }
+        // already suspended on something else we can't surface a target
+        // picker, so the whole batch falls back to auto-targeting (the
+        // triggers still hit the stack; they must not vanish).
+        let force_auto = self.pending_decision.is_some();
         // Walk the queue in *forward* (APNAP) order so the active
         // player's triggers push first and resolve last, matching CR
         // 603.3b. Using an iterator lets us collect the unconsumed
@@ -5789,11 +5791,12 @@ impl GameState {
             // during legal-target enumeration below.
             self.trigger_event_amount_scratch = pending.event_amount;
             let needs = pending.effect.requires_target();
-            let wants_ui = self
-                .players
-                .get(pending.controller)
-                .map(|p| p.wants_ui)
-                .unwrap_or(false);
+            let wants_ui = !force_auto
+                && self
+                    .players
+                    .get(pending.controller)
+                    .map(|p| p.wants_ui)
+                    .unwrap_or(false);
             if needs && wants_ui {
                 let legal = self.enumerate_legal_targets(&pending.effect, pending.controller);
                 // No legal targets → fall back to auto (which returns

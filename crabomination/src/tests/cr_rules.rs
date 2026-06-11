@@ -196,6 +196,36 @@ fn cr_702_2_fight_with_deathtouch_kills_larger_creature() {
     assert!(g.battlefield_find(big).is_none(), "4/4 dies to 1 deathtouch damage");
 }
 
+// ── Mass exilers fire leaves-graveyard bookkeeping ────────────────────────────
+
+/// Rest in Peace's sweep counts as cards leaving each graveyard (the
+/// Witherbloom leaves-graveyard payoffs must see mass exilers too).
+#[test]
+fn mass_graveyard_exile_fires_left_graveyard_bookkeeping() {
+    use crate::effect::{Effect, PlayerRef};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    for p in 0..2 {
+        let id = g.next_id();
+        g.players[p].graveyard.push(crate::card::CardInstance::new(
+            id,
+            catalog::lightning_bolt(),
+            p,
+        ));
+    }
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let events = g
+        .resolve_effect(&Effect::ExilePlayerGraveyard { who: PlayerRef::EachPlayer }, &ctx)
+        .unwrap();
+    for p in 0..2 {
+        assert_eq!(g.players[p].cards_left_graveyard_this_turn, 1, "P{p} tally");
+    }
+    assert_eq!(
+        events.iter().filter(|e| matches!(e, GameEvent::CardLeftGraveyard { .. })).count(),
+        2
+    );
+}
+
 // ── CR 702.80a / 702.90e / 702.2c — keyworded NON-combat damage ───────────────
 
 /// Test-only fixture: a creature with the given keywords.

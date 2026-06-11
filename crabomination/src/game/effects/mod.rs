@@ -1195,8 +1195,8 @@ impl GameState {
                 for id in eligible {
                     if let Some(pos) = self.exile.iter().position(|c| c.id == id) {
                         let card = self.exile.remove(pos);
-                        let owner = card.owner;
-                        self.players[owner].send_to_graveyard(card);
+                        // CR 614.6 — graveyard-hate redirects apply.
+                        self.route_to_graveyard(card, events);
                     }
                 }
                 self.run_effect(then, ctx, events)?;
@@ -2980,6 +2980,7 @@ impl GameState {
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
+                        self.note_left_graveyard(p, cid, events);
                     }
                 }
                 Ok(())
@@ -2996,6 +2997,7 @@ impl GameState {
                             let cid = card.id;
                             self.exile.push(card);
                             events.push(GameEvent::PermanentExiled { card_id: cid });
+                            self.note_left_graveyard(p, cid, events);
                         } else {
                             self.players[p].graveyard.push(card);
                         }
@@ -3046,6 +3048,7 @@ impl GameState {
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
+                        self.note_left_graveyard(p, cid, events);
                     }
                 }
                 Ok(())
@@ -3083,13 +3086,21 @@ impl GameState {
                     events.push(GameEvent::PermanentExiled { card_id: anchor_id });
                 }
 
-                // Sweep the owner's hidden/graveyard zones for same-named cards.
+                // Sweep the owner's hidden/graveyard zones for same-named
+                // cards. Graveyard exiles get leaves-graveyard bookkeeping.
                 let pl = &mut self.players[owner];
                 let mut swept: Vec<CardInstance> = Vec::new();
-                for zone in [&mut pl.graveyard, &mut pl.hand, &mut pl.library] {
+                let mut from_gy: Vec<CardId> = Vec::new();
+                for (zi, zone) in [&mut pl.graveyard, &mut pl.hand, &mut pl.library]
+                    .into_iter()
+                    .enumerate()
+                {
                     let mut i = 0;
                     while i < zone.len() {
                         if zone[i].definition.name == name.as_str() {
+                            if zi == 0 {
+                                from_gy.push(zone[i].id);
+                            }
                             swept.push(zone.remove(i));
                         } else {
                             i += 1;
@@ -3100,6 +3111,9 @@ impl GameState {
                     let cid = c.id;
                     self.exile.push(c);
                     events.push(GameEvent::PermanentExiled { card_id: cid });
+                }
+                for cid in from_gy {
+                    self.note_left_graveyard(owner, cid, events);
                 }
                 use rand::seq::SliceRandom;
                 self.players[owner].library.shuffle(&mut rand::rng());
