@@ -25,7 +25,11 @@ engine primitives; newer batches also ship small reusable primitives
 (no-max-hand-size / play-lands-from-graveyard / mana-doubling / creature
 ability-lock statics, reveal-top-land-else-hand, Mana Clash flip-off,
 -0/-1 & -1/-0 counters, block tax (CR 509.1d), Cipher (CR 702.46),
-`Value::LandsPlayedThisTurn` landfall). Each entry has at least one functionality test in
+`Value::LandsPlayedThisTurn` landfall, land-abilities-only restricted mana,
+graveyard/exile lockdown, graveyard escape/retrace grants, level bands
+(CR 702.87), reveal-until-N-lands mill, per-subject trigger caps,
+leaver-counter collection, X-target destroy-polymorph, Cataclysm
+sacrifice, sideboard wishes, manifest-from-hand, token Role Auras). Each entry has at least one functionality test in
 `crabomination/src/tests/modern.rs` (registered via
 `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 

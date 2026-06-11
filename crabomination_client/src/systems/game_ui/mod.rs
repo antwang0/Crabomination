@@ -59,6 +59,7 @@ pub struct InFlightAnims<'w, 's> {
     pub gy: Query<'w, 's, &'static SendToGraveyardAnimation>,
     pub to_hand: Query<'w, 's, (&'static GameCardId, &'static crate::card::ReturnToHandAnimation)>,
     pub hand_zoom: Res<'w, crate::card::HandZoom>,
+    pub gameplay: Res<'w, crate::config::GameplayConfig>,
 }
 
 /// Bundled mutable resources for `handle_game_input` to stay within Bevy's 16-param limit.
@@ -1918,6 +1919,26 @@ pub fn sync_game_visuals(
     // still renders for spectators (empty viewer hand, zero-height deck).
     let empty_hand: Vec<crabomination::net::HandCardView> = Vec::new();
     let viewer_hand = cv.players.get(viewer).map(|p| &p.hand).unwrap_or(&empty_hand);
+    // Client-side hand sort (config `gameplay.sort_hand`): lands first,
+    // then by mana value, then name — Arena-style layout regardless of
+    // draw order. Hidden cards keep server order at the end. Purely a
+    // display ordering; every interaction below keys off card ids.
+    let sorted_hand: Vec<crabomination::net::HandCardView>;
+    let viewer_hand: &Vec<crabomination::net::HandCardView> = if inflight.gameplay.sort_hand {
+        let mut h = viewer_hand.clone();
+        h.sort_by_key(|c| match c {
+            crabomination::net::HandCardView::Known(k) => (
+                if k.card_types.contains(&crabomination::card::CardType::Land) { 0 } else { 1 },
+                k.cost.cmc(),
+                k.name.clone(),
+            ),
+            crabomination::net::HandCardView::Hidden { .. } => (2, 0, String::new()),
+        });
+        sorted_hand = h;
+        &sorted_hand
+    } else {
+        viewer_hand
+    };
     let viewer_lib_size = cv.players.get(viewer).map(|p| p.library.size).unwrap_or(0);
     let gy_sizes: Vec<usize> = cv.players.iter().map(|p| p.graveyard.len()).collect();
     let gy_size = |owner: usize| gy_sizes.get(owner).copied().unwrap_or(0);

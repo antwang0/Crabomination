@@ -51326,7 +51326,7 @@ fn sunken_citadel_restricted_mana_is_land_abilities_only() {
     }).unwrap();
     let pool = &mut g.players[0].mana_pool;
     assert_eq!(pool.restricted_total(), 2, "two restricted red");
-    let cost = ManaCost::new(vec![crate::mana::generic(2).clone()]);
+    let cost = ManaCost::new(vec![crate::mana::generic(2)]);
     assert!(pool.pay_for_spell(&cost, &SpellKind::default()).is_err(), "can't fund a spell");
     let land_kind = SpellKind { land_ability: true, ..Default::default() };
     assert!(pool.pay_for_spell(&cost, &land_kind).is_ok(), "funds a land ability");
@@ -51839,7 +51839,7 @@ fn ajani_nacatl_pariah_flips_and_cataclysms() {
     // -4: opponent keeps one creature (their best), sacrifices the rest.
     g.battlefield_find_mut(ajani).unwrap().add_counters(crate::card::CounterType::Loyalty, 2);
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: ajani, ability_index: 2, target: None, x_value: None,

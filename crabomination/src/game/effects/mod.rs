@@ -9369,7 +9369,7 @@ impl GameState {
         filter: &crate::card::SelectionRequirement,
         with: &crate::effect::Selector,
         ctx: &EffectContext,
-        events: &mut Vec<GameEvent>,
+        _events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
                 // CR 701.12 — the controller picks one of their own matching
                 // permanents, then swaps controllers with the resolved

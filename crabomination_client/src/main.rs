@@ -189,6 +189,7 @@ fn main() {
     scryfall::ensure_card_images(&specs, &asset_dir);
 
     let gfx = cfg.graphics;
+    let gameplay = cfg.gameplay;
 
     // Custom Default asset source: it wraps the normal file reader and
     // synthesizes a white name-placeholder PNG for any missing card image,
@@ -275,6 +276,7 @@ fn main() {
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: RenderQuality::default().shadow_map_size() })
         .insert_resource(gfx)
+        .insert_resource(gameplay)
         .insert_resource(RenderQuality::default())
         .add_message::<ChangeQuality>()
         .insert_resource(GameLog::default())

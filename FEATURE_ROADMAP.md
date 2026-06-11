@@ -242,7 +242,10 @@ not how Magic works" moments.
   `CardInstance.unlocked_doors`; `GameAction::CastRoomDoor` /
   `UnlockRoomDoor`, door-scoped abilities via live definition rebuild,
   `EventKind::DoorUnlocked`; Unholy Annex // Ritual Chamber).
-- ⏳ **Leveler cards** (level-up counters).
+- ✅ **Leveler cards** (CR 702.87 — `CardDefinition.level_bands` sets base
+  P/T (7a CDA) + grants keywords by Level-counter count; the level-up
+  activation is a plain sorcery-speed `ActivatedAbility`. Student of
+  Warfare).
 - ✅ **Transforming DFCs** (CR 712) — `Effect::Transform` toggles a
   permanent's active face in place (`CardInstance.{transformed,front_face}`,
   same object: counters/tapped/attachments persist), fires

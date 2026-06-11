@@ -873,11 +873,18 @@ fn handle_action_buttons(
                         parsed.unknown.len(),
                         if more > 0 { format!(" (+{more} more)") } else { String::new() },
                     );
-                } else if parsed.main.len() < 40 {
-                    status.0 = format!(
-                        "Deck has only {} cards (need at least 40)",
-                        parsed.main.len()
-                    );
+                } else if let Err(errs) = crabomination::format::validate_deck(
+                    &parsed.main.iter().map(|f| f()).collect::<Vec<_>>(),
+                    crabomination::format::Format::Modern,
+                ) {
+                    // Imported decks face the stock Modern bot deck, so
+                    // enforce Modern construction rules (size, 4-copy cap).
+                    status.0 = errs
+                        .iter()
+                        .take(3)
+                        .map(|e| e.to_string())
+                        .collect::<Vec<_>>()
+                        .join("; ");
                 } else {
                     status.0.clear();
                     commands.insert_resource(ImportedDeck(parsed.main));

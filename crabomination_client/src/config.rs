@@ -42,6 +42,22 @@ pub fn load() -> Config {
 pub struct Config {
     pub paths: PathsConfig,
     pub graphics: GraphicsConfig,
+    pub gameplay: GameplayConfig,
+}
+
+/// Gameplay-feel options.
+#[derive(Debug, Resource, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GameplayConfig {
+    /// Sort your hand client-side (lands first, then by mana value, then
+    /// name) instead of keeping draw order. Default: true.
+    pub sort_hand: bool,
+}
+
+impl Default for GameplayConfig {
+    fn default() -> Self {
+        Self { sort_hand: true }
+    }
 }
 
 
