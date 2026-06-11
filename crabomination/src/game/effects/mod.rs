@@ -4103,6 +4103,9 @@ impl GameState {
                         Some(c) if c.controller != new_ctrl => {
                             let prev = c.controller;
                             c.controller = new_ctrl;
+                            // CR 302.6 — it hasn't been under the new
+                            // controller's control since their turn began.
+                            c.summoning_sick = true;
                             prev
                         }
                         _ => continue,
@@ -4137,8 +4140,16 @@ impl GameState {
                     if let (Some(ctrl_a), Some(ctrl_b)) = (ctrl_a, ctrl_b)
                         && ctrl_a != ctrl_b
                     {
-                        if let Some(c) = self.battlefield_find_mut(ca) { c.controller = ctrl_b; }
-                        if let Some(c) = self.battlefield_find_mut(cb) { c.controller = ctrl_a; }
+                        // CR 302.6 — both sides pick up summoning sickness
+                        // under their new controller.
+                        if let Some(c) = self.battlefield_find_mut(ca) {
+                            c.controller = ctrl_b;
+                            c.summoning_sick = true;
+                        }
+                        if let Some(c) = self.battlefield_find_mut(cb) {
+                            c.controller = ctrl_a;
+                            c.summoning_sick = true;
+                        }
                     }
                 }
                 Ok(())

@@ -492,10 +492,9 @@ impl Decider for AutoDecider {
             Decision::NameCard { suggestions, .. } => {
                 DecisionAnswer::NamedCard(suggestions.first().cloned().unwrap_or_default())
             }
-            // CR 705 — AutoDecider always picks heads. For deterministic
-            // tests; a real client would use an rng. ScriptedDecider can
-            // override with `DecisionAnswer::Bool(false)` for tails.
-            Decision::CoinFlip { .. } => DecisionAnswer::Bool(true),
+            // CR 705 — a real random flip. Tests that need a specific
+            // outcome script it via `ScriptedDecider` (`Bool(true)` = heads).
+            Decision::CoinFlip { .. } => DecisionAnswer::Bool(rand::random::<bool>()),
             // CR 706 — AutoDecider returns the die's midpoint (rounded
             // up) so the result is deterministic AND lands on a typical
             // "middle" result-table band. For a d6 that's 3; for a d20

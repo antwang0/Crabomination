@@ -938,6 +938,10 @@ pub enum SelectionRequirement {
     /// arm looks the candidate up in `players[*].graveyard`. Returns
     /// false for non-Permanent targets and for cards in any other zone.
     InGraveyard,
+    /// True when the candidate card is in the evaluating player's own
+    /// graveyard (CR 702.47a "your graveyard" — Soulshift). Stricter than
+    /// `InGraveyard`, which matches any player's graveyard.
+    InYourGraveyard,
     /// True when the candidate card is in the exile zone. Mirrors
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.

@@ -3891,9 +3891,13 @@ impl GameState {
             let atk_cp = computed.iter().find(|c| c.id == atk.attacker);
             let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
             let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);
-            attacker
-                .map(|a| can_block_attacker_computed(blocker, a, blocker_cp, atk_kws, atk_colors))
-                .unwrap_or(false)
+            let atk_power = atk_cp.map(|c| c.power)
+                .or_else(|| attacker.map(|a| a.power()))
+                .unwrap_or(0);
+            attacker.is_some()
+                && can_block_attacker_computed(
+                    blocker, blocker_cp, atk_kws, atk_colors, atk_power,
+                )
         })
     }
 
@@ -3921,7 +3925,8 @@ impl GameState {
         let atk_cp = computed.iter().find(|c| c.id == attacker_id);
         let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
         let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);
-        can_block_attacker_computed(blocker, attacker, blocker_cp, atk_kws, atk_colors)
+        let atk_power = atk_cp.map(|c| c.power).unwrap_or_else(|| attacker.power());
+        can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power)
     }
 
     // ── Main action dispatch ──────────────────────────────────────────────────
@@ -3949,7 +3954,7 @@ impl GameState {
         // Rule of Law-style one-spell-per-turn lock — gated here so every
         // Cast* variant is covered at once.
         if action.is_cast()
-            && self.players[self.priority.player_with_priority].spells_cast_this_turn >= 1
+            && self.players[self.priority.player_with_priority].spells_cast_this_game_turn >= 1
             && self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::OneSpellPerTurn)
@@ -5863,6 +5868,11 @@ impl GameState {
             return Err(GameError::NotYourPriority);
         }
         if !self.battlefield[pos].definition.is_planeswalker() {
+            return Err(GameError::InvalidTarget);
+        }
+        // CR 701.35 — a detained planeswalker's loyalty abilities can't be
+        // activated (same gate as the regular activation path).
+        if self.battlefield[pos].detained_by.is_some() {
             return Err(GameError::InvalidTarget);
         }
         // CR 606.3 — once per turn, or twice with Urza, Planeswalker's
@@ -8329,10 +8339,10 @@ fn affected_from_requirement(
 /// (from `ComputedPermanent`) instead of the raw definition keywords.
 pub(crate) fn can_block_attacker_computed(
     blocker: &CardInstance,
-    attacker: &CardInstance,
     blocker_computed: &ComputedPermanent,
     attacker_kws: &[Keyword],
     attacker_colors: &[crate::mana::Color],
+    attacker_power: i32,
 ) -> bool {
     let blocker_kws = &blocker_computed.keywords;
     // Unblockable: can't be blocked at all.
@@ -8359,8 +8369,10 @@ pub(crate) fn can_block_attacker_computed(
     if blocker_kws.contains(&Keyword::Shadow) && !attacker_kws.contains(&Keyword::Shadow) {
         return false;
     }
-    // Skulk: can't be blocked by creatures with greater power.
-    if attacker_kws.contains(&Keyword::Skulk) && blocker_computed.power > attacker.power() {
+    // Skulk (CR 702.72a): can't be blocked by creatures with greater power.
+    // Both sides use layer-computed power (an anthem-pumped Skulk attacker
+    // dodges bigger blockers correctly).
+    if attacker_kws.contains(&Keyword::Skulk) && blocker_computed.power > attacker_power {
         return false;
     }
     // Fear (CR 702.36): can only be blocked by artifact creatures and/or

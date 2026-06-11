@@ -3313,6 +3313,7 @@ impl GameState {
         let card_id = card.id;
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        self.players[p].spells_cast_this_game_turn += 1;
         // CR 715 — when cast as its adventure half the card is an
         // instant/sorcery spell, not a creature spell, so the spell-type
         // tallies (Magecraft / Prowess) read the adventure's types.

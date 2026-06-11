@@ -189,9 +189,12 @@ impl GameState {
                 // actions (untapping, phasing, day/night), but the turn
                 // itself still begins.
                 if !self.step_skipped_for(self.active_player_idx, TurnStep::Untap) {
-                    self.do_untap();
-                    // CR 502.2 — day/night turn-based check (doesn't use the stack).
+                    // CR 502.2 — day/night turn-based check. Runs BEFORE
+                    // do_untap so an extra turn (previous active == active)
+                    // reads the real previous-turn spell count rather than
+                    // the counter do_untap is about to reset.
                     self.check_day_night_transition(&mut events);
+                    self.do_untap();
                 }
                 events.push(GameEvent::TurnStarted {
                     player: self.active_player_idx,
@@ -304,6 +307,9 @@ impl GameState {
                 // at the next upkeep) sees it.
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
+                for pl in &mut self.players {
+                    pl.spells_cast_this_game_turn = 0;
+                }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
                 self.give_priority_to_active();

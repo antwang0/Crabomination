@@ -2050,13 +2050,13 @@ pub fn soulshift(n: u32) -> TriggeredAbility {
         description: format!("Soulshift {n} — return a Spirit from your graveyard"),
         body: Box::new(Effect::Move {
             what: target_filtered(
-                SelectionRequirement::InGraveyard
+                SelectionRequirement::InYourGraveyard
                     .and(SelectionRequirement::HasCreatureType(
                         crate::card::CreatureType::Spirit,
                     ))
                     .and(SelectionRequirement::ManaValueAtMost(n)),
             ),
-            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            to: ZoneDest::Hand(PlayerRef::You),
         }),
     })
 }
@@ -2825,7 +2825,7 @@ pub fn transmute(cost: crate::mana::ManaCost, mv: u32) -> ActivatedAbility {
 pub fn graft() -> TriggeredAbility {
     use crate::card::{EventKind, EventScope, EventSpec};
     TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
             .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::Creature

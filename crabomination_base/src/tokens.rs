@@ -205,34 +205,19 @@ pub fn blood_token() -> TokenDefinition {
             ..Default::default()
         },
         // {1}, {T}, Discard a card, Sacrifice this artifact: Draw a card.
-        // Discard isn't expressible as a cost yet, so it lives in the
-        // resolution sequence; AutoDecider picks the first hand card.
+        // The discard is a real cost (CR 602.2b) — unactivatable with an
+        // empty hand, paid before the draw resolves.
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost {
                 symbols: vec![ManaSymbol::Generic(1)],
             },
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
-            once_per_turn: false,
-            sorcery_speed: false,
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             sac_cost: true,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false, discard_cost: None,
+            discard_cost: Some((SelectionRequirement::Any, 1)),
             ..Default::default()
         }],
         triggered_abilities: vec![],

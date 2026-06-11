@@ -74,6 +74,12 @@ pub struct Player {
     /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
     /// cost {1} more" static.
     pub spells_cast_this_turn: u32,
+    /// Like `spells_cast_this_turn` but reset for every player at each
+    /// turn's Cleanup (not just the player's own untap) — the CR-correct
+    /// scope for Rule of Law's "each player can't cast more than one spell
+    /// each turn" (CR 611.2). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub spells_cast_this_game_turn: u32,
     /// Total life gained by this player this turn (sum of every
     /// `Effect::GainLife` and `Effect::Drain`-to-this-player resolution).
     /// Reset to 0 in `do_untap`. Powers Strixhaven's **Infusion** rider —
@@ -368,6 +374,7 @@ impl Player {
             lands_played_this_turn: 0,
             extra_land_plays: 0,
             spells_cast_this_turn: 0,
+            spells_cast_this_game_turn: 0,
             life_gained_this_turn: 0,
             cards_drawn_this_turn: 0,
             cards_drawn_this_step: 0,

@@ -524,12 +524,13 @@ impl GameState {
 
             let blocker_cp = cp_of(blocker_id).ok_or(GameError::CannotBlock(blocker_id))?;
             let atk_colors = cp_of(attacker_id).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_power = cp_of(attacker_id).map(|c| c.power).unwrap_or_else(|| attacker.power());
             if !super::can_block_attacker_computed(
                 blocker,
-                attacker,
                 blocker_cp,
                 kws_of(attacker_id),
                 atk_colors,
+                atk_power,
             ) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
@@ -662,6 +663,7 @@ impl GameState {
                 None => continue,
             };
             let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let idle_able_blocker = self.battlefield.iter().any(|b| {
                 b.definition.is_creature()
                     && self.same_team(b.controller, defender_idx)
@@ -671,7 +673,7 @@ impl GameState {
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
                     && cp_of(b.id).is_some_and(|bcp| {
                         super::can_block_attacker_computed(
-                            b, attacker, bcp, kws_of(atk.attacker), atk_colors,
+                            b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
                         )
                     })
             });
@@ -693,6 +695,7 @@ impl GameState {
                 None => continue,
             };
             let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let unmet = self.battlefield.iter().any(|b| {
                 b.definition.is_creature()
                     && self.same_team(b.controller, defender_idx)
@@ -700,7 +703,7 @@ impl GameState {
                     && !kws_of(b.id).contains(&Keyword::CantBlock)
                     && cp_of(b.id).is_some_and(|bcp| {
                         super::can_block_attacker_computed(
-                            b, attacker, bcp, kws_of(atk.attacker), atk_colors,
+                            b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
                         )
                     })
                     // Able to block it but not assigned to it (here or earlier).
@@ -728,8 +731,11 @@ impl GameState {
             }
             let Some(attacker) = self.battlefield_find(required) else { continue };
             let atk_colors = cp_of(required).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let atk_power = cp_of(required).map(|c| c.power).unwrap_or_else(|| attacker.power());
             let able = cp_of(b.id).is_some_and(|bcp| {
-                super::can_block_attacker_computed(b, attacker, bcp, kws_of(required), atk_colors)
+                super::can_block_attacker_computed(
+                    b, bcp, kws_of(required), atk_colors, atk_power,
+                )
             });
             if !able {
                 continue;
@@ -767,8 +773,11 @@ impl GameState {
                         .is_some_and(|(attacker, bcp)| {
                             let atk_colors =
                                 cp_of(atk.attacker).map(|c| c.colors.clone()).unwrap_or_default();
+                            let atk_power = cp_of(atk.attacker)
+                                .map(|c| c.power)
+                                .unwrap_or_else(|| attacker.power());
                             super::can_block_attacker_computed(
-                                b, attacker, bcp, kws_of(atk.attacker), &atk_colors,
+                                b, bcp, kws_of(atk.attacker), &atk_colors, atk_power,
                             )
                         })
             });

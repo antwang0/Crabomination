@@ -870,3 +870,118 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
     let b = g.battlefield_find(bear_b).expect("untouched");
     assert_eq!(b.damage, 0, "fizzled trigger must not re-aim at another creature");
 }
+
+// ── Audit P1 batch: Rule of Law scope, steal sickness, detain loyalty,
+//    Blood cost, Soulshift scope ──────────────────────────────────────────────
+
+/// Rule of Law locks per game turn, not per the player's own untap-scoped
+/// counter: a stale count from the player's previous turn must not lock them
+/// out on an opponent's turn.
+#[test]
+fn cr_611_2_rule_of_law_does_not_lock_on_stale_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rule_of_law());
+    // Simulate "P1 cast a spell on their own previous turn": stale per-untap
+    // counter is 1, but no spell has been cast this game turn.
+    g.players[1].spells_cast_this_turn = 1;
+    g.players[1].spells_cast_this_game_turn = 0;
+    let id = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("first spell this game turn is legal under Rule of Law");
+    drain_stack(&mut g);
+    // A second spell the same turn is locked.
+    let id2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: id2, target: Some(Target::Player(0)),
+            additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "second spell this turn is locked by Rule of Law"
+    );
+}
+
+/// CR 302.6 — a stolen creature is summoning-sick under its new controller.
+#[test]
+fn cr_302_6_gain_control_sets_summoning_sickness() {
+    use crate::effect::{Duration, Effect, Selector};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let eff = Effect::GainControl {
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: crate::card::SelectionRequirement::Creature,
+        },
+        to: None,
+        duration: Duration::EndOfTurn,
+    };
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.controller, 0, "control stolen");
+    assert!(c.summoning_sick, "stolen creature is summoning-sick (no haste)");
+}
+
+/// CR 701.35 — a detained planeswalker can't activate loyalty abilities.
+#[test]
+fn cr_701_35_detained_planeswalker_cannot_activate_loyalty() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    g.battlefield_find_mut(pw).unwrap().detained_by = Some(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.activate_loyalty_ability(pw, 0, None, None).is_err(),
+        "detained planeswalker's loyalty abilities are locked"
+    );
+}
+
+/// CR 602.2b — the Blood token's discard is a cost: no hand card, no
+/// activation (and no draw).
+#[test]
+fn cr_602_2b_blood_token_discard_is_a_cost() {
+    use crate::game::effects::blood_token;
+    let mut g = two_player_game();
+    let blood = g.add_token_to_battlefield(0, &blood_token());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].hand.clear();
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: blood, ability_index: 0, target: None, x_value: None,
+        })
+        .is_err(),
+        "empty hand can't pay the Blood discard cost"
+    );
+}
+
+/// CR 702.47a — Soulshift returns a Spirit from YOUR graveyard, never an
+/// opponent's.
+#[test]
+fn cr_702_47a_soulshift_only_fetches_own_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::hundred_talon_kami());
+    // Only the OPPONENT has a Spirit in their graveyard.
+    let opp_spirit = g.add_card_to_graveyard(1, catalog::hundred_talon_kami());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let events = g.remove_to_graveyard_with_triggers(kami);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == opp_spirit),
+        "opponent's Spirit stays in their graveyard"
+    );
+    assert!(
+        !g.players[0].hand.iter().any(|c| c.id == opp_spirit),
+        "soulshift must not steal an opponent's Spirit"
+    );
+}

@@ -1494,9 +1494,12 @@ fn lorehold_sparkscholar_b63_v2_magecraft_pings_creature_via_shortcut() {
 }
 
 #[test]
-fn coin_flip_auto_decider_defaults_to_heads() {
-    // AutoDecider's `CoinFlip` answer is `Bool(true)` (heads).
+fn coin_flip_scripted_heads_deals_damage() {
+    // CR 705 — the AutoDecider flips a real random coin; a test scripts
+    // heads to exercise the heads branch deterministically.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let opp_before = g.players[1].life;
     let id = g.add_card_to_hand(0, catalog::lorehold_coinflinger());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -1505,7 +1508,7 @@ fn coin_flip_auto_decider_defaults_to_heads() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Coinflinger castable");
     drain_stack(&mut g);
-    // Default decider answers heads → 3 damage to opp.
+    // Heads → 3 damage to opp.
     assert_eq!(g.players[1].life, opp_before - 3);
 }
 

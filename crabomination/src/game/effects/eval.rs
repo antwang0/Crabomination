@@ -8,8 +8,8 @@
 use super::{EffectContext, EntityRef};
 use crate::card::{CardId, CardInstance, CardType, SelectionRequirement, Supertype};
 use crate::effect::{Predicate, Value};
-use crate::game::{GameState, StackItem, Target};
 use crate::mana::ManaSymbol;
+use crate::game::{GameState, StackItem, Target};
 
 impl GameState {
     /// CR 700.5 — `player`'s devotion to `colors`: the number of mana
@@ -17,8 +17,7 @@ impl GameState {
     /// permanents they control. A hybrid / Phyrexian / mono-hybrid pip
     /// counts once if it contains any of the colors.
     pub(crate) fn devotion_to(&self, player: usize, colors: &[crate::mana::Color]) -> i32 {
-        use crate::mana::ManaSymbol;
-        let matches = |c: &crate::mana::Color| colors.contains(c);
+                let matches = |c: &crate::mana::Color| colors.contains(c);
         self.battlefield
             .iter()
             .filter(|card| card.controller == player)
@@ -1037,12 +1036,9 @@ impl GameState {
                     R::Noncreature => !has_type(CT::Creature),
                     R::Tapped => card.tapped,
                     R::Untapped => !card.tapped,
-                    R::HasColor(c) => card
-                        .definition
-                        .cost
-                        .symbols
-                        .iter()
-                        .any(|s| matches!(s, ManaSymbol::Colored(cc) if cc == c)),
+                    // CR 105.2/202.2 — hybrid/Phyrexian pips count via
+                    // `ManaCost::colors()` (bare `Colored` scan missed them).
+                    R::HasColor(c) => card.definition.cost.colors().contains(c),
                     R::HasKeyword(kw) => card.has_keyword(kw),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
@@ -1179,6 +1175,10 @@ impl GameState {
                         .players
                         .iter()
                         .any(|p| p.graveyard.iter().any(|c| c.id == *cid)),
+                    R::InYourGraveyard => self
+                        .players
+                        .get(controller)
+                        .is_some_and(|p| p.graveyard.iter().any(|c| c.id == *cid)),
                     R::InExile => self.exile.iter().any(|c| c.id == *cid),
                     // CR-spec: "the greatest mana value among [filter] they
                     // control" — the candidate must (a) match `inner` and
@@ -1356,6 +1356,10 @@ impl GameState {
                 .players
                 .iter()
                 .any(|p| p.graveyard.iter().any(|c| c.id == card.id)),
+            R::InYourGraveyard => self
+                .players
+                .get(controller)
+                .is_some_and(|p| p.graveyard.iter().any(|c| c.id == card.id)),
             R::InExile => self.exile.iter().any(|c| c.id == card.id),
             // Battlefield-only ("greatest MV among controlled" walks the
             // battlefield in the static variant; library searches don't
