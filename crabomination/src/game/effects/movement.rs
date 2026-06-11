@@ -234,9 +234,12 @@ impl GameState {
                         to_card: None,
                     });
                 } else {
-                    self.adjust_life(p, -(amount as i32));
+                    let applied = self.adjust_life_applied(p, -(amount as i32));
                     events.push(GameEvent::DamageDealt { amount, to_player: Some(p), to_card: None });
-                    events.push(GameEvent::LifeLost { player: p, amount });
+                    let lost = (-applied).max(0) as u32;
+                    if lost > 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: lost });
+                    }
                 }
                 // Phase M: direct damage from a commander source also
                 // counts toward the 21-commander-damage SBA

@@ -1474,8 +1474,10 @@ impl GameState {
                     let life = self.players[p].life.max(0);
                     let amt = if *rounded_up { (life + 1) / 2 } else { life / 2 } as u32;
                     if amt == 0 { continue; }
-                    self.adjust_life(p, -(amt as i32));
-                    events.push(GameEvent::LifeLost { player: p, amount: amt });
+                    let applied = self.adjust_life_applied(p, -(amt as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
@@ -2297,8 +2299,10 @@ impl GameState {
                 }
                 let life = taken * per;
                 if life > 0 {
-                    self.adjust_life(p, -life);
-                    events.push(GameEvent::LifeLost { player: p, amount: life as u32 });
+                    let applied = self.adjust_life_applied(p, -life);
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
                 }
                 Ok(())
             }
@@ -4829,7 +4833,7 @@ impl GameState {
                         // payment fails.
                         let n = *n as i32;
                         if self.effective_life(affected_controller) >= n {
-                            self.adjust_life(affected_controller, -n);
+                            self.pay_life_cost(affected_controller, n as u32);
                             true
                         } else {
                             false
@@ -4939,7 +4943,7 @@ impl GameState {
                         WardCost::Life(n) => {
                             let n = *n as i32;
                             if self.effective_life(payer) >= n {
-                                self.adjust_life(payer, -n);
+                                self.pay_life_cost(payer, n as u32);
                                 true
                             } else {
                                 false
@@ -5727,7 +5731,10 @@ impl GameState {
                 self.players[p].hand.push(card);
                 if mv > 0 {
                     for opp in self.resolve_players(&crate::effect::PlayerRef::EachOpponent, ctx) {
-                        self.adjust_life(opp, -mv);
+                        let applied = self.adjust_life_applied(opp, -mv);
+                        if applied < 0 {
+                            events.push(GameEvent::LifeLost { player: opp, amount: (-applied) as u32 });
+                        }
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -6900,8 +6907,10 @@ impl GameState {
                     _ => 0,
                 };
                 if x == 0 { return Ok(()); }
-                self.adjust_life(p, -(x as i32));
-                events.push(GameEvent::LifeLost { player: p, amount: x });
+                let applied = self.adjust_life_applied(p, -(x as i32));
+                if applied < 0 {
+                    events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                }
                 // Look at top X; pick one to hand, exile the rest.
                 let revealed: Vec<CardId> =
                     self.players[p].library.iter().take(x as usize).map(|c| c.id).collect();
@@ -7120,8 +7129,10 @@ impl GameState {
                 let life_ok = self.players[p].life > *life_cost as i32;
                 if mana_paid && life_ok {
                     if *life_cost > 0 {
-                        self.adjust_life(p, -(*life_cost as i32));
-                        paid_events.push(GameEvent::LifeLost { player: p, amount: *life_cost });
+                        let applied = self.adjust_life_applied(p, -(*life_cost as i32));
+                        if applied < 0 {
+                            paid_events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                        }
                     }
                     events.append(&mut paid_events);
                 } else {
@@ -7249,8 +7260,10 @@ impl GameState {
                 // Lose 1 life per revealed card (Spoils of the Vault rider).
                 let life = (revealed as u32).saturating_mul(*life_per_revealed);
                 if life > 0 {
-                    self.adjust_life(p, -(life as i32));
-                    events.push(GameEvent::LifeLost { player: p, amount: life });
+                    let applied = self.adjust_life_applied(p, -(life as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);

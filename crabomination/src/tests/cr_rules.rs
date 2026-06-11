@@ -1550,3 +1550,39 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
         "target filters not surfaced at cast time for: {failures:?}"
     );
 }
+
+/// CR 119.3c — life paid for a Phyrexian pip is a life-loss event:
+/// "whenever you lose life" triggers fire on the paid cost.
+#[test]
+fn cr_119_3c_phyrexian_life_payment_fires_loss_trigger() {
+    use crate::card::{CardDefinition, CardType, TriggeredAbility};
+    use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Loss Payoff",
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeLost, EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    });
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, CardDefinition {
+        name: "Phyrexian Bolt",
+        cost: crate::mana::cost(&[crate::mana::phyrexian(crate::mana::Color::Black)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Noop,
+        ..Default::default()
+    });
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // No black mana floated — the pip is paid with 2 life.
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast paying life");
+    assert_eq!(g.players[0].life, 18, "paid 2 life for the pip");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "life-loss trigger drew a card");
+}

@@ -103,12 +103,12 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   also the Lure/MustBlock able-blocker scans at `665-778`). Blocker
   legality reads printed `CardInstance::can_block()`; attacker legality
   already reads the computed view (comment at `combat.rs:241`). CR 509.1a.
-- 🟡 **Lifegain events ignore replacements** — `adjust_life_applied` returns
-  the post-replacement delta; `GainLife`/`LoseLife`/`Drain` and the combat
-  lifelink sites now emit events with the applied amount (CR 119.10).
-  `SetLifeTotal`/`ExchangeLifeTotals` now route the delta through
-  `adjust_life_applied` (CR 119.7). Remaining: other scattered
-  `adjust_life` + manual-event sites.
+- ✅ **Lifegain events ignore replacements** — every event-emitting life
+  site now uses `adjust_life_applied` (combat damage, damage funnel,
+  cumulative upkeep, half/X-loss arms). Paid-life costs (Phyrexian pips,
+  alt/ability life costs, Ward life) route through `pay_life_cost`, which
+  queues a `LifeLost` event drained after the action — paid life now fires
+  loss triggers (CR 118.8/119.3c; test `cr_119_3c_*`).
 - ✅ **Every coin flip is heads** (`mod.rs:2563` +
   `decision.rs:481`). `AutoDecider` answers constant `Bool(true)` for
   `Decision::CoinFlip` despite the doc promising engine RNG, and no live

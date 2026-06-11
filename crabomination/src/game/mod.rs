@@ -576,6 +576,12 @@ pub struct GameState {
     /// `submit_decision` call, so it never crosses a serialization boundary.
     #[serde(skip, default)]
     pub(crate) stashed_resolution_answer: Option<DecisionAnswer>,
+    /// Life-payment events (Phyrexian pips, "pay N life" costs) queued by
+    /// `pay_receipt_life` mid-cast and drained into the action's event batch
+    /// at the end of `perform_action`, so paid life fires life-loss triggers
+    /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e).
+    #[serde(skip, default)]
+    pub(crate) pending_cost_events: Vec<GameEvent>,
     /// True when an effect has flagged "prevent all combat damage this turn"
     /// (CR 615 — damage prevention as a replacement effect). Wired by
     /// Owlin Shieldmage's ETB trigger, Holy Day, Hallowed Burial-adjacent
@@ -932,6 +938,7 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             stashed_resolution_answer: self.stashed_resolution_answer.clone(),
+            pending_cost_events: self.pending_cost_events.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             mana_production_doublers: self.mana_production_doublers,
             resolving_source: self.resolving_source.clone(),
@@ -1055,6 +1062,7 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             stashed_resolution_answer: None,
+            pending_cost_events: Vec::new(),
             prevent_combat_damage_this_turn: false,
             mana_production_doublers: 0,
             resolving_source: None,
@@ -1966,8 +1974,10 @@ impl GameState {
                     let total = per * n;
                     // Auto-pay life only while it leaves the player alive.
                     if self.players[active].life > total as i32 {
-                        self.adjust_life(active, -(total as i32));
-                        events.push(crate::game::GameEvent::LifeLost { player: active, amount: total });
+                        let applied = self.adjust_life_applied(active, -(total as i32));
+                        if applied < 0 {
+                            events.push(crate::game::GameEvent::LifeLost { player: active, amount: (-applied) as u32 });
+                        }
                         true
                     } else {
                         false
@@ -4479,6 +4489,10 @@ impl GameState {
             // the *sending* seat via `concede`, bypassing this path entirely.
             GameAction::Concede => Ok(self.concede(self.active_player_idx)),
         }?;
+        let mut events = events;
+        // CR 119.3c — life paid as a cost (Phyrexian pips, life costs) is a
+        // life-loss event; surface it after the action so loss triggers fire.
+        events.extend(std::mem::take(&mut self.pending_cost_events));
         self.dispatch_triggers_for_events(&events);
         Ok(events)
     }
@@ -5329,6 +5343,13 @@ impl GameState {
     }
 
     pub(crate) fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
+        // Cost-payment events (paid life) queued since the last dispatch —
+        // fold them in so resumed-decision paths that bypass
+        // `perform_action`'s drain still fire their triggers.
+        if !self.pending_cost_events.is_empty() {
+            let pending = std::mem::take(&mut self.pending_cost_events);
+            self.dispatch_triggers_for_events(&pending);
+        }
         if events.is_empty() {
             return;
         }

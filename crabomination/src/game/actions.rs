@@ -949,9 +949,7 @@ impl GameState {
         let forced_only = self.players[p].wants_ui;
         let receipt =
             self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &crate::mana::SpellKind::default(), None)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let card = self.players[p].sideboard.remove(idx);
         let cid = card.id;
         self.players[p].hand.push(card);
@@ -1840,9 +1838,7 @@ impl GameState {
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.set_room_door_unlocked(card_id, right, &mut events);
         Ok(events)
     }
@@ -1928,9 +1924,7 @@ impl GameState {
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         // Exile from hand with N time counters.
         let mut card = self
             .players[p]
@@ -2065,9 +2059,7 @@ impl GameState {
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
             c.turn_face_up();
             if megamorph {
@@ -2122,9 +2114,7 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -2190,9 +2180,7 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -2249,9 +2237,7 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -2351,9 +2337,7 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -2421,9 +2405,7 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -2461,9 +2443,7 @@ impl GameState {
         }
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mut events = receipt.auto_events;
         let card = self
             .players[p]
@@ -3055,9 +3035,7 @@ impl GameState {
                 return Err(e);
             }
         };
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt);
 
         // Delve payment succeeded — exile the chosen graveyard cards now
@@ -3881,9 +3859,7 @@ impl GameState {
         let receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
         )?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt);
         let mana_spent = receipt
             .pool_before
@@ -4036,9 +4012,7 @@ impl GameState {
         let receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), spend_float,
         )?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt);
         let mana_spent = receipt
             .pool_before
@@ -4175,9 +4149,7 @@ impl GameState {
         }
         apply_spell_cost_floor(self, &mut cost);
         let receipt = self.try_pay_with_auto_tap(p, &cost)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -4274,9 +4246,7 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
             .total()
@@ -4595,9 +4565,7 @@ impl GameState {
         if let Some(cost) = alt_cast_cost {
             let forced_only = self.players[p].wants_ui;
             let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
-            if receipt.side_effects.life_lost > 0 {
-                self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-            }
+            self.pay_life_cost(p, receipt.side_effects.life_lost);
         }
         self.cast_card_for_free(
             p,
@@ -4724,9 +4692,7 @@ impl GameState {
                 return Err(e);
             }
         };
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);
         let mana_spent = receipt
             .pool_before
@@ -5090,22 +5056,23 @@ impl GameState {
             }
         };
         self.note_cast_payment_riders(&receipt);
-        if receipt.side_effects.life_lost > 0 {
-            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-        }
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
         let alt_mana_spent = receipt
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
         let mut auto_events = receipt.auto_events;
 
-        // Pay the life portion of the alt cost.
+        // Pay the life portion of the alt cost (CR 119.4; applied
+        // amount honors cannot-lose replacements).
         if alt.life_cost > 0 {
-            self.adjust_life(p, -(alt.life_cost as i32));
-            auto_events.push(GameEvent::LifeLost {
-                player: p,
-                amount: alt.life_cost,
-            });
+            let applied = self.adjust_life_applied(p, -(alt.life_cost as i32));
+            if applied < 0 {
+                auto_events.push(GameEvent::LifeLost {
+                    player: p,
+                    amount: (-applied) as u32,
+                });
+            }
         }
 
         // Exile the pitch card from hand if required.
@@ -7086,9 +7053,7 @@ impl GameState {
                 &ability_spend_kind,
                 spend_float,
             )?;
-            if receipt.side_effects.life_lost > 0 {
-                self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
-            }
+            self.pay_life_cost(p, receipt.side_effects.life_lost);
             auto_mana_events = receipt.auto_events;
         }
 
@@ -7097,11 +7062,13 @@ impl GameState {
         // sufficient life). Emits a LifeLost event so trigger / replay
         // observers see the cost.
         if ability.life_cost > 0 {
-            self.adjust_life(p, -(ability.life_cost as i32));
-            auto_mana_events.push(GameEvent::LifeLost {
-                player: p,
-                amount: ability.life_cost,
-            });
+            let applied = self.adjust_life_applied(p, -(ability.life_cost as i32));
+            if applied < 0 {
+                auto_mana_events.push(GameEvent::LifeLost {
+                    player: p,
+                    amount: (-applied) as u32,
+                });
+            }
         }
 
         // Spend the {E} cost (CR 107.16). Tap/mana/life are committed; the
@@ -7459,6 +7426,23 @@ pub(crate) struct PaymentReceipt {
     pub auto_events: Vec<GameEvent>,
     pub side_effects: crate::mana::PaymentSideEffects,
     pub pool_before: crate::mana::ManaPool,
+}
+
+impl GameState {
+    /// CR 118.8 / 119.3c — apply `life` paid as a cost (Phyrexian pips,
+    /// "pay N life" riders) through the life funnel and queue the loss as
+    /// a `LifeLost` event (drained after the action) so paid life fires
+    /// life-loss triggers.
+    pub(crate) fn pay_life_cost(&mut self, p: usize, life: u32) {
+        if life == 0 {
+            return;
+        }
+        let applied = self.adjust_life_applied(p, -(life as i32));
+        if applied < 0 {
+            self.pending_cost_events
+                .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+        }
+    }
 }
 
 /// Optional-cost cast variants threaded through

@@ -1126,8 +1126,10 @@ impl GameState {
             }
             if !is_land {
                 self.players[p].rad_counters = self.players[p].rad_counters.saturating_sub(1);
-                self.adjust_life(p, -1);
-                events.push(GameEvent::LifeLost { player: p, amount: 1 });
+                let applied = self.adjust_life_applied(p, -1);
+                if applied < 0 {
+                    events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                }
             }
         }
         let mut sba = self.check_state_based_actions();

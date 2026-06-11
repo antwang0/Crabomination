@@ -1753,12 +1753,13 @@ impl GameState {
                         amount,
                     });
                 } else {
-                    self.adjust_life(p, -(amount as i32));
+                    let applied = self.adjust_life_applied(p, -(amount as i32));
                     events.push(GameEvent::DamageDealt {
                         amount,
                         to_player: Some(p),
                         to_card: None,
                     });
+                    let amount = (-applied).max(0) as u32;
                     events.push(GameEvent::LifeLost {
                         player: p,
                         amount,
