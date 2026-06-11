@@ -2471,6 +2471,41 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    ManaPayload::AnyColorAmongLegendaries => {
+                        // Mox Amber — union of colors among legendary
+                        // creatures/planeswalkers you control; no mana if none.
+                        use crate::card::Supertype;
+                        let mut legal: Vec<Color> = Vec::new();
+                        for c in self.battlefield.iter().filter(|c| {
+                            c.controller == p
+                                && c.definition.supertypes.contains(&Supertype::Legendary)
+                                && (c.definition.is_creature() || c.definition.is_planeswalker())
+                        }) {
+                            for col in c.definition.cost.colors() {
+                                if !legal.contains(&col) {
+                                    legal.push(col);
+                                }
+                            }
+                        }
+                        if !legal.is_empty() {
+                            let color = if legal.len() == 1 {
+                                legal[0]
+                            } else {
+                                match self.decider.decide(
+                                    &crate::decision::Decision::ChooseColor {
+                                        source: ctx.source.unwrap_or(CardId(0)),
+                                        legal: legal.clone(),
+                                    },
+                                ) {
+                                    crate::decision::DecisionAnswer::Color(c)
+                                        if legal.contains(&c) => c,
+                                    _ => legal[0],
+                                }
+                            };
+                            add_one(self, p, color);
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                        }
+                    }
                     ManaPayload::AnyColorOpponentCouldProduce
                     | ManaPayload::AnyColorYouCouldProduce => {
                         // Fellwar Stone (opponent) / Star Compass (self) —
@@ -3796,6 +3831,17 @@ impl GameState {
                                 let mut scaled = base;
                                 for _ in 0..doublers {
                                     scaled = scaled.saturating_mul(2);
+                                }
+                                // CR 614.5 — Vizier of Remedies: each copy
+                                // shaves one -1/-1 counter bound for a
+                                // creature its controller controls.
+                                if *kind == CounterType::MinusOneMinusOne
+                                    && self
+                                        .battlefield_find(cid)
+                                        .is_some_and(|c| c.definition.is_creature())
+                                {
+                                    scaled = scaled
+                                        .saturating_sub(self.minus_counter_reduction_for(ctrl));
                                 }
                                 scaled
                             } else {
@@ -5127,10 +5173,19 @@ impl GameState {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let max = self.evaluate_value(count, ctx).max(0) as u32;
                 if max == 0 { return Ok(()); }
+                // Concretize source-counter-relative MV gates (Aether Vial's
+                // "mana value equal to the number of charge counters").
+                let src_counts = |kind: CounterType| -> u32 {
+                    ctx.source
+                        .and_then(|sid| self.battlefield_find(sid))
+                        .map(|c| c.counter_count(kind))
+                        .unwrap_or(0)
+                };
+                let filter = filter.resolve_source_counters(&src_counts);
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .hand
                     .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 if candidates.is_empty() { return Ok(()); }

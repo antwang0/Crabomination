@@ -879,6 +879,11 @@ pub enum SelectionRequirement {
     /// shape rather than the `AtMost`/`AtLeast` approximations).
     /// Composes naturally with `And`/`Or` for range gates.
     ManaValueExactly(u32),
+    /// True when the card's mana value equals the number of counters of the
+    /// given kind on the resolving ability's source (Aether Vial). Resolved
+    /// to a concrete `ManaValueExactly(n)` by `resolve_source_counters` at
+    /// effect resolution; unresolved instances evaluate false.
+    ManaValueEqualsSourceCounters(CounterType),
     /// True when the card's mana value equals the most-recently-sacrificed
     /// creature's mana value plus `offset`, read from the resolution scratch
     /// (`GameState.sacrificed_mana_value`). Powers Birthing Pod's "search for a
@@ -1023,6 +1028,26 @@ impl SelectionRequirement {
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),
+            other => other.clone(),
+        }
+    }
+
+    /// Replace `ManaValueEqualsSourceCounters(kind)` with a concrete
+    /// `ManaValueExactly(n)` where `n` is the source's live counter count —
+    /// called at effect resolution (Aether Vial's `{T}: put a creature card
+    /// with mana value equal to the number of charge counters …`).
+    pub fn resolve_source_counters(&self, counts: &dyn Fn(CounterType) -> u32) -> Self {
+        match self {
+            Self::ManaValueEqualsSourceCounters(kind) => Self::ManaValueExactly(counts(*kind)),
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_source_counters(counts)),
+                Box::new(b.resolve_source_counters(counts)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_source_counters(counts)),
+                Box::new(b.resolve_source_counters(counts)),
+            ),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_source_counters(counts))),
             other => other.clone(),
         }
     }
@@ -1515,6 +1540,15 @@ pub enum AdditionalCastCost {
     /// match. Cast is rejected if no matching card is in the graveyard.
     ExileFromGraveyard {
         filter: SelectionRequirement,
+    },
+    /// "As an additional cost to cast this spell, reveal a [filter] card from
+    /// your hand or pay {pay}." Silvergill Adept. When the caster's hand
+    /// (excluding the spell itself) holds a matching card the cost is free
+    /// (the reveal is knowledge-only); otherwise `pay` generic is added to
+    /// the spell's cost via `extra_cost_for_spell`.
+    RevealFromHandOrPay {
+        filter: SelectionRequirement,
+        pay: u32,
     },
 }
 

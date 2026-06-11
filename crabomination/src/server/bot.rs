@@ -860,7 +860,8 @@ fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet
         // Could produce any single color the rock was set to — treat as
         // potentially any color for the bot's mana-base reasoning.
         ManaPayload::ChosenColorOfSource
-        | ManaPayload::ImprintedCardColor => *set = crate::mana::ColorSet::all(),
+        | ManaPayload::ImprintedCardColor
+        | ManaPayload::AnyColorAmongLegendaries => *set = crate::mana::ColorSet::all(),
         ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner) => {
             accumulate_payload_colors(inner, set)
         }

@@ -664,6 +664,13 @@ pub enum StaticEffect {
     /// discard cards." (Tamiyo, Collector of Tales.) Consulted by the
     /// `Effect::Discard` resolver; the sacrifice half is the sibling above.
     OpponentsCantMakeYouDiscard,
+    /// CR 614.5 — "If one or more -1/-1 counters would be put on a creature
+    /// you control, that many minus one are put on it instead." Vizier of
+    /// Remedies. Stacks: each copy shaves one more counter.
+    MinusCounterReduction,
+    /// "Your opponents can't cast spells during your turn." Voice of
+    /// Victory. Gated at the cast-action dispatch.
+    OpponentsCantCastDuringYourTurn,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

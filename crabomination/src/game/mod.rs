@@ -1704,6 +1704,23 @@ impl GameState {
             .sum()
     }
 
+    /// CR 614.5 — how many -1/-1 counters to shave off a placement onto one
+    /// of `seat`'s creatures (Vizier of Remedies; one per copy).
+    pub fn minus_counter_reduction_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::MinusCounterReduction))
+                    .count() as u32
+            })
+            .sum()
+    }
+
     /// Extra ETB counters granted by `StaticEffect::ChosenTypeEntersWithCounter`
     /// (Metallic Mimic). For a creature `entering` under `controller`, returns
     /// one counter spec per matching source: a *different* permanent the same
@@ -3967,6 +3984,26 @@ impl GameState {
             })
         {
             return Err(GameError::SpellLimitReached);
+        }
+        // Voice of Victory — the active player's opponents can't cast spells
+        // during that player's turn.
+        if action.is_cast() {
+            let caster = self.priority.player_with_priority;
+            let active = self.active_player_idx;
+            let locked = caster != active
+                && !self.same_team(caster, active)
+                && self.battlefield.iter().any(|c| {
+                    c.controller == active
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantCastDuringYourTurn
+                            )
+                        })
+                });
+            if locked {
+                return Err(GameError::SilencedThisTurn);
+            }
         }
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
@@ -8190,7 +8227,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty
-            | StaticEffect::OneSpellPerTurn => vec![],
+            | StaticEffect::OneSpellPerTurn
+            | StaticEffect::MinusCounterReduction
+            | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })
         .collect()
 }

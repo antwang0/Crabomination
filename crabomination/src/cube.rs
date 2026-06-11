@@ -215,6 +215,12 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // ── modern_decks staples expansion ──
+        aether_vial,
+        mox_amber,
+        ulamog_the_ceaseless_hunger,
+        it_that_heralds_the_end,
+        platinum_emperion,
         // ── Eldrazi / sweeper batch ──
         shadowspear,
         myr_retriever,
@@ -533,6 +539,10 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks staples expansion ──
+        vizier_of_remedies,
+        voice_of_victory,
+        ocelot_pride,
         soltari_monk,
         soltari_champion,
         open_the_vaults,
@@ -1103,6 +1113,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(despark);
         // ── modern_decks batch 102 (WB Stillmoon Cavalier) ──
         v.push(stillmoon_cavalier);
+        // ── modern_decks staples expansion ──
+        v.push(priest_of_fell_rites);
         // ── SOS Silverquill (W/B) ──
         v.push(silverquill_charm);
         v.push(killians_confidence);
@@ -1143,6 +1155,14 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks staples expansion ──
+        silvergill_adept,
+        vodalian_hexcatcher,
+        svyelun_of_sea_and_sky,
+        tideshaper_mystic,
+        stern_scolding,
+        peer_through_depths,
+        jace_the_mind_sculptor,
         // Awaken (CR 702.113)
         part_the_waterveil,
         spreading_seas,
@@ -1570,6 +1590,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks staples expansion ──
+        crypt_incursion,
         creeping_chill,
         surgical_extraction,
         smallpox,
@@ -2017,6 +2039,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks staples expansion ──
+        madcap_experiment,
         relentless_assault,
         urabrask_the_hidden,
         den_of_the_bugbear,
@@ -2528,6 +2552,11 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks staples expansion ──
+        wilderness_reclamation,
+        devoted_druid,
+        malevolent_rumble,
+        eldrazi_repurposer,
         chord_of_calling,
         vorinclex_voice_of_hunger,
         rampaging_baloths,
@@ -2953,6 +2982,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(bountiful_landscape);
         v.push(enduring_vitality);
         v.push(fangkeepers_familiar);
+        // ── modern_decks staples expansion ──
+        v.push(writhing_chrysalis);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(simic_ascendancy);

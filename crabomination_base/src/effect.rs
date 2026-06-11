@@ -981,6 +981,10 @@ pub enum ManaPayload {
     /// controller's own permanents. Falls back to colorless if none.
     /// Star Compass.
     AnyColorYouCouldProduce,
+    /// Add one mana of any color among legendary creatures and planeswalkers
+    /// you control (Mox Amber). The legal-color set is the union of those
+    /// permanents' colors; produces nothing when empty.
+    AnyColorAmongLegendaries,
     /// Player chooses a color, then adds mana of that color equal to their
     /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
     DevotionOfChosenColor,

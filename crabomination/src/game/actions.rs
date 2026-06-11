@@ -131,6 +131,19 @@ pub(crate) fn extra_cost_for_spell(
     if state.players[caster].first_spell_tax_charges > 0 {
         tax += 1;
     }
+    // "Reveal a [filter] card from your hand or pay {N}" (Silvergill Adept):
+    // no matching hand card → the pay half joins the cost.
+    for ac in &card.definition.additional_cast_cost {
+        if let crate::card::AdditionalCastCost::RevealFromHandOrPay { filter, pay } = ac {
+            let has_match = state.players[caster]
+                .hand
+                .iter()
+                .any(|c| c.id != card.id && state.evaluate_requirement_on_card(filter, c, caster));
+            if !has_match {
+                tax += pay;
+            }
+        }
+    }
     let already_cast = state.players[caster].spells_cast_this_turn;
     for src in &state.battlefield {
         for sa in &src.definition.static_abilities {
@@ -442,7 +455,8 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::DevotionOfChosenColor
         | ManaPayload::ImprintedCardColor
         | ManaPayload::AnyColorOpponentCouldProduce
-        | ManaPayload::AnyColorYouCouldProduce => true,
+        | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyColorAmongLegendaries => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
         ManaPayload::OfColors(cs, _) => cs.len() > 1,
         ManaPayload::OfColor(_, _)
@@ -800,6 +814,8 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             | ManaPayload::AnyColors(_)
             | ManaPayload::AnyColorOpponentCouldProduce
             | ManaPayload::AnyColorYouCouldProduce => true,
+            // Color set depends on live board state — not auto-tapped.
+            ManaPayload::AnyColorAmongLegendaries => false,
             // Devotion-scaled: it can make `color`, but only the controller
             // should choose to tap it (devotion may be 0). Not auto-tapped.
             ManaPayload::DevotionOfChosenColor => false,
@@ -3100,6 +3116,10 @@ impl GameState {
                 .graveyard
                 .iter()
                 .any(|c| self.evaluate_requirement_on_card(filter, c, p)),
+            // Reveal-or-pay is always announceable: when no matching card is
+            // in hand the pay half is folded into the spell's cost
+            // (`extra_cost_for_spell`) and mana payment enforces it.
+            A::RevealFromHandOrPay { .. } => true,
         })
     }
 
@@ -3274,6 +3294,9 @@ impl GameState {
                         sac_power = Some(mv);
                     }
                 }
+                // Knowledge-only when a matching card is in hand; the pay
+                // half was already folded into the cost.
+                A::RevealFromHandOrPay { .. } => {}
             }
         }
         (events, sac_power)

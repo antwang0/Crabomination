@@ -1323,6 +1323,9 @@ impl GameState {
             R::ManaValueAtMostXFromCost => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
+            // Unresolved source-counter MV gate (concretized at resolution
+            // via `resolve_source_counters`).
+            R::ManaValueEqualsSourceCounters(_) => false,
             R::ManaValueEqualsSacrificedPlus(off) => {
                 card.definition.cost.cmc() == self.sacrificed_mana_value.unwrap_or(0) + *off
             }

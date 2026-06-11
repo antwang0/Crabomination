@@ -43837,3 +43837,853 @@ pub fn pack_rat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: staples expansion (Merfolk / Eldrazi ramp / vial-tribal /
+//    counters combo / planeswalker finishers) ────────────────────────────────
+
+/// Wilderness Reclamation — {3}{G} Enchantment. At the beginning of your end
+/// step, untap all lands you control.
+pub fn wilderness_reclamation() -> CardDefinition {
+    CardDefinition {
+        name: "Wilderness Reclamation",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Silvergill Adept — {1}{U} 2/1 Merfolk Wizard. Additional cost: reveal a
+/// Merfolk card from your hand or pay {3}; ETB draw a card.
+pub fn silvergill_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Silvergill Adept",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::RevealFromHandOrPay {
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Merfolk),
+            pay: 3,
+        }],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Vodalian Hexcatcher — {1}{U} 1/1 Flash Merfolk lord; Sacrifice a Merfolk:
+/// counter target noncreature spell unless its controller pays {1}.
+pub fn vodalian_hexcatcher() -> CardDefinition {
+    CardDefinition {
+        name: "Vodalian Hexcatcher",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "Other Merfolk you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Merfolk),
+                1,
+            )),
+            effect: Effect::CounterUnlessPaid {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Noncreature),
+                ),
+                mana_cost: cost(&[generic(1)]),
+                exile: false,
+                extra_generic: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Svyelun of Sea and Sky — {1}{U}{U} 3/4 Legendary Merfolk God.
+/// Indestructible while you control 2+ other Merfolk; attack draw; other
+/// Merfolk you control have ward {1}.
+pub fn svyelun_of_sea_and_sky() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    let other_merfolk = || {
+        Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        )
+    };
+    CardDefinition {
+        name: "Svyelun of Sea and Sky",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::God],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Indestructible while you control two+ other Merfolk.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::SelectorCountAtLeast {
+                        sel: other_merfolk(),
+                        n: Value::Const(2),
+                    },
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::Indestructible],
+                },
+            },
+            StaticAbility {
+                description: "Other Merfolk you control have ward {1}.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: other_merfolk(),
+                    keyword: Keyword::Ward(WardCost::Mana(cost(&[generic(1)]))),
+                },
+            },
+        ],
+        triggered_abilities: vec![on_attack(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tideshaper Mystic — {U} 1/1 Merfolk Wizard. {T}: Target land becomes the
+/// basic land type of your choice until end of turn. Only during your turn.
+pub fn tideshaper_mystic() -> CardDefinition {
+    let mode = |lt: LandType| Effect::BecomeBasicLand {
+        what: target_filtered(SelectionRequirement::Land),
+        land_type: lt,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Tideshaper Mystic",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::ChooseMode(vec![
+                mode(LandType::Plains),
+                mode(LandType::Island),
+                mode(LandType::Swamp),
+                mode(LandType::Mountain),
+                mode(LandType::Forest),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Devoted Druid — {1}{G} 0/2 Elf Druid. {T}: Add {G}; put a -1/-1 counter
+/// on this: untap it (the counter is part of the resolution, not a cost).
+pub fn devoted_druid() -> CardDefinition {
+    CardDefinition {
+        name: "Devoted Druid",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Green]),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::MinusOneMinusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Untap { what: Selector::This, up_to: None },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Vizier of Remedies — {1}{W} 2/1. If one or more -1/-1 counters would be
+/// put on a creature you control, that many minus one are put instead.
+pub fn vizier_of_remedies() -> CardDefinition {
+    CardDefinition {
+        name: "Vizier of Remedies",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "-1/-1 counters on your creatures: one fewer.",
+            effect: StaticEffect::MinusCounterReduction,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Voice of Victory — {1}{W} 1/3 Human Bard. Mobilize 2; your opponents
+/// can't cast spells during your turn.
+pub fn voice_of_victory() -> CardDefinition {
+    CardDefinition {
+        name: "Voice of Victory",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::mobilize(2)],
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't cast spells during your turn.",
+            effect: StaticEffect::OpponentsCantCastDuringYourTurn,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ocelot Pride — {W} 1/1 Cat. First strike, lifelink, Ascend; end step: if
+/// you gained life this turn, make a 1/1 Cat; with the city's blessing, also
+/// copy each other token that entered this turn.
+pub fn ocelot_pride() -> CardDefinition {
+    let cat = TokenDefinition {
+        name: "Cat".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Ocelot Pride",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Ascend { who: PlayerRef::You },
+                Effect::If {
+                    cond: Predicate::LifeGainedThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(1),
+                    },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::Const(1),
+                            definition: cat,
+                        },
+                        Effect::If {
+                            cond: Predicate::HasCityBlessing { who: PlayerRef::You },
+                            then: Box::new(Effect::ForEach {
+                                selector: Selector::EachPermanent(
+                                    SelectionRequirement::IsToken
+                                        .and(SelectionRequirement::ControlledByYou)
+                                        .and(SelectionRequirement::EnteredThisTurn),
+                                ),
+                                body: Box::new(Effect::CreateTokenCopyOf {
+                                    who: PlayerRef::You,
+                                    count: Value::Const(1),
+                                    source: Selector::TriggerSource,
+                                    extra_creature_types: vec![],
+                                    override_pt: None,
+                                    non_legendary: false,
+                                }),
+                            }),
+                            else_: Box::new(Effect::Noop),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aether Vial — {1} Artifact. Upkeep: may add a charge counter; {T}: put a
+/// creature card with mana value equal to the charge count from your hand
+/// onto the battlefield.
+pub fn aether_vial() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Vial",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayDo {
+                description: "Put a charge counter on Aether Vial?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature.and(
+                    SelectionRequirement::ManaValueEqualsSourceCounters(CounterType::Charge),
+                ),
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mox Amber — {0} Legendary Artifact. {T}: Add one mana of any color among
+/// legendary creatures and planeswalkers you control.
+pub fn mox_amber() -> CardDefinition {
+    CardDefinition {
+        name: "Mox Amber",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyColorAmongLegendaries,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ulamog, the Ceaseless Hunger — {10} 10/10 Indestructible. Cast: exile two
+/// target permanents (two single-target triggers); attacks: defender exiles
+/// the top twenty cards of their library.
+pub fn ulamog_the_ceaseless_hunger() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    let cast_exile = || TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+        effect: Effect::Exile {
+            what: target_filtered(SelectionRequirement::Permanent),
+        },
+    };
+    CardDefinition {
+        name: "Ulamog, the Ceaseless Hunger",
+        cost: cost(&[generic(10)]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 10,
+        toughness: 10,
+        keywords: vec![Keyword::Indestructible],
+        triggered_abilities: vec![
+            cast_exile(),
+            cast_exile(),
+            on_attack(Effect::ExileTopOfLibrary {
+                who: Selector::Player(PlayerRef::DefendingPlayer),
+                amount: Value::Const(20),
+                link_to_source: false,
+                face_down: false,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Crypt Incursion — {2}{B} Instant. Exile all creature cards from target
+/// player's graveyard; gain 3 life per card exiled.
+pub fn crypt_incursion() -> CardDefinition {
+    let gy_creatures = || Selector::CardsInZone {
+        who: PlayerRef::Target(0),
+        zone: crate::card::Zone::Graveyard,
+        filter: SelectionRequirement::Creature,
+    };
+    CardDefinition {
+        name: "Crypt Incursion",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Times(
+                    Box::new(Value::CountOf(Box::new(gy_creatures()))),
+                    Box::new(Value::Const(3)),
+                ),
+            },
+            Effect::Move {
+                what: gy_creatures(),
+                to: ZoneDest::Exile,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Stern Scolding — {U} Instant. Counter target creature spell with power or
+/// toughness 2 or less.
+pub fn stern_scolding() -> CardDefinition {
+    CardDefinition {
+        name: "Stern Scolding",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::Creature)
+                    .and(
+                        SelectionRequirement::PowerAtMost(2)
+                            .or(SelectionRequirement::ToughnessAtMost(2)),
+                    ),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Peer Through Depths — {1}{U} Instant (Arcane). Look at the top five; may
+/// take an instant or sorcery to hand; rest on the bottom.
+pub fn peer_through_depths() -> CardDefinition {
+    CardDefinition {
+        name: "Peer Through Depths",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
+            take: None,
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Malevolent Rumble — {1}{G} Sorcery. Reveal top four, permanent card to
+/// hand, rest to graveyard; create an Eldrazi Spawn.
+pub fn malevolent_rumble() -> CardDefinition {
+    CardDefinition {
+        name: "Malevolent Rumble",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: true,
+                pick_filter: Some(
+                    SelectionRequirement::Nonland
+                        .negate()
+                        .or(SelectionRequirement::Noncreature.negate())
+                        .or(SelectionRequirement::Artifact)
+                        .or(SelectionRequirement::Enchantment)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                take: None,
+                to_battlefield: false,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::eldrazi_spawn_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Eldrazi Repurposer — {2}{G} 3/3 Devoid. Cast and dies triggers each
+/// create an Eldrazi Spawn.
+pub fn eldrazi_repurposer() -> CardDefinition {
+    let spawn = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: crate::game::effects::eldrazi_spawn_token(),
+    };
+    CardDefinition {
+        name: "Eldrazi Repurposer",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+                effect: spawn(),
+            },
+            on_dies(spawn()),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Writhing Chrysalis — {2}{R}{G} 2/3 Devoid, Reach. Cast: two Eldrazi
+/// Spawn; whenever you sacrifice another Eldrazi, +1/+1 counter on this.
+pub fn writhing_chrysalis() -> CardDefinition {
+    CardDefinition {
+        name: "Writhing Chrysalis",
+        cost: cost(&[generic(2), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Devoid, Keyword::Reach],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: crate::game::effects::eldrazi_spawn_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Eldrazi)
+                            .and(SelectionRequirement::OtherThanSource),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// It That Heralds the End — {1}{C} 2/2. Colorless spells you cast with mana
+/// value 7+ cost {1} less; other colorless creatures you control get +1/+1.
+pub fn it_that_heralds_the_end() -> CardDefinition {
+    CardDefinition {
+        name: "It That Heralds the End",
+        cost: cost(&[generic(1), colorless(1)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Colorless MV7+ spells you cast cost {1} less.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::Colorless
+                        .and(SelectionRequirement::ManaValueAtLeast(7)),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Other colorless creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::Colorless)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Primal Command — {3}{G}{G} Sorcery. Choose two: gain 7; bounce a
+/// noncreature permanent to its owner's library top; target player shuffles
+/// their graveyard into their library; search up a creature.
+pub fn primal_command() -> CardDefinition {
+    CardDefinition {
+        name: "Primal Command",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN {
+            picks: vec![0, 3],
+            modes: vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(7) },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::Noncreature),
+                    ),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        pos: crate::effect::LibraryPosition::Top,
+                    },
+                },
+                Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Priest of Fell Rites — {W}{B} 2/2. {T}, pay 3 life, sacrifice: reanimate
+/// a creature (sorcery only); Unearth {3}{W}{B} assembled from primitives
+/// (the leave-replacement exile rider is the end-step exile).
+pub fn priest_of_fell_rites() -> CardDefinition {
+    CardDefinition {
+        name: "Priest of Fell Rites",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 3,
+                sac_cost: true,
+                sorcery_speed: true,
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+            // Unearth {3}{W}{B} (CR 702.84): return from graveyard with
+            // haste, exiled at the next end step.
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), w(), b()]),
+                from_graveyard: true,
+                sorcery_speed: true,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::DelayUntil {
+                        kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                        body: Box::new(Effect::Exile { what: Selector::This }),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Platinum Emperion — {8} 8/8 Golem. Your life total can't change.
+pub fn platinum_emperion() -> CardDefinition {
+    use crate::effect::PlayerStaticTarget;
+    CardDefinition {
+        name: "Platinum Emperion",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Your life total can't change.",
+                effect: StaticEffect::PlayerCannotGainLife {
+                    target: PlayerStaticTarget::Controller,
+                },
+            },
+            StaticAbility {
+                description: "Your life total can't change.",
+                effect: StaticEffect::PlayerCannotLoseLife {
+                    target: PlayerStaticTarget::Controller,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Madcap Experiment — {3}{R} Sorcery. Reveal until an artifact, put it onto
+/// the battlefield, rest to the bottom; damage = cards revealed (modeled as
+/// life loss via the reveal rider).
+pub fn madcap_experiment() -> CardDefinition {
+    CardDefinition {
+        name: "Madcap Experiment",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Artifact,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            cap: Value::Const(100),
+            life_per_revealed: 1,
+            miss_dest: crate::effect::RevealMissDest::BottomRandom,
+        },
+        ..Default::default()
+    }
+}
+
+/// Jace, the Mind Sculptor — {2}{U}{U} loyalty 3. +2 fateseal 1; 0
+/// Brainstorm; -1 bounce a creature; -12 exile target player's library and
+/// shuffle their hand into it.
+pub fn jace_the_mind_sculptor() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    CardDefinition {
+        name: "Jace, the Mind Sculptor",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Planeswalker],
+        supertypes: vec![Supertype::Legendary],
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Fateseal {
+                    who: PlayerRef::EachOpponent,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::Const(2) },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -12,
+                effect: Effect::Seq(vec![
+                    Effect::ExileLibraryExceptBottom {
+                        who: PlayerRef::Target(0),
+                        keep: Value::Const(0),
+                    },
+                    Effect::Move {
+                        what: Selector::CardsInZone {
+                            who: PlayerRef::Target(0),
+                            zone: crate::card::Zone::Hand,
+                            filter: SelectionRequirement::Any,
+                        },
+                        to: ZoneDest::Library {
+                            who: PlayerRef::Target(0),
+                            pos: crate::effect::LibraryPosition::Shuffled,
+                        },
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
