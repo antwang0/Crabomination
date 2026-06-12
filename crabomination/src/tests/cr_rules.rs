@@ -9,6 +9,7 @@
 
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget};
+use crate::mana::Color;
 use crate::game::two_player_game;
 use super::*;
 
@@ -1782,4 +1783,265 @@ fn cr_702_61_triggers_fire_but_activations_blocked() {
     assert_eq!(err, GameError::SplitSecondLock);
     drain_stack(&mut g);
     assert!(g.battlefield_find(stone).is_some(), "Mind Stone never sacrificed");
+}
+
+// ── CR 702.64 — Absorb ────────────────────────────────────────────────────────
+
+/// Lymph Sliver grants all Slivers absorb 1: each damage event to a Sliver
+/// is reduced by 1, per source per event.
+#[test]
+fn cr_702_64_absorb_prevents_n_per_damage_event() {
+    use crate::effect::{Selector, Value};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lymph_sliver());
+    let subject = g.add_card_to_battlefield(0, catalog::crystalline_sliver()); // 2/2
+    // Hit the 2/2 Sliver for 2 → absorb 1 → 1 marked damage, survives.
+    let ctx = crate::game::effects::EffectContext::for_spell(
+        1, Some(Target::Permanent(subject)), 0, 0,
+    );
+    g.resolve_effect(
+        &Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(
+        g.battlefield_find(subject).map(|c| c.damage),
+        Some(1),
+        "absorb 1 soaks one of the two"
+    );
+    // A second event is absorbed separately: 1 damage → fully prevented.
+    g.resolve_effect(
+        &Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.battlefield_find(subject).map(|c| c.damage), Some(1), "1-damage event fully absorbed");
+}
+
+/// Absorb applies to combat damage and keeps a 1-power attacker from
+/// denting the Sliver at all.
+#[test]
+fn cr_702_64_absorb_soaks_combat_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lymph_sliver());
+    let sliver = g.add_card_to_battlefield(0, catalog::crystalline_sliver()); // 2/2 absorb 1
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(0) }];
+    g.block_map.insert(sliver, bear);
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 1;
+    g.resolve_combat().unwrap();
+    // Bear deals 2, absorb 1 → 1 marked (survives); the 2/2 strikes back
+    // for 2 and the bear dies.
+    assert_eq!(g.battlefield_find(sliver).map(|c| c.damage), Some(1),
+        "2/2 with absorb survives the 2-power hit with 1 marked");
+    assert!(g.battlefield_find(bear).is_none(), "bear takes the full strike-back");
+}
+
+// ── CR 704.5y — Role uniqueness SBA ───────────────────────────────────────────
+
+/// Two Roles controlled by the same player on one permanent: the older one
+/// goes to the graveyard (and, being a token, ceases to exist).
+#[test]
+fn cr_704_5y_same_controller_roles_keep_only_the_newest() {
+    use crate::card::{EnchantmentSubtype, EquipBonus, TokenDefinition};
+    use crate::effect::Selector;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let role = TokenDefinition {
+        name: "Wicked".into(),
+        card_types: vec![crate::card::CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
+            ..Default::default()
+        },
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    };
+    let ctx = crate::game::effects::EffectContext::for_ability(bear, 0, None);
+    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: role };
+    g.resolve_effect(&mint, &ctx).unwrap();
+    let first: Vec<CardId> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Wicked").map(|c| c.id).collect();
+    assert_eq!(first.len(), 1);
+    g.resolve_effect(&mint, &ctx).unwrap();
+    g.check_state_based_actions();
+    let roles: Vec<&crate::card::CardInstance> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Wicked").collect();
+    assert_eq!(roles.len(), 1, "only one Role survives the SBA");
+    assert_ne!(roles[0].id, first[0], "the newer Role is the survivor");
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.definition.name == "Wicked"),
+        "the dead Role token ceases to exist"
+    );
+}
+
+/// Roles controlled by different players coexist (CR 704.5y is
+/// per-controller).
+#[test]
+fn cr_704_5y_different_controllers_roles_coexist() {
+    use crate::card::{EnchantmentSubtype, TokenDefinition};
+    use crate::effect::Selector;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let role = TokenDefinition {
+        name: "Cursed".into(),
+        card_types: vec![crate::card::CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let mint = Effect::CreateTokenAttachedTo { target: Selector::This, definition: role };
+    g.resolve_effect(&mint, &crate::game::effects::EffectContext::for_ability(bear, 0, None)).unwrap();
+    g.resolve_effect(&mint, &crate::game::effects::EffectContext::for_ability(bear, 1, None)).unwrap();
+    g.check_state_based_actions();
+    let n = g.battlefield.iter().filter(|c| c.definition.name == "Cursed").count();
+    assert_eq!(n, 2, "one Role per controller may stay");
+}
+
+/// Nylea, Keen-Eyed's nonland miss offers "put it into your graveyard";
+/// accepting bins the reveal, declining leaves it on top.
+#[test]
+fn nylea_reveal_miss_may_go_to_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let top = g.add_card_to_library(0, catalog::lightning_bolt()); // not a creature
+    let nylea = g.add_card_to_battlefield(0, catalog::nylea_keen_eyed());
+    g.clear_sickness(nylea);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nylea, ability_index: 0, target: None, x_value: None,
+    }).expect("activate the reveal");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "miss binned by choice");
+}
+
+// ── CR 702.47 — Splice onto Arcane ───────────────────────────────────────────
+
+/// Splicing Glacial Ray onto an Arcane spell pays the splice cost, keeps the
+/// spliced card in hand, and resolves the spliced text after the main effect.
+#[test]
+fn cr_702_47_splice_adds_text_and_keeps_the_card_in_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let mists = g.add_card_to_hand(0, catalog::reach_through_mists());
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpliced {
+        card_id: mists,
+        splice_cards: vec![ray],
+        target: None,
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).expect("cast Reach Through Mists splicing Glacial Ray");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 2, "spliced Ray dealt 2");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ray),
+        "spliced card stays in hand (CR 702.47a)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mists),
+        "main spell resolved to the graveyard");
+    // The graveyard copy lost the spliced text (CR 702.47e).
+    assert!(g.players[0].graveyard.iter().find(|c| c.id == mists)
+        .unwrap().spliced_effects.is_empty());
+}
+
+/// Splice is rejected when the main spell isn't of the required quality, and
+/// the whole cast rolls back (no splice cost stranded).
+#[test]
+fn cr_702_47_splice_requires_the_quality() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // not Arcane
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    assert!(g.perform_action(GameAction::CastSpellSpliced {
+        card_id: bolt,
+        splice_cards: vec![ray],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).is_err(), "Bolt has no Arcane subtype");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "nothing paid");
+}
+
+/// You can't splice a card without enough mana for its splice cost.
+#[test]
+fn cr_702_47_splice_cost_is_additional() {
+    let mut g = two_player_game();
+    let mists = g.add_card_to_hand(0, catalog::reach_through_mists());
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(Color::Blue, 1); // {U} only — splice {1}{R} unpayable
+    assert!(g.perform_action(GameAction::CastSpellSpliced {
+        card_id: mists,
+        splice_cards: vec![ray],
+        target: None,
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).is_err());
+    assert!(g.players[0].hand.iter().any(|c| c.id == mists), "cast rolled back");
+}
+
+// ── CR 704.5k — the world rule ───────────────────────────────────────────────
+
+/// A second World permanent sends the older one to the graveyard.
+#[test]
+fn cr_704_5k_world_rule_keeps_the_newest() {
+    let mut g = two_player_game();
+    let old = g.add_card_to_battlefield(0, catalog::concordant_crossroads());
+    g.battlefield_find_mut(old).unwrap().battlefield_timestamp = 10;
+    let new = g.add_card_to_battlefield(1, catalog::nether_void());
+    g.battlefield_find_mut(new).unwrap().battlefield_timestamp = 20;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(old).is_none(), "older World binned");
+    assert!(g.battlefield_find(new).is_some(), "newest World survives");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old));
+}
+
+/// On a timestamp tie, ALL World permanents go (CR 704.5k second sentence).
+#[test]
+fn cr_704_5k_world_rule_tie_bins_all() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::concordant_crossroads());
+    let b = g.add_card_to_battlefield(1, catalog::nether_void());
+    g.battlefield_find_mut(a).unwrap().battlefield_timestamp = 7;
+    g.battlefield_find_mut(b).unwrap().battlefield_timestamp = 7;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(),
+        "simultaneous Worlds all die");
+}
+
+/// Nether Void taxes every spell {3} (countered when unpaid).
+#[test]
+fn nether_void_counters_unpaid_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::nether_void());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "unpaid tax: countered");
+    assert_eq!(g.players[1].life, 20, "no damage dealt");
+}
+
+/// Concordant Crossroads gives everything haste.
+#[test]
+fn concordant_crossroads_grants_haste_to_all() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::concordant_crossroads());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&crate::card::Keyword::Haste));
+    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&crate::card::Keyword::Haste));
 }

@@ -689,7 +689,7 @@ pub fn hangarback_walker() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Hangarback Walker",

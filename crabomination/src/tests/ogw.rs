@@ -1327,7 +1327,7 @@ fn wasteland_scorpion_cycles() {
     let id = g.add_card_to_hand(0, catalog::wasteland_scorpion());
     g.players[0].mana_pool.add_colorless(2);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::Cycle { card_id: id }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "discard one, draw one (net zero)");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cycled card in graveyard");

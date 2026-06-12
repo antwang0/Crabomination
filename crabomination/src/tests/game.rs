@@ -7038,3 +7038,149 @@ fn cr_613_7_eot_grant_after_lose_all_abilities_survives() {
     assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
         "earlier grant is stripped by later ability loss");
 }
+
+// ── Seat-routed yes/no suspends (resolution answer log) ───────────────────
+
+/// Rhystic Study's tax question routes to the *taxed* seat: a `wants_ui`
+/// opponent gets the prompt, and paying suppresses the draw.
+#[test]
+fn rhystic_tax_prompt_routes_to_the_taxed_seat() {
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    g.add_card_to_battlefield(0, catalog::rhystic_study());
+    g.add_card_to_library(0, catalog::forest());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1); // floating {1} for the tax
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    // Resolve the Rhystic trigger (above the Bolt) — it suspends for P1.
+    for _ in 0..6 {
+        if g.pending_decision.is_some() { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    let pd = g.pending_decision.as_ref().expect("tax question suspends");
+    assert_eq!(pd.acting_player(), 1, "the taxed player answers, not the enchantment's controller");
+    let hand_before = g.players[0].hand.len();
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("pay the tax");
+    assert_eq!(g.players[0].hand.len(), hand_before, "paid tax suppresses the draw");
+    assert_eq!(g.players[1].mana_pool.total(), 0, "floating mana spent on the tax");
+}
+
+/// Browbeat asks each player in turn; a mid-loop `wants_ui` acceptor takes
+/// the 5 and the controller never draws.
+#[test]
+fn browbeat_offer_routes_to_each_seat_and_accept_closes_it() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let bb = g.add_card_to_hand(0, catalog::browbeat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Browbeat castable");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // P0 (APNAP first) declines…
+    let pd = g.pending_decision.as_ref().expect("asks P0 first");
+    assert_eq!(pd.acting_player(), 0);
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("P0 declines");
+    // …then P1 accepts and takes 5.
+    let pd = g.pending_decision.as_ref().expect("continuation reaches P1");
+    assert_eq!(pd.acting_player(), 1);
+    let hand_before = g.players[0].hand.len();
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("P1 accepts");
+    assert_eq!(g.players[1].life, 15, "acceptor took 5");
+    assert_eq!(g.players[0].hand.len(), hand_before, "no draw once someone accepts");
+}
+
+/// Nobody accepting Browbeat runs the `otherwise` draw-three.
+#[test]
+fn browbeat_all_decline_draws_three() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let bb = g.add_card_to_hand(0, catalog::browbeat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Browbeat castable");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    let hand_before = g.players[0].hand.len();
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("P0 declines");
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("P1 declines");
+    assert_eq!(g.players[0].hand.len(), hand_before + 3, "otherwise: target draws three");
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(g.players[1].life, 20);
+}
+
+/// Clash prompts each `wants_ui` seat to bottom their reveal; the answers
+/// replay across the two suspends and the comparison uses the revealed MVs.
+#[test]
+fn clash_prompts_each_ui_seat_to_bottom() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::serra_angel()); // P0 reveal, MV 5
+    let opp_top = g.add_card_to_library(1, catalog::grizzly_bears()); // P1 reveal, MV 2
+    g.add_card_to_library(1, catalog::island());
+    let rp = g.add_card_to_hand(0, catalog::recross_the_paths());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // P0 keeps their reveal on top, P1 bottoms theirs.
+    let pd = g.pending_decision.as_ref().expect("asks the controller first");
+    assert_eq!(pd.acting_player(), 0);
+    g.submit_decision(DecisionAnswer::Bool(false)).expect("P0 keeps");
+    let pd = g.pending_decision.as_ref().expect("then the opponent");
+    assert_eq!(pd.acting_player(), 1);
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("P1 bottoms");
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == rp), "won clash (5 vs 2) → back to hand");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(opp_top), "P1's reveal bottomed");
+}
+
+/// Tribute routes the pay-or-not question to the opponent's seat.
+#[test]
+fn tribute_question_routes_to_the_opponent() {
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    let fan = g.add_card_to_hand(0, catalog::fanatic_of_xenagos());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fan, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    for _ in 0..8 {
+        if g.pending_decision.is_some() { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    let pd = g.pending_decision.as_ref().expect("tribute question suspends");
+    assert_eq!(pd.acting_player(), 1, "the opponent answers tribute");
+    g.submit_decision(DecisionAnswer::Bool(true)).expect("tribute paid");
+    let fan_bf = g.battlefield.iter().find(|c| c.definition.name == "Fanatic of Xenagos")
+        .expect("on battlefield");
+    assert_eq!(
+        fan_bf.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1, "tribute paid: +1/+1 counter, no haste-trigger half"
+    );
+}

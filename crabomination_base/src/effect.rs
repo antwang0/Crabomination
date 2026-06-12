@@ -297,6 +297,9 @@ pub enum Value {
     /// Studies.
     CountMatching { sel: Box<Selector>, filter: SelectionRequirement },
     PowerOf(Box<Selector>),
+    /// Number of creatures currently blocking the resolved permanent
+    /// (Spined Sliver's "+1/+1 for each creature blocking it").
+    BlockersOf(Box<Selector>),
     ToughnessOf(Box<Selector>),
     LifeOf(PlayerRef),
     /// Lowest life total among all players in the game (CR 119.7 — Repay
@@ -538,6 +541,12 @@ pub enum Value {
     /// the resolved player controls (0–5). Powers Tribal Flames / Territorial
     /// Kavu, and (as a generic cost reduction) Leyline Binding.
     DomainCount(PlayerRef),
+    /// Cards in *every* player's graveyard whose name matches the resolving
+    /// spell's name (`EffectContext.source_name`). Rune Snag's counter tax.
+    SameNamedInAllGraveyards,
+    /// Conditional value: `then` when `pred` holds, else `else_`.
+    /// Polukranos, Unchained's "enters with six… escapes with twelve instead".
+    IfPred { pred: Box<Predicate>, then: Box<Value>, else_: Box<Value> },
 }
 
 impl Value {
@@ -653,6 +662,14 @@ pub enum Predicate {
     /// 702.139). Backed by `CardInstance.cast_from_escape`; gates the
     /// "sacrifice it unless it escaped" ETB rider on Kroxa / Uro.
     SourceCastFromEscape,
+    /// CR 702.77 — true if a card in exile is champion-linked to the
+    /// effect's source (`exiled_by` points at it). Gates "when a [type] is
+    /// championed with this creature" riders (Mistbind Clique).
+    SourceChampionedSomething,
+    /// True if the trigger's subject (a blocker) is blocking the listening
+    /// source. Scopes a `Blocks`/`AnyPlayer` trigger to "whenever a creature
+    /// blocks *this* creature" (Nessian Boar).
+    TriggerBlocksSource,
     /// True if the trigger's object (the just-cast spell, `trigger_source`)
     /// has the same name the effect's source stamped via `Effect::NameCard`
     /// (`CardInstance.named_card`). Gates "whenever an opponent casts a spell
@@ -686,6 +703,11 @@ pub enum Predicate {
     /// library this turn. `PlayerRef::EachOpponent` is satisfied by any one
     /// opponent. Archive Trap's "rather than pay" gate.
     SearchedLibraryThisTurn { who: PlayerRef },
+    /// CR 702.76 — Prowl gate: true if a creature of any listed type under
+    /// the resolving controller's control dealt combat damage to a player
+    /// this turn (`Player.prowl_types_this_turn`; Changeling damage
+    /// satisfies any type).
+    ProwlTypeDealtCombatDamage { types: Vec<crate::card::CreatureType> },
     /// True if any player matching `who` had at least `at_least` cards put
     /// into their graveyard from anywhere this turn (CR 700.4 tally —
     /// `Player.cards_to_graveyard_this_turn`). Ravenous Trap's free
@@ -1295,14 +1317,32 @@ pub struct EventSpec {
     /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
     #[serde(default)]
     pub per_subject_cap: Option<u8>,
+    /// The event's actor (caster / controller of the triggering spell or
+    /// ability) must be an opponent of the trigger's controller. Refines
+    /// scopes that don't already gate on the actor — Opaline Sliver's
+    /// "becomes the target of a spell an opponent controls" on SelfSource.
+    #[serde(default)]
+    pub actor_is_opponent: bool,
 }
 
 impl EventSpec {
     pub fn new(kind: EventKind, scope: EventScope) -> Self {
-        Self { kind, scope, filter: None, once_per_turn: false, per_subject_cap: None }
+        Self {
+            kind,
+            scope,
+            filter: None,
+            once_per_turn: false,
+            per_subject_cap: None,
+            actor_is_opponent: false,
+        }
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
+        self
+    }
+    /// Require the triggering event's actor to be an opponent.
+    pub fn from_opponent(mut self) -> Self {
+        self.actor_is_opponent = true;
         self
     }
     /// Mark this trigger "only once each turn" (CR 603.3d).
@@ -1625,6 +1665,9 @@ pub enum Effect {
     /// "spells you control can't be countered for the rest of this turn"
     /// (Veil of Summer). Cleared at the next untap.
     GrantSpellsUncounterableThisTurn { who: Selector },
+    /// Stamp `uncounterable` on a target spell already on the stack —
+    /// "Target spell can't be countered" (Vexing Shusher's activation).
+    MakeSpellUncounterable { what: Selector },
     /// Set `Player.cant_cast_noncreature_this_turn` on each resolved player —
     /// "those players can't cast noncreature spells this turn"
     /// (Ranger-Captain of Eos). Cleared at the next untap.
@@ -1942,6 +1985,10 @@ pub enum Effect {
     Move { what: Selector, to: ZoneDest },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// CR 701.19a — `picker` searches `who`'s library: the pick decision
+    /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
+    /// "search target opponent's library ... exile that card").
+    SearchPickedBy { who: PlayerRef, picker: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s hand and graveyard into their library (Day's
@@ -2287,6 +2334,9 @@ pub enum Effect {
         to: Option<PlayerRef>,
         duration: Duration,
     },
+    /// Gain control of the resolved permanents for as long as the effect's
+    /// source remains on the battlefield (Sower of Temptation).
+    GainControlWhileSourceRemains { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
     /// Amass N (CR 701.43): put `count` +1/+1 counters on an Army `who`
@@ -2751,7 +2801,14 @@ pub enum Effect {
 
     // ── Misc atomic operations needed by existing cards ──────────────────────
     /// Reveal the top card of `who`'s library; if `reveal_filter` matches, draw it.
-    RevealTopAndDrawIf { who: PlayerRef, reveal_filter: SelectionRequirement },
+    RevealTopAndDrawIf {
+        who: PlayerRef,
+        reveal_filter: SelectionRequirement,
+        /// On a miss, the player may put the revealed card into their
+        /// graveyard instead of leaving it on top (Nylea, Keen-Eyed).
+        #[serde(default)]
+        may_graveyard_miss: bool,
+    },
 
     /// Reveal the top card of `who`'s library (fires `TopCardRevealed` event for
     /// the animation) without moving it. Used by Chaos Warp's "reveal top card"
@@ -2808,6 +2865,28 @@ pub enum Effect {
     /// artifact or creature card, puts it onto the battlefield, and
     /// shuffles the rest in.
     DestroyTargetsPolymorph { filter: SelectionRequirement },
+    /// Destroy X chosen permanent targets matching `filter` (slots `0..X`
+    /// from the cast's target list) — the plain sibling of
+    /// `DestroyTargetsPolymorph`. Heliod's Intervention mode 0.
+    DestroyTargets { filter: SelectionRequirement },
+    /// CR 702.77 — Champion a [filter]: exile another matching permanent you
+    /// control linked to the source (returns when the source leaves), or
+    /// sacrifice the source if you exile nothing. Mistbind Clique,
+    /// Changeling Hero.
+    Champion { filter: SelectionRequirement },
+    /// Exile up to `count` cards from any graveyards, chosen by the
+    /// controller (Faerie Macabre). A `wants_ui` controller picks via
+    /// `ChooseCards`; the auto path takes the highest-MV opponent cards.
+    ExileUpToNFromGraveyards { count: Value },
+    /// Choose a color, exile the top `amount` cards of `who`'s library, and
+    /// create one `token` per exiled card of the chosen color (Oona, Queen
+    /// of the Fae).
+    ExileTopMintPerChosenColor { who: Selector, amount: Value, token: crate::card::TokenDefinition },
+    /// Spells cast by opponents of the effect's controller that match
+    /// `filter` cost `{amount}` more until the controller's next turn
+    /// (Elspeth Conquers Death chapter II). Cleared at the controller's
+    /// untap step.
+    SpellTaxUntilYourNextTurn { amount: u32, filter: SelectionRequirement },
     /// Cataclysm-family: each resolved player keeps one artifact, one
     /// creature, one enchantment, and one planeswalker from among the
     /// nonland permanents they control (auto-pick keeps the highest mana

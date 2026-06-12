@@ -735,3 +735,183 @@ pub fn trigger_reveal_animation(
             });
     }
 }
+
+// ── Split-card half picker (CR 709 / 702.102) ────────────────────────────────
+
+/// Root entity of the split-card half-picker modal.
+#[derive(Component)]
+pub struct SplitCastModal;
+
+/// A half-pick button: cast the right half or the fused whole.
+#[derive(Component)]
+pub struct SplitCastButton {
+    pub spell: CardId,
+    pub choice: crate::game::SplitCastChoice,
+    pub needs_target: bool,
+}
+
+#[derive(Component)]
+pub struct SplitCastCancelButton;
+
+/// Spawn or despawn the split half-picker based on `SplitCastState`.
+pub fn spawn_split_cast_modal(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<crate::theme::UiFonts>,
+    state: Res<crate::game::SplitCastState>,
+    existing: Query<Entity, With<SplitCastModal>>,
+) {
+    let want_open = state.pending.is_some();
+    let is_open = !existing.is_empty();
+    if !state.is_changed() && want_open == is_open {
+        return;
+    }
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+    let Some(spell_id) = state.pending else { return };
+    let Some(cv) = &view.0 else { return };
+    let Some(known) = cv.players.get(cv.your_seat).and_then(|p| {
+        p.hand.iter().find_map(|h| match h {
+            crabomination::net::HandCardView::Known(k) if k.id == spell_id => Some(k.clone()),
+            _ => None,
+        })
+    }) else {
+        return;
+    };
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            SplitCastModal,
+        ))
+        .with_children(|root| {
+            root.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
+                    row_gap: Val::Px(10.0),
+                    align_items: AlignItems::Center,
+                    min_width: Val::Px(320.0),
+                    ..default()
+                },
+                BackgroundColor(theme::PANEL_BG),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Text::new(format!("{} — cast which half?", known.name)),
+                    ui_fonts.tf(15.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                ));
+                let button = |panel: &mut ChildSpawnerCommands,
+                                  label: String,
+                                  choice: crate::game::SplitCastChoice,
+                                  needs_target: bool| {
+                    panel
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                                ..default()
+                            },
+                            BackgroundColor(theme::BUTTON_INFO_BG),
+                            SplitCastButton { spell: spell_id, choice, needs_target },
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new(label),
+                                ui_fonts.tf(13.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                bevy::picking::Pickable::IGNORE,
+                            ));
+                        });
+                };
+                button(
+                    panel,
+                    format!("Cast right half ({})", known.split_right_cost_label),
+                    crate::game::SplitCastChoice::Right,
+                    known.split_right_needs_target,
+                );
+                // Fused with targets needs two target picks — beyond the
+                // single-target cursor; offer Fused only when target-free.
+                if known.split_fusable && !known.split_fused_needs_target {
+                    button(
+                        panel,
+                        "Cast fused (both halves)".into(),
+                        crate::game::SplitCastChoice::Fused,
+                        false,
+                    );
+                }
+                panel
+                    .spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            margin: UiRect::top(Val::Px(8.0)),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_DANGER_BG),
+                        SplitCastCancelButton,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new("Cancel"),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            bevy::picking::Pickable::IGNORE,
+                        ));
+                    });
+            });
+        });
+}
+
+/// Half-pick button → submit immediately (no target) or arm the targeting
+/// cursor with `pending_split` so the eventual pick routes through
+/// `CastSplitRight` / `CastSplitFused`.
+pub fn handle_split_cast_buttons(
+    mut state: ResMut<crate::game::SplitCastState>,
+    mut targeting: ResMut<TargetingState>,
+    outbox: Option<Res<NetOutbox>>,
+    pick_q: Query<(&Interaction, &SplitCastButton), Changed<Interaction>>,
+    cancel_q: Query<&Interaction, (Changed<Interaction>, With<SplitCastCancelButton>)>,
+) {
+    if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
+        state.pending = None;
+        return;
+    }
+    for (interaction, btn) in &pick_q {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        state.pending = None;
+        if btn.needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = Some(btn.spell);
+            targeting.pending_split = Some(btn.choice);
+            return;
+        }
+        let Some(outbox) = &outbox else { return };
+        let action = match btn.choice {
+            crate::game::SplitCastChoice::Right => GameAction::CastSplitRight {
+                card_id: btn.spell, target: None, additional_targets: vec![],
+                mode: None, x_value: None,
+            },
+            crate::game::SplitCastChoice::Fused => GameAction::CastSplitFused {
+                card_id: btn.spell, target: None, additional_targets: vec![],
+                mode: None, x_value: None,
+            },
+        };
+        outbox.submit(action);
+        return;
+    }
+}

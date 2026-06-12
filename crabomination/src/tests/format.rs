@@ -100,3 +100,20 @@ fn basic_lands_are_unlimited() {
     standard_deck.extend(make_deck(catalog::lightning_bolt, 4));
     assert!(validate_deck(&standard_deck, Format::Standard).is_ok());
 }
+
+/// Banned cards are rejected per format; restricted cards cap at one copy.
+#[test]
+fn banlist_and_restricted_list_enforced() {
+    use crate::format::{validate_deck, DeckError, Format};
+    // A Modern deck running Treasure Cruise is illegal.
+    let mut deck: Vec<_> = (0..59).map(|_| crate::catalog::forest()).collect();
+    deck.push(crate::catalog::treasure_cruise());
+    let errs = validate_deck(&deck, Format::Modern).unwrap_err();
+    assert!(errs.iter().any(|e| matches!(e, DeckError::BannedCard { card_name } if *card_name == "Treasure Cruise")));
+    // The same deck is fine in Vintage with one copy…
+    assert!(validate_deck(&deck, Format::Vintage).is_ok());
+    // …but two copies break the restricted list.
+    deck.push(crate::catalog::treasure_cruise());
+    let errs = validate_deck(&deck, Format::Vintage).unwrap_err();
+    assert!(errs.iter().any(|e| matches!(e, DeckError::RestrictedCard { card_name, found: 2 } if *card_name == "Treasure Cruise")));
+}

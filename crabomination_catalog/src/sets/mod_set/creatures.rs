@@ -503,7 +503,7 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
         }],
@@ -2169,7 +2169,7 @@ pub fn siege_gang_commander() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Siege-Gang Commander",
@@ -3085,7 +3085,7 @@ pub fn sporemound() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
         }],
@@ -3109,7 +3109,7 @@ pub fn avenger_of_zendikar() -> CardDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     let your_plants = Selector::EachPermanent(
         SelectionRequirement::HasCreatureType(CreatureType::Plant)
@@ -3405,7 +3405,7 @@ pub fn penumbra_spider() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         })],
         ..Default::default()
@@ -3702,7 +3702,7 @@ pub fn bitterbloom_bearer() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
         }],
@@ -3788,9 +3788,7 @@ pub fn tidehollow_sculler() -> CardDefinition {
 
 /// Temur Ascendancy — {U}{R}{G} Enchantment. Creatures you control with
 /// power 4 or greater have haste; when one enters under your control, draw
-/// a card. 🟡 the haste static over-grants (the `PowerAtLeast` selector
-/// isn't decomposed), so it currently grants haste to all your creatures;
-/// the draw trigger is filtered faithfully.
+/// a card.
 pub fn temur_ascendancy() -> CardDefinition {
     use crate::effect::{Predicate, Selector as Sel, StaticEffect};
     CardDefinition {
@@ -3806,11 +3804,12 @@ pub fn temur_ascendancy() -> CardDefinition {
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         static_abilities: vec![StaticAbility {
-            description: "Creatures you control have haste.",
+            description: "Creatures you control with power 4 or greater have haste.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Sel::EachPermanent(
                     SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(4)),
                 ),
                 keyword: Keyword::Haste,
             },
@@ -3940,7 +3939,7 @@ pub fn grave_titan() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     let make_zombies = Effect::CreateToken {
         who: PlayerRef::You,
@@ -4209,7 +4208,7 @@ pub fn thragtusk() -> CardDefinition {
                         triggered_abilities: vec![],
                     
                         static_abilities: vec![],
-                        equipped_bonus: None,
+                        ..Default::default()
                     },
                 },
             },
@@ -4284,7 +4283,7 @@ pub fn wurmcoil_engine() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     let wurm_lifelink = TokenDefinition {
         name: "Phyrexian Wurm".into(),
@@ -4302,7 +4301,7 @@ pub fn wurmcoil_engine() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Wurmcoil Engine",
@@ -4573,7 +4572,7 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Koma, Cosmos Serpent",
@@ -4849,7 +4848,7 @@ pub fn basking_broodscale() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Basking Broodscale",
@@ -5073,7 +5072,7 @@ pub fn descendant_of_storms() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Descendant of Storms",
@@ -5153,7 +5152,7 @@ pub fn elder_gargaroth() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Elder Gargaroth",
@@ -5421,7 +5420,7 @@ pub fn doomed_traveler() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         })],
         ..Default::default()

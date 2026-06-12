@@ -64,6 +64,12 @@ impl GameState {
             // control" cards (Orysa Tide Choreographer's "total toughness
             // ≥ 10" alt-cost gate, etc.). Same fan-out convention as
             // `CountersOn`.
+            Value::BlockersOf(s) => self
+                .resolve_selector(s, ctx)
+                .iter()
+                .filter_map(|e| e.as_permanent_id())
+                .map(|id| self.block_map.values().filter(|&&a| a == id).count() as i32)
+                .sum(),
             Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
                     // `as_card_id` (not `as_permanent_id`): a dies-trigger
@@ -441,6 +447,21 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|seat| self.domain_count(seat) as i32)
                 .unwrap_or(0),
+            Value::SameNamedInAllGraveyards => {
+                let Some(name) = ctx.source_name.filter(|n| !n.is_empty()) else { return 0 };
+                self.players
+                    .iter()
+                    .flat_map(|p| p.graveyard.iter())
+                    .filter(|c| c.definition.name == name)
+                    .count() as i32
+            }
+            Value::IfPred { pred, then, else_ } => {
+                if self.evaluate_predicate(pred, ctx) {
+                    self.evaluate_value(then, ctx)
+                } else {
+                    self.evaluate_value(else_, ctx)
+                }
+            }
         }
     }
 
@@ -569,6 +590,15 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.cast_from_escape)
                 .unwrap_or(false),
+            Predicate::SourceChampionedSomething => ctx.source.is_some_and(|cid| {
+                self.exile.iter().any(|c| c.exiled_by.as_ref().is_some_and(|l| l.source == cid))
+            }),
+            Predicate::TriggerBlocksSource => match (ctx.trigger_source, ctx.source) {
+                (Some(EntityRef::Permanent(blocker)), Some(src)) => {
+                    self.block_map.get(&blocker) == Some(&src)
+                }
+                _ => false,
+            },
             Predicate::TriggerObjectNameMatchesNamedCard => {
                 let named = ctx
                     .source
@@ -619,6 +649,11 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .iter()
                 .any(|&p| self.players[p].searched_library_this_turn),
+            Predicate::ProwlTypeDealtCombatDamage { types } => {
+                let pl = &self.players[ctx.controller];
+                pl.prowl_any_type_this_turn
+                    || types.iter().any(|t| pl.prowl_types_this_turn.contains(t))
+            }
             Predicate::CardsToGraveyardThisTurnAtLeast { who, at_least } => self
                 .resolve_players(who, ctx)
                 .iter()
@@ -1177,6 +1212,14 @@ impl GameState {
                         StackItem::Trigger { source, .. } if *source == card.id
                     )),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+                    R::ManaValueAtMostYourCount(inner) => {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                            .count() as u32;
+                        card.definition.cost.cmc() <= n
+                    }
                     // Unresolved X-relative filter (no X in scope here).
                     R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
@@ -1369,6 +1412,14 @@ impl GameState {
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            R::ManaValueAtMostYourCount(inner) => {
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .count() as u32;
+                card.definition.cost.cmc() <= n
+            }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
             R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,

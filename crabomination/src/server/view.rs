@@ -422,7 +422,7 @@ fn project_player(
         hand: player
             .hand
             .iter()
-            .map(|c| project_hand_card(c, player_seat, viewer_seat))
+            .map(|c| project_hand_card(c, state, player_seat, viewer_seat))
             .collect(),
         lands_played_this_turn: player.lands_played_this_turn,
         first_spell_tax_charges: player.first_spell_tax_charges,
@@ -458,15 +458,24 @@ fn project_player(
     }
 }
 
-fn project_hand_card(card: &CardInstance, owner_seat: usize, viewer_seat: usize) -> HandCardView {
+fn project_hand_card(
+    card: &CardInstance,
+    state: &crate::game::GameState,
+    owner_seat: usize,
+    viewer_seat: usize,
+) -> HandCardView {
     if owner_seat == viewer_seat {
-        HandCardView::Known(known_card(card))
+        HandCardView::Known(known_card_in(card, Some(state)))
     } else {
         HandCardView::Hidden { id: card.id }
     }
 }
 
 fn known_card(card: &CardInstance) -> KnownCard {
+    known_card_in(card, None)
+}
+
+fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) -> KnownCard {
     let cycling_cost = card.definition.keywords.iter().find_map(|kw| {
         if let crate::card::Keyword::Cycling(c) = kw {
             Some(c.clone())
@@ -477,14 +486,20 @@ fn known_card(card: &CardInstance) -> KnownCard {
     let cycling_life = card.definition.keywords.iter().find_map(|kw| {
         if let crate::card::Keyword::CyclingLife(n) = kw { Some(*n) } else { None }
     });
-    let landcycling_cost = card.definition.keywords.iter().find_map(|kw| {
-        // Typecycling rides the same client affordance (CR 702.29e).
-        match kw {
-            crate::card::Keyword::Landcycling(c, _) => Some(c.clone()),
-            crate::card::Keyword::Typecycling(spec) => Some(spec.0.clone()),
-            _ => None,
-        }
-    });
+    let landcycling_cost = card
+        .definition
+        .keywords
+        .iter()
+        .find_map(|kw| {
+            // Typecycling rides the same client affordance (CR 702.29e).
+            match kw {
+                crate::card::Keyword::Landcycling(c, _) => Some(c.clone()),
+                crate::card::Keyword::Typecycling(spec) => Some(spec.0.clone()),
+                _ => None,
+            }
+        })
+        // Battlefield-granted typecycling (Homing Sliver's slivercycling).
+        .or_else(|| state.and_then(|st| st.granted_typecycling_for(card)).map(|(c, _)| c));
     let (modal_descriptions, modal_needs_target) =
         if let crate::effect::Effect::ChooseMode(modes) = &card.definition.effect {
             let descs = modes.iter().map(|m| m.effect_short_text()).collect();
@@ -511,6 +526,21 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .as_ref()
             .map(|a| format_mana_cost_for_label(&a.mana_cost))
             .unwrap_or_default(),
+        alt_cost_available: card.definition.alternative_cost.as_ref().is_none_or(|a| {
+            // Condition-gated alt costs (Prowl, Archive Trap) and
+            // not-your-turn pitches grey out when unavailable; without a
+            // GameState handle (command-zone views) report available.
+            let Some(st) = state else { return true };
+            let cond_ok = a.condition.as_ref().is_none_or(|c| {
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    crate::card::CardId(0),
+                    card.owner,
+                    None,
+                );
+                st.evaluate_predicate(c, &ctx)
+            });
+            cond_ok && !(a.not_your_turn_only && st.active_player_idx == card.owner)
+        }),
         back_face_name: card
             .definition
             .back_face
@@ -540,6 +570,23 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .iter()
             .map(|(n, _)| *n)
             .max(),
+        split_right_cost_label: card
+            .definition
+            .split
+            .as_ref()
+            .map(|sp| format_mana_cost_for_label(&sp.right.cost))
+            .unwrap_or_default(),
+        split_right_needs_target: card
+            .definition
+            .split
+            .as_ref()
+            .is_some_and(|sp| sp.right.effect.requires_target()),
+        split_fusable: card.definition.split.as_ref().is_some_and(|sp| sp.fuse),
+        split_fused_needs_target: card.definition.split.as_ref().is_some_and(|sp| {
+            sp.fuse
+                && (card.definition.effect.requires_target()
+                    || sp.right.effect.requires_target())
+        }),
     }
 }
 
@@ -2569,6 +2616,27 @@ mod tests {
         assert!(k2.has_alternative_cost);
         assert!(!k2.alt_cost_needs_pitch, "Surge needs no pitch");
         assert_eq!(k2.alt_cost_label, "{1}{R}", "surge cost label rendered");
+    }
+
+    #[test]
+    fn alt_cost_availability_tracks_the_condition_gate() {
+        // Prowl is unavailable before tribal combat damage, available after.
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::latchkey_faerie());
+        let hand_view = |g: &crate::game::GameState| {
+            let v = project(g, 0);
+            match v.players[0].hand.iter().find(|h| matches!(h,
+                crate::net::HandCardView::Known(k) if k.id == id)).unwrap()
+            {
+                crate::net::HandCardView::Known(k) => k.clone(),
+                _ => unreachable!(),
+            }
+        };
+        let k = hand_view(&g);
+        assert!(k.has_alternative_cost && !k.alt_cost_available, "prowl gated off");
+        g.players[0].prowl_types_this_turn.push(crate::card::CreatureType::Rogue);
+        let k = hand_view(&g);
+        assert!(k.alt_cost_available, "prowl available after a Rogue connected");
     }
 
     #[test]

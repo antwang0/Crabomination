@@ -31,7 +31,7 @@ and the rules-coverage audit in `TODO.md`.
   Monstrosity/Devour/Amass); cast-mode + alt-cost (Kicker/Casualty/Connive/
   Offspring/Plot/Saddle/Blitz/Spectacle/Escalate/Buyback/Bestow/Foretell/
   Suspend/Flashback/Madness/Escape/Adventure/Cascade/Storm/Convoke/Delve);
-  plus Phasing-adjacent Fading/Vanishing, Cumulative Upkeep, Echo, Dredge,
+  Absorb; plus Phasing-adjacent Fading/Vanishing, Cumulative Upkeep, Echo, Dredge,
   Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift, Unleash,
   Devoid (CDA colorless), Ingest.
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
@@ -204,16 +204,18 @@ not how Magic works" moments.
   affect targeting (fixes Lightning Greaves' granted Shroud). Remaining:
   broader "you may play" permissions and devotion-gated *non-type* states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
-- ⏳ **Regeneration shields & "the next time" prevention** as proper shields
-  rather than instantaneous.
+- ✅ **Regeneration shields & "the next time" prevention** as proper shields
+  (`regeneration_shields`, `prevention_shields`).
 - ⏳ **Damage marking vs. wither/-1/-1**, lethal/indestructible interplay
   audited against CR 120 / 704.
 - ⏳ **Loyalty fidelity:** activate at sorcery speed once/turn (have), but
   also loyalty-set effects, "can be activated any time" riders, proliferate
   on loyalty, attacking planeswalkers redirect rules.
-- ⏳ **State-based action coverage audit:** legend rule for planeswalkers
-  (post-2017 unified rule), world rule, +1/-1 counter annihilation,
-  saga-chapter sacrifice, attached-Aura falls off, token ceases to exist.
+- 🟡 **State-based action coverage audit:** +1/-1 counter annihilation ✅
+  (CR 122.3), counter caps ✅ (CR 122.4), legend rule ✅, saga-chapter
+  sacrifice ✅, world rule ✅ (CR 704.5k — timestamp-keyed, ties bin all;
+  Concordant Crossroads / Nether Void). Remaining: attached-Aura orphan
+  corners.
 
 ## Tier 3 — Object model & zones
 
@@ -442,7 +444,7 @@ feature; sweep card-batch by card-batch.
   + `resolving_lki_source`); Goldvein Hydra, Cacophony Scamp, Heartfire Hero.
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
-  per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,
+  per extra mode; Collective Brutality's discard-a-card), ✅ Splice (CR 702.47 — `Keyword::Splice(cost, quality)` + `GameAction::CastSpellSpliced`: pay splice costs additionally, spliced rules text resolves after the main effect, card stays in hand; Glacial Ray, Kodama's Might onto Arcane spells),
   ✅ Replicate (CR 702.107 — `Keyword::Replicate(cost)` +
   `GameAction::CastSpellReplicate { times }`: pay the replicate cost any number
   of times, copy the spell that many times via `copy_stack_spell`; Pyromatics,
@@ -621,8 +623,9 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    `FastForward::manual_priority`; while on, `auto_advance_p0` never passes
    for the player (explicit End Turn / Next Turn / click-to-advance still
    override). Shift-hold-after-your-spell remains ⏳.
-7. ⏳ **Stack visualization** with response affordances and "respond / let
-   resolve" per item.
+7. ✅ **Stack visualization** — the stack panel renders as a visual zone
+   (see main's stack-panel work); per-item "respond / let resolve"
+   affordances remain ⏳.
 8. ✅ **Phase bar / step indicator** — the left-edge phase chart shows every
    step with the current one highlighted, carries clickable stop markers
    (see #2), and right-click arms click-to-advance ("pass until this
@@ -641,11 +644,15 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    ✅ `ChooseAmount` (sacrifice-any-number / pay-life), ✅ creature-type
    choices incl. the Crippling Fear sweep (+ engine-ranked `suggestions`
    on the wire; this also fixes the `ChooseCreatureType` client softlock —
-   the engine suspended but no modal existed). Remaining ⏳:
-   `CommanderRedirect` and `ChooseLegendToKeep` (raised inside damage
-   application / SBA processing, outside the effect-resolution suspend
-   machinery), and modal triggers with *targeting* modes (target slots are
-   assigned at push time, so those still pick synchronously).
+   the engine suspended but no modal existed), ✅ **seat-routed yes/no
+   asks** (`ask_seat_bool` + the replayable answer log — rhystic taxes,
+   Tribute, Browbeat/Tempting Offer, Clash bottoming, MayPay all prompt
+   the right `wants_ui` seat). Remaining ⏳: `CommanderRedirect` and
+   `ChooseLegendToKeep` (raised inside damage application / SBA
+   processing, outside the effect-resolution suspend machinery), modal
+   triggers with *targeting* modes (target slots are assigned at push
+   time, so those still pick synchronously), and non-Bool opponent-owned
+   picks (searches, Fateseal).
 
 ## Tier 8 — UI / UX quality-of-life
 
@@ -689,10 +696,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   per-target hint layers (`legal_target_filter` exists to build on).
 - ⏳ **Animations & SFX** polish; **board-state pings / alerts**
   (low life, triggers waiting, your turn).
-- ⏳ **Settings menu** (graphics quality exists; add audio, gameplay,
-  accessibility tabs).
-- ⏳ **Battlefield organization** (auto-tuck lands, group tokens, stack
-  identical permanents).
+- ✅ **Settings menu** — main-menu Settings panel (window mode, resolution,
+  quality, gameplay; persisted). Audio/accessibility tabs ⏳.
+- ✅ **Battlefield organization** — identical tokens cascade into piles
+  with ×N badges.
 
 ## Tier 9 — Multiplayer & social
 
@@ -719,8 +726,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 - 🟡 **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
   The per-action rope ships server-side (`CRAB_ACTION_TIMEOUT_SECS` →
   `run_match_inner`'s `action_timeout`; on expiry the actor auto-answers
-  the pending decision via AutoDecider or passes priority, with a notice
-  to the seat). Remaining: per-game chess clock, client-side rope UI.
+  the pending decision via AutoDecider or passes priority). The seat now
+  sees it: `ServerMsg::Rope` on arming + a client countdown banner at
+  ≤15s and a "server acted for you" notice. Remaining: per-game chess
+  clock.
 - ⏳ **Friends / invites / ratings / leaderboards** (server-side).
 - ⏳ **Free-for-all politics** UI (deals, voting, monarch/initiative
   passing) for 3+ player tables.
@@ -728,8 +737,12 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 ## Tier 10 — Formats & match structure
 
 - ⏳ **Best-of-3 + sideboarding** flow (core competitive structure).
-- ⏳ **Deck legality validation** per format (banlist, size, singleton,
-  color identity for Commander).
+- 🟡 **Deck legality validation** per format — size / copy caps / singleton
+  / Commander color identity ✅ (`format::validate_deck`,
+  `validate_commander_deck`), ban + Vintage-restricted lists ✅
+  (`Format::banned_cards` / `restricted_cards`, enforced in
+  `validate_deck`; wired into the menu deck import + server config).
+  Remaining: per-set legality pools (Standard rotation), Pauper rarity.
 - ⏳ **More 60-card formats:** Modern, Pioneer, Legacy, Vintage, Pauper
   (mostly banlist/pool config on top of existing rules).
 - ⏳ **Limited match rules** (40-card, basic-land access).

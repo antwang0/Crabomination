@@ -27,6 +27,17 @@ pub struct StaticAbility {
 /// A continuous effect produced by a static ability. Subsumes the old
 /// `StaticAbilityTemplate` enum; maps 1-to-1 to one or more
 /// `layers::Modification`s.
+/// What a triggered mana ability adds (CR 605.1b — `ExtraManaOnLandTap`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExtraManaKind {
+    /// One mana of a type the land just produced (Mana Flare).
+    Mirror,
+    /// A fixed color (Wild Growth's {G}).
+    Fixed(crate::mana::Color),
+    /// The source's ETB-chosen color (Utopia Sprawl).
+    ChosenColor,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
@@ -87,8 +98,34 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
     },
+    /// "All [filter] have 'This gets +P/+T as long as [condition]'" — the
+    /// conditional self-pump granted to a class of permanents (Sedge
+    /// Sliver). Unlike `PumpTeamIf`, the condition is evaluated per affected
+    /// permanent with *that permanent's controller* as "you", so each
+    /// player's Slivers check their own board.
+    GrantPumpSelfIf {
+        filter: SelectionRequirement,
+        condition: Predicate,
+        power: i32,
+        toughness: i32,
+        #[serde(default)]
+        keywords: Vec<Keyword>,
+    },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// "All [filter] have protection from the chosen color" — the color is
+    /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
+    /// until the choice is made.
+    GrantProtectionFromChosenColor { applies_to: Selector },
+    /// "Each [creature_type] creature gets +P/+T for each *other*
+    /// [creature_type] on the battlefield" (Sliver Legion). State-aware:
+    /// gathered with the live battlefield count, one effect per matching
+    /// permanent.
+    PumpPTPerOtherOfType {
+        creature_type: crate::card::CreatureType,
+        power: i32,
+        toughness: i32,
+    },
     /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
     /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
     /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.
@@ -389,6 +426,10 @@ pub enum StaticEffect {
     /// enter the battlefield, and players can't cast spells from graveyards
     /// or libraries.
     GraveyardLibraryLockdown,
+    /// Kunoros, Hound of Athreos: the graveyard-only sibling — creature
+    /// cards in graveyards can't enter the battlefield and players can't
+    /// cast spells from graveyards (library plays unaffected).
+    GraveyardLockdown,
     /// Soulless Jailer: permanent cards in graveyards can't enter the
     /// battlefield, and players can't cast noncreature spells from
     /// graveyards or exile.
@@ -501,6 +542,10 @@ pub enum StaticEffect {
     /// both ETB-counter sites (`stack.rs` spell-resolve and `movement.rs`
     /// move-to-battlefield) via `chosen_type_etb_counter_specs`.
     ChosenTypeEntersWithCounter { kind: CounterType },
+    /// "Each other [creature_type] creature you control enters with an
+    /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
+    /// `ChosenTypeEntersWithCounter`; Changeling entrants count.
+    TypeEntersWithCounter { creature_type: crate::card::CreatureType, kind: CounterType },
     /// Strict Proctor — "If a permanent entering the battlefield causes
     /// a triggered ability of a permanent to trigger, that ability's
     /// controller sacrifices the permanent unless they pay {amount}."
@@ -570,6 +615,26 @@ pub enum StaticEffect {
     GrantActivatedAbility {
         applies_to: Selector,
         ability: ActivatedAbility,
+    },
+    /// CR 605.1b — triggered mana ability: "Whenever [a matching land] is
+    /// tapped for mana, its controller adds [extra]." Doesn't use the stack;
+    /// resolved immediately at the mana-ability fast path. `enchanted_only`
+    /// restricts to the land this source enchants (Wild Growth);
+    /// `filter` matches the tapped land (Vernal Bloom's Forests).
+    ExtraManaOnLandTap {
+        #[serde(default)]
+        enchanted_only: bool,
+        filter: SelectionRequirement,
+        extra: ExtraManaKind,
+    },
+    /// "Each [filter] card in each player's hand has typecycling [cost]"
+    /// (Homing Sliver's slivercycling grant). Consulted by `landcycle_card`
+    /// and the hand-affordance view for cards whose printed keywords lack
+    /// cycling; `search` is the fetch filter (CR 702.29e).
+    GrantTypecyclingToHandCards {
+        filter: SelectionRequirement,
+        cost: crate::mana::ManaCost,
+        search: SelectionRequirement,
     },
     /// "All [filter] permanents have '[triggered ability]'" (CR 613 layer 6
     /// grant — Kataki, War's Wage's "All artifacts have 'At the beginning of
@@ -665,8 +730,17 @@ pub enum StaticEffect {
     /// much of that mana instead." Mana Reflection. Each instance the
     /// controller of the resolving mana ability has on the battlefield
     /// doubles the produced pip count (2 instances → 4×, …). Read by
-    /// `mana_production_doublers_for` just before a mana ability resolves.
+    /// `mana_production_multiplier_for` just before a mana ability resolves.
     ManaProductionDoubled,
+    /// CR 614.5 — "If you tap a permanent for mana, it produces three times
+    /// as much of that mana instead." Nyxbloom Ancient. Composes with
+    /// `ManaProductionDoubled` multiplicatively (2 + 3 → 6×).
+    ManaProductionTripled,
+    /// "If damage would be dealt to this permanent while it has a [kind]
+    /// counter on it, prevent that damage and remove that many [kind]
+    /// counters from it." Polukranos, Unchained. Consulted at both damage
+    /// funnels for the source permanent itself.
+    PreventDamageByRemovingCounters { kind: crate::card::CounterType },
     /// Cursed Totem / Damping Matrix — "Activated abilities of creatures
     /// can't be activated unless they're mana abilities." Global lock
     /// checked in `activate_ability` (sibling of

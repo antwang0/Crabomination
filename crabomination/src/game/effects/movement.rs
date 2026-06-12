@@ -62,6 +62,59 @@ impl GameState {
             }
             return 0;
         }
+        // CR 702.64 — Absorb N on the damaged creature prevents N of this
+        // event's damage per instance (each instance applies separately).
+        let mut amount = amount;
+        if let EntityRef::Permanent(cid) = ent {
+            let absorbed: u32 = self
+                .computed_permanent(cid)
+                .map(|cp| {
+                    cp.keywords
+                        .iter()
+                        .filter_map(|k| match k {
+                            crate::card::Keyword::Absorb(n) => Some(*n),
+                            _ => None,
+                        })
+                        .sum()
+                })
+                .unwrap_or(0);
+            let soaked = absorbed.min(amount);
+            if soaked > 0 {
+                events.push(GameEvent::DamagePrevented {
+                    amount: soaked,
+                    to_player: None,
+                    to_card: Some(cid),
+                });
+                amount -= soaked;
+                if amount == 0 {
+                    return 0;
+                }
+            }
+        }
+        // "If damage would be dealt to this while it has a [kind] counter,
+        // prevent that damage and remove that many counters" (Polukranos,
+        // Unchained). Prevents the whole event; removes min(amount, counters).
+        if let EntityRef::Permanent(cid) = ent
+            && amount > 0
+            && let Some(kind) = self.battlefield_find(cid).and_then(|c| {
+                c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::PreventDamageByRemovingCounters { kind } => {
+                        (c.counter_count(kind) > 0).then_some(kind)
+                    }
+                    _ => None,
+                })
+            })
+        {
+            events.push(GameEvent::DamagePrevented {
+                amount,
+                to_player: None,
+                to_card: Some(cid),
+            });
+            if let Some(c) = self.battlefield_find_mut(cid) {
+                c.remove_counters(kind, amount);
+            }
+            return 0;
+        }
         if self.prevention_shields.is_empty() {
             return amount;
         }
@@ -117,8 +170,10 @@ impl GameState {
             events.push(GameEvent::DamagePrevented { amount: prevented, to_player, to_card });
         }
         if life_gain > 0 && let Some(p) = to_player {
-            self.adjust_life(p, life_gain as i32);
-            events.push(GameEvent::LifeGained { player: p, amount: life_gain });
+            let applied = self.adjust_life_applied(p, life_gain as i32);
+            if applied > 0 {
+                events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+            }
         }
         remaining
     }
@@ -335,8 +390,10 @@ impl GameState {
         // Scrollwielder), that controller gains life equal to the damage dealt.
         // (Combat damage handles its own lifelink in `combat.rs`.)
         if let Some(seat) = self.noncombat_lifelink_seat(source) {
-            self.adjust_life(seat, amount as i32);
-            events.push(GameEvent::LifeGained { player: seat, amount });
+            let applied = self.adjust_life_applied(seat, amount as i32);
+            if applied > 0 {
+                events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
+            }
         }
     }
 
@@ -562,6 +619,9 @@ impl GameState {
             ZoneDest::Graveyard => crate::card::Zone::Graveyard,
             ZoneDest::Exile => crate::card::Zone::Exile,
         };
+        // CR 702.47e — a spell loses its splice changes once it leaves the
+        // stack for any reason.
+        card.spliced_effects.clear();
         // CR 712.16/712.17 — a melded permanent leaving the battlefield
         // leaves as its two component cards; the melded shell ceases to
         // exist.
@@ -804,6 +864,19 @@ impl GameState {
     /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
     pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         self.return_linked_exiles(id, events);
+        // Source-bound control steals end with their source (Sower of
+        // Temptation — CR 800.4 hands the permanent back).
+        let mut kept = Vec::new();
+        for tc in std::mem::take(&mut self.temporary_control) {
+            if tc.source == Some(id) {
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card) {
+                    c.controller = tc.original_controller;
+                }
+            } else {
+                kept.push(tc);
+            }
+        }
+        self.temporary_control = kept;
         // CR 400.7 — the card is a new object in its next zone: effects
         // that granted abilities to the permanent don't follow it.
         if let Some(c) = self.find_card_anywhere_mut(id) {

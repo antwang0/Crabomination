@@ -222,6 +222,17 @@ pub enum AffectedPermanents {
         source_controller: usize,
         requirement: Box<SelectionRequirement>,
     },
+    /// Like `CardMatch`, but additionally gated on the affected permanent's
+    /// *computed* power (CR 613.8 — a layer-6 keyword grant doesn't feed back
+    /// into layer 7, so the dependency is acyclic). Evaluated in a second
+    /// per-card pass once the gate-free power is known. Powers Temur
+    /// Ascendancy's "creatures you control with power 4 or greater have
+    /// haste".
+    CardMatchPowerGated {
+        source_controller: usize,
+        requirement: Box<SelectionRequirement>,
+        power_at_least: i32,
+    },
 }
 
 // ── Computed permanent ────────────────────────────────────────────────────────
@@ -281,6 +292,25 @@ pub fn apply_layers_one(
 fn compute_permanent(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
+) -> ComputedPermanent {
+    // Power-gated effects (CR 613.8) need the card's gate-free power first:
+    // pass 1 excludes them, pass 2 re-runs the full walk with each gate
+    // resolved against that power. Keyword grants don't feed back into
+    // layer 7, so the result is a fixpoint after one re-run.
+    let has_gated = effects
+        .iter()
+        .any(|e| matches!(e.affected, AffectedPermanents::CardMatchPowerGated { .. }));
+    if !has_gated {
+        return compute_permanent_pass(card, effects, None);
+    }
+    let pass1 = compute_permanent_pass(card, effects, None);
+    compute_permanent_pass(card, effects, Some(pass1.power))
+}
+
+fn compute_permanent_pass(
+    card: &crate::card::CardInstance,
+    effects: &[ContinuousEffect],
+    gate_power: Option<i32>,
 ) -> ComputedPermanent {
     // Start from the base card definition.
     let mut controller = card.controller;
@@ -361,7 +391,7 @@ fn compute_permanent(
     // Sort effects by layer, then sublayer, then timestamp.
     let mut sorted: Vec<&ContinuousEffect> = effects
         .iter()
-        .filter(|e| affects(e, card))
+        .filter(|e| affects(e, card, gate_power))
         .chain(eot_grants.iter())
         .collect();
     sorted.sort_by(|a, b| {
@@ -484,19 +514,39 @@ fn colors_from_card(card: &crate::card::CardInstance) -> Vec<Color> {
     card.definition.printed_colors()
 }
 
-/// Returns true if `effect` affects `card`.
-fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool {
-    affected_includes(&effect.affected, effect.source, card)
+/// Returns true if `effect` affects `card`. `gate_power` is the card's
+/// gate-free computed power for `CardMatchPowerGated` effects; `None` (pass 1)
+/// excludes them.
+fn affects(
+    effect: &ContinuousEffect,
+    card: &crate::card::CardInstance,
+    gate_power: Option<i32>,
+) -> bool {
+    affected_includes_gated(&effect.affected, effect.source, card, gate_power)
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
 /// describing effect's `source` permanent. Split out of [`affects`] so the
 /// enters-tapped ETB replacement (CR 614.13) can reuse the same selector
 /// matching without constructing a throwaway `ContinuousEffect`.
+/// Power-gated matches resolve against the card's printed power + counters
+/// (callers with a computed view use [`affected_includes_gated`]).
 pub(crate) fn affected_includes(
     affected: &AffectedPermanents,
     source: CardId,
     card: &crate::card::CardInstance,
+) -> bool {
+    let printed_power = card.definition.base_power()
+        + card.counter_count(CounterType::PlusOnePlusOne) as i32
+        - card.counter_count(CounterType::MinusOneMinusOne) as i32;
+    affected_includes_gated(affected, source, card, Some(printed_power))
+}
+
+fn affected_includes_gated(
+    affected: &AffectedPermanents,
+    source: CardId,
+    card: &crate::card::CardInstance,
+    gate_power: Option<i32>,
 ) -> bool {
     match affected {
         AffectedPermanents::Source => source == card.id,
@@ -554,6 +604,16 @@ pub(crate) fn affected_includes(
             // CR "other ... you control": `OtherThanSource` is matched here
             // (where the source id is known) rather than in the source-blind
             // `requirement_matches_card`, which treats it as always-true.
+            if requirement_mentions_other_than_source(requirement) && source == card.id {
+                return false;
+            }
+            requirement_matches_card(requirement, card, *source_controller)
+        }
+        AffectedPermanents::CardMatchPowerGated { source_controller, requirement, power_at_least } => {
+            let Some(power) = gate_power else { return false };
+            if power < *power_at_least {
+                return false;
+            }
             if requirement_mentions_other_than_source(requirement) && source == card.id {
                 return false;
             }

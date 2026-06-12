@@ -1935,8 +1935,7 @@ pub fn afterlife(n: i32) -> TriggeredAbility {
             },
             activated_abilities: vec![],
             triggered_abilities: vec![],
-            static_abilities: vec![],
-            equipped_bonus: None,
+            ..Default::default()
         },
     })
 }
@@ -2231,8 +2230,7 @@ pub fn fabricate(n: i32) -> TriggeredAbility {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     etb(Effect::ChooseMode(vec![
         Effect::AddCounter {
@@ -2814,6 +2812,22 @@ pub fn transmute(cost: crate::mana::ManaCost, mv: u32) -> ActivatedAbility {
             filter: SelectionRequirement::ManaValueExactly(mv),
             to: ZoneDest::Hand(PlayerRef::You),
         },
+        ..Default::default()
+    }
+}
+
+/// Prowl (CR 702.76): "You may cast this for [cost] if you dealt combat
+/// damage to a player this turn with a creature of any of `types`."
+/// `marks_kicked` stamps the cast so "if its prowl cost was paid" riders
+/// gate on `Predicate::SpellWasKicked`.
+pub fn prowl(
+    cost: crate::mana::ManaCost,
+    types: Vec<crate::card::CreatureType>,
+) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost: cost,
+        condition: Some(Predicate::ProwlTypeDealtCombatDamage { types }),
+        marks_kicked: true,
         ..Default::default()
     }
 }

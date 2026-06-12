@@ -69,6 +69,9 @@ mod tests_ogw;
 #[cfg(test)]
 #[path = "../tests/cr_rules.rs"]
 mod tests_cr_rules;
+#[cfg(test)]
+#[path = "../tests/thb.rs"]
+mod tests_thb;
 pub mod types;
 
 #[cfg(test)]
@@ -566,6 +569,13 @@ pub struct GameState {
     /// top of the cast. Never snapshots.
     #[serde(skip, default)]
     pub(crate) pending_cast_spend_float: Option<bool>,
+    /// Transient: the library card a `wants_ui` cycler picked for a
+    /// landcycling / typecycling fetch (CR 702.29e). Set by the
+    /// `ActionSearchPick` resume just before it replays the Landcycle
+    /// action; consumed by `landcycle_card` in lieu of the first-match
+    /// auto-pick. Inner `None` = fail to find. Never snapshots.
+    #[serde(skip, default)]
+    pub(crate) pending_landcycle_pick: Option<Option<crate::card::CardId>>,
     /// Transient: the permanent a `wants_ui` activator picked to satisfy an
     /// activated ability's "Sacrifice another …" cost (`sac_other_filter`).
     /// Set by `submit_decision`'s `ActivateAbilityChoice` resume just before it
@@ -614,6 +624,16 @@ pub struct GameState {
     /// `submit_decision` call, so it never crosses a serialization boundary.
     #[serde(skip, default)]
     pub(crate) stashed_resolution_answer: Option<DecisionAnswer>,
+    /// Replay log for multi-question resolution effects (Clash,
+    /// `PlayersMayAccept`, `TemptingOffer`, `UnlessPlayerPays`, `MayPay`):
+    /// each suspend re-queues the *originating effect*, whose re-run replays
+    /// the logged answers in ask order (via a local cursor) before reaching
+    /// the next unanswered question. `apply_pending_effect_answer` appends
+    /// the validated answer; the effect clears the log on every completing
+    /// path (`ask_bool_logged` / `clear_answer_log`). Serialized so a
+    /// snapshot taken between two questions of the same effect round-trips.
+    #[serde(default)]
+    pub(crate) resolution_answer_log: Vec<DecisionAnswer>,
     /// Life-payment events (Phyrexian pips, "pay N life" costs) queued by
     /// `pay_receipt_life` mid-cast and drained into the action's event batch
     /// at the end of `perform_action`, so paid life fires life-loss triggers
@@ -631,12 +651,13 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
-    /// CR 701.10f — transient mana-production doubler count for the mana
-    /// ability currently resolving (Mana Reflection). Set before a tapped-
-    /// for-mana ability resolves and reset to 0 after; the `AddMana` resolver
-    /// multiplies each pip count by `2^doublers`. 0 = no doubling (1×).
+    /// CR 701.10f / 614.5 — transient mana-production multiplier for the
+    /// mana ability currently resolving (Mana Reflection ×2, Nyxbloom
+    /// Ancient ×3, composed). Set before a tapped-for-mana ability resolves
+    /// and reset to 1 after; the `AddMana` resolver scales each pip count
+    /// by it. 0 (serde default) reads as 1×.
     #[serde(default)]
-    pub(crate) mana_production_doublers: u8,
+    pub(crate) mana_production_multiplier: u32,
     /// Identity of the spell currently resolving — (card id, caster, printed
     /// colors). Stamped around `resolve_effect` in spell resolution so
     /// source-aware damage replacements (Torbran) can read the controller and
@@ -689,6 +710,11 @@ pub struct GameState {
     /// (covers further searches until end of turn). Cleared at cleanup.
     #[serde(default)]
     pub(crate) search_tax_paid_this_turn: Vec<usize>,
+    /// "Spells your opponents cast cost {N} more until your next turn"
+    /// (Elspeth Conquers Death II). Each entry taxes matching spells cast by
+    /// opponents of `controller`; cleared at `controller`'s untap.
+    #[serde(default)]
+    pub(crate) turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
     /// CR 615.7 — sources whose damage is prevented entirely this turn
     /// (Burrenton Forge-Tender's chosen source). Cleared at cleanup.
     #[serde(default)]
@@ -885,6 +911,21 @@ pub(crate) struct TempControl {
     pub(crate) card: CardId,
     pub(crate) original_controller: usize,
     pub(crate) duration: crate::effect::Duration,
+    /// "For as long as [source] remains on the battlefield" steals (Sower of
+    /// Temptation): control reverts when this permanent leaves, via
+    /// `on_left_battlefield`. `duration` is `Permanent` so turn sweeps skip it.
+    #[serde(default)]
+    pub(crate) source: Option<CardId>,
+}
+
+/// A turn-scoped spell tax — see `GameState.turn_scoped_spell_taxes`.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct TurnScopedSpellTax {
+    /// The effect's controller: their opponents pay, and the tax clears at
+    /// their untap step.
+    pub(crate) controller: usize,
+    pub(crate) amount: u32,
+    pub(crate) filter: crate::card::SelectionRequirement,
 }
 
 /// A pending copy-reversion entry — see `GameState.temporary_copies`.
@@ -974,6 +1015,7 @@ impl Clone for GameState {
             pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
             pending_cast_discards: self.pending_cast_discards.clone(),
             pending_cast_spend_float: self.pending_cast_spend_float,
+            pending_landcycle_pick: self.pending_landcycle_pick,
             pending_ability_sac_other: self.pending_ability_sac_other,
             pending_ability_tap_other: self.pending_ability_tap_other,
             pending_ability_exile_other: self.pending_ability_exile_other.clone(),
@@ -981,9 +1023,10 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             stashed_resolution_answer: self.stashed_resolution_answer.clone(),
+            resolution_answer_log: self.resolution_answer_log.clone(),
             pending_cost_events: self.pending_cost_events.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
-            mana_production_doublers: self.mana_production_doublers,
+            mana_production_multiplier: self.mana_production_multiplier,
             resolving_source: self.resolving_source.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
@@ -993,6 +1036,7 @@ impl Clone for GameState {
             blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
+            turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
             prevention_shields: self.prevention_shields.clone(),
@@ -1099,6 +1143,7 @@ impl GameState {
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
             pending_cast_spend_float: None,
+            pending_landcycle_pick: None,
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
             pending_ability_exile_other: None,
@@ -1106,9 +1151,10 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             stashed_resolution_answer: None,
+            resolution_answer_log: Vec::new(),
             pending_cost_events: Vec::new(),
             prevent_combat_damage_this_turn: false,
-            mana_production_doublers: 0,
+            mana_production_multiplier: 1,
             resolving_source: None,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
@@ -1118,6 +1164,7 @@ impl GameState {
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
+            turn_scoped_spell_taxes: Vec::new(),
             damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
             prevention_shields: Vec::new(),
@@ -1840,13 +1887,26 @@ impl GameState {
             if src.controller != controller || src.id == entering {
                 continue;
             }
-            let Some(ct) = src.chosen_creature_type else { continue };
-            if !entering_types.contains(&ct) {
-                continue;
-            }
+            let changeling = ec
+                .definition
+                .keywords
+                .contains(&crate::card::Keyword::Changeling);
             for sa in &src.definition.static_abilities {
-                if let StaticEffect::ChosenTypeEntersWithCounter { kind } = &sa.effect {
-                    specs.push(*kind);
+                match &sa.effect {
+                    StaticEffect::ChosenTypeEntersWithCounter { kind } => {
+                        if src
+                            .chosen_creature_type
+                            .is_some_and(|ct| entering_types.contains(&ct) || changeling)
+                        {
+                            specs.push(*kind);
+                        }
+                    }
+                    StaticEffect::TypeEntersWithCounter { creature_type, kind } => {
+                        if entering_types.contains(creature_type) || changeling {
+                            specs.push(*kind);
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
@@ -2512,6 +2572,19 @@ impl GameState {
         })
     }
 
+    /// True while graveyards specifically are locked — Grafdigger's Cage or
+    /// the graveyard-only Kunoros lockdown.
+    pub(crate) fn graveyard_locked(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.graveyard_library_locked()
+            || self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::GraveyardLockdown))
+            })
+    }
+
     /// Soulless Jailer — true while any battlefield permanent locks
     /// graveyard entries and graveyard/exile noncreature casts.
     pub(crate) fn graveyard_exile_locked(&self) -> bool {
@@ -2534,8 +2607,8 @@ impl GameState {
     ) -> bool {
         use crate::card::Zone;
         (def.is_creature()
-            && matches!(zone, Zone::Graveyard | Zone::Library)
-            && self.graveyard_library_locked())
+            && (matches!(zone, Zone::Graveyard) && self.graveyard_locked()
+                || matches!(zone, Zone::Library) && self.graveyard_library_locked()))
             || (def.is_permanent()
                 && zone == Zone::Graveyard
                 && self.graveyard_exile_locked())
@@ -2626,7 +2699,8 @@ impl GameState {
         zone: crate::card::Zone,
     ) -> bool {
         use crate::card::Zone;
-        (matches!(zone, Zone::Graveyard | Zone::Library) && self.graveyard_library_locked())
+        (matches!(zone, Zone::Graveyard) && self.graveyard_locked())
+            || (matches!(zone, Zone::Library) && self.graveyard_library_locked())
             || (!def.is_creature()
                 && matches!(zone, Zone::Graveyard | Zone::Exile)
                 && self.graveyard_exile_locked())
@@ -2673,6 +2747,41 @@ impl GameState {
             self.players[ctrl].creatures_entered_this_turn.push(id);
         }
         self.battlefield.push(inst);
+        // CR 707.2 — a token minted from a clone-y definition (Vizier of
+        // Many Faces' embalm token) applies its `enters_as_copy` replacement
+        // as it enters, before ETB triggers fire off the copied identity.
+        // Mint-time type riders (embalm's "it's a Zombie in addition") are
+        // re-layered on the copy: the delta vs the printed card survives.
+        let minted_extra_types: Vec<crate::card::CreatureType> = {
+            let c = self.battlefield.iter().find(|c| c.id == id).unwrap();
+            if c.definition.enters_as_copy.is_some() {
+                let printed = crabomination_base::registry::resolve_card(c.definition.name);
+                c.definition
+                    .subtypes
+                    .creature_types
+                    .iter()
+                    .filter(|t| {
+                        printed
+                            .as_ref()
+                            .is_none_or(|p| !p.subtypes.creature_types.contains(t))
+                    })
+                    .copied()
+                    .collect()
+            } else {
+                vec![]
+            }
+        };
+        if self.apply_enters_as_copy(id, ctrl, events) && !minted_extra_types.is_empty()
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id)
+        {
+            let mut def = (*c.definition).clone();
+            for t in minted_extra_types {
+                if !def.subtypes.creature_types.contains(&t) {
+                    def.subtypes.creature_types.push(t);
+                }
+            }
+            c.definition = std::sync::Arc::new(def);
+        }
         events.push(crate::game::GameEvent::TokenCreated { card_id: id });
         events.push(crate::game::GameEvent::PermanentEntered { card_id: id });
         self.last_created_token = Some(id);
@@ -2702,9 +2811,11 @@ impl GameState {
     /// own graveyard-specific event (CardMilled, etc.).
     pub(crate) fn route_to_graveyard(
         &mut self,
-        card: crate::card::CardInstance,
+        mut card: crate::card::CardInstance,
         events: &mut Vec<crate::game::GameEvent>,
     ) -> bool {
+        // CR 702.47e — splice changes are lost when the spell leaves the stack.
+        card.spliced_effects.clear();
         // CR 712.16 — a melded shell dies as its two component cards.
         if !card.meld_parts.is_empty() {
             let mut card = card;
@@ -3370,6 +3481,46 @@ impl GameState {
                 }
             }
         }
+        // Sliver Legion — "each [type] gets +P/+T for each OTHER [type]".
+        // The bonus differs per affected permanent (it excludes itself), so
+        // this is gathered state-aware: one Specific effect per matching
+        // permanent, scaled by the live count minus one.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpPTPerOtherOfType {
+                    creature_type,
+                    power,
+                    toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let matching: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.subtypes.creature_types.contains(creature_type))
+                    .map(|c| c.id)
+                    .collect();
+                let others = matching.len().saturating_sub(1) as i32;
+                if others == 0 {
+                    continue;
+                }
+                for id in matching {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![id]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            others * power,
+                            others * toughness,
+                        ),
+                    });
+                }
+            }
+        }
         // CR 702.183 — Impending: a permanent with the Impending keyword isn't
         // a creature while it has a time counter. Emit a layer-4
         // RemoveCardType(Creature) self-effect while counters remain.
@@ -3511,6 +3662,63 @@ impl GameState {
                 }
             }
         }
+        // "All [filter] have 'This gets +P/+T as long as [condition]'"
+        // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
+        // evaluated per matching permanent with that permanent's controller
+        // as "you".
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::GrantPumpSelfIf {
+                    filter,
+                    condition,
+                    power,
+                    toughness,
+                    keywords,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                for subject in &self.battlefield {
+                    if !crate::game::layers::requirement_matches_card(
+                        filter,
+                        subject,
+                        card.controller,
+                    ) {
+                        continue;
+                    }
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        subject.id,
+                        subject.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    if *power != 0 || *toughness != 0 {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![subject.id]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(*power, *toughness),
+                        });
+                    }
+                    for kw in keywords {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![subject.id]),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
+            }
+        }
         // "As long as [condition], [creatures the selector picks] get +P/+T."
         // (`StaticEffect::PumpTeamIf`) — the conditional team anthem. Evaluate
         // the gate against the source; while it holds, emit a layer-7 pump for
@@ -3612,6 +3820,17 @@ impl GameState {
                         &ctx,
                     );
                     (n, base_t)
+                }
+                crate::card::DynamicPt::DevotionToToughness { color, base_p } => {
+                    let mut ctx = crate::game::effects::EffectContext::for_spell(
+                        card.controller, None, 0, 0,
+                    );
+                    ctx.source = Some(card.id);
+                    let n = self.evaluate_value(
+                        &crate::effect::Value::DevotionTo(vec![color]),
+                        &ctx,
+                    );
+                    (base_p, n)
                 }
                 crate::card::DynamicPt::ControllerGraveyardSize => {
                     let n = self.players[card.controller].graveyard.len() as i32;
@@ -4635,6 +4854,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_plotted(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSpellSpliced {
+                card_id,
+                splice_cards,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_spliced(card_id, &splice_cards, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
@@ -4736,7 +4963,7 @@ impl GameState {
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),
-            GameAction::Cycle { card_id } => self.cycle_card(card_id),
+            GameAction::Cycle { card_id, x_value } => self.cycle_card(card_id, x_value),
             GameAction::Reinforce { card_id, target } => self.reinforce_card(card_id, target),
             GameAction::Landcycle { card_id } => self.landcycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
@@ -4920,7 +5147,11 @@ impl GameState {
     /// from the discarded zone (graveyard); the engine emits
     /// `GameEvent::CardDiscarded` from `discard_card_from_hand` so
     /// discard-matters triggers see the cycle.
-    fn cycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
+    fn cycle_card(
+        &mut self,
+        card_id: crate::card::CardId,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
         let seat = self.player_with_priority();
         // Locate the card in `seat`'s hand and clone the cycling cost —
@@ -4940,9 +5171,12 @@ impl GameState {
         if life_cost > 0 && self.players[seat].life < life_cost as i32 {
             return Err(GameError::InsufficientLife);
         }
-        // Pay the cycling cost from the floated mana pool.
+        // Pay the cycling cost from the floated mana pool; an {X} in the
+        // cost (Shark Typhoon's {X}{1}{U}) is paid as `x_value` generic.
+        let x = x_value.unwrap_or(0);
         if let Some(mc) = &cycling_cost {
-            self.players[seat].mana_pool.pay(mc).map_err(GameError::Mana)?;
+            let mc = if mc.has_x() { mc.with_x_value(x) } else { mc.clone() };
+            self.players[seat].mana_pool.pay(&mc).map_err(GameError::Mana)?;
         }
         if life_cost > 0 {
             self.adjust_life(seat, -(life_cost as i32));
@@ -4958,6 +5192,7 @@ impl GameState {
             events.push(GameEvent::CardCycled {
                 player: seat,
                 card_id,
+                x,
             });
         }
         // Draw a card (Dredge can replace this draw, CR 702.52).
@@ -5012,6 +5247,31 @@ impl GameState {
     /// type and puts it into hand (shuffling after). The fetched land is the
     /// first matching card (a minor approximation for the rare multi-match
     /// case — usually a basic land).
+    /// Typecycling granted to a hand card by a battlefield static
+    /// (`GrantTypecyclingToHandCards` — Homing Sliver's slivercycling).
+    /// Returns the cheapest matching grant's `(cost, search filter)`.
+    pub fn granted_typecycling_for(
+        &self,
+        card: &crate::card::CardInstance,
+    ) -> Option<(crate::mana::ManaCost, SelectionRequirement)> {
+        self.battlefield
+            .iter()
+            .flat_map(|src| src.definition.static_abilities.iter().map(move |sa| (src, sa)))
+            .filter_map(|(src, sa)| {
+                let crate::effect::StaticEffect::GrantTypecyclingToHandCards {
+                    filter,
+                    cost,
+                    search,
+                } = &sa.effect
+                else {
+                    return None;
+                };
+                crate::game::layers::requirement_matches_card(filter, card, src.controller)
+                    .then(|| (cost.clone(), search.clone()))
+            })
+            .min_by_key(|(c, _)| c.cmc())
+    }
+
     fn landcycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
         use rand::seq::SliceRandom;
@@ -5021,35 +5281,74 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| {
-                c.definition.keywords.iter().find_map(|kw| match kw {
-                    Keyword::Landcycling(mc, lt) => Some((
-                        mc.clone(),
-                        crate::card::SelectionRequirement::Land
-                            .and(crate::card::SelectionRequirement::HasLandType(*lt)),
-                    )),
-                    Keyword::Typecycling(spec) => Some(((**spec).0.clone(), (**spec).1.clone())),
-                    _ => None,
-                })
+                c.definition
+                    .keywords
+                    .iter()
+                    .find_map(|kw| match kw {
+                        Keyword::Landcycling(mc, lt) => Some((
+                            mc.clone(),
+                            crate::card::SelectionRequirement::Land
+                                .and(crate::card::SelectionRequirement::HasLandType(*lt)),
+                        )),
+                        Keyword::Typecycling(spec) => {
+                            Some(((**spec).0.clone(), (**spec).1.clone()))
+                        }
+                        _ => None,
+                    })
+                    .or_else(|| self.granted_typecycling_for(c))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // Matching library cards, in library order.
+        let matches: Vec<(crate::card::CardId, String)> = {
+            let ids: Vec<(crate::card::CardId, String)> = self.players[seat]
+                .library
+                .iter()
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            ids.into_iter()
+                .filter(|(id, _)| {
+                    self.evaluate_requirement_static(
+                        &filter,
+                        &crate::game::types::Target::Permanent(*id),
+                        seat,
+                        None,
+                    )
+                })
+                .collect()
+        };
+        // CR 702.29e — a `wants_ui` cycler with a real choice picks which
+        // card to fetch. Suspend before any cost is paid; the resume replays
+        // this action with the pick stashed.
+        let stashed_pick = self.pending_landcycle_pick.take();
+        if stashed_pick.is_none() && self.players[seat].wants_ui && matches.len() > 1 {
+            let eligible: Vec<crate::card::CardId> = matches.iter().map(|(id, _)| *id).collect();
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::SearchLibrary {
+                    player: seat,
+                    candidates: matches,
+                    eligible: Some(eligible),
+                },
+                resume: crate::game::types::ResumeContext::ActionSearchPick {
+                    actor: seat,
+                    action: Box::new(GameAction::Landcycle { card_id }),
+                },
+            });
+            return Ok(vec![]);
+        }
         self.players[seat].mana_pool.pay(&cycling_cost).map_err(GameError::Mana)?;
         let mut events = vec![];
         if self.discard_card(seat, card_id, &mut events) {
-            events.push(GameEvent::CardCycled { player: seat, card_id });
+            events.push(GameEvent::CardCycled { player: seat, card_id, x: 0 });
         }
-        // Search the library for a matching card; reveal + to hand.
-        if let Some(pos) = {
-            let ids: Vec<crate::card::CardId> =
-                self.players[seat].library.iter().map(|c| c.id).collect();
-            ids.into_iter().position(|id| {
-                self.evaluate_requirement_static(
-                    &filter,
-                    &crate::game::types::Target::Permanent(id),
-                    seat,
-                    None,
-                )
-            })
-        } {
+        // Fetch the stashed pick (validated against the match set), else the
+        // first match; reveal + to hand.
+        let chosen = match stashed_pick {
+            Some(pick) => pick.filter(|id| matches.iter().any(|(m, _)| m == id)),
+            None => matches.first().map(|(id, _)| *id),
+        };
+        if let Some(pos) = chosen
+            .and_then(|id| self.players[seat].library.iter().position(|c| c.id == id))
+        {
             let fetched = self.players[seat].library.remove(pos);
             self.place_card_in_dest(
                 fetched,
@@ -6687,10 +6986,13 @@ impl GameState {
                 x_value,
                 converged_value,
                 mana_spent,
+                trigger_source_ent,
+                event_amount,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more = self.continue_trigger_resolution(
-                    source, controller, remaining, target, mode, x_value, converged_value, mana_spent,
+                let mut more = self.continue_trigger_resolution_with_source(
+                    source, controller, remaining, target, mode, x_value, converged_value,
+                    mana_spent, trigger_source_ent, event_amount,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -6936,6 +7238,18 @@ impl GameState {
                 let _ = actor;
                 self.pending_cast_spend_float = Some(spend);
                 return self.perform_action(*action);
+            }
+            ResumeContext::ActionSearchPick { actor, action } => {
+                // CR 702.29e — the cycler picked which card to fetch. Stash
+                // and replay the originating action.
+                let DecisionAnswer::Search(pick) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let _ = actor;
+                self.pending_landcycle_pick = Some(pick);
+                let r = self.perform_action(*action);
+                self.pending_landcycle_pick = None;
+                return r;
             }
             ResumeContext::ActivateAbilityChoice {
                 activator,
@@ -7607,6 +7921,13 @@ impl GameState {
                 self.stashed_resolution_answer = Some(DecisionAnswer::Bool(*b));
                 Ok(Vec::new())
             }
+            PendingEffectState::SeatBoolAnswerPending { .. } => {
+                let DecisionAnswer::Bool(b) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                self.resolution_answer_log.push(DecisionAnswer::Bool(*b));
+                Ok(Vec::new())
+            }
             PendingEffectState::DivisionAnswerPending => {
                 let DecisionAnswer::DamageDivision(v) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -7857,6 +8178,25 @@ impl GameState {
             let mut right_events = self.resolve_effect(&right_effect, &right_ctx)?;
             events.append(&mut right_events);
         }
+        // CR 702.47b — spliced rules text resolves after the main spell's
+        // effect; spliced effect `i` reads its target from
+        // `additional_targets[i]`.
+        for (i, spliced) in card.spliced_effects.clone().into_iter().enumerate() {
+            let splice_ctx = EffectContext::for_spell_with_source_and_origin(
+                card.id,
+                card.definition.name,
+                caster,
+                additional_targets.get(i).cloned(),
+                Vec::new(),
+                mode,
+                x_value,
+                converged_value,
+                mana_spent,
+                card.cast_from_hand,
+            );
+            let mut splice_events = self.resolve_effect(&spliced, &splice_ctx)?;
+            events.append(&mut splice_events);
+        }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
                 decision,
@@ -8000,26 +8340,7 @@ impl GameState {
         Ok(events)
     }
 
-    /// Resolve a triggered ability's effect tree.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn continue_trigger_resolution(
-        &mut self,
-        source: CardId,
-        controller: usize,
-        effect: crate::effect::Effect,
-        target: Option<Target>,
-        mode: usize,
-        x_value: u32,
-        converged_value: u32,
-        mana_spent: u32,
-    ) -> Result<Vec<GameEvent>, GameError> {
-        self.continue_trigger_resolution_with_source(
-            source, controller, effect, target, mode, x_value, converged_value, mana_spent, None,
-            0,
-        )
-    }
-
-    /// Variant of `continue_trigger_resolution` that carries the
+    /// Resolve a triggered ability's effect tree, carrying the
     /// trigger's "source entity" (the just-cast spell, the dying
     /// creature, etc.) into `ctx.trigger_source`. Used by spell-cast
     /// triggers whose body looks up the cast spell on the stack
@@ -8093,6 +8414,8 @@ impl GameState {
                     x_value,
                     converged_value,
                     mana_spent,
+                    trigger_source_ent,
+                    event_amount,
                 },
             });
         }
@@ -8147,15 +8470,28 @@ impl GameState {
     /// "lesser mana value than that artifact"), read from the death
     /// snapshot cache (tokens are already gone from every zone).
     pub(crate) fn event_amount_for(&self, ev: &GameEvent) -> u32 {
-        if let GameEvent::CreatureDied { card_id } = ev {
-            return self
+        match ev {
+            GameEvent::CreatureDied { card_id } => self
                 .died_card_snapshots
                 .get(card_id)
                 .or_else(|| self.find_card_anywhere(*card_id))
                 .map(|c| c.definition.cost.cmc())
-                .unwrap_or(0);
+                .unwrap_or(0),
+            // "Where X is that spell's mana value" riders (Shark Typhoon).
+            GameEvent::SpellCast { card_id, .. } => self
+                .stack
+                .iter()
+                .find_map(|item| match item {
+                    StackItem::Spell { card, .. } if card.id == *card_id => {
+                        Some(card.definition.cost.cmc())
+                    }
+                    _ => None,
+                })
+                .or_else(|| self.find_card_anywhere(*card_id).map(|c| c.definition.cost.cmc()))
+                .unwrap_or(0),
+            GameEvent::CardCycled { x, .. } => *x,
+            _ => event_amount(ev),
         }
-        event_amount(ev)
     }
 
     pub(crate) fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
@@ -8447,6 +8783,22 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                     None => vec![],
                 }
             }
+            // Ward Sliver — the granted protection color comes off the
+            // source's ETB `chosen_color` stamp; inert until chosen.
+            StaticEffect::GrantProtectionFromChosenColor { applies_to } => {
+                match (card.chosen_color, selector_to_affected(applies_to, card)) {
+                    (Some(color), Some(affected)) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(Keyword::Protection(color)),
+                    }],
+                    _ => vec![],
+                }
+            }
             StaticEffect::LoseKeyword { applies_to, keyword } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {
@@ -8661,6 +9013,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::GraveyardLibraryLockdown
+            | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown
             | StaticEffect::GraveyardCardsHaveEscape { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
@@ -8679,9 +9032,15 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PumpSelfByControlledPermanents — needs a live battlefield
             // count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpSelfByControlledPermanents { .. }
+            // PumpPTPerOtherOfType — needs the live type count; resolved in
+            // `gather_continuous_effects`.
+            | StaticEffect::PumpPTPerOtherOfType { .. }
             // PumpSelfIf — needs live predicate evaluation; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpSelfIf { .. }
+            // GrantPumpSelfIf — per-subject predicate, resolved in
+            // `gather_continuous_effects`.
+            | StaticEffect::GrantPumpSelfIf { .. }
             // PumpTeamIf — conditional team anthem, resolved in
             // `gather_continuous_effects` (needs live predicate eval).
             | StaticEffect::PumpTeamIf { .. }
@@ -8713,9 +9072,13 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
             | StaticEffect::DamageCantBePrevented
-            // ManaProductionDoubled — consulted at mana-ability resolution
-            // via `mana_production_doublers_for`; no layer effect.
+            // ManaProductionDoubled / Tripled — consulted at mana-ability
+            // resolution via `mana_production_multiplier_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled
+            | StaticEffect::ManaProductionTripled
+            // PreventDamageByRemovingCounters (Polukranos, Unchained) —
+            // consulted at both damage funnels; no layer effect.
+            | StaticEffect::PreventDamageByRemovingCounters { .. }
             // CreatureActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Cursed Totem); no layer effect.
             | StaticEffect::CreatureActivatedAbilitiesLocked
@@ -8771,6 +9134,12 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GraveyardAnthem { .. }
             | StaticEffect::SpellsUncounterable { .. }
             | StaticEffect::MinusCounterReduction
+            // Hand-zone grant, consulted by `landcycle_card` / the view.
+            | StaticEffect::GrantTypecyclingToHandCards { .. }
+            // CR 605.1b — resolved at the mana-ability fast path.
+            | StaticEffect::ExtraManaOnLandTap { .. }
+            // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
+            | StaticEffect::TypeEntersWithCounter { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })
         .collect()
@@ -8831,6 +9200,54 @@ fn simple_walker_can_handle(req: &SelectionRequirement) -> bool {
     }
 }
 
+/// Split `PowerAtLeast(n)` leaves off a conjunctive requirement tree.
+/// Returns `(max gate, residual tree)` — `None` when no power leaf exists or
+/// the tree isn't a plain And-conjunction. An all-gate tree leaves
+/// `SelectionRequirement::Any` as the residual.
+fn extract_power_gate(
+    req: &SelectionRequirement,
+) -> Option<(i32, SelectionRequirement)> {
+    use SelectionRequirement as R;
+    fn walk(r: &R, gate: &mut Option<i32>) -> Option<Option<R>> {
+        // Outer None = unsupported shape; inner None = leaf removed.
+        match r {
+            R::PowerAtLeast(n) => {
+                *gate = Some(gate.map_or(*n, |g: i32| g.max(*n)));
+                Some(None)
+            }
+            R::And(a, b) => {
+                let ra = walk(a, gate)?;
+                let rb = walk(b, gate)?;
+                Some(match (ra, rb) {
+                    (Some(a), Some(b)) => Some(R::And(Box::new(a), Box::new(b))),
+                    (Some(x), None) | (None, Some(x)) => Some(x),
+                    (None, None) => None,
+                })
+            }
+            // Power leaves under Or/Not can't be hoisted into a single gate.
+            R::Or(..) | R::Not(..) => {
+                if requirement_mentions_power(r) { None } else { Some(Some(r.clone())) }
+            }
+            other => Some(Some(other.clone())),
+        }
+    }
+    let mut gate = None;
+    let residual = walk(req, &mut gate)?;
+    gate.map(|g| (g, residual.unwrap_or(R::Any)))
+}
+
+fn requirement_mentions_power(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::PowerAtLeast(_) => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_power(a) || requirement_mentions_power(b)
+        }
+        R::Not(inner) => requirement_mentions_power(inner),
+        _ => false,
+    }
+}
+
 fn affected_from_requirement(
     req: &SelectionRequirement,
     source_controller: usize,
@@ -8846,6 +9263,18 @@ fn affected_from_requirement(
         return Some(AffectedPermanents::CardMatch {
             source_controller,
             requirement: Box::new(req.clone()),
+        });
+    }
+    // Power-gated lord scope (CR 613.8 — Temur Ascendancy's "creatures you
+    // control with power 4 or greater have haste"): split the PowerAtLeast
+    // leaves off the And-tree; the residual must be card-only.
+    if let Some((gate, residual)) = extract_power_gate(req)
+        && crate::game::layers::requirement_is_card_only(&residual)
+    {
+        return Some(AffectedPermanents::CardMatchPowerGated {
+            source_controller,
+            requirement: Box::new(residual),
+            power_at_least: gate,
         });
     }
     // Decompose And-trees to extract controller filter + card-type filter.

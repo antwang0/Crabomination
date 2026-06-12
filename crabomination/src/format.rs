@@ -73,7 +73,63 @@ pub struct FormatRules {
     pub multiplayer_starting_life: Option<i32>,
 }
 
+/// Representative point-in-time ban lists, filtered to cards that could
+/// plausibly appear in the catalog. Not exhaustive — extend as the catalog
+/// grows.
+const MODERN_BANNED: &[&str] = &[
+    "Uro, Titan of Nature's Wrath", "Oko, Thief of Crowns", "Once Upon a Time",
+    "Hogaak, Arisen Necropolis", "Nadu, Winged Wisdom", "Birthing Pod",
+    "Blazing Shoal", "Bridge from Below", "Chrome Mox", "Dark Depths",
+    "Deathrite Shaman", "Dig Through Time", "Dread Return", "Glimpse of Nature",
+    "Hypergenesis", "Krark-Clan Ironworks", "Mental Misstep", "Mox Opal",
+    "Mystic Sanctuary", "Treasure Cruise", "Seething Song", "Second Sunrise",
+    "Sensei's Divining Top", "Simian Spirit Guide", "Skullclamp", "Summer Bloom",
+    "Tibalt's Trickery", "Umezawa's Jitte", "Up the Beanstalk", "Eye of Ugin",
+    "Arcum's Astrolabe", "Gitaxian Probe", "Golgari Grave-Troll",
+];
+const LEGACY_BANNED: &[&str] = &[
+    "Black Lotus", "Ancestral Recall", "Time Walk", "Timetwister",
+    "Mox Pearl", "Mox Sapphire", "Mox Jet", "Mox Ruby", "Mox Emerald",
+    "Treasure Cruise", "Dig Through Time", "Deathrite Shaman",
+    "Sensei's Divining Top", "Wrenn and Six", "Oko, Thief of Crowns",
+    "Expressive Iteration", "Mental Misstep", "Gitaxian Probe", "Skullclamp",
+    "Demonic Tutor", "Necropotence", "Frantic Search", "Windfall", "Channel",
+];
+const VINTAGE_RESTRICTED: &[&str] = &[
+    "Black Lotus", "Ancestral Recall", "Time Walk", "Timetwister",
+    "Mox Pearl", "Mox Sapphire", "Mox Jet", "Mox Ruby", "Mox Emerald",
+    "Demonic Tutor", "Brainstorm", "Ponder", "Treasure Cruise",
+    "Dig Through Time", "Chalice of the Void", "Channel", "Windfall",
+    "Necropotence", "Sol Ring", "Time Vault", "Trinisphere",
+    "Mystic Forge", "Karn, the Great Creator",
+];
+const COMMANDER_BANNED: &[&str] = &[
+    "Black Lotus", "Ancestral Recall", "Time Walk", "Timetwister",
+    "Mox Pearl", "Mox Sapphire", "Mox Jet", "Mox Ruby", "Mox Emerald",
+    "Emrakul, the Aeons Torn", "Griselbrand", "Flash", "Hullbreacher",
+    "Paradox Engine", "Prophet of Kruphix", "Channel", "Upheaval",
+    "Biorhythm", "Limited Resources", "Sundering Titan", "Karakas",
+];
+
 impl Format {
+    /// Cards banned outright in this format (representative list).
+    pub fn banned_cards(self) -> &'static [&'static str] {
+        match self {
+            Format::Modern | Format::Pioneer | Format::Standard | Format::Pauper => MODERN_BANNED,
+            Format::Legacy => LEGACY_BANNED,
+            Format::Commander | Format::Brawl => COMMANDER_BANNED,
+            _ => &[],
+        }
+    }
+
+    /// Cards restricted to one copy in this format (Vintage).
+    pub fn restricted_cards(self) -> &'static [&'static str] {
+        match self {
+            Format::Vintage => VINTAGE_RESTRICTED,
+            _ => &[],
+        }
+    }
+
     /// Return the rules for this format.
     pub fn rules(self) -> FormatRules {
         match self {
@@ -184,6 +240,10 @@ pub enum DeckError {
     TooManyCards { found: u32, maximum: u32 },
     /// A non-basic-land card appears more times than allowed.
     TooManyCopies { card_name: &'static str, found: u32, maximum: u32 },
+    /// The card is on the format's ban list.
+    BannedCard { card_name: &'static str },
+    /// The card is restricted (Vintage) and appears more than once.
+    RestrictedCard { card_name: &'static str, found: u32 },
 }
 
 impl std::fmt::Display for DeckError {
@@ -197,6 +257,12 @@ impl std::fmt::Display for DeckError {
             }
             DeckError::TooManyCopies { card_name, found, maximum } => {
                 write!(f, "{card_name}: {found} copies, maximum is {maximum}")
+            }
+            DeckError::BannedCard { card_name } => {
+                write!(f, "{card_name} is banned in this format")
+            }
+            DeckError::RestrictedCard { card_name, found } => {
+                write!(f, "{card_name} is restricted ({found} copies, maximum is 1)")
             }
         }
     }
@@ -262,6 +328,17 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
                 found: *count,
                 maximum: rules.max_copies,
             });
+        }
+    }
+
+    // Ban / restricted lists.
+    let banned = format.banned_cards();
+    let restricted = format.restricted_cards();
+    for (name, count) in &copy_counts {
+        if banned.contains(name) {
+            errors.push(DeckError::BannedCard { card_name: name });
+        } else if *count > 1 && restricted.contains(name) {
+            errors.push(DeckError::RestrictedCard { card_name: name, found: *count });
         }
     }
 

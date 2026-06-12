@@ -209,6 +209,10 @@ pub enum ServerMsg {
     /// client stores it and, if its connection drops mid-match, opens a fresh
     /// connection and sends `ClientMsg::Resume { token }` to re-claim the seat.
     ResumeToken { token: String },
+    /// The per-action rope (`CRAB_ACTION_TIMEOUT_SECS`) armed for *your*
+    /// seat: act within `seconds` or the server auto-acts for you. Sent
+    /// once per arming; every accepted action re-arms (and re-sends).
+    Rope { seconds: u32 },
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────
@@ -619,6 +623,10 @@ impl HandCardView {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnownCard {
     pub id: CardId,
@@ -643,6 +651,14 @@ pub struct KnownCard {
     /// alt-cast modal header. Defaults to "".
     #[serde(default)]
     pub alt_cost_label: String,
+    /// False when the alternative cost is condition-gated and the gate
+    /// currently fails (Prowl with no tribal connect, Archive Trap with no
+    /// opponent search this turn, not-your-turn pitch costs on your turn).
+    /// Lets the client grey out the alt-cast entry instead of offering a
+    /// cast the server will reject. Meaningful only when
+    /// `has_alternative_cost`; defaults to `true`.
+    #[serde(default = "default_true")]
+    pub alt_cost_available: bool,
     /// MDFC back-face name, if any (e.g. Blightstep Pathway → "Searstep
     /// Pathway"). Drives the client's right-click flip on hand cards: when
     /// `Some`, right-click toggles the card's hand visual to the back face
@@ -699,6 +715,21 @@ pub struct KnownCard {
     /// count (already surfaced via the generic counter display).
     #[serde(default)]
     pub saga_final_chapter: Option<u32>,
+    /// CR 709 — pre-rendered cost label of the split card's right half
+    /// (e.g. "{2}{G}"). Empty for non-split cards. Drives the client's
+    /// half-picker modal (right-click).
+    #[serde(default)]
+    pub split_right_cost_label: String,
+    /// True when the right half's effect carries a targeted slot.
+    #[serde(default)]
+    pub split_right_needs_target: bool,
+    /// CR 702.102 — the split card may be cast fused (both halves).
+    #[serde(default)]
+    pub split_fusable: bool,
+    /// True when either fused half carries a targeted slot (the client's
+    /// single-target cursor can't collect two; it greys the Fused button).
+    #[serde(default)]
+    pub split_fused_needs_target: bool,
 }
 
 /// One activated ability as projected for the client.
@@ -1842,7 +1873,7 @@ impl From<&GameEvent> for GameEventWire {
                 target: *target,
                 caster: *caster,
             },
-            GameEvent::CardCycled { player, card_id } => GameEventWire::CardCycled {
+            GameEvent::CardCycled { player, card_id, .. } => GameEventWire::CardCycled {
                 player: *player,
                 card_id: *card_id,
             },

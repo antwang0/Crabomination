@@ -297,34 +297,57 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **THB cards deferred (each wants one primitive):**
-  - **Heliod's Intervention** — modal X-target destroy ("destroy X target
-    artifacts and/or enchantments"); needs a plain `DestroyTargets` sibling
-    of `DestroyTargetsPolymorph` plus modal-X target collection.
-  - **Shark Typhoon** — X/X token where X = the triggering spell's mana
-    value; `TokenDefinition.power` is a fixed `i32`, so dynamic-P/T token
-    mints need a `Value`-powered mint rider. Also X-cycling.
-  - **Nyxbloom Ancient** (mana tripling), **Polukranos, Unchained**
-    (escape-with-counters + fight activation), **Elspeth Conquers Death**
-    (saga + cost tax + reanimate chapter) — all primitives exist in parts;
-    just card work.
-- ⏳ **Noticed this run (gods / rope / split-second batch):**
-  - **Rope client UI** — the server's `CRAB_ACTION_TIMEOUT_SECS` rope sends
-    only an `ActionError` notice when it acts for a stalled seat; a visible
-    countdown / "the server passed for you" toast would surface it properly.
-  - **Opponent-owned `MayDo`/`Search` decisions** still answer through the
-    resolving controller's decider (Boseiju's "that player may search",
-    Karametra's fetch under a `wants_ui` opponent) — same family as the
-    existing per-seat decider-routing note.
-  - **Nylea, Keen-Eyed's nonland branch** omits the optional "you may put it
-    into your graveyard" (the reveal stays on top instead).
-  - **`AutoDecider::decide` panics on an empty `ChooseTarget.legal` set** —
-    unreachable today (the engine never raises an empty-choice decision),
-    but the rope path now calls it server-side; a graceful fallback would
-    be cheap insurance.
+- ✅ **THB batch shipped** (`catalog::sets::thb`, tests `tests/thb.rs`):
+  Heliod's Intervention (`Effect::DestroyTargets` X-target destroy),
+  Shark Typhoon (`TokenDefinition.dynamic_pt` mint rider + X-cycling via
+  `GameAction::Cycle { x_value }`), Nyxbloom Ancient
+  (`StaticEffect::ManaProductionTripled` — multiplier composes with Mana
+  Reflection), Polukranos, Unchained (`Value::IfPred` escape counters +
+  `StaticEffect::PreventDamageByRemovingCounters`), Elspeth Conquers Death
+  (`Effect::SpellTaxUntilYourNextTurn` + reanimate chapter), plus Dream
+  Trawler, Arasta, Daxos (`DynamicPt::DevotionToToughness`), Tymaret Calls
+  the Dead, Thirst for Meaning, Shatter the Sky, Alseid, Mire Triton,
+  Aphemia, Phoenix of Ash, Underworld Rage-Hound, Nessian Boar
+  (`Predicate::TriggerBlocksSource`), Mystic Repeal, Ox of Agonas.
+- ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
+  - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
+    bot heuristic that takes the first eligible candidate would make
+    fetch/tutor effects function under bots; many tests assume the decline,
+    so flip carefully.
+  - ✅ **Faerie batch shipped:** Mistbind Clique (`Effect::Champion`
+    CR 702.77 with the self-sacrifice clause — Changeling Hero rides it
+    too — + `Predicate::SourceChampionedSomething` + target-player tap),
+    Oona, Queen of the Fae (`Effect::ExileTopMintPerChosenColor`), Faerie
+    Macabre (`Effect::ExileUpToNFromGraveyards`), Rune Snag
+    (`Value::SameNamedInAllGraveyards` into `CounterUnlessPaid.extra_generic`).
+  - **`EventSpec::per_subject_cap` is per-turn**, so Spined Sliver won't
+    re-trigger in a second combat phase the same turn.
+  - **`ExtraManaOnLandTap` Mirror** mirrors the *first* produced pip; the
+    printed Mana Flare lets the tapping player choose among produced types
+    (matters only for multi-type productions).
+  - **Notorious Throng X** uses `LifeLostThisTurn(EachOpponent)` (a max) —
+    exact in 2P; multiplayer wants a damage-dealt-to-opponents sum.
+
+- ⏳ **Noticed this run (gods / rope / split-second batch):** Rope client
+  UI ✅ (`ServerMsg::Rope` + countdown banner), Nylea's may-bin reveal ✅,
+  `AutoDecider` empty-`ChooseTarget` fallback ✅. Remaining:
+  - ✅ **Opponent-owned `Search` decisions** are seat-routed:
+    `PendingDecision::acting_player` answers `SearchLibrary` with the
+    decision's named searcher (Boseiju test
+    `boseiju_opponent_search_routes_to_the_searched_seat`).
   - **`Selector::LastCreatedTokens` + `GrantKeyword`** (Sokenzan) grants
     haste only to tokens minted in the same resolution — fine today; a
     "they gain haste" rider on `CreateToken` would be tidier.
+
+- ⏳ **Noticed this run (slivers / seat-routed asks batch):**
+  - **TemptingOffer ordering** — opponents now answer before the body
+    runs (re-run idempotency); printed timing shows them the
+    controller's result first.
+  - **Statics-granted triggers from died-LKI snapshots** — the
+    died-card Enrage walk only reads printed triggers; a granted
+    "when this is dealt damage" wouldn't fire on lethal damage.
+  - **Answer-log nesting** — `ask_seat_bool` users can't nest another
+    log-using effect inside their own ask sequence (single shared log).
 
 - ⏳ **Noticed (Modern staples batch, 2026-06-11):** 38 staples shipped
   across three waves (see git). The "deferred, each wanting one primitive"
@@ -339,34 +362,45 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   (`EquipBonus.conditional`), Ravenous Trap ✅
   (`Player.cards_to_graveyard_this_turn` +
   `Predicate::CardsToGraveyardThisTurnAtLeast`), Spellskite ✅. Remaining:
-  - **Pyxis of Pandemonium / Ojer Taq** — face-down exile piles / DFC god.
+  - **Ojer Taq** — DFC god (Pyxis of Pandemonium ✅ — face-down linked
+    exile piles + deploy).
   - **Witchbane Orb** ships without the destroy-Curses ETB (player-attached
     Curses unmodeled). **Counterbalance**'s reveal is a MayDo (bots decline
     by default).
   - **Lightning Storm** — any-player stack activations (the "discard a land,
     choose new targets" response loop).
-  - **Spellskite** ability-on-stack targets (only spell targets redirect).
+
+- ⏳ **Noticed this run (THB / splice / split-picker pass, 2026-06-12):**
+  - **Splice UI/bot** — `CastSpellSpliced` is engine-only; the client has no
+    splice picker and the bot never splices.
+  - **Callaphe, Beloved of the Sea** — wants a "spells your opponents cast
+    that target [your permanents] cost {1} more" static
+    (`extra_cost_for_spell` doesn't see the cast's target today).
+  - **Calix, Destiny's Hand** — -3 wants `ExileUntilSourceLeaves` anchored to
+    a *chosen* permanent rather than the effect source.
+  - **Hateful Eidolon / Bronzehide Lion** — die-with-attached-Aura LKI count
+    and a dies→returns-as-Aura transform are both unmodeled.
+  - **Tectonic Giant** mode 1 grants may-play on both impulsed cards (the
+    printed "choose one of them" pick is dropped); the grant bills MV-generic
+    rather than the card's real cost.
+  - **Fused split casts with targets** — the client's half-picker greys the
+    Fused button when either half targets (the targeting cursor collects one
+    target; fused needs left + right slots).
 
 - ⏳ **Noticed this run (claude/modern_decks, 2026-06-11 second pass):**
-  - **Per-seat decider routing** — `UnlessPlayerPays` (rhystic/Kataki taxes),
-    `RevealTopToHandLoseLifeRepeat`, and the new Seek library pick all answer
-    through the single global decider; a networked `wants_ui` seat should get
-    a stash-and-rerun suspend (same family as the existing MayPay/Fateseal
-    notes). Kataki under AutoDecider always declines → bots sacrifice their
-    artifacts even with open mana.
+  `UnlessPlayerPays` per-seat routing ✅ (rhystic/Kataki taxes now prompt
+  the taxed `wants_ui` seat via `ask_seat_bool`). Remaining:
+  - **`RevealTopToHandLoseLifeRepeat` + Seek library pick** still answer
+    through the single global decider (non-Bool decisions; the
+    `ask_seat_bool` replay-log only covers yes/no questions).
+    Kataki under AutoDecider still declines → bots sacrifice their
+    artifacts even with open mana (needs a bot heuristic, not routing).
   - **`SacrificeOrPay` chooser** — the auto rule (sacrifice when a match
     exists, else fold the pay into the cost) is deterministic; a wants_ui
     "which half?" picker would make Bayou Groff interactive.
-  - **Seek (Hide // Seek) pick agency** — `Effect::Search { who: Target }`
-    lets the searched player's decider answer; the printed card has the
-    caster choose. A `controller_picks` rider on Search would fix it.
-  - **Vizier of Many Faces** — embalm clone still wants an
-    embalm-copy-any-creature path.
 
-- ⏳ **Noticed this run (follow-ups sweep):**
-  - **`Effect::MayPay` for a `wants_ui` seat** still answers through the
-    synchronous decider (Springheart's landfall pay) — the `MayDo`
-    stash-and-rerun suspend should be extended to cover it.
+- ⏳ **Noticed this run (follow-ups sweep):** `Effect::MayPay` wants_ui
+  suspend ✅ (seat-routed). Remaining:
   - **Nadu's granted ability** is modeled as a trigger on Nadu itself with
     a per-subject cap (behaviorally equivalent); a true "creatures you
     control have [triggered ability]" static grant framework is still open
@@ -378,8 +412,8 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ⏳ **Noticed (modern_decks batches 4-6):** all the listed cards shipped
   (Nadu / Six / Ajani MDFC / Kozilek / Ulamog the Defiler / Springheart /
   Not Dead After All / Indomitable Creativity — each with its primitive).
-  Remaining: **Clash** (CR 701.30) is synchronous-decider only; a
-  `wants_ui` seat should get the bottom-or-keep prompt.
+  Remaining: none — Clash (CR 701.30) now prompts each `wants_ui` seat
+  to bottom or keep via the seat-routed answer log.
 
 - ⏳ **Noticed (staples expansion / audit):** The Ozolith, Soulless Jailer,
   Underworld Breach, Karn the Great Creator, and Sunken Citadel all shipped
@@ -593,10 +627,8 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   keep the bare filter re-check. **Multi-target all-illegal fizzle ✅** —
   battlefield-aimed multi-target spells fizzle only when every slot is
   illegal (Arc Trail tests). Remaining ⏳: Aura spells (permanent path) and
-  protection-from-color on resolution. ⚠️ Audit 2026-06-11: **triggered
-  abilities** still re-target via `auto_target_for_effect` instead of
-  fizzling (`mod.rs:7228`), and the fizzle path sends flashbacked spells to
-  the graveyard instead of exile — see audit P0/P1.
+  protection-from-color on resolution. (Audit follow-up closed — triggered
+  abilities fizzle per CR 608.2b and flashbacked fizzles route to exile.)
 - ⏳ **Demonstrate "you may" + opponent choice (CR 702.150).** `Effect::
   Demonstrate` always copies (the optional "you may" collapses) and auto-picks
   the lowest-seat opponent rather than prompting the caster. Fine for bots;
@@ -1561,6 +1593,31 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.47 — Splice** — `Keyword::Splice(cost, quality)` +
+  `GameAction::CastSpellSpliced`: splice costs paid additionally
+  (atomic rollback), spliced text resolves after the main effect reading
+  targets from `additional_targets[i]`, card stays in hand, changes lost
+  off-stack (702.47e). Glacial Ray / Kodama's Might / Reach Through Mists
+  (`sets::chk`). Tests `cr_702_47_*`. Client splice picker + bot splice
+  awareness still ⏳.
+- ✅ **CR 704.5k — world rule** — timestamp-keyed (newest survives, ties
+  bin all). Concordant Crossroads, Nether Void. Tests `cr_704_5k_*`.
+- ✅ **CR 614.5 / 701.10f — mana-production multipliers compose** —
+  `ManaProductionTripled` (Nyxbloom Ancient) × `ManaProductionDoubled`
+  (Mana Reflection) = 6×; only "tap a permanent for mana" abilities
+  qualify (rituals exempt).
+- ✅ **CR 702.64 — Absorb** — `Keyword::Absorb(n)` soaks N per damage event
+  at the shared prevention funnel (combat + non-combat). Lymph Sliver
+  (grant via `GrantKeyword`). Tests `cr_702_64_*`.
+- ✅ **CR 704.5y — Role uniqueness SBA** — same-controller duplicate Roles
+  on one host: all but the newest (battlefield timestamp) hit the
+  graveyard. Tests `cr_704_5y_*`.
+- ✅ **CR 701.30 — Clash, seat-routed** — both clashing `wants_ui` players
+  get the bottom-or-keep prompt via the resolution answer log
+  (`ask_seat_bool`); reveal events and zone moves stay after the asks so
+  the suspend re-run is idempotent. Test `clash_prompts_each_ui_seat_to_bottom`.
+- ✅ **CR 702.104 — Tribute, seat-routed** — the opponent (not the global
+  decider) answers the tribute question. Test `tribute_question_routes_to_the_opponent`.
 - ✅ **CR 700.4 — "dies" under graveyard→exile replacements** — a creature
   whose death-placement is redirected to exile (Rest in Peace, Leyline,
   void/finality, Kalitas) never dies: self/equipment dies triggers, watcher
@@ -1718,11 +1775,12 @@ picking an item up.
   final chapter → sacrifice, unless a chapter ability is still on the stack);
   spell-copy-off-stack identity ✅ (704.5d/e — the token-purge SBA sweeps
   copies from every non-stack zone; test
-  `cr_704_5e_countered_spell_copy_ceases_to_exist`). Battle / Role / Dungeon
-  / Speed SBAs remain; multi-SBA "collapse into one replacement" (704.7).
+  `cr_704_5e_countered_spell_copy_ceases_to_exist`); Role uniqueness ✅
+  (704.5y). Battle / Dungeon / Speed SBAs remain; multi-SBA "collapse into
+  one replacement" (704.7).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed.)
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
-- 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. ⚠️ Audit 2026-06-11: the replacements apply inside `adjust_life` but callers still emit `LifeGained` with the pre-replacement amount (triggers fire on suppressed gains), and `SetLifeTotal`/`ExchangeLifeTotals` bypass `adjust_life` entirely — see audit P1.
+- 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel.)
 - 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded). Remaining: choose-to-draw (121.3); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - 🟡 **CR 502 — Untap Step** — Phasing (502.1 / 702.26) ✅: `do_phasing`
   runs as a turn-based action at the top of the untap step, moving the active
@@ -1760,12 +1818,15 @@ picking an item up.
   attacker's pool, auto-tapping mana sources for any shortfall (atomic
   rollback if unpayable); block tax (509.1d) pays the same way per blocking
   player. Tests `cr_508_1g_*`, `cr_509_1d_block_tax_auto_taps_lands`.
-- 🟡 **CR 605 — Mana Abilities** — triggered-mana-ability fast-path (605.4a).
+- ✅ **CR 605 — Mana Abilities** — triggered mana abilities (605.1b/605.4a)
+  resolve stack-free at the mana-ability fast path via
+  `StaticEffect::ExtraManaOnLandTap` (Mana Flare, Vernal Bloom, Wild
+  Growth, Utopia Sprawl; tests `cr_605_1b_*`).
 - ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
 - ✅ **CR 701.12 — Exchange (control)** — `Effect::ExchangeControl { a, b }` swaps the controllers of two resolved permanents simultaneously (Switcheroo). Exchange-life-totals + exchange-hand/graveyard already ✅. Vedalken Plotter ✅ via `Effect::ExchangeControlChoosing` (controller picks their own permanent at resolution, the opponent's is the cast target). Remaining ⏳: an *until-end-of-turn* exchange variant.
-- ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker. ⚠️ Audit 2026-06-11: several arms bypass the funnel entirely (Living End, SacrificeAndRemember, Ward sac costs, Fading/Vanishing/cumulative upkeep) — dies triggers and Persist/Undying silently dropped; see audit P1 death-funnel family.
+- ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker. (Audit follow-up closed — the P1 death-funnel bypass family is fixed; all arms route through the shared funnels.)
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
 - ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics. (Loyalty activation now honors `detained_by`; Detain's target filter is enforced at cast time.)
 - ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
@@ -1798,8 +1859,8 @@ picking an item up.
   `KnownCard.has_landcycling` + a client Landcycle keybind. Ships Wirewood
   Guardian, Daru Lancer, the LTR cycle (Troll of Khazad-dûm, Lorien
   Revealed, Eagles of the North, Oliphaunt, Generous Ent), Ash Barrens.
-  Remaining: a UI search-prompt to choose *which* card among multiple
-  matches (today it auto-fetches the first match).
+  UI pick among multiple matches ✅ (`ResumeContext::ActionSearchPick` —
+  a `wants_ui` cycler suspends before costs and picks the fetch).
 - 🟡 **CR 117.1 — Order of priority** — APNAP corner cases; see git.
 - 🟡 **CR 301 — Artifacts** — see git.
 - ✅ **CR 701.8 — Destroy / 701.19 Regenerate** — `regeneration_shields` replace destruction on the SBA lethal-damage path, `Effect::Destroy`, and consume one shield (tap + remove-from-combat + heal). `DestroyNoRegen` bypasses. Toughness≤0 SBA correctly ignores shields.
@@ -1921,20 +1982,15 @@ picking an item up.
   - ✅ **Rhystic "draw unless they pay X" rider** — Esper Sentinel ships
     faithful (`WardCost::GenericSourcePower` + `once_per_turn` first-spell
     gate, exact in 2P); Mystic Remora already rode `UnlessPlayerPays`.
-  - **Power-gated keyword anthems** (Temur Ascendancy "creatures with power
-    4+ have haste") — `affected_from_requirement` drops `PowerAtLeast` (it's
-    layer-7 computed); needs a second-pass / CR 613.8 dependency in
-    `apply_layers`. Currently over-grants to all your creatures.
-  - **MV-scaled token on LTB** (Skyclave Apparition's "owner creates an X/X
-    Illusion where X = exiled card's MV") — needs a dynamic-P/T token mint.
+  - ✅ **Power-gated keyword anthems** — `AffectedPermanents::
+    CardMatchPowerGated` + a two-pass `compute_permanent` (CR 613.8);
+    Temur Ascendancy's haste gate is faithful.
   - ✅ **"with no counters on it" target filter** — added
     `SelectionRequirement::HasNoCounters`; ships Heartless Act (modal:
     destroy a no-counter creature / remove-all counters).
   - ✅ **Typecycling / Landcycling** (CR 702.29e) — `Keyword::Landcycling`
     + `GameAction::Landcycle`; ships Wirewood/Daru/Shoreline/Twisted
-    Abomination/Skirk. Follow-up: a UI search-prompt to choose *which* land
-    among multiple matches (today auto-fetches the first match), and
-    nonbasic-type cycling (e.g. Mistcycling) once those land types exist.
+    Abomination/Skirk. UI multi-match pick ✅.
   - ✅ **"Discard unless they discard an artifact" conditional discard** —
     `Effect::DiscardUnlessKind` (auto-keeps the lowest-MV matching card);
     Wrench Mind is faithful.
@@ -2156,11 +2212,6 @@ picking an item up.
   Silverquill's Inkling generator. With at least 5 distinct Inkling
   minters and a +2/+2 lord in the catalog, a Silverquill Inkling
   tribal pool is now viable.
-
-- ⏳ **Triggered mana ability fast-path** (CR 605.4a) — promoted from
-  the existing TODO entry into the CR-audit row. Same blocker as
-  before: no STX/SOS card requires the fast-path today. First Mana
-  Reflection / Wirewood Channeler-class card would trigger.
 
 - ⏳ **`SelectionRequirement::ManaValueAtMostX`** (push modern_decks
   batch 39 suggested) — the current `ManaValueAtMost(u32)` predicate
@@ -2420,14 +2471,11 @@ picking an item up.
   factory's `triggered_abilities` / `static_abilities` / activated-
   ability complexity could flag stale rows automatically.
 
-- ⏳ **Triggered mana ability fast-path (CR 605.1b)** — triggered mana
-  abilities don't currently bypass the stack. The engine handles
-  *activated* mana abilities specially (`activate_ability` resolves
-  them immediately without `StackItem::Trigger` push) but triggered
-  mana abilities like Mana Reflection's "Whenever a permanent taps
-  for mana, that permanent produces twice as much instead" go through
-  the normal dispatcher. No SOS/STX card exercises this today; first
-  card to need it will be the wiring trigger.
+- ✅ **Triggered mana ability fast-path (CR 605.1b)** —
+  `StaticEffect::ExtraManaOnLandTap` resolves stack-free right after the
+  tapping ability (Mana Flare / Vernal Bloom / Wild Growth / Utopia
+  Sprawl); Mana Reflection's doubling already rode
+  `mana_production_doublers`.
 
 - ⏳ **CR 122.2-strict counter clearing on zone change** — to be
   fully compliant we should clear all counters when a card moves
@@ -2680,8 +2728,8 @@ verified; client-only edits (e.g. `keyword_label`) are reviewed by hand.
 Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
 deal noncombat damage to a creature, it deals that much in -1/-1 counters
 instead" needs a damage-replacement hook. Soul-Scar Mage ships as 1/2 Prowess
-without it. ⚠️ Audit 2026-06-11: native Infect/Wither are *also* missing from
-the non-combat damage funnel (`movement.rs:248`) — fix together; see audit P1.
+without it. (Native Infect/Wither on the non-combat funnel shipped —
+`deal_damage_to_from` lands -1/-1 counters / poison; CR 702.80a/702.90e.)
 
 ### Phyrexian mana
 Mutagenic Growth ({G/P}), Gut Shot, Dismember, etc. — a mana symbol payable

@@ -51,7 +51,7 @@ pub enum CreatureType {
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
-    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark,
+    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
@@ -389,6 +389,10 @@ pub enum Keyword {
     Flanking,
     /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
     Bushido(u32),
+    /// Absorb N (CR 702.64) — if a source would deal damage to this
+    /// creature, prevent N of that damage (per source, per event; multiple
+    /// instances each apply).
+    Absorb(u32),
     /// Rampage N (CR 702.23) — when this becomes blocked, it gets +N/+N for each blocker beyond the first.
     Rampage(u32),
     Intimidate,
@@ -498,6 +502,10 @@ pub enum Keyword {
     /// upkeeps (Enduring Ideal).
     Epic,
     Cycling(crate::mana::ManaCost),
+    /// CR 702.47 — "Splice onto [quality] [cost]": while in hand, reveal as
+    /// you cast a matching spell to add this card's rules text to it for the
+    /// cost. Cast via `GameAction::CastSpellSpliced` (Glacial Ray).
+    Splice(crate::mana::ManaCost, SpellSubtype),
     /// CR 702.29 — Cycling whose cost is a life payment instead of mana
     /// ("Cycling—Pay 2 life", Street Wraith).
     CyclingLife(u32),
@@ -803,8 +811,10 @@ pub struct LevelBand {
 }
 
 /// Composable filter for valid targets of a spell or ability.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// `Default` is the match-anything `Any`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SelectionRequirement {
+    #[default]
     Any,
     Player,
     /// A player who is an opponent of the effect's controller ("target
@@ -929,6 +939,10 @@ pub enum SelectionRequirement {
     IsBlockingAlone,
     IsSpellOnStack,
     ManaValueAtMost(u32),
+    /// MV at most the number of battlefield permanents matching the inner
+    /// filter that the evaluating player controls (Spellstutter Sprite's
+    /// "mana value X or less, where X is the number of Faeries you control").
+    ManaValueAtMostYourCount(Box<SelectionRequirement>),
     /// Mana value ≤ the X paid into the resolving spell's cost. Resolved to
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.
@@ -1246,6 +1260,12 @@ pub struct TokenDefinition {
     /// tokens. Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
+    /// Mint-time dynamic P/T: evaluated against the minting effect's
+    /// context and stamped over `power`/`toughness` (Shark Typhoon's
+    /// "X/X … where X is that spell's mana value"). Type riders chosen at
+    /// mint time survive copies per CR 707.2.
+    #[serde(default)]
+    pub dynamic_pt: Option<(crate::effect::Value, crate::effect::Value)>,
 }
 
 // ── Card definition ───────────────────────────────────────────────────────────
@@ -1577,8 +1597,9 @@ impl Adventure {
 /// chosen permanent; `extra_creature_types` are layered on top of the
 /// copied subtypes (Phantasmal Image's "it's an Illusion in addition to
 /// its other types").
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct EntersAsCopy {
+    #[serde(default)]
     pub filter: SelectionRequirement,
     #[serde(default)]
     pub extra_creature_types: Vec<CreatureType>,
@@ -1772,6 +1793,9 @@ pub enum DynamicPt {
     /// Power = the controller's devotion to `color` (CR 700.5), with a
     /// fixed printed toughness. Anax, Hardened in the Forge (`*/3`).
     DevotionTo { color: crate::mana::Color, base_t: i32 },
+    /// Toughness = the controller's devotion to `color`, with a fixed
+    /// printed power. Daxos, Blessed by the Sun (`2/*`).
+    DevotionToToughness { color: crate::mana::Color, base_p: i32 },
     /// Power = toughness = size of the controller's graveyard. Cruel
     /// Somnophage.
     ControllerGraveyardSize,
@@ -2306,6 +2330,11 @@ pub struct CardInstance {
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
     pub bargained: bool,
+    /// CR 702.47 — rules text gained by splicing cards onto this spell,
+    /// resolved after the main effect (each entry reads its target from the
+    /// matching `additional_targets` slot). Cleared when the spell leaves
+    /// the stack (702.47e).
+    pub spliced_effects: Vec<Effect>,
     /// CR 702.27 — true if this spell was cast paying its optional Buyback
     /// cost. On resolution the resolver returns the card to its owner's
     /// hand instead of the graveyard.
@@ -2596,6 +2625,7 @@ impl CardInstance {
             kick_count: 0,
             squad_count: 0,
             bargained: false,
+            spliced_effects: Vec::new(),
             bought_back: false,
             entwined: false,
             bestowed: false,
@@ -2916,6 +2946,9 @@ struct CardInstanceWire {
     /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     bargained: bool,
+    /// CR 702.47 spliced rules text. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    spliced_effects: Vec<Effect>,
     /// CR 702.46 — creature this card is ciphered onto. `#[serde(default)]`
     /// for back-compat.
     #[serde(default)]
@@ -3106,6 +3139,7 @@ impl serde::Serialize for CardInstance {
             kick_count: self.kick_count,
             squad_count: self.squad_count,
             bargained: self.bargained,
+            spliced_effects: self.spliced_effects.clone(),
             encoded_on: self.encoded_on,
             cast_target_was_battlefield: self.cast_target_was_battlefield,
             granted_activated_abilities: self.granted_activated_abilities.clone(),
@@ -3183,6 +3217,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.kick_count = wire.kick_count;
         c.squad_count = wire.squad_count;
         c.bargained = wire.bargained;
+        c.spliced_effects = wire.spliced_effects.clone();
         c.encoded_on = wire.encoded_on;
         c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
         c.granted_activated_abilities = wire.granted_activated_abilities;

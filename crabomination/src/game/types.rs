@@ -214,6 +214,20 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.47 — cast a spell splicing the given hand cards onto it. Each
+    /// splice card (revealed, stays in hand) must carry `Keyword::Splice`
+    /// whose quality matches the cast spell's subtypes; its splice cost is
+    /// paid additionally and its rules text resolves after the main effect.
+    /// Spliced effect `i` reads its target from `additional_targets[i]`.
+    CastSpellSpliced {
+        card_id: CardId,
+        splice_cards: Vec<CardId>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
     /// creatures, {N} less each" additional cost. Each id in `sacrifices`
     /// (a creature you control) is sacrificed as an additional cost and the
@@ -436,7 +450,13 @@ pub enum GameAction {
     /// card to the controller's graveyard, draws a card. Per CR
     /// 702.29c, "When you cycle this card" triggers fire from
     /// whatever zone the card winds up in after the discard.
-    Cycle { card_id: CardId },
+    Cycle {
+        card_id: CardId,
+        /// X paid to an `{X}` symbol in the cycling cost ({X}{1}{U} —
+        /// Shark Typhoon). Ignored for X-less cycling costs.
+        #[serde(default)]
+        x_value: Option<u32>,
+    },
     /// CR 702.77 — Activate a card's Reinforce ability from your hand. `card_id`
     /// must carry a `Keyword::Reinforce(n, cost)`. Pays the cost, discards the
     /// card, then puts N +1/+1 counters on `target`.
@@ -564,6 +584,13 @@ pub struct PendingDecision {
 
 impl PendingDecision {
     pub fn acting_player(&self) -> usize {
+        // A library search is answered by the seat the decision names — the
+        // searching player (CR 701.19a), which for an opponent-owned search
+        // (Boseiju, Karametra under a wants_ui opponent) or a cross-library
+        // pick (Seek) is not the resume's owner.
+        if let crate::decision::Decision::SearchLibrary { player, .. } = &self.decision {
+            return *player;
+        }
         // A suspended effect usually wants its answer from the spell's caster
         // / ability's controller. The exception is a forced sacrifice (CR
         // 701.16), where the *sacrificing* player chooses — which for an Edict
@@ -589,6 +616,7 @@ impl PendingDecision {
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
             ResumeContext::ActionFloatConfirm { actor, .. } => *actor,
+            ResumeContext::ActionSearchPick { actor, .. } => *actor,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
         }
     }
@@ -596,13 +624,14 @@ impl PendingDecision {
 
 impl PendingEffectState {
     /// The player who must answer this suspended decision, when it isn't the
-    /// owning spell's caster / ability's controller. Currently only a forced
-    /// sacrifice (CR 701.16) re-points the answer to the sacrificing player
-    /// (an Edict's target). Everything else returns `None` (answered by the
-    /// resume's owner).
+    /// owning spell's caster / ability's controller: a forced sacrifice
+    /// (CR 701.16 — the Edict's target chooses) and seat-routed yes/no
+    /// questions (rhystic taxes, Tempting Offer, Clash). Everything else
+    /// returns `None` (answered by the resume's owner).
     pub(crate) fn answering_player(&self) -> Option<usize> {
         match self {
             PendingEffectState::SacrificePending { player } => Some(*player),
+            PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
             _ => None,
         }
     }
@@ -730,6 +759,15 @@ pub(crate) enum ResumeContext {
         /// `Value::CastSpellManaSpent`.
         #[serde(default)]
         mana_spent: u32,
+        /// The trigger's subject (`ctx.trigger_source` — the just-cast
+        /// spell, the taxed caster, the dying creature). Threaded so a
+        /// suspended trigger that reads `PlayerRef::Triggerer` /
+        /// `Selector::TriggerSource` still resolves it on resume.
+        #[serde(default)]
+        trigger_source_ent: Option<crate::game::effects::EntityRef>,
+        /// The firing event's amount (`Value::TriggerEventAmount`).
+        #[serde(default)]
+        event_amount: u32,
     },
     Ability {
         source: CardId,
@@ -784,6 +822,14 @@ pub(crate) enum ResumeContext {
     /// sources). Carries the originating `GameAction` so the resume replays the
     /// exact action — kicker / buyback / flashback / etc. survive the round-trip.
     ActionFloatConfirm {
+        actor: usize,
+        action: Box<GameAction>,
+    },
+    /// CR 702.29e — a `wants_ui` cycler is picking which matching library
+    /// card a landcycle / typecycle fetches. The action suspended before any
+    /// cost was paid and is replayed verbatim with the pick stashed in
+    /// `pending_landcycle_pick`.
+    ActionSearchPick {
         actor: usize,
         action: Box<GameAction>,
     },
@@ -851,6 +897,7 @@ impl GameAction {
                 | A::CastAftermath { .. }
                 | A::CastSpellCasualty { .. }
                 | A::CastSpellBargain { .. }
+                | A::CastSpellSpliced { .. }
                 | A::CastSpellSacrificeReduce { .. }
                 | A::CastSpellSquad { .. }
                 | A::CastSpellReplicate { .. }
@@ -1010,6 +1057,12 @@ pub enum PendingEffectState {
     /// Suspended on the `OptionalTrigger` raised by `Effect::MayDo`. The
     /// yes/no answer is stashed for the re-run.
     MayDoAnswerPending,
+    /// Suspended on a yes/no question routed to `player` (who may differ
+    /// from the resolving controller — rhystic taxes, Tempting Offer,
+    /// Browbeat, Clash). The validated answer is *appended* to
+    /// `GameState.resolution_answer_log`; the re-run replays the log in
+    /// ask order to reach the next unanswered question.
+    SeatBoolAnswerPending { player: usize },
     /// Suspended on a `DivideDamage` split. The raw division is stashed;
     /// the re-run renormalises a malformed answer (wrong length / sum).
     DivisionAnswerPending,
@@ -1219,7 +1272,13 @@ pub enum GameEvent {
     /// specific triggers ("When you cycle this card", "Whenever a
     /// player cycles a card") see a distinct event from regular hand
     /// discards.
-    CardCycled { player: usize, card_id: CardId },
+    CardCycled {
+        player: usize,
+        card_id: CardId,
+        /// X paid to an `{X}` in the cycling cost (Shark Typhoon's
+        /// "create an X/X" cycle trigger reads it as the event amount).
+        x: u32,
+    },
     /// CR 104.3a — `player` conceded and left the game. Emitted before the
     /// `GameOver` that the resulting state-based-action pass produces.
     PlayerConceded { player: usize },

@@ -1063,7 +1063,7 @@ pub fn quandrix_geomancer() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Quandrix Geomancer",
@@ -2132,7 +2132,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Quandrix Tessellator",

@@ -29,7 +29,10 @@ ability-lock statics, reveal-top-land-else-hand, Mana Clash flip-off,
 graveyard/exile lockdown, graveyard escape/retrace grants, level bands
 (CR 702.87), reveal-until-N-lands mill, per-subject trigger caps,
 leaver-counter collection, X-target destroy-polymorph, Cataclysm
-sacrifice, sideboard wishes, manifest-from-hand, token Role Auras). Each entry has at least one functionality test in
+sacrifice, sideboard wishes, manifest-from-hand, token Role Auras,
+seat-routed yes/no asks (`ask_seat_bool` answer log), Absorb (CR 702.64),
+chosen-color protection grants, `MakeSpellUncounterable`, and
+statics-granted triggers firing from every hardcoded dispatch site). Each entry has at least one functionality test in
 `crabomination/src/tests/modern.rs` (registered via
 `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 

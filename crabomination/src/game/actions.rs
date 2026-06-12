@@ -183,6 +183,13 @@ pub(crate) fn extra_cost_for_spell(
             }
         }
     }
+    // Turn-scoped taxes (Elspeth Conquers Death II): opponents of the
+    // entry's controller pay until that player's next turn.
+    for t in &state.turn_scoped_spell_taxes {
+        if t.controller != caster && state.evaluate_requirement_on_card(&t.filter, card, caster) {
+            tax += t.amount;
+        }
+    }
 
     tax
 }
@@ -829,22 +836,87 @@ impl crate::game::GameState {
         })
     }
 
-    /// CR 701.10f — number of `StaticEffect::ManaProductionDoubled` permanents
-    /// `player` controls (Mana Reflection). Each doubles a mana ability's pip
-    /// output: the effective multiplier is `2^count`.
-    pub fn mana_production_doublers_for(&self, player: usize) -> u8 {
+    /// CR 701.10f / 614.5 — combined mana-production multiplier from the
+    /// `ManaProductionDoubled` (Mana Reflection) and `ManaProductionTripled`
+    /// (Nyxbloom Ancient) permanents `player` controls. Replacements compose
+    /// multiplicatively: 2^doublers × 3^triplers, clamped to keep pip math
+    /// sane.
+    pub fn mana_production_multiplier_for(&self, player: usize) -> u32 {
         use crate::effect::StaticEffect;
-        self.battlefield
+        let mut mult: u32 = 1;
+        for c in self.battlefield.iter().filter(|c| c.controller == player) {
+            for sa in &c.definition.static_abilities {
+                match sa.effect {
+                    StaticEffect::ManaProductionDoubled => mult = mult.saturating_mul(2),
+                    StaticEffect::ManaProductionTripled => mult = mult.saturating_mul(3),
+                    _ => {}
+                }
+            }
+        }
+        mult.min(1 << 16)
+    }
+
+    /// CR 605.1b — resolve `ExtraManaOnLandTap` triggered mana abilities
+    /// after `land_id` (controlled by `p`) was tapped for mana. `resolved`
+    /// is the tapping ability's event batch — `Mirror` reads the produced
+    /// color off its `ManaAdded` events.
+    fn resolve_extra_mana_on_land_tap(
+        &mut self,
+        land_id: crate::card::CardId,
+        p: usize,
+        resolved: &[GameEvent],
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::effect::{ExtraManaKind, StaticEffect};
+        let Some(land) = self.battlefield.iter().find(|c| c.id == land_id) else { return };
+        if !land.definition.is_land() {
+            return;
+        }
+        let land = land.clone();
+        let grants: Vec<(crate::card::CardId, ExtraManaKind)> = self
+            .battlefield
             .iter()
-            .filter(|c| c.controller == player)
-            .map(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .filter(|sa| matches!(sa.effect, StaticEffect::ManaProductionDoubled))
-                    .count() as u8
+            .flat_map(|src| src.definition.static_abilities.iter().map(move |sa| (src, sa)))
+            .filter_map(|(src, sa)| {
+                let StaticEffect::ExtraManaOnLandTap { enchanted_only, filter, extra } =
+                    &sa.effect
+                else {
+                    return None;
+                };
+                if *enchanted_only && src.attached_to != Some(land_id) {
+                    return None;
+                }
+                (crate::game::layers::requirement_matches_card(filter, &land, src.controller))
+                    .then_some((src.id, *extra))
             })
-            .sum()
+            .collect();
+        for (src_id, extra) in grants {
+            let color = match extra {
+                ExtraManaKind::Fixed(c) => Some(c),
+                ExtraManaKind::ChosenColor => self
+                    .battlefield_find(src_id)
+                    .and_then(|c| c.chosen_color),
+                ExtraManaKind::Mirror => resolved.iter().find_map(|e| match e {
+                    GameEvent::ManaAdded { player, color, .. } if *player == p => Some(*color),
+                    _ => None,
+                }),
+            };
+            match color {
+                Some(c) => {
+                    self.players[p].mana_pool.add(c, 1);
+                    events.push(GameEvent::ManaAdded { player: p, color: c, source: Some(src_id) });
+                }
+                // Mirror of a colorless-only production (or no pip found).
+                None => {
+                    if resolved.iter().any(|e| matches!(e,
+                        GameEvent::ColorlessManaAdded { player, .. } if *player == p))
+                    {
+                        self.players[p].mana_pool.add_colorless(1);
+                        events.push(GameEvent::ColorlessManaAdded { player: p, source: Some(src_id) });
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1166,9 +1238,13 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .map(|c| {
+                // Printed + statics-granted ETBs ("Slivers you control have
+                // 'When this enters…'" — Lavabelly) fire alike.
+                let static_granted = self.statics_granted_triggers_for(c);
                 c.definition
                     .triggered_abilities
                     .iter()
+                    .chain(static_granted.iter())
                     .filter(|t| t.event.kind == EventKind::EntersBattlefield
                         && matches!(t.event.scope, EventScope::SelfSource))
                     .map(|t| t.effect.clone())
@@ -1794,6 +1870,88 @@ impl GameState {
     /// `sacrifice` is `Some`, that artifact/enchantment/token the caster
     /// controls is sacrificed as an additional cost and the resolving spell is
     /// stamped `bargained` (read by `Predicate::SpellWasBargained`).
+    /// CR 702.47 — cast `card_id` splicing the given hand cards onto it.
+    /// Each splice card must carry a `Keyword::Splice` whose quality matches
+    /// one of the spell's subtypes; it stays in hand (revealed), its splice
+    /// cost is paid additionally, and its rules text resolves after the main
+    /// effect (spliced effect `i` targets `additional_targets[i]`).
+    pub(crate) fn cast_spell_spliced(
+        &mut self,
+        card_id: CardId,
+        splice_cards: &[CardId],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let splice_cards = splice_cards.to_vec();
+        self.cast_atomically(move |g| {
+            g.cast_spell_spliced_inner(
+                card_id,
+                &splice_cards,
+                target.clone(),
+                additional_targets.clone(),
+                mode,
+                x_value,
+            )
+        })
+    }
+
+    fn cast_spell_spliced_inner(
+        &mut self,
+        card_id: CardId,
+        splice_cards: &[CardId],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::Keyword;
+        let p = self.priority.player_with_priority;
+        if splice_cards.is_empty() || splice_cards.contains(&card_id) {
+            return Err(GameError::InvalidTarget);
+        }
+        let mut seen = std::collections::HashSet::new();
+        let spell_subtypes = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.subtypes.spell_subtypes.clone())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let mut spliced_effects = Vec::new();
+        for &sid in splice_cards {
+            // CR 702.47b — no card spliced onto the same spell twice.
+            if !seen.insert(sid) {
+                return Err(GameError::InvalidTarget);
+            }
+            let splicer = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == sid)
+                .ok_or(GameError::CardNotInHand(sid))?;
+            let (cost, quality) = splicer
+                .definition
+                .keywords
+                .iter()
+                .find_map(|k| match k {
+                    Keyword::Splice(cost, quality) => Some((cost.clone(), *quality)),
+                    _ => None,
+                })
+                .ok_or(GameError::InvalidTarget)?;
+            if !spell_subtypes.contains(&quality) {
+                return Err(GameError::InvalidTarget);
+            }
+            spliced_effects.push(splicer.definition.effect.clone());
+            // The splice cost is an additional cost (601.2b); the card stays
+            // in hand.
+            self.try_pay_with_auto_tap(p, &cost)?;
+        }
+        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            c.spliced_effects = spliced_effects;
+        }
+        self.cast_spell(card_id, target, additional_targets, mode, x_value)
+    }
+
     pub(crate) fn cast_spell_bargain(
         &mut self,
         card_id: CardId,
@@ -5581,6 +5739,18 @@ impl GameState {
             // AutoDecider picks mode 0 (Scry); ScriptedDecider::new([Mode(1)])
             // exercises the pump branch.
             let mode = self.pick_trigger_mode(&effect, source, listener_controller);
+            // The cast spell's mana value, so "where X is that spell's mana
+            // value" riders scale (Shark Typhoon).
+            let spell_mv = self
+                .stack
+                .iter()
+                .find_map(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cast_card => {
+                        Some(card.definition.cost.cmc())
+                    }
+                    _ => None,
+                })
+                .unwrap_or(0);
             self.stack.push(
                 TriggerPush::new(source, listener_controller, effect)
                     .target(auto_target)
@@ -5593,6 +5763,7 @@ impl GameState {
                     // Selector::CastSpellTarget.
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                     .mana_spent(mana_spent)
+                    .event_amount(spell_mv)
                     .build(),
             );
         }
@@ -7595,13 +7766,22 @@ impl GameState {
 
         if is_mana_ab {
             let effect = ability.effect.clone();
-            // CR 701.10f — Mana Reflection doubles a permanent tapped for mana.
-            // Stamp the transient doubler count so the `AddMana` resolver
-            // multiplies pip output; clear it afterward.
-            self.mana_production_doublers = self.mana_production_doublers_for(p);
+            // CR 701.10f / 614.5 — "tap a permanent for mana" multipliers
+            // (Mana Reflection ×2, Nyxbloom Ancient ×3). Stamp the transient
+            // multiplier so the `AddMana` resolver scales pip output; clear
+            // it afterward. Only tapping qualifies per the printed text.
+            self.mana_production_multiplier =
+                if ability.tap_cost { self.mana_production_multiplier_for(p) } else { 1 };
             let resolved = self.continue_ability_resolution(card_id, p, effect, target.clone());
-            self.mana_production_doublers = 0;
-            events.append(&mut resolved?);
+            self.mana_production_multiplier = 1;
+            let mut resolved = resolved?;
+            // CR 605.1b — triggered mana abilities ("Whenever a land is
+            // tapped for mana, … adds …") don't use the stack; they resolve
+            // here, right after the tapping ability.
+            if ability.tap_cost {
+                self.resolve_extra_mana_on_land_tap(card_id, p, &resolved, &mut events);
+            }
+            events.append(&mut resolved);
         } else {
             // Non-mana activated ability goes on the stack.
             let ability_target = target.clone();

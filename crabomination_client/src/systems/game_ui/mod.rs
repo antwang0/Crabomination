@@ -21,8 +21,9 @@ pub use player_stats::{
     update_player_stats_chips, LifeFlashTracker,
 };
 pub use popups::{
-    handle_ability_menu, handle_alt_cast_buttons, handle_pay_times_buttons, spawn_ability_menu,
-    spawn_alt_cast_modal, spawn_pay_times_modal, trigger_reveal_animation,
+    handle_ability_menu, handle_alt_cast_buttons, handle_pay_times_buttons,
+    handle_split_cast_buttons, spawn_ability_menu, spawn_alt_cast_modal, spawn_pay_times_modal,
+    spawn_split_cast_modal, trigger_reveal_animation,
 };
 
 use std::collections::{HashMap, HashSet};
@@ -82,6 +83,7 @@ pub struct GameInputResources<'w> {
     pub legal_targets: ResMut<'w, crate::game::LegalTargets>,
     pub modal_cast: ResMut<'w, crate::game::PendingModalCast>,
     pub pay_times: ResMut<'w, crate::game::PayTimesState>,
+    pub split_cast: ResMut<'w, crate::game::SplitCastState>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -3637,6 +3639,7 @@ pub fn handle_game_input(
                         let mode = targeting.pending_mode;
                         let action = build_pending_cast(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
+                            targeting.pending_split,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3685,6 +3688,7 @@ pub fn handle_game_input(
                         let mode = targeting.pending_mode;
                         let action = build_pending_cast(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
+                            targeting.pending_split,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3745,6 +3749,7 @@ pub fn handle_game_input(
                     let mode = targeting.pending_mode;
                     let action = build_pending_cast(
                         pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
+                            targeting.pending_split,
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3787,7 +3792,7 @@ pub fn handle_game_input(
                         _ => None,
                     });
                 if let Some(k) = known {
-                    if k.has_alternative_cost {
+                    if k.has_alternative_cost && k.alt_cost_available {
                         r.alt_cast.pending = Some(card_id);
                     } else if cv.squadable_hand.contains(&card_id) {
                         r.pay_times.pending =
@@ -3801,6 +3806,8 @@ pub fn handle_game_input(
                         r.pay_times.pending =
                             Some((card_id, crate::game::PayTimesMechanic::Multikicker));
                         r.pay_times.times = 1;
+                    } else if cv.splittable_right_hand.contains(&card_id) {
+                        r.split_cast.pending = Some(card_id);
                     } else if k.back_face_name.is_some()
                         && !r.flipped_hand.flipped.insert(card_id) {
                             r.flipped_hand.flipped.remove(&card_id);
@@ -3861,7 +3868,7 @@ pub fn handle_game_input(
             let has_alt = cv.players[your_seat].hand.iter().any(|h| {
                 matches!(h,
                     crabomination::net::HandCardView::Known(k)
-                    if k.id == card_id && k.has_alternative_cost)
+                    if k.id == card_id && k.has_alternative_cost && k.alt_cost_available)
             });
             if has_alt {
                 r.alt_cast.pending = Some(card_id);
@@ -3882,7 +3889,7 @@ pub fn handle_game_input(
                     if k.id == card_id && k.has_cycling)
             });
             if has_cycling {
-                outbox.submit(GameAction::Cycle { card_id });
+                outbox.submit(GameAction::Cycle { card_id, x_value: None });
             } else {
                 // No plain Cycling — fall back to Landcycling (CR 702.29e) if
                 // the card has it (fetch a land of the named type to hand).
@@ -4187,15 +4194,22 @@ fn build_pending_cast(
     mode: Option<usize>,
     cast_back: bool,
     pay_times: Option<(u32, crate::game::PayTimesMechanic)>,
+    split: Option<crate::game::SplitCastChoice>,
 ) -> GameAction {
-    match pay_times {
-        Some((times, mechanic)) => {
-            popups::pay_times_cast_action(mechanic, card_id, times, target, mode)
-        }
-        None if cast_back => GameAction::CastSpellBack {
+    match (split, pay_times) {
+        (Some(crate::game::SplitCastChoice::Right), _) => GameAction::CastSplitRight {
             card_id, target, additional_targets: vec![], mode, x_value: None,
         },
-        None => GameAction::CastSpell {
+        (Some(crate::game::SplitCastChoice::Fused), _) => GameAction::CastSplitFused {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        },
+        (None, Some((times, mechanic))) => {
+            popups::pay_times_cast_action(mechanic, card_id, times, target, mode)
+        }
+        (None, None) if cast_back => GameAction::CastSpellBack {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        },
+        (None, None) => GameAction::CastSpell {
             card_id, target, additional_targets: vec![], mode, x_value: None,
         },
     }
@@ -4217,6 +4231,7 @@ fn cancel_targeting(
     targeting.pending_equip_source = None;
     targeting.pending_prepare_source = None;
     targeting.pending_pay_times = None;
+    targeting.pending_split = None;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

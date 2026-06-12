@@ -666,6 +666,7 @@ fn create_token_attacking_joins_combat_tapped() {
         triggered_abilities: vec![],
         static_abilities: vec![],
         equipped_bonus: None,
+        dynamic_pt: None,
     };
     let trig = shortcut::on_attack(Effect::CreateTokenAttacking {
         who: PlayerRef::You,

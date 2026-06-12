@@ -104,14 +104,32 @@ impl GameState {
         self.empty_mana_pools();
 
         // Auto-declare empty blockers if no one blocked.
+        let mut events = vec![];
         if self.step == TurnStep::DeclareBlockers
             && !self.attacking.is_empty()
             && !self.blockers_declared
         {
             self.blockers_declared = true;
+            // CR 509.3g — every attacker went unblocked; "attacks and isn't
+            // blocked" triggers fire on this path too, not just on an
+            // explicit DeclareBlockers action. Dispatch inline: if anything
+            // triggered, stop here (priority round for the trigger) instead
+            // of advancing into combat damage in the same pass.
+            let unblocked: Vec<GameEvent> = self
+                .attacking
+                .iter()
+                .map(|atk| GameEvent::AttackerWentUnblocked { attacker: atk.attacker })
+                .collect();
+            // Dispatched here, not via the returned events — the caller
+            // (`perform_action`) re-dispatches returned events, which would
+            // double-fire the triggers.
+            let stack_before = self.stack.len();
+            self.dispatch_triggers_for_events(&unblocked);
+            if self.stack.len() > stack_before || self.pending_decision.is_some() {
+                self.give_priority_to_active();
+                return Ok(events);
+            }
         }
-
-        let mut events = vec![];
 
         if self.step == TurnStep::Cleanup {
             // All players passed during a CR 514.3a cleanup priority round
@@ -801,6 +819,21 @@ impl GameState {
                             .unwrap_or_default();
                     }
 
+                    // Statics-granted ETBs ("Slivers you control have 'When
+                    // this enters…'" — Lavabelly) fire as though printed;
+                    // gathered now that the entrant is on the battlefield.
+                    if let Some(c) = self.battlefield_find(card_id) {
+                        etb_triggers.extend(
+                            self.statics_granted_triggers_for(c)
+                                .into_iter()
+                                .filter(|t| {
+                                    t.event.kind == EventKind::EntersBattlefield
+                                        && matches!(t.event.scope, EventScope::SelfSource)
+                                })
+                                .map(|t| t.effect),
+                        );
+                    }
+
                     events.push(GameEvent::PermanentEntered { card_id });
 
                     // CR 702.146e — a daybound permanent entering while it's
@@ -1439,6 +1472,9 @@ impl GameState {
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
+        // "Opponents' spells cost more until your next turn" expires too
+        // (Elspeth Conquers Death II).
+        self.turn_scoped_spell_taxes.retain(|t| t.controller != p);
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {
@@ -1460,6 +1496,8 @@ impl GameState {
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();
+            pl.prowl_types_this_turn.clear();
+            pl.prowl_any_type_this_turn = false;
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
             pl.spells_uncounterable_this_turn = false;
@@ -1936,20 +1974,24 @@ impl GameState {
         }
 
         // World rule (CR 704.5k): if two or more permanents have the World
-        // supertype, all except the one that has been a World permanent for
-        // the shortest time (the newest, i.e. highest CardId) go to their
-        // owners' graveyards. Unlike the legend rule this is global, not
-        // per-controller.
+        // supertype, all except the one with the newest timestamp go to their
+        // owners' graveyards; on a timestamp tie ALL of them go. Unlike the
+        // legend rule this is global, not per-controller.
         let world_victims: Vec<CardId> = {
-            let worlds: Vec<CardId> = self
+            let worlds: Vec<(CardId, u64)> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.definition.supertypes.contains(&Supertype::World))
-                .map(|c| c.id)
+                .map(|c| (c.id, c.battlefield_timestamp))
                 .collect();
             if worlds.len() > 1 {
-                let keep = worlds.iter().copied().max().unwrap();
-                worlds.into_iter().filter(|id| *id != keep).collect()
+                let newest = worlds.iter().map(|&(_, ts)| ts).max().unwrap();
+                let tied = worlds.iter().filter(|&&(_, ts)| ts == newest).count() > 1;
+                worlds
+                    .into_iter()
+                    .filter(|&(_, ts)| tied || ts != newest)
+                    .map(|(id, _)| id)
+                    .collect()
             } else {
                 Vec::new()
             }
@@ -2267,6 +2309,39 @@ impl GameState {
         for id in orphaned_auras {
             // Fire any leaves-the-battlefield triggers on the Aura itself
             // (CR 603.6d) — e.g. Rancor's "return it to its owner's hand".
+            events.append(&mut self.remove_to_graveyard_with_triggers(id));
+        }
+
+        // CR 704.5y — if a permanent has more than one Role controlled by
+        // the same player attached, each but the newest (by battlefield
+        // timestamp, CardId tiebreak) goes to its owner's graveyard.
+        let stale_roles: Vec<CardId> = {
+            let mut by_host: std::collections::HashMap<(CardId, usize), Vec<(u64, CardId)>> =
+                std::collections::HashMap::new();
+            for c in self.battlefield.iter().filter(|c| {
+                c.definition
+                    .subtypes
+                    .enchantment_subtypes
+                    .contains(&crate::card::EnchantmentSubtype::Role)
+            }) {
+                if let Some(host) = c.attached_to {
+                    by_host
+                        .entry((host, c.controller))
+                        .or_default()
+                        .push((c.battlefield_timestamp, c.id));
+                }
+            }
+            by_host
+                .into_values()
+                .filter(|roles| roles.len() > 1)
+                .flat_map(|mut roles| {
+                    roles.sort();
+                    roles.pop(); // keep the newest
+                    roles.into_iter().map(|(_, id)| id)
+                })
+                .collect()
+        };
+        for id in stale_roles {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 

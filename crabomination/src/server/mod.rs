@@ -594,6 +594,11 @@ fn run_match_inner(
                 if actor < n && bots[actor].is_none() {
                     if rope.map(|(s, _)| s) != Some(actor) {
                         rope = Some((actor, Instant::now()));
+                        // Tell the seat its clock started so the client can
+                        // render a countdown.
+                        if let Some(tx) = seat_tx.get(actor).and_then(|s| s.as_ref()) {
+                            let _ = tx.send(ServerMsg::Rope { seconds: t.as_secs() as u32 });
+                        }
                     }
                     Some((actor, rope.expect("just set").1 + t))
                 } else {
@@ -2199,15 +2204,21 @@ mod tests {
         drain_initial(&c0);
         drain_initial(&c1);
         // Neither client acts; the rope should pass priority through whole
-        // turns. Wait for a view whose turn number advanced.
+        // turns. Wait for a view whose turn number advanced, and check the
+        // seats were told their clock started (`ServerMsg::Rope`).
         let deadline = Instant::now() + Duration::from_secs(20);
         let mut advanced = false;
+        let mut rope_notices = 0u32;
         'outer: while Instant::now() < deadline {
             for ch in [&c0, &c1] {
                 while let Ok(msg) = ch.rx.try_recv() {
                     let view = match msg {
                         ServerMsg::View(v) => Some(v),
                         ServerMsg::Update { view, .. } => Some(view),
+                        ServerMsg::Rope { .. } => {
+                            rope_notices += 1;
+                            None
+                        }
                         _ => None,
                     };
                     if view.is_some_and(|v| v.turn > turn0) {
@@ -2219,6 +2230,7 @@ mod tests {
             thread::sleep(Duration::from_millis(10));
         }
         assert!(advanced, "rope never advanced the turn");
+        assert!(rope_notices > 0, "seats were never told the rope armed");
         drop(c0);
         drop(c1);
         let _ = handle.join();

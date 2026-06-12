@@ -24,6 +24,32 @@ fn implicit_player_for_slot(what: &Selector, slot: u8) -> Option<&'static Select
         .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
+/// Slot-agnostic sibling of [`implicit_player_for_slot`] for the primary
+/// target filter ("tap all lands target player controls" — Mistbind Clique).
+fn implicit_player_if_controlled_by_target(
+    what: &Selector,
+) -> Option<&'static SelectionRequirement> {
+    matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
+        .then_some(&IMPLICIT_PLAYER_TARGET)
+}
+
+/// `Some(&Player)` when `what` is a bare `Selector::Player(Target(_))`
+/// (Oona's "target opponent exiles…").
+fn implicit_player_if_bare_player_target(
+    what: &Selector,
+) -> Option<&'static SelectionRequirement> {
+    matches!(what, Selector::Player(PlayerRef::Target(_))).then_some(&IMPLICIT_PLAYER_TARGET)
+}
+
+/// Slot-keyed sibling of [`implicit_player_if_bare_player_target`].
+fn implicit_player_for_bare_player_slot(
+    what: &Selector,
+    slot: u8,
+) -> Option<&'static SelectionRequirement> {
+    matches!(what, Selector::Player(PlayerRef::Target(n)) if *n == slot)
+        .then_some(&IMPLICIT_PLAYER_TARGET)
+}
+
 /// `Some(&Player)` when a bare `PlayerRef::Target(n)` fills `slot` — effects
 /// that target a player directly through a `PlayerRef` field
 /// (`ExilePlayerGraveyard`, `ExileHand`, `DiscardUnlessKind`).
@@ -153,6 +179,10 @@ impl Effect {
             Effect::WishToHand { .. } => false,
             Effect::SacrificeAllButOnePerType { who } => sel_has_target(who),
             Effect::DestroyTargetsPolymorph { .. } => true,
+            Effect::DestroyTargets { .. } => true,
+            Effect::Champion { .. } => false,
+            Effect::ExileUpToNFromGraveyards { count } => value_has_target(count),
+            Effect::SpellTaxUntilYourNextTurn { .. } => false,
             Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
             Effect::ManifestDread { .. } => false,
             Effect::Cloak { .. } => false,
@@ -238,7 +268,8 @@ impl Effect {
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount }
             | Effect::MillUntilLands { who, lands: amount }
-            | Effect::ExileTopOfLibrary { who, amount, .. } => {
+            | Effect::ExileTopOfLibrary { who, amount, .. }
+            | Effect::ExileTopMintPerChosenColor { who, amount, .. } => {
                 sel_has_target(who) || value_has_target(amount)
             }
             Effect::MillTwoRepeatSharedColor { who } => sel_has_target(who),
@@ -278,6 +309,9 @@ impl Effect {
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
+            Effect::SearchPickedBy { who, picker, to, .. } => {
+                player_has_target(who) || player_has_target(picker) || zonedest_has_target(to)
+            }
             Effect::ShuffleGraveyardIntoLibrary { who }
             | Effect::ShuffleHandAndGraveyardIntoLibrary { who } => player_has_target(who),
             Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),
@@ -330,7 +364,8 @@ impl Effect {
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
-            | Effect::CounterUnless { what, .. } => sel_has_target(what),
+            | Effect::CounterUnless { what, .. }
+            | Effect::MakeSpellUncounterable { what } => sel_has_target(what),
             Effect::UnlessPlayerPays { then, .. } => then.requires_target(),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
@@ -370,7 +405,8 @@ impl Effect {
             Effect::RemoveAllCounters { what } => sel_has_target(what),
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
             Effect::Proliferate => false,
-            Effect::GainControl { what, .. } => sel_has_target(what),
+            Effect::GainControl { what, .. }
+            | Effect::GainControlWhileSourceRemains { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
             | Effect::CreateTokenAttacking { who, count, .. }
             | Effect::Amass { who, count, .. } => {
@@ -526,7 +562,8 @@ impl Effect {
                 _ => None,
             }),
             Effect::DealDamageDivided { filter, .. }
-            | Effect::DestroyTargetsPolymorph { filter } => Some(filter),
+            | Effect::DestroyTargetsPolymorph { filter }
+            | Effect::DestroyTargets { filter } => Some(filter),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
@@ -553,9 +590,6 @@ impl Effect {
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileReturnNextEndStep { what }
-            | Effect::PhaseOut { what }
-            | Effect::Tap { what }
-            | Effect::Untap { what, .. }
             | Effect::Provoke { what }
             | Effect::Suspect { what }
             | Effect::Detain { what }
@@ -564,10 +598,17 @@ impl Effect {
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
+            | Effect::MakeSpellUncounterable { what }
             | Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellMayChooseTargets { what, .. }
-            | Effect::GainControl { what, .. } => sel_filter(what),
+            | Effect::GainControl { what, .. }
+            | Effect::GainControlWhileSourceRemains { what } => sel_filter(what),
+            // "Tap all lands target player controls" surfaces the implicit
+            // Player filter (Mistbind Clique); plain selectors keep theirs.
+            Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
+                sel_filter(what).or_else(|| implicit_player_if_controlled_by_target(what))
+            }
             Effect::UnlessPlayerPays { then, .. } => then.primary_target_filter(),
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
@@ -603,6 +644,9 @@ impl Effect {
             | Effect::MillUntilLands { who, .. }
             | Effect::MillTwoRepeatSharedColor { who }
             | Effect::ExileTopOfLibrary { who, .. } => sel_filter(who),
+            Effect::ExileTopMintPerChosenColor { who, .. } => {
+                sel_filter(who).or_else(|| implicit_player_if_bare_player_target(who))
+            }
             Effect::Drain { to, .. } => sel_filter(to),
             Effect::AddPoison { who, .. } => sel_filter(who),
             Effect::DiscardChosen { from, .. } => sel_filter(from),
@@ -953,6 +997,15 @@ impl Effect {
                 Value::Const(n) => format!("exile top {n} of library"),
                 _ => "exile top of library".into(),
             },
+            Effect::ExileTopMintPerChosenColor { .. } => {
+                "exile top of library; a token per chosen-color card".into()
+            }
+            Effect::DestroyTargets { .. } => "destroy the chosen targets".into(),
+            Effect::Champion { .. } => "champion a permanent".into(),
+            Effect::ExileUpToNFromGraveyards { .. } => "exile cards from graveyards".into(),
+            Effect::SpellTaxUntilYourNextTurn { amount, .. } => {
+                format!("opponents' spells cost {{{amount}}} more until your next turn")
+            }
             Effect::Discard { amount, .. } => match amount {
                 Value::Const(1) => "discard a card".into(),
                 Value::Const(n) => format!("discard {n} cards"),
@@ -1023,10 +1076,14 @@ impl Effect {
             | Effect::MillUntilLands { .. }
             | Effect::MillTwoRepeatSharedColor { .. }
             | Effect::ExileTopOfLibrary { .. }
+            | Effect::ExileTopMintPerChosenColor { .. }
             | Effect::MillHalf { .. }
             | Effect::DiscardHalf { .. }
             | Effect::SacrificeHalf { .. }
             | Effect::AddPoison { .. } => true,
+            // Cross-library searches target the searched player.
+            Effect::SearchPickedBy { who: PlayerRef::Target(_), .. } => true,
+            Effect::Search { who: PlayerRef::Target(_), .. } => true,
             // Divided damage allows player targets only when its filter can
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.
@@ -1039,7 +1096,8 @@ impl Effect {
             | Effect::CounterSpellToZone { .. }
             | Effect::CounterAbility { .. }
             | Effect::CounterUnlessPaid { .. }
-            | Effect::CounterUnless { .. } => false,
+            | Effect::CounterUnless { .. }
+            | Effect::MakeSpellUncounterable { .. } => false,
             Effect::UnlessPlayerPays { then, .. } => then.accepts_player_target(),
             // "Gain control of all creatures target PLAYER controls"
             // (Emrakul, the World Anew) takes a player; the plain
@@ -1049,13 +1107,15 @@ impl Effect {
             }
             // Targets a card to recast (graveyard/exile), not a player.
             Effect::CastWithoutPayingImmediate { .. } => false,
+            // "Tap all lands target player controls" takes a player
+            // (Mistbind Clique); the plain selector forms don't.
+            Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
+                matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
+            }
             // Permanent-targeting effects: skip Player.
             Effect::Destroy { .. }
             | Effect::DestroyNoRegen { .. }
             | Effect::Exile { .. }
-            | Effect::PhaseOut { .. }
-            | Effect::Tap { .. }
-            | Effect::Untap { .. }
             | Effect::Move { .. }
             | Effect::AddCounter { .. }
             | Effect::RemoveCounter { .. }
@@ -1303,6 +1363,9 @@ impl Effect {
                 | Effect::MillUntilLands { who, .. }
                 | Effect::MillTwoRepeatSharedColor { who }
                 | Effect::ExileTopOfLibrary { who, .. } => sel_find(who, slot),
+                Effect::ExileTopMintPerChosenColor { who, .. } => sel_find(who, slot)
+                    .or_else(|| implicit_player_for_bare_player_slot(who, slot)),
+                Effect::DestroyTargets { filter } => Some(filter),
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
                 Effect::DiscardChosen { from, .. } => sel_find(from, slot),
@@ -1323,8 +1386,10 @@ impl Effect {
                 | Effect::CounterAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
+                | Effect::MakeSpellUncounterable { what }
                 | Effect::Suspect { what }
-                | Effect::GainControl { what, .. } => sel_find(what, slot),
+                | Effect::GainControl { what, .. }
+                | Effect::GainControlWhileSourceRemains { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }

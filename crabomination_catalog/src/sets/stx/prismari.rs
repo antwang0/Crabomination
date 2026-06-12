@@ -279,7 +279,7 @@ pub fn elemental_summoning() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Elemental Summoning",

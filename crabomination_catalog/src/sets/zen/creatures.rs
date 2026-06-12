@@ -27,6 +27,7 @@ pub fn goblin_guide() -> CardDefinition {
                 // planeswalker controller) Goblin Guide is attacking.
                 who: PlayerRef::DefendingPlayer,
                 reveal_filter: SelectionRequirement::Land,
+                may_graveyard_miss: false,
             },
         }],
         ..Default::default()

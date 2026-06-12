@@ -76,10 +76,7 @@ pub fn golem_3_3_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Golem],
             ..Default::default()
         },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -119,8 +116,7 @@ pub fn food_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -158,8 +154,7 @@ pub fn treasure_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -221,8 +216,7 @@ pub fn blood_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -256,8 +250,7 @@ pub fn stx_pest_token() -> TokenDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -286,8 +279,7 @@ pub fn eldrazi_scion_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -336,10 +328,7 @@ pub fn inkling_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Inkling],
             ..Default::default()
         },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -358,10 +347,7 @@ pub fn detective_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Detective],
             ..Default::default()
         },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -380,10 +366,7 @@ pub fn fractal_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Fractal],
             ..Default::default()
         },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -402,10 +385,7 @@ pub fn spirit_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -424,10 +404,7 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -513,7 +490,6 @@ pub fn clue_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

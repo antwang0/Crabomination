@@ -400,7 +400,7 @@ pub fn lorehold_excavation() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Lorehold Excavation",
@@ -1385,7 +1385,7 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Lorehold Pilgrimwarden",
@@ -4240,7 +4240,7 @@ pub fn lorehold_spiritsage() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Lorehold Spiritsage",
@@ -11792,7 +11792,7 @@ pub fn lorehold_battlescroll_b159() -> CardDefinition {
         activated_abilities: vec![] as Vec<ActivatedAbility>,
         triggered_abilities: vec![],
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Lorehold Battlescroll (b159)",
@@ -11995,7 +11995,7 @@ pub fn lorehold_cavalcade_b161() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Lorehold Cavalcade (b161)",
@@ -12458,7 +12458,7 @@ pub fn lorehold_command() -> CardDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     let team = each_your_creature();
     CardDefinition {

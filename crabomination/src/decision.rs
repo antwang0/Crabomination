@@ -456,9 +456,13 @@ impl Decider for AutoDecider {
     }
     fn decide(&mut self, decision: &Decision) -> DecisionAnswer {
         match decision {
-            Decision::ChooseTarget { legal, .. } => {
-                DecisionAnswer::Target(legal.first().cloned().expect("no legal target"))
-            }
+            // Empty `legal` shouldn't be raised, but the server rope path
+            // calls this for stalled seats — decline (consumers fall back on
+            // a non-Target answer) instead of panicking.
+            Decision::ChooseTarget { legal, .. } => match legal.first() {
+                Some(t) => DecisionAnswer::Target(t.clone()),
+                None => DecisionAnswer::Bool(false),
+            },
             Decision::ChooseMode { .. } => DecisionAnswer::Mode(0),
             Decision::ChooseColor { legal, .. } => {
                 DecisionAnswer::Color(*legal.first().unwrap_or(&Color::Green))
