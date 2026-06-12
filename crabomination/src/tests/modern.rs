@@ -53087,6 +53087,29 @@ fn hide_bottoms_artifact_seek_exiles_and_gains_mv() {
     assert_eq!(g.players[0].life, before + mv, "gained MV life");
 }
 
+/// CR 701.19a — Seek's pick routes to the caster's seat, not the searched
+/// library's owner.
+#[test]
+fn seek_pick_routes_to_the_caster() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let seek = g.add_card_to_hand(0, catalog::hide_seek());
+    let fatty = g.add_card_to_library(1, catalog::cryptic_serpent());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: seek, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Seek");
+    g.perform_action(GameAction::PassPriority).expect("active passes");
+    g.perform_action(GameAction::PassPriority).expect("resolve");
+    let pd = g.pending_decision.as_ref().expect("search pick is pending");
+    assert_eq!(pd.acting_player(), 0, "the caster picks");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Search(Some(fatty))))
+        .expect("submit the pick");
+    assert!(g.exile.iter().any(|c| c.id == fatty), "picked card exiled from the opponent's library");
+}
+
 // ── Rhystic riders, Ad Nauseam, faithful Wrench Mind, MV≤X targeting ────────
 
 /// Esper Sentinel: an opponent's first noncreature spell each turn draws you

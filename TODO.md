@@ -369,9 +369,6 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **`SacrificeOrPay` chooser** — the auto rule (sacrifice when a match
     exists, else fold the pay into the cost) is deterministic; a wants_ui
     "which half?" picker would make Bayou Groff interactive.
-  - **Seek (Hide // Seek) pick agency** — `Effect::Search { who: Target }`
-    lets the searched player's decider answer; the printed card has the
-    caster choose. A `controller_picks` rider on Search would fix it.
   - **Vizier of Many Faces** — embalm clone still wants an
     embalm-copy-any-creature path.
 

@@ -1945,6 +1945,10 @@ pub enum Effect {
     Move { what: Selector, to: ZoneDest },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// CR 701.19a — `picker` searches `who`'s library: the pick decision
+    /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
+    /// "search target opponent's library ... exile that card").
+    SearchPickedBy { who: PlayerRef, picker: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s hand and graveyard into their library (Day's

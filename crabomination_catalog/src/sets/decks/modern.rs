@@ -48317,9 +48317,8 @@ pub fn turn_burn() -> CardDefinition {
 }
 
 /// Hide // Seek — {R}{W} // {W}{B} Instant. Hide bottoms an artifact or
-/// enchantment; Seek exiles a card from a target opponent's library, gaining
-/// life equal to its mana value (the searched player's decider answers the
-/// pick).
+/// enchantment; Seek exiles a card of the caster's choice from a target
+/// opponent's library, gaining life equal to its mana value.
 pub fn hide_seek() -> CardDefinition {
     CardDefinition {
         name: "Hide // Seek",
@@ -48339,8 +48338,9 @@ pub fn hide_seek() -> CardDefinition {
                 cost: cost(&[w(), b()]),
                 card_types: vec![CardType::Instant],
                 effect: Effect::Seq(vec![
-                    Effect::Search {
+                    Effect::SearchPickedBy {
                         who: PlayerRef::Target(0),
+                        picker: PlayerRef::You,
                         filter: SelectionRequirement::Any,
                         to: ZoneDest::Exile,
                     },

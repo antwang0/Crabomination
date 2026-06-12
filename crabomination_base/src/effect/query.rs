@@ -278,6 +278,9 @@ impl Effect {
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
+            Effect::SearchPickedBy { who, picker, to, .. } => {
+                player_has_target(who) || player_has_target(picker) || zonedest_has_target(to)
+            }
             Effect::ShuffleGraveyardIntoLibrary { who }
             | Effect::ShuffleHandAndGraveyardIntoLibrary { who } => player_has_target(who),
             Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),

@@ -5603,9 +5603,21 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Search { who, filter, to } => {
+            e @ (Effect::Search { .. } | Effect::SearchPickedBy { .. }) => {
                 use crate::decision::Decision;
+                let (who, picker_ref, filter, to) = match e {
+                    Effect::Search { who, filter, to } => (who, None, filter, to),
+                    Effect::SearchPickedBy { who, picker, filter, to } => {
+                        (who, Some(picker), filter, to)
+                    }
+                    _ => unreachable!(),
+                };
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // CR 701.19a — the picker (when distinct) makes the pick;
+                // the searched library is still `p`'s.
+                let picker = picker_ref
+                    .and_then(|pr| self.resolve_player(pr, ctx))
+                    .unwrap_or(p);
 
                 // Leonin Arbiter — an unpayable search tax means the search
                 // happens but finds nothing (CR 701.19d).
@@ -5632,14 +5644,14 @@ impl GameState {
                 let eligible: Option<Vec<crate::card::CardId>> =
                     Some(candidates.iter().map(|(id, _)| *id).collect());
                 let decision = Decision::SearchLibrary {
-                    player: p,
+                    player: picker,
                     candidates,
                     eligible: eligible.clone(),
                 };
                 let pending =
                     PendingEffectState::SearchPending { player: p, to: to.clone(), eligible };
 
-                if self.players[p].wants_ui {
+                if self.players[picker].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
                     return Ok(());
                 }
