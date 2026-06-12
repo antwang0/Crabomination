@@ -503,6 +503,10 @@ pub enum Keyword {
     /// upkeeps (Enduring Ideal).
     Epic,
     Cycling(crate::mana::ManaCost),
+    /// CR 702.47 — "Splice onto [quality] [cost]": while in hand, reveal as
+    /// you cast a matching spell to add this card's rules text to it for the
+    /// cost. Cast via `GameAction::CastSpellSpliced` (Glacial Ray).
+    Splice(crate::mana::ManaCost, SpellSubtype),
     /// CR 702.29 — Cycling whose cost is a life payment instead of mana
     /// ("Cycling—Pay 2 life", Street Wraith).
     CyclingLife(u32),
@@ -2316,6 +2320,11 @@ pub struct CardInstance {
     /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
     /// by `Predicate::SpellWasBargained`.
     pub bargained: bool,
+    /// CR 702.47 — rules text gained by splicing cards onto this spell,
+    /// resolved after the main effect (each entry reads its target from the
+    /// matching `additional_targets` slot). Cleared when the spell leaves
+    /// the stack (702.47e).
+    pub spliced_effects: Vec<Effect>,
     /// CR 702.27 — true if this spell was cast paying its optional Buyback
     /// cost. On resolution the resolver returns the card to its owner's
     /// hand instead of the graveyard.
@@ -2606,6 +2615,7 @@ impl CardInstance {
             kick_count: 0,
             squad_count: 0,
             bargained: false,
+            spliced_effects: Vec::new(),
             bought_back: false,
             entwined: false,
             bestowed: false,
@@ -2926,6 +2936,9 @@ struct CardInstanceWire {
     /// CR 702.176 bargain flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     bargained: bool,
+    /// CR 702.47 spliced rules text. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    spliced_effects: Vec<Effect>,
     /// CR 702.46 — creature this card is ciphered onto. `#[serde(default)]`
     /// for back-compat.
     #[serde(default)]
@@ -3116,6 +3129,7 @@ impl serde::Serialize for CardInstance {
             kick_count: self.kick_count,
             squad_count: self.squad_count,
             bargained: self.bargained,
+            spliced_effects: self.spliced_effects.clone(),
             encoded_on: self.encoded_on,
             cast_target_was_battlefield: self.cast_target_was_battlefield,
             granted_activated_abilities: self.granted_activated_abilities.clone(),
@@ -3193,6 +3207,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.kick_count = wire.kick_count;
         c.squad_count = wire.squad_count;
         c.bargained = wire.bargained;
+        c.spliced_effects = wire.spliced_effects.clone();
         c.encoded_on = wire.encoded_on;
         c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
         c.granted_activated_abilities = wire.granted_activated_abilities;

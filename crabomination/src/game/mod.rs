@@ -2788,9 +2788,11 @@ impl GameState {
     /// own graveyard-specific event (CardMilled, etc.).
     pub(crate) fn route_to_graveyard(
         &mut self,
-        card: crate::card::CardInstance,
+        mut card: crate::card::CardInstance,
         events: &mut Vec<crate::game::GameEvent>,
     ) -> bool {
+        // CR 702.47e — splice changes are lost when the spell leaves the stack.
+        card.spliced_effects.clear();
         // CR 712.16 — a melded shell dies as its two component cards.
         if !card.meld_parts.is_empty() {
             let mut card = card;
@@ -4829,6 +4831,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_plotted(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSpellSpliced {
+                card_id,
+                splice_cards,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_spliced(card_id, &splice_cards, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
@@ -8137,6 +8147,25 @@ impl GameState {
             );
             let mut right_events = self.resolve_effect(&right_effect, &right_ctx)?;
             events.append(&mut right_events);
+        }
+        // CR 702.47b — spliced rules text resolves after the main spell's
+        // effect; spliced effect `i` reads its target from
+        // `additional_targets[i]`.
+        for (i, spliced) in card.spliced_effects.clone().into_iter().enumerate() {
+            let splice_ctx = EffectContext::for_spell_with_source_and_origin(
+                card.id,
+                card.definition.name,
+                caster,
+                additional_targets.get(i).cloned(),
+                Vec::new(),
+                mode,
+                x_value,
+                converged_value,
+                mana_spent,
+                card.cast_from_hand,
+            );
+            let mut splice_events = self.resolve_effect(&spliced, &splice_ctx)?;
+            events.append(&mut splice_events);
         }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {

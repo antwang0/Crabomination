@@ -1576,6 +1576,19 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.47 — Splice** — `Keyword::Splice(cost, quality)` +
+  `GameAction::CastSpellSpliced`: splice costs paid additionally
+  (atomic rollback), spliced text resolves after the main effect reading
+  targets from `additional_targets[i]`, card stays in hand, changes lost
+  off-stack (702.47e). Glacial Ray / Kodama's Might / Reach Through Mists
+  (`sets::chk`). Tests `cr_702_47_*`. Client splice picker + bot splice
+  awareness still ⏳.
+- ✅ **CR 704.5k — world rule** — timestamp-keyed (newest survives, ties
+  bin all). Concordant Crossroads, Nether Void. Tests `cr_704_5k_*`.
+- ✅ **CR 614.5 / 701.10f — mana-production multipliers compose** —
+  `ManaProductionTripled` (Nyxbloom Ancient) × `ManaProductionDoubled`
+  (Mana Reflection) = 6×; only "tap a permanent for mana" abilities
+  qualify (rituals exempt).
 - ✅ **CR 702.64 — Absorb** — `Keyword::Absorb(n)` soaks N per damage event
   at the shared prevention funnel (combat + non-combat). Lymph Sliver
   (grant via `GrantKeyword`). Tests `cr_702_64_*`.

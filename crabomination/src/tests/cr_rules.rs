@@ -9,6 +9,7 @@
 
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget};
+use crate::mana::Color;
 use crate::game::two_player_game;
 use super::*;
 
@@ -1916,4 +1917,131 @@ fn nylea_reveal_miss_may_go_to_graveyard() {
     }).expect("activate the reveal");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "miss binned by choice");
+}
+
+// ── CR 702.47 — Splice onto Arcane ───────────────────────────────────────────
+
+/// Splicing Glacial Ray onto an Arcane spell pays the splice cost, keeps the
+/// spliced card in hand, and resolves the spliced text after the main effect.
+#[test]
+fn cr_702_47_splice_adds_text_and_keeps_the_card_in_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let mists = g.add_card_to_hand(0, catalog::reach_through_mists());
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpliced {
+        card_id: mists,
+        splice_cards: vec![ray],
+        target: None,
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).expect("cast Reach Through Mists splicing Glacial Ray");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 2, "spliced Ray dealt 2");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ray),
+        "spliced card stays in hand (CR 702.47a)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mists),
+        "main spell resolved to the graveyard");
+    // The graveyard copy lost the spliced text (CR 702.47e).
+    assert!(g.players[0].graveyard.iter().find(|c| c.id == mists)
+        .unwrap().spliced_effects.is_empty());
+}
+
+/// Splice is rejected when the main spell isn't of the required quality, and
+/// the whole cast rolls back (no splice cost stranded).
+#[test]
+fn cr_702_47_splice_requires_the_quality() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // not Arcane
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    assert!(g.perform_action(GameAction::CastSpellSpliced {
+        card_id: bolt,
+        splice_cards: vec![ray],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).is_err(), "Bolt has no Arcane subtype");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "nothing paid");
+}
+
+/// You can't splice a card without enough mana for its splice cost.
+#[test]
+fn cr_702_47_splice_cost_is_additional() {
+    let mut g = two_player_game();
+    let mists = g.add_card_to_hand(0, catalog::reach_through_mists());
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(Color::Blue, 1); // {U} only — splice {1}{R} unpayable
+    assert!(g.perform_action(GameAction::CastSpellSpliced {
+        card_id: mists,
+        splice_cards: vec![ray],
+        target: None,
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).is_err());
+    assert!(g.players[0].hand.iter().any(|c| c.id == mists), "cast rolled back");
+}
+
+// ── CR 704.5k — the world rule ───────────────────────────────────────────────
+
+/// A second World permanent sends the older one to the graveyard.
+#[test]
+fn cr_704_5k_world_rule_keeps_the_newest() {
+    let mut g = two_player_game();
+    let old = g.add_card_to_battlefield(0, catalog::concordant_crossroads());
+    g.battlefield_find_mut(old).unwrap().battlefield_timestamp = 10;
+    let new = g.add_card_to_battlefield(1, catalog::nether_void());
+    g.battlefield_find_mut(new).unwrap().battlefield_timestamp = 20;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(old).is_none(), "older World binned");
+    assert!(g.battlefield_find(new).is_some(), "newest World survives");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old));
+}
+
+/// On a timestamp tie, ALL World permanents go (CR 704.5k second sentence).
+#[test]
+fn cr_704_5k_world_rule_tie_bins_all() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::concordant_crossroads());
+    let b = g.add_card_to_battlefield(1, catalog::nether_void());
+    g.battlefield_find_mut(a).unwrap().battlefield_timestamp = 7;
+    g.battlefield_find_mut(b).unwrap().battlefield_timestamp = 7;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(),
+        "simultaneous Worlds all die");
+}
+
+/// Nether Void taxes every spell {3} (countered when unpaid).
+#[test]
+fn nether_void_counters_unpaid_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::nether_void());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "unpaid tax: countered");
+    assert_eq!(g.players[1].life, 20, "no damage dealt");
+}
+
+/// Concordant Crossroads gives everything haste.
+#[test]
+fn concordant_crossroads_grants_haste_to_all() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::concordant_crossroads());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&crate::card::Keyword::Haste));
+    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&crate::card::Keyword::Haste));
 }

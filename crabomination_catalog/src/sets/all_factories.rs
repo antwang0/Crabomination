@@ -53,6 +53,14 @@ static AP: &[Factory] = &[
 static ARN: &[Factory] = &[
     super::arn::juzam_djinn,
 ];
+static CHK: &[Factory] = &[
+    super::chk::glacial_ray,
+    super::chk::reach_through_mists,
+    super::chk::kodamas_might,
+    super::chk::concordant_crossroads,
+    super::chk::nether_void,
+    super::chk::eiganjo_castle,
+];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
     super::decks::chancellor_of_the_tangle,
@@ -7558,6 +7566,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("all", ALL),
     ("ap", AP),
     ("arn", ARN),
+    ("chk", CHK),
     ("decks", DECKS),
     ("dis", DIS),
     ("fem", FEM),

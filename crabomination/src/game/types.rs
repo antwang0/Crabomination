@@ -214,6 +214,20 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.47 — cast a spell splicing the given hand cards onto it. Each
+    /// splice card (revealed, stays in hand) must carry `Keyword::Splice`
+    /// whose quality matches the cast spell's subtypes; its splice cost is
+    /// paid additionally and its rules text resolves after the main effect.
+    /// Spliced effect `i` reads its target from `additional_targets[i]`.
+    CastSpellSpliced {
+        card_id: CardId,
+        splice_cards: Vec<CardId>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
     /// creatures, {N} less each" additional cost. Each id in `sacrifices`
     /// (a creature you control) is sacrificed as an additional cost and the
@@ -870,6 +884,7 @@ impl GameAction {
                 | A::CastAftermath { .. }
                 | A::CastSpellCasualty { .. }
                 | A::CastSpellBargain { .. }
+                | A::CastSpellSpliced { .. }
                 | A::CastSpellSacrificeReduce { .. }
                 | A::CastSpellSquad { .. }
                 | A::CastSpellReplicate { .. }

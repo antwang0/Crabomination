@@ -1974,20 +1974,24 @@ impl GameState {
         }
 
         // World rule (CR 704.5k): if two or more permanents have the World
-        // supertype, all except the one that has been a World permanent for
-        // the shortest time (the newest, i.e. highest CardId) go to their
-        // owners' graveyards. Unlike the legend rule this is global, not
-        // per-controller.
+        // supertype, all except the one with the newest timestamp go to their
+        // owners' graveyards; on a timestamp tie ALL of them go. Unlike the
+        // legend rule this is global, not per-controller.
         let world_victims: Vec<CardId> = {
-            let worlds: Vec<CardId> = self
+            let worlds: Vec<(CardId, u64)> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.definition.supertypes.contains(&Supertype::World))
-                .map(|c| c.id)
+                .map(|c| (c.id, c.battlefield_timestamp))
                 .collect();
             if worlds.len() > 1 {
-                let keep = worlds.iter().copied().max().unwrap();
-                worlds.into_iter().filter(|id| *id != keep).collect()
+                let newest = worlds.iter().map(|&(_, ts)| ts).max().unwrap();
+                let tied = worlds.iter().filter(|&&(_, ts)| ts == newest).count() > 1;
+                worlds
+                    .into_iter()
+                    .filter(|&(_, ts)| tied || ts != newest)
+                    .map(|(id, _)| id)
+                    .collect()
             } else {
                 Vec::new()
             }

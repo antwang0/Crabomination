@@ -1800,6 +1800,88 @@ impl GameState {
     /// `sacrifice` is `Some`, that artifact/enchantment/token the caster
     /// controls is sacrificed as an additional cost and the resolving spell is
     /// stamped `bargained` (read by `Predicate::SpellWasBargained`).
+    /// CR 702.47 — cast `card_id` splicing the given hand cards onto it.
+    /// Each splice card must carry a `Keyword::Splice` whose quality matches
+    /// one of the spell's subtypes; it stays in hand (revealed), its splice
+    /// cost is paid additionally, and its rules text resolves after the main
+    /// effect (spliced effect `i` targets `additional_targets[i]`).
+    pub(crate) fn cast_spell_spliced(
+        &mut self,
+        card_id: CardId,
+        splice_cards: &[CardId],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let splice_cards = splice_cards.to_vec();
+        self.cast_atomically(move |g| {
+            g.cast_spell_spliced_inner(
+                card_id,
+                &splice_cards,
+                target.clone(),
+                additional_targets.clone(),
+                mode,
+                x_value,
+            )
+        })
+    }
+
+    fn cast_spell_spliced_inner(
+        &mut self,
+        card_id: CardId,
+        splice_cards: &[CardId],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::Keyword;
+        let p = self.priority.player_with_priority;
+        if splice_cards.is_empty() || splice_cards.contains(&card_id) {
+            return Err(GameError::InvalidTarget);
+        }
+        let mut seen = std::collections::HashSet::new();
+        let spell_subtypes = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.subtypes.spell_subtypes.clone())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let mut spliced_effects = Vec::new();
+        for &sid in splice_cards {
+            // CR 702.47b — no card spliced onto the same spell twice.
+            if !seen.insert(sid) {
+                return Err(GameError::InvalidTarget);
+            }
+            let splicer = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == sid)
+                .ok_or(GameError::CardNotInHand(sid))?;
+            let (cost, quality) = splicer
+                .definition
+                .keywords
+                .iter()
+                .find_map(|k| match k {
+                    Keyword::Splice(cost, quality) => Some((cost.clone(), *quality)),
+                    _ => None,
+                })
+                .ok_or(GameError::InvalidTarget)?;
+            if !spell_subtypes.contains(&quality) {
+                return Err(GameError::InvalidTarget);
+            }
+            spliced_effects.push(splicer.definition.effect.clone());
+            // The splice cost is an additional cost (601.2b); the card stays
+            // in hand.
+            self.try_pay_with_auto_tap(p, &cost)?;
+        }
+        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            c.spliced_effects = spliced_effects;
+        }
+        self.cast_spell(card_id, target, additional_targets, mode, x_value)
+    }
+
     pub(crate) fn cast_spell_bargain(
         &mut self,
         card_id: CardId,

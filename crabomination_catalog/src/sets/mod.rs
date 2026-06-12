@@ -255,6 +255,7 @@ pub mod akh;
 pub mod all;
 pub mod ap;
 pub mod arn;
+pub mod chk;
 pub mod dis;
 pub mod fem;
 pub mod gpt;

@@ -784,16 +784,19 @@ impl ManaPool {
                     have,
                 });
             }
+            // Drain colorless first — generic pips shouldn't eat colored
+            // mana a follow-up payment (splice cost, kicker, a second
+            // spell) might need. Any {C} pips in THIS cost were already
+            // taken in pass 2.
             let mut rem = generic;
+            let drain = rem.min(tmp.colorless);
+            tmp.colorless -= drain;
+            rem -= drain;
             for color in Color::ALL {
                 if rem == 0 { break; }
                 let drain = rem.min(tmp.amount(color));
                 *tmp.slot_mut(color) -= drain;
                 rem -= drain;
-            }
-            // Drain colorless last for generic
-            if rem > 0 {
-                tmp.colorless -= rem;
             }
         }
 

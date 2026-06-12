@@ -213,7 +213,9 @@ not how Magic works" moments.
   on loyalty, attacking planeswalkers redirect rules.
 - 🟡 **State-based action coverage audit:** +1/-1 counter annihilation ✅
   (CR 122.3), counter caps ✅ (CR 122.4), legend rule ✅, saga-chapter
-  sacrifice ✅. Remaining: world rule, attached-Aura orphan corners.
+  sacrifice ✅, world rule ✅ (CR 704.5k — timestamp-keyed, ties bin all;
+  Concordant Crossroads / Nether Void). Remaining: attached-Aura orphan
+  corners.
 
 ## Tier 3 — Object model & zones
 
@@ -442,7 +444,7 @@ feature; sweep card-batch by card-batch.
   + `resolving_lki_source`); Goldvein Hydra, Cacophony Scamp, Heartfire Hero.
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
-  per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,
+  per extra mode; Collective Brutality's discard-a-card), ✅ Splice (CR 702.47 — `Keyword::Splice(cost, quality)` + `GameAction::CastSpellSpliced`: pay splice costs additionally, spliced rules text resolves after the main effect, card stays in hand; Glacial Ray, Kodama's Might onto Arcane spells),
   ✅ Replicate (CR 702.107 — `Keyword::Replicate(cost)` +
   `GameAction::CastSpellReplicate { times }`: pay the replicate cost any number
   of times, copy the spell that many times via `copy_stack_spell`; Pyromatics,
@@ -621,8 +623,9 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    `FastForward::manual_priority`; while on, `auto_advance_p0` never passes
    for the player (explicit End Turn / Next Turn / click-to-advance still
    override). Shift-hold-after-your-spell remains ⏳.
-7. ⏳ **Stack visualization** with response affordances and "respond / let
-   resolve" per item.
+7. ✅ **Stack visualization** — the stack panel renders as a visual zone
+   (see main's stack-panel work); per-item "respond / let resolve"
+   affordances remain ⏳.
 8. ✅ **Phase bar / step indicator** — the left-edge phase chart shows every
    step with the current one highlighted, carries clickable stop markers
    (see #2), and right-click arms click-to-advance ("pass until this
@@ -693,10 +696,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   per-target hint layers (`legal_target_filter` exists to build on).
 - ⏳ **Animations & SFX** polish; **board-state pings / alerts**
   (low life, triggers waiting, your turn).
-- ⏳ **Settings menu** (graphics quality exists; add audio, gameplay,
-  accessibility tabs).
-- ⏳ **Battlefield organization** (auto-tuck lands, group tokens, stack
-  identical permanents).
+- ✅ **Settings menu** — main-menu Settings panel (window mode, resolution,
+  quality, gameplay; persisted). Audio/accessibility tabs ⏳.
+- ✅ **Battlefield organization** — identical tokens cascade into piles
+  with ×N badges.
 
 ## Tier 9 — Multiplayer & social
 
@@ -734,8 +737,12 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 ## Tier 10 — Formats & match structure
 
 - ⏳ **Best-of-3 + sideboarding** flow (core competitive structure).
-- ⏳ **Deck legality validation** per format (banlist, size, singleton,
-  color identity for Commander).
+- 🟡 **Deck legality validation** per format — size / copy caps / singleton
+  / Commander color identity ✅ (`format::validate_deck`,
+  `validate_commander_deck`), ban + Vintage-restricted lists ✅
+  (`Format::banned_cards` / `restricted_cards`, enforced in
+  `validate_deck`; wired into the menu deck import + server config).
+  Remaining: per-set legality pools (Standard rotation), Pauper rarity.
 - ⏳ **More 60-card formats:** Modern, Pioneer, Legacy, Vintage, Pauper
   (mostly banlist/pool config on top of existing rules).
 - ⏳ **Limited match rules** (40-card, basic-land access).
