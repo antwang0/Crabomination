@@ -2551,7 +2551,13 @@ impl GameState {
                     ManaPayload::Colorless(v) => {
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
                         for _ in 0..n {
-                            self.players[p].mana_pool.add_colorless(mult);
+                            match restriction {
+                                // Powerstone tokens — restricted {C}.
+                                Some(r) => self.players[p]
+                                    .mana_pool
+                                    .add_restricted_colorless(mult, r),
+                                None => self.players[p].mana_pool.add_colorless(mult),
+                            }
                             events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                         }
                     }

@@ -2067,6 +2067,7 @@ static DECKS: &[Factory] = &[
     super::decks::shacklegeist,
     super::decks::deflecting_palm,
     super::decks::sword_point_diplomacy,
+    super::decks::stern_lesson,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,

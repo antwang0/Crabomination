@@ -51948,3 +51948,24 @@ pub fn sword_point_diplomacy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Stern Lesson — {2}{U} Instant. Draw two, discard one, create a tapped
+/// Powerstone token.
+pub fn stern_lesson() -> CardDefinition {
+    CardDefinition {
+        name: "Stern Lesson",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crate::game::effects::powerstone_token(),
+            },
+            Effect::Tap { what: Selector::LastCreatedToken },
+        ]),
+        ..Default::default()
+    }
+}

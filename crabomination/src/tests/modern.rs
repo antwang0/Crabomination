@@ -231,7 +231,8 @@ fn paradise_druid_taps_for_any_color() {
         card_id: id, ability_index: 0, target: None, x_value: None })
     .expect("tap for mana");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.total() + pool.restricted_total(), 1, "produced one mana");
 }
 
 /// Merfolk Trickster taps an opponent's creature on ETB.
@@ -36094,7 +36095,8 @@ fn vodalian_arcanist_taps_for_restricted_mana() {
         card_id: id, ability_index: 0, target: None, x_value: None })
     .expect("tap for mana");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1,
+        "restricted colorless sits apart from the free pool");
 }
 
 /// Reflecting Pool taps for a color a land you control could produce — with a
@@ -48011,7 +48013,9 @@ fn eldrazi_temple_restricted_mana() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: temple, ability_index: 1, target: None, x_value: None,
     }).expect("tap for restricted {C}{C}");
-    assert_eq!(g.players[0].mana_pool.total(), 2);
+    // Restricted {C} sits apart from the free pool (it only becomes
+    // spendable through pay_for_spell when the restriction permits).
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2);
     // a non-Eldrazi spell can't spend it
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
     assert!(g.perform_action(GameAction::CastSpell {
@@ -56471,4 +56475,37 @@ fn sword_point_diplomacy_pay_or_take() {
     assert!(g.exile.iter().any(|c| c.id == a), "denied card exiled");
     assert!(g.players[0].has_in_hand(b1) && g.players[0].has_in_hand(c1),
         "unpaid cards into hand");
+}
+
+/// Stern Lesson loots two-for-one and mints a tapped Powerstone whose
+/// mana can't cast a nonartifact spell.
+#[test]
+fn stern_lesson_powerstone_restriction() {
+    use crabomination_base::mana::SpellKind;
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::stern_lesson());
+    g.add_card_to_hand(0, catalog::forest()); // discard fodder
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    let stone = g.battlefield.iter().find(|c| c.definition.name == "Powerstone")
+        .expect("Powerstone minted").id;
+    assert!(g.battlefield_find(stone).unwrap().tapped, "enters tapped");
+    g.clear_sickness(stone);
+    g.battlefield_find_mut(stone).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for {C}");
+    // The restricted {C} can't fund a nonartifact spell but can fund an
+    // artifact spell.
+    let pool = &mut g.players[0].mana_pool;
+    assert!(pool.clone().pay_for_spell(
+        &crabomination_base::mana::cost(&[crabomination_base::mana::generic(1)]),
+        &SpellKind { casting_nonartifact_spell: true, ..Default::default() },
+    ).is_err(), "nonartifact spell rejected");
+    assert!(pool.clone().pay_for_spell(
+        &crabomination_base::mana::cost(&[crabomination_base::mana::generic(1)]),
+        &SpellKind { artifact: true, ..Default::default() },
+    ).is_ok(), "artifact spell allowed");
 }

@@ -152,6 +152,8 @@ pub enum ArtifactSubtype {
     Equipment, Vehicle, Food, Treasure, Clue, Blood, Fortification, Contraption,
     // Lost Caverns of Ixalan explore token (CR 111.10s).
     Map,
+    // The Brothers' War mana token (CR 111.10q).
+    Powerstone,
 }
 
 /// Enchantment subtypes.
@@ -2036,6 +2038,7 @@ impl CardDefinition {
             land_ability: false,
             creature: self.is_creature(),
             creature_ability: false,
+            casting_nonartifact_spell: !self.is_artifact(),
         }
     }
 

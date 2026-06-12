@@ -158,6 +158,31 @@ pub fn treasure_token() -> TokenDefinition {
     }
 }
 
+/// Powerstone token (CR 111.10q): "{T}: Add {C}. This mana can't be spent
+/// to cast a nonartifact spell."
+pub fn powerstone_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Powerstone".into(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Powerstone],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::Const(1))),
+                    crate::mana::SpendRestriction::NoNonartifactSpells,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Treasure as enhanced by Goldspan Dragon — "{T}, Sacrifice this artifact:
 /// Add two mana of any one color." (Goldspan grants this to Treasures you
 /// control; modeled on the Treasures it mints, the common play pattern.)
