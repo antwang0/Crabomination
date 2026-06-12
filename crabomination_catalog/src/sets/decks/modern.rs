@@ -16511,6 +16511,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                 )),
                 once_per_turn: false,
                 per_subject_cap: None,
+                actor_is_opponent: false,
             },
             effect: Effect::WinGame { who: PlayerRef::You },
         }],
@@ -46518,6 +46519,7 @@ pub fn the_ozolith() -> CardDefinition {
                 filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
                 once_per_turn: false,
                 per_subject_cap: None,
+                actor_is_opponent: false,
             },
             effect: Effect::MoveAllCounters {
                 from: Selector::This,
@@ -46552,6 +46554,7 @@ pub fn nadu_winged_wisdom() -> CardDefinition {
                 filter: None,
                 once_per_turn: false,
                 per_subject_cap: Some(2),
+                actor_is_opponent: false,
             },
             effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
         }],
@@ -49816,8 +49819,7 @@ pub fn dormant_sliver() -> CardDefinition {
 }
 
 /// Opaline Sliver — {1}{W}{U} 2/2. All Slivers have "Whenever this becomes
-/// the target of a spell, you may draw a card." (Printed: an opponent's
-/// spell; the caster gate isn't modeled.)
+/// the target of a spell an opponent controls, you may draw a card.
 pub fn opaline_sliver() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
@@ -49825,7 +49827,8 @@ pub fn opaline_sliver() -> CardDefinition {
             effect: StaticEffect::GrantTriggeredAbility {
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
                 ability: Box::new(TriggeredAbility {
-                    event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                    event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
+                        .from_opponent(),
                     effect: Effect::MayDo {
                         description: "Draw a card?".into(),
                         body: Box::new(Effect::Draw {

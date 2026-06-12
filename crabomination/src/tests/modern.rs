@@ -54828,6 +54828,22 @@ fn opaline_sliver_draws_when_targeted() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "targeting fed a draw");
 }
 
+/// Opaline Sliver's granted trigger gates on the caster being an opponent —
+/// your own spell targeting your Sliver doesn't draw.
+#[test]
+fn opaline_sliver_ignores_your_own_targeting_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::opaline_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::might_sliver());
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, pump, Target::Permanent(s));
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "cast only — no draw off your own spell");
+}
+
 /// Ward Sliver: ETB color choice grants all Slivers protection from it.
 #[test]
 fn ward_sliver_grants_chosen_protection() {

@@ -325,9 +325,6 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **Sedge Sliver** — granting *conditional statics* ("+1/+1 while you
     control a Swamp") to a class of permanents isn't modeled. (Sliver
     Legion's per-count anthem ✅ via `StaticEffect::PumpPTPerOtherOfType`.)
-  - **Opaline Sliver** fires on any targeting spell (printed: an
-    opponent's); `EventKind::BecameTarget` doesn't carry a caster gate
-    for SelfSource scopes.
   - **TemptingOffer ordering** — opponents now answer before the body
     runs (re-run idempotency); printed timing shows them the
     controller's result first.

@@ -1295,14 +1295,32 @@ pub struct EventSpec {
     /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
     #[serde(default)]
     pub per_subject_cap: Option<u8>,
+    /// The event's actor (caster / controller of the triggering spell or
+    /// ability) must be an opponent of the trigger's controller. Refines
+    /// scopes that don't already gate on the actor — Opaline Sliver's
+    /// "becomes the target of a spell an opponent controls" on SelfSource.
+    #[serde(default)]
+    pub actor_is_opponent: bool,
 }
 
 impl EventSpec {
     pub fn new(kind: EventKind, scope: EventScope) -> Self {
-        Self { kind, scope, filter: None, once_per_turn: false, per_subject_cap: None }
+        Self {
+            kind,
+            scope,
+            filter: None,
+            once_per_turn: false,
+            per_subject_cap: None,
+            actor_is_opponent: false,
+        }
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
+        self
+    }
+    /// Require the triggering event's actor to be an opponent.
+    pub fn from_opponent(mut self) -> Self {
+        self.actor_is_opponent = true;
         self
     }
     /// Mark this trigger "only once each turn" (CR 603.3d).
