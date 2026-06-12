@@ -87,6 +87,19 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
     },
+    /// "All [filter] have 'This gets +P/+T as long as [condition]'" — the
+    /// conditional self-pump granted to a class of permanents (Sedge
+    /// Sliver). Unlike `PumpTeamIf`, the condition is evaluated per affected
+    /// permanent with *that permanent's controller* as "you", so each
+    /// player's Slivers check their own board.
+    GrantPumpSelfIf {
+        filter: SelectionRequirement,
+        condition: Predicate,
+        power: i32,
+        toughness: i32,
+        #[serde(default)]
+        keywords: Vec<Keyword>,
+    },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
     /// "All [filter] have protection from the chosen color" — the color is

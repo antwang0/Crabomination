@@ -322,9 +322,6 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ⏳ **Noticed this run (slivers / seat-routed asks batch):**
   - **Homing Sliver** — needs statics that grant cycling to *hand* cards
     ("Each Sliver card in each player's hand has slivercycling {3}").
-  - **Sedge Sliver** — granting *conditional statics* ("+1/+1 while you
-    control a Swamp") to a class of permanents isn't modeled. (Sliver
-    Legion's per-count anthem ✅ via `StaticEffect::PumpPTPerOtherOfType`.)
   - **TemptingOffer ordering** — opponents now answer before the body
     runs (re-run idempotency); printed timing shows them the
     controller's result first.

@@ -54844,6 +54844,35 @@ fn opaline_sliver_ignores_your_own_targeting_spell() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1, "cast only — no draw off your own spell");
 }
 
+/// Sedge Sliver's granted "+1/+1 while you control a Swamp" checks each
+/// Sliver's own controller, and the {B} regeneration grant works.
+#[test]
+fn sedge_sliver_conditional_pump_is_per_controller() {
+    let mut g = two_player_game();
+    let sedge = g.add_card_to_battlefield(0, catalog::sedge_sliver());
+    let theirs = g.add_card_to_battlefield(1, catalog::plated_sliver());
+    // Only P0 controls a Swamp.
+    g.add_card_to_battlefield(0, catalog::swamp());
+    // Plated Sliver itself grants all Slivers +0/+1, so baselines shift by that.
+    let c = g.computed_permanent(sedge).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 4), "own Sliver buffed by own Swamp");
+    let c = g.computed_permanent(theirs).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 2), "opponent's Sliver has no Swamp of its own");
+    // Opponent plays a Swamp — now their Sliver gets the buff too.
+    g.add_card_to_battlefield(1, catalog::swamp());
+    let c = g.computed_permanent(theirs).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 3), "buffed once their controller has a Swamp");
+    // Regeneration grant: {B} shields the Sliver from destruction.
+    g.players[1].mana_pool.add(Color::Black, 1);
+    let printed = catalog::plated_sliver().activated_abilities.len();
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: theirs, ability_index: printed, target: None, x_value: None,
+    }).expect("granted {B}: Regenerate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().regeneration_shields >= 1, "shield up");
+}
+
 /// Ward Sliver: ETB color choice grants all Slivers protection from it.
 #[test]
 fn ward_sliver_grants_chosen_protection() {

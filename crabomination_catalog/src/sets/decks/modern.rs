@@ -49662,6 +49662,44 @@ pub fn vexing_shusher() -> CardDefinition {
 
 // ── modern_decks: Sliver tribal wave 2 (granted activations + utility) ────────
 
+/// Sedge Sliver — {2}{B} 2/2. All Slivers have "This creature gets +1/+1 as
+/// long as you control a Swamp" and "{B}: Regenerate this creature." Each
+/// Sliver checks its own controller's Swamps.
+pub fn sedge_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "All Slivers get +1/+1 while their controller controls a Swamp.",
+                effect: StaticEffect::GrantPumpSelfIf {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                    condition: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::HasLandType(LandType::Swamp)
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        n: Value::Const(1),
+                    },
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                },
+            },
+            StaticAbility {
+                description: "All Slivers have {B}: Regenerate this creature.",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: all_slivers(),
+                    ability: ActivatedAbility {
+                        mana_cost: cost(&[b()]),
+                        effect: Effect::Regenerate { what: Selector::This },
+                        ..Default::default()
+                    },
+                },
+            },
+        ],
+        ..sliver("Sedge Sliver", cost(&[generic(2), b()]), 2, 2)
+    }
+}
+
 /// Crypt Sliver — {1}{B} 1/1. All Slivers have "{T}: Regenerate target Sliver."
 pub fn crypt_sliver() -> CardDefinition {
     CardDefinition {

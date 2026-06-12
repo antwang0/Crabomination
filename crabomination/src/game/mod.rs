@@ -3554,6 +3554,63 @@ impl GameState {
                 }
             }
         }
+        // "All [filter] have 'This gets +P/+T as long as [condition]'"
+        // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
+        // evaluated per matching permanent with that permanent's controller
+        // as "you".
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::GrantPumpSelfIf {
+                    filter,
+                    condition,
+                    power,
+                    toughness,
+                    keywords,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                for subject in &self.battlefield {
+                    if !crate::game::layers::requirement_matches_card(
+                        filter,
+                        subject,
+                        card.controller,
+                    ) {
+                        continue;
+                    }
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        subject.id,
+                        subject.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    if *power != 0 || *toughness != 0 {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![subject.id]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(*power, *toughness),
+                        });
+                    }
+                    for kw in keywords {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![subject.id]),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
+            }
+        }
         // "As long as [condition], [creatures the selector picks] get +P/+T."
         // (`StaticEffect::PumpTeamIf`) — the conditional team anthem. Evaluate
         // the gate against the source; while it holds, emit a layer-7 pump for
@@ -8730,6 +8787,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PumpSelfIf — needs live predicate evaluation; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpSelfIf { .. }
+            // GrantPumpSelfIf — per-subject predicate, resolved in
+            // `gather_continuous_effects`.
+            | StaticEffect::GrantPumpSelfIf { .. }
             // PumpTeamIf — conditional team anthem, resolved in
             // `gather_continuous_effects` (needs live predicate eval).
             | StaticEffect::PumpTeamIf { .. }
