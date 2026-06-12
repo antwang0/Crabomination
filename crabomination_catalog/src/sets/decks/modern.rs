@@ -50934,3 +50934,137 @@ pub fn pyxis_of_pandemonium() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Faerie Conclave — Land. Enters tapped; {T}: Add {U}; {1}{U}: 2/1 blue
+/// flying Faerie until end of turn.
+pub fn faerie_conclave() -> CardDefinition {
+    use crate::sets::{etb_tap, tap_add};
+    CardDefinition {
+        name: "Faerie Conclave",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add(Color::Blue),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(1),
+                    creature_types: vec![CreatureType::Faerie],
+                    keywords: vec![Keyword::Flying],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![etb_tap()],
+        ..Default::default()
+    }
+}
+
+/// Secluded Glen — Land. Reveal a Faerie card from your hand or it enters
+/// tapped; {T}: Add {U} or {B}.
+pub fn secluded_glen() -> CardDefinition {
+    use crate::sets::tap_add;
+    CardDefinition {
+        name: "Secluded Glen",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(Color::Blue), tap_add(Color::Black)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::IfRevealFromHand {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Faerie),
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Familiar's Ruse — {U}{U} Instant. Additional cost: return a creature you
+/// control to hand. Counter target spell.
+pub fn familiars_ruse() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Familiar's Ruse",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::ReturnToHand {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        ..Default::default()
+    }
+}
+
+/// Thieving Sprite — {2}{B} Faerie Rogue 1/1. Flying; ETB: you pick a card
+/// from target player's hand, they discard it. (The printed "they reveal X
+/// = your Faerie count first" reveal-cap is dropped — you see the hand.)
+pub fn thieving_sprite() -> CardDefinition {
+    CardDefinition {
+        name: "Thieving Sprite",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: SelectionRequirement::Any,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quickling — {1}{U} Faerie Rogue 2/2. Flash, flying; ETB: sacrifice it
+/// unless you return another creature you control to hand (auto-picks the
+/// bounce when one exists).
+pub fn quickling() -> CardDefinition {
+    CardDefinition {
+        name: "Quickling",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                )),
+                then: Box::new(Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::OtherThanSource),
+                        )),
+                        count: Box::new(Value::ONE),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+                else_: Box::new(Effect::SacrificeSource),
+            },
+        }],
+        ..Default::default()
+    }
+}

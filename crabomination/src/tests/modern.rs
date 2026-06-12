@@ -55671,3 +55671,94 @@ fn changeling_hero_champion_self_sacrifice() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(hero).is_none(), "nothing to champion → sacrificed");
 }
+
+/// Faerie Conclave enters tapped and animates into a 2/1 flier.
+#[test]
+fn faerie_conclave_animates() {
+    let mut g = two_player_game();
+    let fc = g.add_card_to_hand(0, catalog::faerie_conclave());
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(fc)).expect("play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fc).unwrap().tapped, "enters tapped");
+    g.battlefield_find_mut(fc).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fc, ability_index: 1, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(fc).unwrap();
+    assert!(c.card_types.contains(&CardType::Creature));
+    assert_eq!((c.power, c.toughness), (2, 1));
+}
+
+/// Secluded Glen enters untapped when a Faerie can be revealed, tapped
+/// otherwise.
+#[test]
+fn secluded_glen_reveal_gate() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::faerie_macabre());
+    let glen = g.add_card_to_hand(0, catalog::secluded_glen());
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(glen)).expect("play");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(glen).unwrap().tapped, "Faerie revealed → untapped");
+}
+
+/// Familiar's Ruse bounces a creature as the cost and counters the spell.
+#[test]
+fn familiars_ruse_bounce_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    let ruse = g.add_card_to_hand(0, catalog::familiars_ruse());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: ruse, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ruse");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature bounced as cost");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
+}
+
+/// Thieving Sprite forces a chosen discard.
+#[test]
+fn thieving_sprite_chosen_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let ts = g.add_card_to_battlefield(0, catalog::thieving_sprite());
+    g.fire_self_etb_triggers(ts, 0);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty(), "card discarded");
+}
+
+/// Quickling bounces another creature or sacrifices itself.
+#[test]
+fn quickling_bounce_or_sacrifice() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let q1 = g.add_card_to_battlefield(0, catalog::quickling());
+    g.fire_self_etb_triggers(q1, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bear bounced");
+    assert!(g.battlefield_find(q1).is_some(), "Quickling stays");
+    // With no other creature, the second Quickling sacrifices itself.
+    let q2 = g.add_card_to_battlefield(1, catalog::quickling());
+    g.fire_self_etb_triggers(q2, 1);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(q2).is_none(), "no bounce target → sacrificed");
+}
