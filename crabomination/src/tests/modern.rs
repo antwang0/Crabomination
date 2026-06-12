@@ -56509,3 +56509,62 @@ fn stern_lesson_powerstone_restriction() {
         &SpellKind { artifact: true, ..Default::default() },
     ).is_ok(), "artifact spell allowed");
 }
+
+/// Boggart Ram-Gang's wither lands combat damage as -1/-1 counters.
+#[test]
+fn boggart_ram_gang_wither_in_combat() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let gang = g.add_card_to_battlefield(0, catalog::boggart_ram_gang());
+    let blocker = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.clear_sickness(gang);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: gang, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, gang)])).expect("block");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(blocker).expect("Angel survives 3 wither");
+    assert_eq!(b.counter_count(crate::card::CounterType::MinusOneMinusOne), 3,
+        "wither dealt -1/-1 counters");
+}
+
+/// Eyeblight's Ending can't target an Elf.
+#[test]
+fn eyeblights_ending_non_elf_only() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::eyeblights_ending());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(elf)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Elves are safe");
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Barkhide Troll enters with a counter and trades it for hexproof.
+#[test]
+fn barkhide_troll_counter_for_hexproof() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::barkhide_troll());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, id);
+    assert_eq!(g.battlefield_find(id).unwrap()
+        .counter_count(crate::card::CounterType::PlusOnePlusOne), 1, "enters with a counter");
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("remove the counter");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(crate::card::CounterType::PlusOnePlusOne), 0, "counter paid");
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Hexproof));
+}

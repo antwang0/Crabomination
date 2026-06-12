@@ -51969,3 +51969,63 @@ pub fn stern_lesson() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Boggart Ram-Gang — {R/G}{R/G}{R/G} 3/3 Goblin Warrior. Haste, wither.
+pub fn boggart_ram_gang() -> CardDefinition {
+    let rg = || crate::mana::hybrid(Color::Red, Color::Green);
+    CardDefinition {
+        name: "Boggart Ram-Gang",
+        cost: cost(&[rg(), rg(), rg()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste, Keyword::Wither],
+        ..Default::default()
+    }
+}
+
+/// Eyeblight's Ending — {2}{B} Kindred Instant — Elf. Destroy target
+/// non-Elf creature.
+pub fn eyeblights_ending() -> CardDefinition {
+    CardDefinition {
+        name: "Eyeblight's Ending",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Elf).negate()),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Barkhide Troll — {G}{G} 2/2 Troll, enters with a +1/+1 counter.
+/// {1}, remove a +1/+1 counter: gains hexproof until end of turn.
+pub fn barkhide_troll() -> CardDefinition {
+    CardDefinition {
+        name: "Barkhide Troll",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Troll], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

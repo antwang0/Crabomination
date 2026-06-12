@@ -2850,12 +2850,9 @@ would unlock Diary of Dreams cleanly, plus other counter-scaled cost
 reducers (M21 Mazemind Tome).
 
 ### Counter-Removal Activation Cost
-`ActivatedAbility` has no "remove N counters of kind K from the source as
-a cost" field. Blocks Experiment One's `Remove two +1/+1 counters:
-Regenerate this` (currently shipped Evolve-only), Walking Ballista's
-`Remove a +1/+1 counter: deal 1`, Hangarback Walker, and the -1/-1-counter
-sac-engines. Add `counter_cost: Option<(CounterType, u32)>` to
-`ActivatedAbility`, paid after tap/mana/life like `sac_cost`.
+✅ Shipped as `ActivatedAbility.remove_counter_cost` (Walking Ballista's
+`Remove a +1/+1 counter: deal 1`, Barkhide Troll's hexproof pump).
+Experiment One's `Remove two: Regenerate` still pending a per-card pass.
 
 ### Page Counter Type
 SOS Diary of Dreams (and the rest of the SOS book/grandeur subtheme)
