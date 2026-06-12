@@ -55762,3 +55762,218 @@ fn quickling_bounce_or_sacrifice() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(q2).is_none(), "no bounce target → sacrificed");
 }
+
+// ── Cleave (CR 702.148) ──────────────────────────────────────────────────────
+
+/// Wash Away's base mode only counters a spell not cast from its owner's
+/// hand: a flashback cast is counterable for {U}, a hand cast is not a
+/// legal target.
+#[test]
+fn cleave_wash_away_base_needs_non_hand_cast() {
+    let mut g = two_player_game();
+    // Seat 1 flashbacks Lava Dart out of the graveyard (sac a Mountain).
+    let dart = g.add_card_to_graveyard(1, catalog::lava_dart());
+    g.add_card_to_battlefield(1, catalog::mountain());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: dart, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lava Dart flashback");
+    let wash = g.add_card_to_hand(0, catalog::wash_away());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wash, target: Some(Target::Permanent(dart)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("base Wash Away counters the non-hand cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the Dart never resolved");
+}
+
+/// The base mode rejects a hand-cast spell; the cleave cast ({1}{U}{U})
+/// drops the bracket and counters it.
+#[test]
+fn cleave_wash_away_cleave_counters_hand_cast() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt cast from hand");
+    let wash = g.add_card_to_hand(0, catalog::wash_away());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: wash, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "base mode can't counter a hand cast");
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: wash, pitch_card: None, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave cast counters anything");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the Bolt was countered");
+}
+
+/// Dig Up: base fetches a basic land to hand; the cleave cast fetches any
+/// card (CR 702.148 removes the bracketed restriction).
+#[test]
+fn cleave_dig_up_fetches_anything() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bolt))]));
+    let id = g.add_card_to_hand(0, catalog::dig_up());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave Dig Up");
+    drain_stack(&mut g);
+    assert!(g.players[0].has_in_hand(bolt), "a nonland fetched on the cleave cast");
+}
+
+/// Path of Peril: the base sweep only kills mana value ≤ 2; cleave kills all.
+#[test]
+fn cleave_path_of_peril_base_spares_big_creatures() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::atraxa_grand_unifier());
+    let id = g.add_card_to_hand(0, catalog::path_of_peril());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("base Path of Peril");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none(), "MV 2 swept");
+    assert!(g.battlefield_find(big).is_some(), "MV 7 survives the base mode");
+}
+
+/// Parasitic Grasp's base mode targets only Humans; the damage and lifegain
+/// both land.
+#[test]
+fn cleave_parasitic_grasp_base_is_human_only() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::parasitic_grasp());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "a Bear isn't a Human");
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave hits any creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "3 damage killed the 2/2");
+    assert_eq!(g.players[0].life, 23, "gained 3");
+}
+
+/// Winged Portent draws per flyer on the base mode and per creature on the
+/// cleave cast.
+#[test]
+fn cleave_winged_portent_counts_fliers_then_everything() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::consecrated_sphinx()); // flyer
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let a = g.add_card_to_hand(0, catalog::winged_portent());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: a, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("base Winged Portent");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 1, "one flyer → one draw");
+
+    let b = g.add_card_to_hand(0, catalog::winged_portent());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: b, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave Winged Portent");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "two creatures → two draws");
+}
+
+/// Dread Fugue's base pick is capped at mana value 2; cleave rips any
+/// nonland card.
+#[test]
+fn cleave_dread_fugue_mv_cap_on_base() {
+    let mut g = two_player_game();
+    let expensive = g.add_card_to_hand(1, catalog::atraxa_grand_unifier());
+    let cheap = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::dread_fugue());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("base Dread Fugue");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == cheap),
+        "the MV≤2 card was discarded");
+    assert!(g.players[1].hand.iter().any(|c| c.id == expensive),
+        "the MV 7 card is out of the base mode's reach");
+}
+
+/// Fierce Retribution's base mode only hits attackers; cleave hits any
+/// creature.
+#[test]
+fn cleave_fierce_retribution_base_needs_attacker() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fierce_retribution());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "non-attacker rejected on the base mode");
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave destroys any creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Alchemist's Retrieval bounces only your own nonland permanent on the
+/// base mode; cleave bounces anything nonland.
+#[test]
+fn cleave_alchemists_retrieval_base_is_own_only() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::alchemists_retrieval());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "opponent's permanent rejected on the base mode");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave bounces any nonland permanent");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "bounced to owner's hand");
+}

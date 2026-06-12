@@ -1216,6 +1216,12 @@ impl GameState {
                         self.block_map.len() == 1 && self.block_map.contains_key(&card.id)
                     }
                     R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
+                    // Wash Away's base mode: a stack spell cast from
+                    // anywhere but its owner's hand (CR 702.148 bracket).
+                    R::SpellNotCastFromHand => self.stack.iter().any(|si| matches!(
+                        si,
+                        StackItem::Spell { card: c, .. } if c.id == card.id && !c.cast_from_hand
+                    )),
                     R::HasAbilityOnStack => self.stack.iter().any(|si| matches!(
                         si,
                         StackItem::Trigger { source, .. } if *source == card.id
@@ -1523,7 +1529,8 @@ impl GameState {
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::AttackedThisTurn | R::HasAbilityOnStack
-            | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn | R::IsEnchanted
+            | R::IsSpellOnStack | R::SpellNotCastFromHand
+            | R::DealtDamageToControllerThisTurn | R::IsEnchanted
             | R::IsEquipped | R::IsModified => false,
         }
     }

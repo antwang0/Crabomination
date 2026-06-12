@@ -51068,3 +51068,199 @@ pub fn quickling() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cleave (CR 702.148) ─────────────────────────────────────────────────────
+// Cleave rides `AlternativeCost { mana_cost, effect_override }`: the cleave
+// cast pays the alternative cost and resolves the bracket-stripped text
+// (CR 702.148b text-changing effect, baked as the override effect).
+
+/// `Cleave [cost]` — alternative cost whose cast resolves `unbracketed`.
+fn cleave(mana_cost: ManaCost, unbracketed: Effect) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        effect_override: Some(unbracketed),
+        ..Default::default()
+    }
+}
+
+/// Wash Away — {U} Instant. Counter target spell [that wasn't cast from its
+/// owner's hand]. Cleave {1}{U}{U}.
+pub fn wash_away() -> CardDefinition {
+    CardDefinition {
+        name: "Wash Away",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::SpellNotCastFromHand),
+        },
+        alternative_cost: Some(cleave(
+            cost(&[generic(1), u(), u()]),
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+        )),
+        ..Default::default()
+    }
+}
+
+/// Dig Up — {G} Sorcery. Search your library for a [basic land] card, put it
+/// into your hand, then shuffle. Cleave {1}{B}{B}{G}.
+pub fn dig_up() -> CardDefinition {
+    CardDefinition {
+        name: "Dig Up",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        alternative_cost: Some(cleave(
+            cost(&[generic(1), b(), b(), g()]),
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        )),
+        ..Default::default()
+    }
+}
+
+/// Fierce Retribution — {1}{W} Instant. Destroy target [attacking] creature.
+/// Cleave {5}{W}.
+pub fn fierce_retribution() -> CardDefinition {
+    CardDefinition {
+        name: "Fierce Retribution",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            ),
+        },
+        alternative_cost: Some(cleave(
+            cost(&[generic(5), w()]),
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        )),
+        ..Default::default()
+    }
+}
+
+/// Path of Peril — {1}{B}{B} Sorcery. Destroy all creatures [with mana value
+/// 2 or less]. Cleave {4}{W}{B}.
+pub fn path_of_peril() -> CardDefinition {
+    let sweep = |filter: SelectionRequirement| Effect::ForEach {
+        selector: Selector::EachPermanent(filter),
+        body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+    };
+    CardDefinition {
+        name: "Path of Peril",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: sweep(
+            SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2)),
+        ),
+        alternative_cost: Some(cleave(
+            cost(&[generic(4), w(), b()]),
+            sweep(SelectionRequirement::Creature),
+        )),
+        ..Default::default()
+    }
+}
+
+/// Parasitic Grasp — {1}{B} Instant. Deals 3 damage to target [Human]
+/// creature; you gain 3 life. Cleave {1}{B}{B}.
+pub fn parasitic_grasp() -> CardDefinition {
+    let body = |filter: SelectionRequirement| {
+        Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(filter), amount: Value::Const(3) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ])
+    };
+    CardDefinition {
+        name: "Parasitic Grasp",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: body(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
+        ),
+        alternative_cost: Some(cleave(
+            cost(&[generic(1), b(), b()]),
+            body(SelectionRequirement::Creature),
+        )),
+        ..Default::default()
+    }
+}
+
+/// Alchemist's Retrieval — {U} Instant. Return target nonland permanent
+/// [you control] to its owner's hand. Cleave {1}{U}.
+pub fn alchemists_retrieval() -> CardDefinition {
+    let bounce = |filter: SelectionRequirement| Effect::Move {
+        what: target_filtered(filter),
+        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+    };
+    CardDefinition {
+        name: "Alchemist's Retrieval",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: bounce(
+            SelectionRequirement::Nonland
+                .and(SelectionRequirement::Permanent)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        alternative_cost: Some(cleave(
+            cost(&[generic(1), u()]),
+            bounce(SelectionRequirement::Nonland.and(SelectionRequirement::Permanent)),
+        )),
+        ..Default::default()
+    }
+}
+
+/// Winged Portent — {1}{U}{U} Instant. Draw a card for each creature you
+/// control [with flying]. Cleave {4}{G}{U}.
+pub fn winged_portent() -> CardDefinition {
+    let draw_per = |filter: SelectionRequirement| Effect::Draw {
+        who: Selector::You,
+        amount: Value::CountMatching {
+            sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
+            filter: filter.and(SelectionRequirement::ControlledByYou),
+        },
+    };
+    CardDefinition {
+        name: "Winged Portent",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: draw_per(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+        ),
+        alternative_cost: Some(cleave(
+            cost(&[generic(4), g(), u()]),
+            draw_per(SelectionRequirement::Creature),
+        )),
+        ..Default::default()
+    }
+}
+
+/// Dread Fugue — {B} Sorcery. Target player reveals their hand; you choose a
+/// nonland card from it [with mana value 2 or less]; they discard it.
+/// Cleave {2}{B}.
+pub fn dread_fugue() -> CardDefinition {
+    let rip = |filter: SelectionRequirement| Effect::DiscardChosen {
+        from: Selector::Player(PlayerRef::Target(0)),
+        count: Value::ONE,
+        filter,
+    };
+    CardDefinition {
+        name: "Dread Fugue",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: rip(
+            SelectionRequirement::Nonland.and(SelectionRequirement::ManaValueAtMost(2)),
+        ),
+        alternative_cost: Some(cleave(cost(&[generic(2), b()]), rip(SelectionRequirement::Nonland))),
+        ..Default::default()
+    }
+}

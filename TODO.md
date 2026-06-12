@@ -1593,6 +1593,13 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.148 — Cleave** — rides `AlternativeCost { mana_cost,
+  effect_override }`: the cleave cast pays the alternative cost and
+  resolves the bracket-stripped effect (702.148b text change baked as the
+  override; target filters come from the override on the alt path). Ships
+  Wash Away (+ new `SelectionRequirement::SpellNotCastFromHand`), Dig Up,
+  Fierce Retribution, Path of Peril, Parasitic Grasp, Alchemist's
+  Retrieval, Winged Portent, Dread Fugue. Tests `cleave_*`.
 - ✅ **CR 702.47 — Splice** — `Keyword::Splice(cost, quality)` +
   `GameAction::CastSpellSpliced`: splice costs paid additionally
   (atomic rollback), spliced text resolves after the main effect reading

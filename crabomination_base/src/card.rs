@@ -938,6 +938,9 @@ pub enum SelectionRequirement {
     /// `block_map.keys()` AND `block_map.len() == 1`.
     IsBlockingAlone,
     IsSpellOnStack,
+    /// A stack spell that was NOT cast from its owner's hand (Wash Away's
+    /// bracketed base mode — flashback/graveyard/exile casts qualify).
+    SpellNotCastFromHand,
     ManaValueAtMost(u32),
     /// MV at most the number of battlefield permanents matching the inner
     /// filter that the evaluating player controls (Spellstutter Sprite's
