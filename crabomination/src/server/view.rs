@@ -420,7 +420,7 @@ fn project_player(
         hand: player
             .hand
             .iter()
-            .map(|c| project_hand_card(c, player_seat, viewer_seat))
+            .map(|c| project_hand_card(c, state, player_seat, viewer_seat))
             .collect(),
         lands_played_this_turn: player.lands_played_this_turn,
         first_spell_tax_charges: player.first_spell_tax_charges,
@@ -456,15 +456,24 @@ fn project_player(
     }
 }
 
-fn project_hand_card(card: &CardInstance, owner_seat: usize, viewer_seat: usize) -> HandCardView {
+fn project_hand_card(
+    card: &CardInstance,
+    state: &crate::game::GameState,
+    owner_seat: usize,
+    viewer_seat: usize,
+) -> HandCardView {
     if owner_seat == viewer_seat {
-        HandCardView::Known(known_card(card))
+        HandCardView::Known(known_card_in(card, Some(state)))
     } else {
         HandCardView::Hidden { id: card.id }
     }
 }
 
 fn known_card(card: &CardInstance) -> KnownCard {
+    known_card_in(card, None)
+}
+
+fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) -> KnownCard {
     let cycling_cost = card.definition.keywords.iter().find_map(|kw| {
         if let crate::card::Keyword::Cycling(c) = kw {
             Some(c.clone())
@@ -475,14 +484,20 @@ fn known_card(card: &CardInstance) -> KnownCard {
     let cycling_life = card.definition.keywords.iter().find_map(|kw| {
         if let crate::card::Keyword::CyclingLife(n) = kw { Some(*n) } else { None }
     });
-    let landcycling_cost = card.definition.keywords.iter().find_map(|kw| {
-        // Typecycling rides the same client affordance (CR 702.29e).
-        match kw {
-            crate::card::Keyword::Landcycling(c, _) => Some(c.clone()),
-            crate::card::Keyword::Typecycling(spec) => Some(spec.0.clone()),
-            _ => None,
-        }
-    });
+    let landcycling_cost = card
+        .definition
+        .keywords
+        .iter()
+        .find_map(|kw| {
+            // Typecycling rides the same client affordance (CR 702.29e).
+            match kw {
+                crate::card::Keyword::Landcycling(c, _) => Some(c.clone()),
+                crate::card::Keyword::Typecycling(spec) => Some(spec.0.clone()),
+                _ => None,
+            }
+        })
+        // Battlefield-granted typecycling (Homing Sliver's slivercycling).
+        .or_else(|| state.and_then(|st| st.granted_typecycling_for(card)).map(|(c, _)| c));
     let (modal_descriptions, modal_needs_target) =
         if let crate::effect::Effect::ChooseMode(modes) = &card.definition.effect {
             let descs = modes.iter().map(|m| m.effect_short_text()).collect();

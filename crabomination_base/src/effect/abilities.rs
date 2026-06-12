@@ -597,6 +597,15 @@ pub enum StaticEffect {
         applies_to: Selector,
         ability: ActivatedAbility,
     },
+    /// "Each [filter] card in each player's hand has typecycling [cost]"
+    /// (Homing Sliver's slivercycling grant). Consulted by `landcycle_card`
+    /// and the hand-affordance view for cards whose printed keywords lack
+    /// cycling; `search` is the fetch filter (CR 702.29e).
+    GrantTypecyclingToHandCards {
+        filter: SelectionRequirement,
+        cost: crate::mana::ManaCost,
+        search: SelectionRequirement,
+    },
     /// "All [filter] permanents have '[triggered ability]'" (CR 613 layer 6
     /// grant — Kataki, War's Wage's "All artifacts have 'At the beginning of
     /// your upkeep, sacrifice this artifact unless you pay {1}'"). The

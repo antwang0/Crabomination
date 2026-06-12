@@ -49700,6 +49700,23 @@ pub fn sedge_sliver() -> CardDefinition {
     }
 }
 
+/// Homing Sliver — {3}{R} 2/2. Each Sliver card in each player's hand has
+/// slivercycling {3} ({3}, Discard: search your library for a Sliver card,
+/// put it into your hand).
+pub fn homing_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Sliver cards in hands have slivercycling {3}.",
+            effect: StaticEffect::GrantTypecyclingToHandCards {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                cost: cost(&[generic(3)]),
+                search: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+            },
+        }],
+        ..sliver("Homing Sliver", cost(&[generic(3), r()]), 2, 2)
+    }
+}
+
 /// Crypt Sliver — {1}{B} 1/1. All Slivers have "{T}: Regenerate target Sliver."
 pub fn crypt_sliver() -> CardDefinition {
     CardDefinition {

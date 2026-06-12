@@ -320,8 +320,6 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     "they gain haste" rider on `CreateToken` would be tidier.
 
 - ⏳ **Noticed this run (slivers / seat-routed asks batch):**
-  - **Homing Sliver** — needs statics that grant cycling to *hand* cards
-    ("Each Sliver card in each player's hand has slivercycling {3}").
   - **TemptingOffer ordering** — opponents now answer before the body
     runs (re-run idempotency); printed timing shows them the
     controller's result first.

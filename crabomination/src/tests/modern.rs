@@ -54873,6 +54873,25 @@ fn sedge_sliver_conditional_pump_is_per_controller() {
     assert!(g.battlefield_find(theirs).unwrap().regeneration_shields >= 1, "shield up");
 }
 
+/// Homing Sliver grants slivercycling {3} to Sliver cards in hand —
+/// {3}, discard the hand Sliver, fetch any Sliver from the library.
+#[test]
+fn homing_sliver_grants_slivercycling_to_hand_slivers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::homing_sliver());
+    let in_hand = g.add_card_to_hand(0, catalog::plated_sliver());
+    let in_lib = g.add_card_to_library(0, catalog::might_sliver());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Landcycle { card_id: in_hand }).expect("slivercycle");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == in_hand), "hand Sliver discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == in_lib), "library Sliver fetched");
+    // A non-Sliver hand card gets no grant.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::Landcycle { card_id: bear }).is_err(),
+        "non-Sliver can't slivercycle");
+}
+
 /// Ward Sliver: ETB color choice grants all Slivers protection from it.
 #[test]
 fn ward_sliver_grants_chosen_protection() {

@@ -1487,6 +1487,7 @@ static DECKS: &[Factory] = &[
     super::decks::vexing_shusher,
     super::decks::crypt_sliver,
     super::decks::sedge_sliver,
+    super::decks::homing_sliver,
     super::decks::hibernation_sliver,
     super::decks::necrotic_sliver,
     super::decks::acidic_sliver,

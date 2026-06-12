@@ -5105,6 +5105,31 @@ impl GameState {
     /// type and puts it into hand (shuffling after). The fetched land is the
     /// first matching card (a minor approximation for the rare multi-match
     /// case — usually a basic land).
+    /// Typecycling granted to a hand card by a battlefield static
+    /// (`GrantTypecyclingToHandCards` — Homing Sliver's slivercycling).
+    /// Returns the cheapest matching grant's `(cost, search filter)`.
+    pub fn granted_typecycling_for(
+        &self,
+        card: &crate::card::CardInstance,
+    ) -> Option<(crate::mana::ManaCost, SelectionRequirement)> {
+        self.battlefield
+            .iter()
+            .flat_map(|src| src.definition.static_abilities.iter().map(move |sa| (src, sa)))
+            .filter_map(|(src, sa)| {
+                let crate::effect::StaticEffect::GrantTypecyclingToHandCards {
+                    filter,
+                    cost,
+                    search,
+                } = &sa.effect
+                else {
+                    return None;
+                };
+                crate::game::layers::requirement_matches_card(filter, card, src.controller)
+                    .then(|| (cost.clone(), search.clone()))
+            })
+            .min_by_key(|(c, _)| c.cmc())
+    }
+
     fn landcycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
         use rand::seq::SliceRandom;
@@ -5114,15 +5139,21 @@ impl GameState {
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| {
-                c.definition.keywords.iter().find_map(|kw| match kw {
-                    Keyword::Landcycling(mc, lt) => Some((
-                        mc.clone(),
-                        crate::card::SelectionRequirement::Land
-                            .and(crate::card::SelectionRequirement::HasLandType(*lt)),
-                    )),
-                    Keyword::Typecycling(spec) => Some(((**spec).0.clone(), (**spec).1.clone())),
-                    _ => None,
-                })
+                c.definition
+                    .keywords
+                    .iter()
+                    .find_map(|kw| match kw {
+                        Keyword::Landcycling(mc, lt) => Some((
+                            mc.clone(),
+                            crate::card::SelectionRequirement::Land
+                                .and(crate::card::SelectionRequirement::HasLandType(*lt)),
+                        )),
+                        Keyword::Typecycling(spec) => {
+                            Some(((**spec).0.clone(), (**spec).1.clone()))
+                        }
+                        _ => None,
+                    })
+                    .or_else(|| self.granted_typecycling_for(c))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
         self.players[seat].mana_pool.pay(&cycling_cost).map_err(GameError::Mana)?;
@@ -8879,6 +8910,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GraveyardAnthem { .. }
             | StaticEffect::SpellsUncounterable { .. }
             | StaticEffect::MinusCounterReduction
+            // Hand-zone grant, consulted by `landcycle_card` / the view.
+            | StaticEffect::GrantTypecyclingToHandCards { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })
         .collect()
