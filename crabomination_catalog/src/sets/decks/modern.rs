@@ -50298,3 +50298,261 @@ pub fn utopia_sprawl() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Syphon Sliver — {2}{B} 2/2. Sliver creatures you control have lifelink.
+pub fn syphon_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Your Slivers have lifelink.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: your_slivers(),
+                keyword: Keyword::Lifelink,
+            },
+        }],
+        ..sliver("Syphon Sliver", cost(&[generic(2), b()]), 2, 2)
+    }
+}
+
+/// Overgrowth — {2}{G} Aura. Enchant land; enchanted land tapped for mana
+/// adds an additional {G}{G} (two ExtraManaOnLandTap instances).
+pub fn overgrowth() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::{ExtraManaKind, StaticEffect};
+    let extra = || StaticAbility {
+        description: "Enchanted land tapped for mana adds an additional {G}.",
+        effect: StaticEffect::ExtraManaOnLandTap {
+            enchanted_only: true,
+            filter: SelectionRequirement::Any,
+            extra: ExtraManaKind::Fixed(Color::Green),
+        },
+    };
+    CardDefinition {
+        name: "Overgrowth",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Land },
+        },
+        static_abilities: vec![extra(), extra()],
+        ..Default::default()
+    }
+}
+
+/// Crypt Ghast — {3}{B} 2/2 Spirit. Extort; whenever you tap a Swamp for
+/// mana, add an additional {B}.
+pub fn crypt_ghast() -> CardDefinition {
+    use crate::effect::{ExtraManaKind, StaticEffect};
+    CardDefinition {
+        name: "Crypt Ghast",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::extort()],
+        static_abilities: vec![StaticAbility {
+            description: "Your Swamps tapped for mana add an additional {B}.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: SelectionRequirement::HasLandType(LandType::Swamp)
+                    .and(SelectionRequirement::ControlledByYou),
+                extra: ExtraManaKind::Fixed(Color::Black),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nirkana Revenant — {4}{B}{B} 4/4 Vampire Shade. Your Swamps tapped for
+/// mana add an additional {B}; {B}: +1/+1 until end of turn.
+pub fn nirkana_revenant() -> CardDefinition {
+    use crate::effect::{Duration, ExtraManaKind, StaticEffect};
+    CardDefinition {
+        name: "Nirkana Revenant",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shade],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Your Swamps tapped for mana add an additional {B}.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: SelectionRequirement::HasLandType(LandType::Swamp)
+                    .and(SelectionRequirement::ControlledByYou),
+                extra: ExtraManaKind::Fixed(Color::Black),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Marsh Flitter — {3}{B} 1/1 Faerie Rogue, flying. ETB: two 1/1 Goblin
+/// Rogue tokens; sacrifice a Goblin: base P/T 3/3 until end of turn.
+pub fn marsh_flitter() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Marsh Flitter",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: crate::card::TokenDefinition {
+                name: "Goblin Rogue".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Black],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                1,
+            )),
+            effect: Effect::SetBasePT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Earwig Squad — {3}{B}{B} 5/3 Goblin Rogue. Prowl {2}{B}; ETB if prowled,
+/// exile three cards of your choice from target opponent's library.
+pub fn earwig_squad() -> CardDefinition {
+    let pick = || Effect::SearchPickedBy {
+        who: PlayerRef::Target(0),
+        picker: PlayerRef::You,
+        filter: SelectionRequirement::Any,
+        to: ZoneDest::Exile,
+    };
+    CardDefinition {
+        name: "Earwig Squad",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        alternative_cost: Some(crate::effect::shortcut::prowl(
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Goblin, CreatureType::Rogue],
+        )),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Seq(vec![pick(), pick(), pick()])),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Oona's Blackguard — {1}{B} 1/1 Faerie Rogue, flying. Other Rogues you
+/// control enter with an extra +1/+1 counter; a countered creature of yours
+/// dealing combat damage to a player makes them discard a card.
+pub fn oonas_blackguard() -> CardDefinition {
+    CardDefinition {
+        name: "Oona's Blackguard",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Other Rogues you control enter with a +1/+1 counter.",
+            effect: StaticEffect::TypeEntersWithCounter {
+                creature_type: CreatureType::Rogue,
+                kind: CounterType::PlusOnePlusOne,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+            }),
+            effect: Effect::Discard {
+                who: Selector::Target(0),
+                amount: Value::Const(1),
+                random: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Morsel Theft — {2}{B}{B} Kindred Sorcery — Rogue. Prowl {1}{B}. Target
+/// player loses 3 life, you gain 3; draw a card if the prowl cost was paid.
+pub fn morsel_theft() -> CardDefinition {
+    CardDefinition {
+        name: "Morsel Theft",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rogue],
+            ..Default::default()
+        },
+        alternative_cost: Some(crate::effect::shortcut::prowl(
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Rogue],
+        )),
+        effect: Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(3) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

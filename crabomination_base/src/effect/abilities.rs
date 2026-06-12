@@ -538,6 +538,10 @@ pub enum StaticEffect {
     /// both ETB-counter sites (`stack.rs` spell-resolve and `movement.rs`
     /// move-to-battlefield) via `chosen_type_etb_counter_specs`.
     ChosenTypeEntersWithCounter { kind: CounterType },
+    /// "Each other [creature_type] creature you control enters with an
+    /// additional `kind` counter" (Oona's Blackguard). Fixed-type sibling of
+    /// `ChosenTypeEntersWithCounter`; Changeling entrants count.
+    TypeEntersWithCounter { creature_type: crate::card::CreatureType, kind: CounterType },
     /// Strict Proctor — "If a permanent entering the battlefield causes
     /// a triggered ability of a permanent to trigger, that ability's
     /// controller sacrifices the permanent unless they pay {amount}."

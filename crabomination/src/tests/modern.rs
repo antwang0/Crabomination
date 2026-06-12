@@ -55201,3 +55201,132 @@ fn cr_605_1b_vernal_bloom_boosts_forests_only() {
     tap_for_mana(&mut g, swamp);
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "Swamp unaffected");
 }
+
+/// Crypt Ghast doubles only YOUR Swamps; Overgrowth stacks two extra {G}.
+#[test]
+fn crypt_ghast_and_overgrowth_extra_mana() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crypt_ghast());
+    let yours = g.add_card_to_battlefield(0, catalog::swamp());
+    let theirs = g.add_card_to_battlefield(1, catalog::swamp());
+    tap_for_mana(&mut g, yours);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2, "your Swamp adds an extra {{B}}");
+    g.priority.player_with_priority = 1;
+    tap_for_mana(&mut g, theirs);
+    assert_eq!(g.players[1].mana_pool.amount(Color::Black), 1, "opponent's Swamp unaffected");
+
+    // Overgrowth: enchanted land taps for base + {G}{G}.
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    let aura = g.add_card_to_battlefield(0, catalog::overgrowth());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(land);
+    g.priority.player_with_priority = 0;
+    tap_for_mana(&mut g, land);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "Overgrowth adds {{G}}{{G}}");
+}
+
+/// Marsh Flitter mints two Goblin Rogues and sacs one for base 3/3.
+#[test]
+fn marsh_flitter_tokens_and_base_pt_swap() {
+    let mut g = two_player_game();
+    let flitter = g.add_card_to_hand(0, catalog::marsh_flitter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, flitter);
+    assert_eq!(g.battlefield.iter()
+        .filter(|c| c.definition.name == "Goblin Rogue" && c.controller == 0).count(), 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: flitter, ability_index: 0, target: None, x_value: None,
+    }).expect("sac a Goblin");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(flitter).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "base P/T 3/3 until end of turn");
+    assert_eq!(g.battlefield.iter()
+        .filter(|c| c.definition.name == "Goblin Rogue" && c.controller == 0).count(), 1,
+        "one token paid the cost");
+}
+
+/// Earwig Squad prowled: caster exiles three cards from the opponent's library.
+#[test]
+fn earwig_squad_prowled_exiles_three_from_library() {
+    let mut g = two_player_game();
+    let rogue = g.add_card_to_battlefield(0, catalog::aunties_snitch());
+    prowl_swing(&mut g, rogue);
+    let picks: Vec<_> = (0..4).map(|_| g.add_card_to_library(1, catalog::forest())).collect();
+    let squad = g.add_card_to_hand(0, catalog::earwig_squad());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib_before = g.players[1].library.len();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(picks[0])),
+        DecisionAnswer::Search(Some(picks[1])),
+        DecisionAnswer::Search(Some(picks[2])),
+    ]));
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: squad, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("prowl Earwig Squad");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib_before - 3, "three cards exiled");
+}
+
+/// Oona's Blackguard: other Rogues enter with a counter; countered creatures
+/// connecting make the player discard.
+#[test]
+fn oonas_blackguard_counters_and_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::oonas_blackguard());
+    let rogue = g.add_card_to_hand(0, catalog::aunties_snitch());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, rogue);
+    assert_eq!(g.battlefield_find(rogue).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 1, "entered with an extra counter");
+    g.add_card_to_hand(1, catalog::forest());
+    let opp_hand = g.players[1].hand.len();
+    prowl_swing(&mut g, rogue);
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "damaged player discarded");
+}
+
+/// Morsel Theft drains 3; prowled cast also draws.
+#[test]
+fn morsel_theft_drains_and_prowl_draws() {
+    let mut g = two_player_game();
+    let rogue = g.add_card_to_battlefield(0, catalog::aunties_snitch());
+    prowl_swing(&mut g, rogue);
+    g.add_card_to_library(0, catalog::island());
+    let theft = g.add_card_to_hand(0, catalog::morsel_theft());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    let hand = g.players[0].hand.len();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: theft, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("prowl Morsel Theft");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 3);
+    assert_eq!(g.players[0].life, l0 + 3);
+    assert_eq!(g.players[0].hand.len(), hand, "-1 cast +1 prowl draw");
+}
+
+/// Syphon Sliver grants your Slivers lifelink; Nirkana pumps with {B}.
+#[test]
+fn syphon_sliver_and_nirkana_basics() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::syphon_sliver());
+    let s = g.add_card_to_battlefield(0, catalog::plated_sliver());
+    assert!(g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Lifelink));
+    let theirs = g.add_card_to_battlefield(1, catalog::plated_sliver());
+    assert!(!g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Lifelink),
+        "opponent's Slivers don't get lifelink");
+
+    let nirkana = g.add_card_to_battlefield(0, catalog::nirkana_revenant());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nirkana, ability_index: 0, target: None, x_value: None,
+    }).expect("{B}: pump");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(nirkana).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5));
+}

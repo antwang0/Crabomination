@@ -1032,6 +1032,9 @@ impl Effect {
             | Effect::DiscardHalf { .. }
             | Effect::SacrificeHalf { .. }
             | Effect::AddPoison { .. } => true,
+            // Cross-library searches target the searched player.
+            Effect::SearchPickedBy { who: PlayerRef::Target(_), .. } => true,
+            Effect::Search { who: PlayerRef::Target(_), .. } => true,
             // Divided damage allows player targets only when its filter can
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.

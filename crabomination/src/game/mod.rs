@@ -1852,13 +1852,26 @@ impl GameState {
             if src.controller != controller || src.id == entering {
                 continue;
             }
-            let Some(ct) = src.chosen_creature_type else { continue };
-            if !entering_types.contains(&ct) {
-                continue;
-            }
+            let changeling = ec
+                .definition
+                .keywords
+                .contains(&crate::card::Keyword::Changeling);
             for sa in &src.definition.static_abilities {
-                if let StaticEffect::ChosenTypeEntersWithCounter { kind } = &sa.effect {
-                    specs.push(*kind);
+                match &sa.effect {
+                    StaticEffect::ChosenTypeEntersWithCounter { kind } => {
+                        if src
+                            .chosen_creature_type
+                            .is_some_and(|ct| entering_types.contains(&ct) || changeling)
+                        {
+                            specs.push(*kind);
+                        }
+                    }
+                    StaticEffect::TypeEntersWithCounter { creature_type, kind } => {
+                        if entering_types.contains(creature_type) || changeling {
+                            specs.push(*kind);
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
@@ -8968,6 +8981,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GrantTypecyclingToHandCards { .. }
             // CR 605.1b — resolved at the mana-ability fast path.
             | StaticEffect::ExtraManaOnLandTap { .. }
+            // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
+            | StaticEffect::TypeEntersWithCounter { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })
         .collect()
