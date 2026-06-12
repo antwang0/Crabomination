@@ -50716,3 +50716,31 @@ pub fn sygg_river_cutthroat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Spined Sliver — {R}{G} 2/2. Whenever a Sliver becomes blocked, it gets
+/// +1/+1 until end of turn for each creature blocking it.
+pub fn spined_sliver() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: {
+                let mut e = EventSpec::new(EventKind::BecomesBlocked, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                    });
+                // The underlying event fires per blocker; cap to once per
+                // Sliver so the per-blocker scaling isn't double-counted.
+                e.per_subject_cap = Some(1);
+                e
+            },
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::BlockersOf(Box::new(Selector::TriggerSource)),
+                toughness: Value::BlockersOf(Box::new(Selector::TriggerSource)),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..sliver("Spined Sliver", cost(&[r(), g()]), 2, 2)
+    }
+}

@@ -297,6 +297,9 @@ pub enum Value {
     /// Studies.
     CountMatching { sel: Box<Selector>, filter: SelectionRequirement },
     PowerOf(Box<Selector>),
+    /// Number of creatures currently blocking the resolved permanent
+    /// (Spined Sliver's "+1/+1 for each creature blocking it").
+    BlockersOf(Box<Selector>),
     ToughnessOf(Box<Selector>),
     LifeOf(PlayerRef),
     /// Lowest life total among all players in the game (CR 119.7 — Repay

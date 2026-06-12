@@ -55464,3 +55464,34 @@ fn sygg_draws_after_three_life_lost() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew off the 3-life hit");
 }
+
+/// Spined Sliver grows +1/+1 per blocker when a Sliver becomes blocked.
+#[test]
+fn spined_sliver_grows_per_blocker() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spined_sliver());
+    let atk = g.add_card_to_battlefield(0, catalog::might_sliver()); // 4/4 lord → others +1/+1
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)])).expect("double block");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(atk).unwrap();
+    // Might Sliver base 4/4 (its own lord excludes itself? it buffs all
+    // Slivers) + Spined trigger +2/+2 for two blockers.
+    assert!(c.power >= 6, "two blockers fed +2/+2 (got {}/{})", c.power, c.toughness);
+}

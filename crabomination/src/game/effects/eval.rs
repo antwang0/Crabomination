@@ -64,6 +64,12 @@ impl GameState {
             // control" cards (Orysa Tide Choreographer's "total toughness
             // ≥ 10" alt-cost gate, etc.). Same fan-out convention as
             // `CountersOn`.
+            Value::BlockersOf(s) => self
+                .resolve_selector(s, ctx)
+                .iter()
+                .filter_map(|e| e.as_permanent_id())
+                .map(|id| self.block_map.values().filter(|&&a| a == id).count() as i32)
+                .sum(),
             Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
                     // `as_card_id` (not `as_permanent_id`): a dies-trigger
