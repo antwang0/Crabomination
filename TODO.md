@@ -1931,12 +1931,9 @@ picking an item up.
   - ✅ **Rhystic "draw unless they pay X" rider** — Esper Sentinel ships
     faithful (`WardCost::GenericSourcePower` + `once_per_turn` first-spell
     gate, exact in 2P); Mystic Remora already rode `UnlessPlayerPays`.
-  - **Power-gated keyword anthems** (Temur Ascendancy "creatures with power
-    4+ have haste") — `affected_from_requirement` drops `PowerAtLeast` (it's
-    layer-7 computed); needs a second-pass / CR 613.8 dependency in
-    `apply_layers`. Currently over-grants to all your creatures.
-  - **MV-scaled token on LTB** (Skyclave Apparition's "owner creates an X/X
-    Illusion where X = exiled card's MV") — needs a dynamic-P/T token mint.
+  - ✅ **Power-gated keyword anthems** — `AffectedPermanents::
+    CardMatchPowerGated` + a two-pass `compute_permanent` (CR 613.8);
+    Temur Ascendancy's haste gate is faithful.
   - ✅ **"with no counters on it" target filter** — added
     `SelectionRequirement::HasNoCounters`; ships Heartless Act (modal:
     destroy a no-counter creature / remove-all counters).
