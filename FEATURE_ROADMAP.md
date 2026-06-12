@@ -204,16 +204,16 @@ not how Magic works" moments.
   affect targeting (fixes Lightning Greaves' granted Shroud). Remaining:
   broader "you may play" permissions and devotion-gated *non-type* states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
-- ⏳ **Regeneration shields & "the next time" prevention** as proper shields
-  rather than instantaneous.
+- ✅ **Regeneration shields & "the next time" prevention** as proper shields
+  (`regeneration_shields`, `prevention_shields`).
 - ⏳ **Damage marking vs. wither/-1/-1**, lethal/indestructible interplay
   audited against CR 120 / 704.
 - ⏳ **Loyalty fidelity:** activate at sorcery speed once/turn (have), but
   also loyalty-set effects, "can be activated any time" riders, proliferate
   on loyalty, attacking planeswalkers redirect rules.
-- ⏳ **State-based action coverage audit:** legend rule for planeswalkers
-  (post-2017 unified rule), world rule, +1/-1 counter annihilation,
-  saga-chapter sacrifice, attached-Aura falls off, token ceases to exist.
+- 🟡 **State-based action coverage audit:** +1/-1 counter annihilation ✅
+  (CR 122.3), counter caps ✅ (CR 122.4), legend rule ✅, saga-chapter
+  sacrifice ✅. Remaining: world rule, attached-Aura orphan corners.
 
 ## Tier 3 — Object model & zones
 

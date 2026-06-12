@@ -50559,3 +50559,160 @@ pub fn morsel_theft() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Faerie tribal (Lorwyn block) ─────────────────────────────────────────────
+
+/// Spellstutter Sprite — {1}{U} 1/1 Faerie Wizard, Flash, flying. ETB:
+/// counter target spell with MV ≤ the number of Faeries you control.
+pub fn spellstutter_sprite() -> CardDefinition {
+    CardDefinition {
+        name: "Spellstutter Sprite",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::ManaValueAtMostYourCount(Box::new(
+                        SelectionRequirement::HasCreatureType(CreatureType::Faerie)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                ),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Scion of Oona — {2}{U} 1/1 Faerie Soldier, Flash, flying. Other Faeries
+/// you control get +1/+1 and have shroud.
+pub fn scion_of_oona() -> CardDefinition {
+    let other_faeries = || {
+        Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Faerie)
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        )
+    };
+    CardDefinition {
+        name: "Scion of Oona",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Faeries you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: other_faeries(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Faeries you control have shroud.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: other_faeries(),
+                    keyword: Keyword::Shroud,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Peppersmoke — {B} Kindred Instant — Faerie. Target creature gets -1/-1
+/// until end of turn; if you control a Faerie, draw a card.
+pub fn peppersmoke() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Peppersmoke",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Faerie)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sower of Temptation — {2}{U}{U} 2/2 Faerie Wizard, flying. ETB: gain
+/// control of target creature for as long as this remains on the battlefield.
+pub fn sower_of_temptation() -> CardDefinition {
+    CardDefinition {
+        name: "Sower of Temptation",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
+            what: target_filtered(SelectionRequirement::Creature),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sygg, River Cutthroat — {U/B}{U/B} Legendary 1/3 Merfolk Rogue. At each
+/// end step, if an opponent lost 3+ life this turn, you may draw a card.
+pub fn sygg_river_cutthroat() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Sygg, River Cutthroat",
+        cost: cost(&[crate::mana::hybrid(Color::Blue, Color::Black), crate::mana::hybrid(Color::Blue, Color::Black)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::ValueAtLeast(
+                Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+                Value::Const(3),
+            )),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -2317,6 +2317,9 @@ pub enum Effect {
         to: Option<PlayerRef>,
         duration: Duration,
     },
+    /// Gain control of the resolved permanents for as long as the effect's
+    /// source remains on the battlefield (Sower of Temptation).
+    GainControlWhileSourceRemains { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
     /// Amass N (CR 701.43): put `count` +1/+1 counters on an Army `who`

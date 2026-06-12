@@ -4437,7 +4437,34 @@ impl GameState {
                             card: cid,
                             original_controller: prev,
                             duration: *duration,
+                            source: None,
                         });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainControlWhileSourceRemains { what } => {
+                // CR 611.2c — the steal lasts while the source stays on the
+                // battlefield; `on_left_battlefield` unwinds it.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let new_ctrl = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.controller != new_ctrl
+                    {
+                        let prev = c.controller;
+                        c.controller = new_ctrl;
+                        c.summoning_sick = true;
+                        if !self.temporary_control.iter().any(|t| t.card == cid) {
+                            self.temporary_control.push(crate::game::TempControl {
+                                card: cid,
+                                original_controller: prev,
+                                duration: crate::effect::Duration::Permanent,
+                                source: Some(src),
+                            });
+                        }
                     }
                 }
                 Ok(())

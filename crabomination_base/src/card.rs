@@ -934,6 +934,10 @@ pub enum SelectionRequirement {
     IsBlockingAlone,
     IsSpellOnStack,
     ManaValueAtMost(u32),
+    /// MV at most the number of battlefield permanents matching the inner
+    /// filter that the evaluating player controls (Spellstutter Sprite's
+    /// "mana value X or less, where X is the number of Faeries you control").
+    ManaValueAtMostYourCount(Box<SelectionRequirement>),
     /// Mana value ≤ the X paid into the resolving spell's cost. Resolved to
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.

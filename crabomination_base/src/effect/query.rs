@@ -374,7 +374,8 @@ impl Effect {
             Effect::RemoveAllCounters { what } => sel_has_target(what),
             Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
             Effect::Proliferate => false,
-            Effect::GainControl { what, .. } => sel_has_target(what),
+            Effect::GainControl { what, .. }
+            | Effect::GainControlWhileSourceRemains { what } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
             | Effect::CreateTokenAttacking { who, count, .. }
             | Effect::Amass { who, count, .. } => {
@@ -572,7 +573,8 @@ impl Effect {
             | Effect::CastWithoutPayingImmediate { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellMayChooseTargets { what, .. }
-            | Effect::GainControl { what, .. } => sel_filter(what),
+            | Effect::GainControl { what, .. }
+            | Effect::GainControlWhileSourceRemains { what } => sel_filter(what),
             Effect::UnlessPlayerPays { then, .. } => then.primary_target_filter(),
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
@@ -1334,7 +1336,8 @@ impl Effect {
                 | Effect::CounterUnless { what, .. }
                 | Effect::MakeSpellUncounterable { what }
                 | Effect::Suspect { what }
-                | Effect::GainControl { what, .. } => sel_find(what, slot),
+                | Effect::GainControl { what, .. }
+                | Effect::GainControlWhileSourceRemains { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }

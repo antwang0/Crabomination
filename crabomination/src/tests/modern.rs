@@ -55354,3 +55354,113 @@ fn syphon_sliver_and_nirkana_basics() {
     let c = g.computed_permanent(nirkana).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5));
 }
+
+// ── Faerie tribal ────────────────────────────────────────────────────────────
+
+/// Spellstutter Sprite counters only spells with MV ≤ your Faerie count.
+#[test]
+fn spellstutter_sprite_counters_by_faerie_count() {
+    let mut g = two_player_game();
+    // Opponent casts a 2-MV spell; with only the Sprite itself (1 Faerie),
+    // MV 2 > 1 — the trigger fizzles and the spell resolves.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    let sprite = g.add_card_to_hand(0, catalog::spellstutter_sprite());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sprite, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flash in the Sprite");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "MV 2 > 1 Faerie — bear resolves");
+
+    // Second sprite with a Faerie buddy on board: 2 Faeries ≥ MV 2 — counters.
+    g.add_card_to_battlefield(0, catalog::scion_of_oona());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast bolt");
+    let sprite2 = g.add_card_to_hand(0, catalog::spellstutter_sprite());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sprite2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flash in the second Sprite");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "MV 1 ≤ 2 Faeries — countered");
+}
+
+/// Scion of Oona: other Faeries get +1/+1 and shroud; Scion itself doesn't.
+#[test]
+fn scion_of_oona_buffs_other_faeries() {
+    let mut g = two_player_game();
+    let scion = g.add_card_to_battlefield(0, catalog::scion_of_oona());
+    let sprite = g.add_card_to_battlefield(0, catalog::spellstutter_sprite());
+    let c = g.computed_permanent(sprite).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2));
+    assert!(c.keywords.contains(&Keyword::Shroud));
+    let c = g.computed_permanent(scion).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 1), "Scion doesn't buff itself");
+    assert!(!c.keywords.contains(&Keyword::Shroud));
+}
+
+/// Sower of Temptation steals a creature until it leaves the battlefield.
+#[test]
+fn sower_of_temptation_steal_reverts_when_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sower = g.add_card_to_hand(0, catalog::sower_of_temptation());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, sower, Target::Permanent(bear));
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen");
+    g.remove_to_graveyard_with_triggers(sower);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "handed back on leave");
+}
+
+/// Peppersmoke shrinks and cantrips with a Faerie around.
+#[test]
+fn peppersmoke_shrinks_and_cantrips_with_a_faerie() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spellstutter_sprite());
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let smoke = g.add_card_to_hand(0, catalog::peppersmoke());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, smoke, Target::Permanent(bear));
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 1));
+    assert_eq!(g.players[0].hand.len(), hand, "-1 cast +1 draw");
+}
+
+/// Sygg draws at end step after an opponent lost 3+ life.
+#[test]
+fn sygg_draws_after_three_life_lost() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::sygg_river_cutthroat());
+    g.add_card_to_library(0, catalog::island());
+    let rogue = g.add_card_to_battlefield(0, catalog::aunties_snitch()); // 3 power
+    let hand = g.players[0].hand.len();
+    prowl_swing(&mut g, rogue);
+    // Advance into the end step so the trigger fires.
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew off the 3-life hit");
+}

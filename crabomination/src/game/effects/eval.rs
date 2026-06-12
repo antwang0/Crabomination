@@ -1182,6 +1182,14 @@ impl GameState {
                         StackItem::Trigger { source, .. } if *source == card.id
                     )),
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+                    R::ManaValueAtMostYourCount(inner) => {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                            .count() as u32;
+                        card.definition.cost.cmc() <= n
+                    }
                     // Unresolved X-relative filter (no X in scope here).
                     R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
@@ -1373,6 +1381,14 @@ impl GameState {
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            R::ManaValueAtMostYourCount(inner) => {
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .count() as u32;
+                card.definition.cost.cmc() <= n
+            }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
             R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,

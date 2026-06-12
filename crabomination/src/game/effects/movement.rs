@@ -837,6 +837,19 @@ impl GameState {
     /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
     pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         self.return_linked_exiles(id, events);
+        // Source-bound control steals end with their source (Sower of
+        // Temptation — CR 800.4 hands the permanent back).
+        let mut kept = Vec::new();
+        for tc in std::mem::take(&mut self.temporary_control) {
+            if tc.source == Some(id) {
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card) {
+                    c.controller = tc.original_controller;
+                }
+            } else {
+                kept.push(tc);
+            }
+        }
+        self.temporary_control = kept;
         // CR 400.7 — the card is a new object in its next zone: effects
         // that granted abilities to the permanent don't follow it.
         if let Some(c) = self.find_card_anywhere_mut(id) {

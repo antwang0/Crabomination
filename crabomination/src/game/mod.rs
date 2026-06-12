@@ -893,6 +893,11 @@ pub(crate) struct TempControl {
     pub(crate) card: CardId,
     pub(crate) original_controller: usize,
     pub(crate) duration: crate::effect::Duration,
+    /// "For as long as [source] remains on the battlefield" steals (Sower of
+    /// Temptation): control reverts when this permanent leaves, via
+    /// `on_left_battlefield`. `duration` is `Permanent` so turn sweeps skip it.
+    #[serde(default)]
+    pub(crate) source: Option<CardId>,
 }
 
 /// A pending copy-reversion entry — see `GameState.temporary_copies`.
