@@ -635,3 +635,162 @@ fn phoenix_of_ash_pump() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ph).unwrap().power, 4, "+2/+0");
 }
+
+/// Agonizing Remorse exiles a chosen nonland hand card; you lose 1.
+#[test]
+fn agonizing_remorse_exiles_from_hand() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::agonizing_remorse());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "nonland exiled");
+    assert_eq!(g.players[0].life, life - 1);
+}
+
+/// Eat to Extinction exiles a creature and surveils.
+#[test]
+fn eat_to_extinction_exiles_and_surveils() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::eat_to_extinction());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}
+
+/// Taranika's attack trigger makes the untapped target a 4/4 indestructible.
+#[test]
+fn taranika_attack_trigger_untaps_and_buffs() {
+    let mut g = two_player_game();
+    let t = g.add_card_to_battlefield(0, catalog::taranika_akroan_veteran());
+    let goat = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(goat).unwrap().tapped = true;
+    g.clear_sickness(t);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: t,
+        target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(goat).unwrap();
+    assert!(!g.battlefield_find(goat).unwrap().tapped, "untapped");
+    assert_eq!((c.power, c.toughness), (4, 4), "base 4/4 until end of turn");
+    assert!(c.keywords.contains(&crate::card::Keyword::Indestructible));
+}
+
+/// Sweet Oblivion mills four and escapes from the graveyard.
+#[test]
+fn sweet_oblivion_mills_and_escapes() {
+    let mut g = two_player_game();
+    for _ in 0..8 { g.add_card_to_library(1, catalog::forest()); }
+    let so = g.add_card_to_graveyard(0, catalog::sweet_oblivion());
+    let fodder: Vec<_> =
+        (0..4).map(|_| g.add_card_to_graveyard(0, catalog::lightning_bolt())).collect();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastEscape {
+        card_id: so, exile_cards: fodder,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 4, "milled four");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == so),
+        "escaped sorcery returns to the graveyard");
+}
+
+/// Klothys's Design pumps the team by green devotion.
+#[test]
+fn klothyss_design_pumps_by_devotion() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // {G} = 1 devotion
+    let spell = g.add_card_to_hand(0, catalog::klothyss_design());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Devotion at resolution: the bear's {G} = 1 → +1/+1.
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
+
+/// Escape Protocol flickers an artifact when you cycle and pay {1}.
+#[test]
+fn escape_protocol_flickers_on_cycle() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::escape_protocol());
+    let stone = g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.battlefield_find_mut(stone).unwrap().tapped = true;
+    let cycler = g.add_card_to_hand(0, catalog::shark_typhoon());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3); // {X=0}{1}{U} cycle + {1} flicker
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.perform_action(GameAction::Cycle { card_id: cycler, x_value: Some(0) })
+        .expect("cycle");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(stone).expect("flickered back");
+    assert!(!c.tapped, "returned untapped (new object)");
+}
+
+/// Protean Thaumaturge copies another creature on constellation.
+#[test]
+fn protean_thaumaturge_constellation_copy() {
+    let mut g = two_player_game();
+    let pt = g.add_card_to_battlefield(0, catalog::protean_thaumaturge());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(pt).unwrap();
+    assert_eq!(c.definition.name, "Serra Angel", "became a copy");
+}
+
+/// Enigmatic Incarnation sacrifices an enchantment for a creature with
+/// MV = 1 + the sacrifice's MV.
+#[test]
+fn enigmatic_incarnation_fetches_on_end_step() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::enigmatic_incarnation());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol()); // MV 2
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 — wrong
+    let wurm = g.add_card_to_library(0, catalog::serra_angel()); // MV 5 — wrong
+    let triton = g.add_card_to_library(0, catalog::mire_triton()); // wrong (MV 2)
+    let target_mv3 = g.add_card_to_library(0, catalog::dream_trawler()); // MV 6 — wrong
+    let hill = g.add_card_to_library(0, catalog::phoenix_of_ash()); // MV 3 — the pick
+    let _ = (bears, wurm, triton, target_mv3);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Search(Some(hill)),
+    ]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment sacrificed");
+    assert!(g.battlefield_find(hill).is_some(), "MV-3 creature fetched onto the battlefield");
+}

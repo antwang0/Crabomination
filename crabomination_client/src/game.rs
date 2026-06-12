@@ -142,6 +142,17 @@ pub struct TargetingState {
     /// routes through the matching `CastSpell*` action. Set by the
     /// pay-times stepper.
     pub pending_pay_times: Option<(u32, PayTimesMechanic)>,
+    /// When `Some`, the pending cast is a split-card half (CR 709) — the
+    /// eventual submit routes through `CastSplitRight` / `CastSplitFused`.
+    /// Set by the half-picker modal.
+    pub pending_split: Option<SplitCastChoice>,
+}
+
+/// Which split-card cast shape the half-picker selected.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SplitCastChoice {
+    Right,
+    Fused,
 }
 
 /// Which pay-N-times cast mechanic the stepper is configuring.
@@ -220,6 +231,15 @@ pub struct GraveyardBrowserState {
 #[derive(Resource, Default)]
 pub struct AltCastState {
     /// The spell being cast via alt cost (the player's hand card).
+    pub pending: Option<CardId>,
+}
+
+/// Split-card half picker (CR 709 / 702.102). Set when the user
+/// right-clicks a split hand card; the modal offers right-half / fused
+/// casts (the plain left-half cast stays on left-click).
+#[derive(Resource, Default)]
+pub struct SplitCastState {
+    /// The split hand card whose half-picker modal is open.
     pub pending: Option<CardId>,
 }
 

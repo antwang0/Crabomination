@@ -7478,6 +7478,14 @@ static THB: &[Factory] = &[
     super::thb::underworld_rage_hound,
     super::thb::nessian_boar,
     super::thb::mystic_repeal,
+    super::thb::agonizing_remorse,
+    super::thb::eat_to_extinction,
+    super::thb::taranika_akroan_veteran,
+    super::thb::sweet_oblivion,
+    super::thb::klothyss_design,
+    super::thb::escape_protocol,
+    super::thb::protean_thaumaturge,
+    super::thb::enigmatic_incarnation,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

@@ -563,6 +563,23 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .iter()
             .map(|(n, _)| *n)
             .max(),
+        split_right_cost_label: card
+            .definition
+            .split
+            .as_ref()
+            .map(|sp| format_mana_cost_for_label(&sp.right.cost))
+            .unwrap_or_default(),
+        split_right_needs_target: card
+            .definition
+            .split
+            .as_ref()
+            .is_some_and(|sp| sp.right.effect.requires_target()),
+        split_fusable: card.definition.split.as_ref().is_some_and(|sp| sp.fuse),
+        split_fused_needs_target: card.definition.split.as_ref().is_some_and(|sp| {
+            sp.fuse
+                && (card.definition.effect.requires_target()
+                    || sp.right.effect.requires_target())
+        }),
     }
 }
 

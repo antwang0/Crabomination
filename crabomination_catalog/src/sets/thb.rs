@@ -650,3 +650,233 @@ pub fn mystic_repeal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Agonizing Remorse — {1}{B} Sorcery. Target opponent reveals their hand;
+/// exile a nonland card from it. You lose 1 life. (The graveyard-pick
+/// option collapses to the hand pick.)
+pub fn agonizing_remorse() -> CardDefinition {
+    CardDefinition {
+        name: "Agonizing Remorse",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileChosenFromHand {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: SelectionRequirement::Nonland,
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Eat to Extinction — {3}{B} Instant. Exile target creature or
+/// planeswalker. Surveil 1.
+pub fn eat_to_extinction() -> CardDefinition {
+    CardDefinition {
+        name: "Eat to Extinction",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Taranika, Akroan Veteran — {1}{W}{W} 3/3. Vigilance; attacks → untap
+/// another target creature you control, it's base 4/4 + indestructible EOT.
+pub fn taranika_akroan_veteran() -> CardDefinition {
+    let tgt = || {
+        target_filtered(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        )
+    };
+    CardDefinition {
+        name: "Taranika, Akroan Veteran",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: tgt(), up_to: None },
+                Effect::SetBasePT {
+                    what: tgt(),
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: tgt(),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sweet Oblivion — {1}{U} Sorcery. Target player mills four. Escape —
+/// {3}{U}, exile four other cards.
+pub fn sweet_oblivion() -> CardDefinition {
+    CardDefinition {
+        name: "Sweet Oblivion",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Escape(cost(&[generic(3), u()]), 4)],
+        effect: Effect::Mill {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Klothys's Design — {5}{G} Sorcery. Creatures you control get +X/+X until
+/// end of turn, where X is your devotion to green.
+pub fn klothyss_design() -> CardDefinition {
+    CardDefinition {
+        name: "Klothys's Design",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::DevotionTo(vec![Color::Green]),
+            toughness: Value::DevotionTo(vec![Color::Green]),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Escape Protocol — {1}{U} Enchantment. Cycle a card → may pay {1} to
+/// flicker target artifact or creature you control.
+pub fn escape_protocol() -> CardDefinition {
+    let tgt = || {
+        target_filtered(
+            SelectionRequirement::Artifact
+                .or(SelectionRequirement::Creature)
+                .and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Escape Protocol",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {1} to flicker an artifact or creature?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Exile { what: tgt() },
+                    Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Protean Thaumaturge — {1}{U} 1/1. Constellation — may become a copy of
+/// another target creature. (The "except it has this ability" rider is
+/// dropped — the copy is plain.)
+pub fn protean_thaumaturge() -> CardDefinition {
+    CardDefinition {
+        name: "Protean Thaumaturge",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Enchantment,
+                }),
+            effect: Effect::MayDo {
+                description: "Become a copy of another target creature?".into(),
+                body: Box::new(Effect::BecomeCopyOf {
+                    what: Selector::This,
+                    source: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                    ),
+                    extra_creature_types: Vec::new(),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Enigmatic Incarnation — {2}{G}{U} Enchantment. End step: may sacrifice
+/// another enchantment to fetch a creature with MV = 1 + its MV onto the
+/// battlefield.
+pub fn enigmatic_incarnation() -> CardDefinition {
+    CardDefinition {
+        name: "Enigmatic Incarnation",
+        cost: cost(&[generic(2), g(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Enchantment
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                )),
+                then: Box::new(Effect::MayDo {
+                    description: "Sacrifice an enchantment to fetch a creature?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::SacrificeAndRemember {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Enchantment
+                                .and(SelectionRequirement::OtherThanSource),
+                        },
+                        Effect::Search {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Creature
+                                .and(SelectionRequirement::ManaValueEqualsSacrificedPlus(1)),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
+                        },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}

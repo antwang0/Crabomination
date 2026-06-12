@@ -290,6 +290,7 @@ fn main() {
         .insert_resource(BlockingState::default())
         .insert_resource(AttackingState::default())
         .insert_resource(AltCastState::default())
+        .insert_resource(game::SplitCastState::default())
         .insert_resource(game::PayTimesState::default())
         .insert_resource(FlippedHandCards::default())
         .insert_resource(CardNames::default())
@@ -717,6 +718,18 @@ fn main() {
         .add_systems(
             Update,
             (handle_alt_cast_buttons, spawn_alt_cast_modal)
+                .chain()
+                .after(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Split-card half picker (CR 709 / 702.102): right-click a split
+        // hand card to cast its right half or the fused whole.
+        .add_systems(
+            Update,
+            (
+                systems::game_ui::handle_split_cast_buttons,
+                systems::game_ui::spawn_split_cast_modal,
+            )
                 .chain()
                 .after(handle_game_input)
                 .run_if(in_state(AppState::InGame)),
