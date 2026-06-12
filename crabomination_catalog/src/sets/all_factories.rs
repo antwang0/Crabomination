@@ -1511,6 +1511,7 @@ static DECKS: &[Factory] = &[
     super::decks::sower_of_temptation,
     super::decks::sygg_river_cutthroat,
     super::decks::spined_sliver,
+    super::decks::vizier_of_many_faces,
     super::decks::frogtosser_banneret,
     super::decks::hibernation_sliver,
     super::decks::necrotic_sliver,

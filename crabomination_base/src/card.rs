@@ -808,8 +808,10 @@ pub struct LevelBand {
 }
 
 /// Composable filter for valid targets of a spell or ability.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// `Default` is the match-anything `Any`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SelectionRequirement {
+    #[default]
     Any,
     Player,
     /// A player who is an opponent of the effect's controller ("target
@@ -1575,8 +1577,9 @@ impl Adventure {
 /// chosen permanent; `extra_creature_types` are layered on top of the
 /// copied subtypes (Phantasmal Image's "it's an Illusion in addition to
 /// its other types").
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct EntersAsCopy {
+    #[serde(default)]
     pub filter: SelectionRequirement,
     #[serde(default)]
     pub extra_creature_types: Vec<CreatureType>,

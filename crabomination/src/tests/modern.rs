@@ -28836,7 +28836,7 @@ fn doomed_dissenter_leaves_a_zombie_when_it_dies() {
     let _ = g.check_state_based_actions();
     drain_stack(&mut g);
     let zombies = g.battlefield.iter().filter(|c| c.controller == 0
-        && c.definition.subtypes.creature_types.contains(&CreatureType::Zombie)).count();
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie)).count();
     assert_eq!(zombies, 1, "Doomed Dissenter dies → one 2/2 Zombie");
 }
 
@@ -42132,7 +42132,7 @@ fn lilianas_mastery_makes_and_buffs_zombies() {
     drain_stack(&mut g);
     use crate::card::CreatureType;
     let zombies: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Zombie))
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie))
         .map(|c| c.id).collect();
     assert_eq!(zombies.len(), 2, "two Zombie tokens entered");
     assert_eq!(g.computed_permanent(zombies[0]).unwrap().power, 3, "tokens anthemed to 3/3");
@@ -55494,4 +55494,33 @@ fn spined_sliver_grows_per_blocker() {
     // Might Sliver base 4/4 (its own lord excludes itself? it buffs all
     // Slivers) + Spined trigger +2/+2 for two blockers.
     assert!(c.power >= 6, "two blockers fed +2/+2 (got {}/{})", c.power, c.toughness);
+}
+
+/// Vizier of Many Faces clone-enters, and its embalm token clone-enters too.
+#[test]
+fn vizier_of_many_faces_embalm_token_clones() {
+    let mut g = two_player_game();
+    let fatty = g.add_card_to_battlefield(1, catalog::might_sliver()); // 4/4
+    let viz = g.add_card_to_hand(0, catalog::vizier_of_many_faces());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, viz);
+    let c = g.computed_permanent(viz).unwrap();
+    assert_eq!(g.battlefield_find(viz).unwrap().definition.name, "Might Sliver", "cast copy");
+    assert!(c.power >= 4);
+    // Kill it, embalm from the graveyard: the token also enters as a copy.
+    g.remove_to_graveyard_with_triggers(viz);
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: viz, ability_index: 0, target: None, x_value: None,
+    }).expect("embalm");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.is_token && c.controller == 0)
+        .expect("embalm token minted");
+    assert_eq!(token.definition.name, "Might Sliver", "token clone-entered");
+    assert!(token.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie),
+        "embalm token is also a Zombie");
+    assert!(g.exile.iter().any(|c| c.id == viz), "Vizier exiled by embalm");
 }

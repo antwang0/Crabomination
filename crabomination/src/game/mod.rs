@@ -2703,6 +2703,41 @@ impl GameState {
             self.players[ctrl].creatures_entered_this_turn.push(id);
         }
         self.battlefield.push(inst);
+        // CR 707.2 — a token minted from a clone-y definition (Vizier of
+        // Many Faces' embalm token) applies its `enters_as_copy` replacement
+        // as it enters, before ETB triggers fire off the copied identity.
+        // Mint-time type riders (embalm's "it's a Zombie in addition") are
+        // re-layered on the copy: the delta vs the printed card survives.
+        let minted_extra_types: Vec<crate::card::CreatureType> = {
+            let c = self.battlefield.iter().find(|c| c.id == id).unwrap();
+            if c.definition.enters_as_copy.is_some() {
+                let printed = crabomination_base::registry::resolve_card(c.definition.name);
+                c.definition
+                    .subtypes
+                    .creature_types
+                    .iter()
+                    .filter(|t| {
+                        printed
+                            .as_ref()
+                            .is_none_or(|p| !p.subtypes.creature_types.contains(t))
+                    })
+                    .copied()
+                    .collect()
+            } else {
+                vec![]
+            }
+        };
+        if self.apply_enters_as_copy(id, ctrl, events) && !minted_extra_types.is_empty()
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id)
+        {
+            let mut def = (*c.definition).clone();
+            for t in minted_extra_types {
+                if !def.subtypes.creature_types.contains(&t) {
+                    def.subtypes.creature_types.push(t);
+                }
+            }
+            c.definition = std::sync::Arc::new(def);
+        }
         events.push(crate::game::GameEvent::TokenCreated { card_id: id });
         events.push(crate::game::GameEvent::PermanentEntered { card_id: id });
         self.last_created_token = Some(id);

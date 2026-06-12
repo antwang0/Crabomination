@@ -377,8 +377,6 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **`SacrificeOrPay` chooser** — the auto rule (sacrifice when a match
     exists, else fold the pay into the cost) is deterministic; a wants_ui
     "which half?" picker would make Bayou Groff interactive.
-  - **Vizier of Many Faces** — embalm clone still wants an
-    embalm-copy-any-creature path.
 
 - ⏳ **Noticed this run (follow-ups sweep):** `Effect::MayPay` wants_ui
   suspend ✅ (seat-routed). Remaining:

@@ -7728,7 +7728,18 @@ impl GameState {
                                     new_def.subtypes.creature_types.push(*t);
                                 }
                             }
-                            c.definition = std::sync::Arc::new(new_def);
+                            let original =
+                                std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
+                            // CR 400.7 — in its next zone the object is its
+                            // printed card again; `revert_copy_on_leave`
+                            // restores this (a dead Clone is a Clone in the
+                            // graveyard, so Vizier's embalm stays available).
+                            self.temporary_copies.push(crate::game::TempCopy {
+                                card: cid,
+                                original_name: original.name.to_string(),
+                                original: Some(original),
+                                duration: crate::effect::Duration::Permanent,
+                            });
                         }
                     }
                 }

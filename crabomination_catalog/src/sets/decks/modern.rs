@@ -50744,3 +50744,27 @@ pub fn spined_sliver() -> CardDefinition {
         ..sliver("Spined Sliver", cost(&[r(), g()]), 2, 2)
     }
 }
+
+/// Vizier of Many Faces — {2}{U}{U} 0/0 Shapeshifter Cleric. May enter as a
+/// copy of any creature; Embalm {3}{U}{U} — the token clone-enters too
+/// (it's also a Zombie; the white/no-cost rider is approximated).
+pub fn vizier_of_many_faces() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Vizier of Many Faces",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter, CreatureType::Cleric],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature,
+            ..Default::default()
+        }),
+        activated_abilities: vec![crate::effect::shortcut::embalm(cost(&[
+            generic(3), u(), u(),
+        ]))],
+        ..Default::default()
+    }
+}
