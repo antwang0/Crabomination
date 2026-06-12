@@ -3599,7 +3599,7 @@ pub fn handle_game_input(
                         _ => None,
                     });
                 if let Some(k) = known {
-                    if k.has_alternative_cost {
+                    if k.has_alternative_cost && k.alt_cost_available {
                         r.alt_cast.pending = Some(card_id);
                     } else if cv.squadable_hand.contains(&card_id) {
                         r.pay_times.pending =
@@ -3663,7 +3663,7 @@ pub fn handle_game_input(
             let has_alt = cv.players[your_seat].hand.iter().any(|h| {
                 matches!(h,
                     crabomination::net::HandCardView::Known(k)
-                    if k.id == card_id && k.has_alternative_cost)
+                    if k.id == card_id && k.has_alternative_cost && k.alt_cost_available)
             });
             if has_alt {
                 r.alt_cast.pending = Some(card_id);

@@ -524,6 +524,21 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .as_ref()
             .map(|a| format_mana_cost_for_label(&a.mana_cost))
             .unwrap_or_default(),
+        alt_cost_available: card.definition.alternative_cost.as_ref().is_none_or(|a| {
+            // Condition-gated alt costs (Prowl, Archive Trap) and
+            // not-your-turn pitches grey out when unavailable; without a
+            // GameState handle (command-zone views) report available.
+            let Some(st) = state else { return true };
+            let cond_ok = a.condition.as_ref().is_none_or(|c| {
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    crate::card::CardId(0),
+                    card.owner,
+                    None,
+                );
+                st.evaluate_predicate(c, &ctx)
+            });
+            cond_ok && !(a.not_your_turn_only && st.active_player_idx == card.owner)
+        }),
         back_face_name: card
             .definition
             .back_face
@@ -2559,6 +2574,27 @@ mod tests {
         assert!(k2.has_alternative_cost);
         assert!(!k2.alt_cost_needs_pitch, "Surge needs no pitch");
         assert_eq!(k2.alt_cost_label, "{1}{R}", "surge cost label rendered");
+    }
+
+    #[test]
+    fn alt_cost_availability_tracks_the_condition_gate() {
+        // Prowl is unavailable before tribal combat damage, available after.
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::latchkey_faerie());
+        let hand_view = |g: &crate::game::GameState| {
+            let v = project(g, 0);
+            match v.players[0].hand.iter().find(|h| matches!(h,
+                crate::net::HandCardView::Known(k) if k.id == id)).unwrap()
+            {
+                crate::net::HandCardView::Known(k) => k.clone(),
+                _ => unreachable!(),
+            }
+        };
+        let k = hand_view(&g);
+        assert!(k.has_alternative_cost && !k.alt_cost_available, "prowl gated off");
+        g.players[0].prowl_types_this_turn.push(crate::card::CreatureType::Rogue);
+        let k = hand_view(&g);
+        assert!(k.alt_cost_available, "prowl available after a Rogue connected");
     }
 
     #[test]

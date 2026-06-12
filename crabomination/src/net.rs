@@ -610,6 +610,10 @@ impl HandCardView {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnownCard {
     pub id: CardId,
@@ -634,6 +638,14 @@ pub struct KnownCard {
     /// alt-cast modal header. Defaults to "".
     #[serde(default)]
     pub alt_cost_label: String,
+    /// False when the alternative cost is condition-gated and the gate
+    /// currently fails (Prowl with no tribal connect, Archive Trap with no
+    /// opponent search this turn, not-your-turn pitch costs on your turn).
+    /// Lets the client grey out the alt-cast entry instead of offering a
+    /// cast the server will reject. Meaningful only when
+    /// `has_alternative_cost`; defaults to `true`.
+    #[serde(default = "default_true")]
+    pub alt_cost_available: bool,
     /// MDFC back-face name, if any (e.g. Blightstep Pathway → "Searstep
     /// Pathway"). Drives the client's right-click flip on hand cards: when
     /// `Some`, right-click toggles the card's hand visual to the back face
