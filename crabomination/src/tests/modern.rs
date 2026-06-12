@@ -5689,16 +5689,21 @@ fn temur_ascendancy_draws_only_for_power_4_plus_etb() {
 }
 
 #[test]
-fn temur_ascendancy_grants_haste_to_all_your_creatures() {
+fn temur_ascendancy_grants_haste_only_to_power_4_plus() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::temur_ascendancy());
-    // A freshly-arrived creature (summoning sick) can attack thanks to haste.
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let c = g.compute_battlefield();
+    assert!(!c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Haste),
+        "a 2/2 is below the power-4 gate");
+    // Pump the bear past the gate (CR 613.8 — the gate reads computed power).
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().power_bonus += 2;
+    let c = g.compute_battlefield();
     assert!(c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Haste),
-        "Temur Ascendancy grants haste to your creatures");
-    // Opponent's creature gets no haste.
+        "a pumped 4/2 gains haste");
+    // Opponent's big creature gets no haste.
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == opp).unwrap().power_bonus += 5;
     let c = g.compute_battlefield();
     assert!(!c.iter().find(|c| c.id == opp).unwrap().keywords.contains(&Keyword::Haste),
         "opponent's creatures are unaffected");

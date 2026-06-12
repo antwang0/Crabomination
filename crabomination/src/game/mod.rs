@@ -8879,6 +8879,54 @@ fn simple_walker_can_handle(req: &SelectionRequirement) -> bool {
     }
 }
 
+/// Split `PowerAtLeast(n)` leaves off a conjunctive requirement tree.
+/// Returns `(max gate, residual tree)` — `None` when no power leaf exists or
+/// the tree isn't a plain And-conjunction. An all-gate tree leaves
+/// `SelectionRequirement::Any` as the residual.
+fn extract_power_gate(
+    req: &SelectionRequirement,
+) -> Option<(i32, SelectionRequirement)> {
+    use SelectionRequirement as R;
+    fn walk(r: &R, gate: &mut Option<i32>) -> Option<Option<R>> {
+        // Outer None = unsupported shape; inner None = leaf removed.
+        match r {
+            R::PowerAtLeast(n) => {
+                *gate = Some(gate.map_or(*n, |g: i32| g.max(*n)));
+                Some(None)
+            }
+            R::And(a, b) => {
+                let ra = walk(a, gate)?;
+                let rb = walk(b, gate)?;
+                Some(match (ra, rb) {
+                    (Some(a), Some(b)) => Some(R::And(Box::new(a), Box::new(b))),
+                    (Some(x), None) | (None, Some(x)) => Some(x),
+                    (None, None) => None,
+                })
+            }
+            // Power leaves under Or/Not can't be hoisted into a single gate.
+            R::Or(..) | R::Not(..) => {
+                if requirement_mentions_power(r) { None } else { Some(Some(r.clone())) }
+            }
+            other => Some(Some(other.clone())),
+        }
+    }
+    let mut gate = None;
+    let residual = walk(req, &mut gate)?;
+    gate.map(|g| (g, residual.unwrap_or(R::Any)))
+}
+
+fn requirement_mentions_power(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::PowerAtLeast(_) => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_power(a) || requirement_mentions_power(b)
+        }
+        R::Not(inner) => requirement_mentions_power(inner),
+        _ => false,
+    }
+}
+
 fn affected_from_requirement(
     req: &SelectionRequirement,
     source_controller: usize,
@@ -8894,6 +8942,18 @@ fn affected_from_requirement(
         return Some(AffectedPermanents::CardMatch {
             source_controller,
             requirement: Box::new(req.clone()),
+        });
+    }
+    // Power-gated lord scope (CR 613.8 — Temur Ascendancy's "creatures you
+    // control with power 4 or greater have haste"): split the PowerAtLeast
+    // leaves off the And-tree; the residual must be card-only.
+    if let Some((gate, residual)) = extract_power_gate(req)
+        && crate::game::layers::requirement_is_card_only(&residual)
+    {
+        return Some(AffectedPermanents::CardMatchPowerGated {
+            source_controller,
+            requirement: Box::new(residual),
+            power_at_least: gate,
         });
     }
     // Decompose And-trees to extract controller filter + card-type filter.

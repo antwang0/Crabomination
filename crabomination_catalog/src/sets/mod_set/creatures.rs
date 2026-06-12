@@ -3788,9 +3788,7 @@ pub fn tidehollow_sculler() -> CardDefinition {
 
 /// Temur Ascendancy — {U}{R}{G} Enchantment. Creatures you control with
 /// power 4 or greater have haste; when one enters under your control, draw
-/// a card. 🟡 the haste static over-grants (the `PowerAtLeast` selector
-/// isn't decomposed), so it currently grants haste to all your creatures;
-/// the draw trigger is filtered faithfully.
+/// a card.
 pub fn temur_ascendancy() -> CardDefinition {
     use crate::effect::{Predicate, Selector as Sel, StaticEffect};
     CardDefinition {
@@ -3806,11 +3804,12 @@ pub fn temur_ascendancy() -> CardDefinition {
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         static_abilities: vec![StaticAbility {
-            description: "Creatures you control have haste.",
+            description: "Creatures you control with power 4 or greater have haste.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Sel::EachPermanent(
                     SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(4)),
                 ),
                 keyword: Keyword::Haste,
             },

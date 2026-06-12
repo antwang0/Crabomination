@@ -146,8 +146,10 @@ impl GameState {
             events.push(GameEvent::DamagePrevented { amount: prevented, to_player, to_card });
         }
         if life_gain > 0 && let Some(p) = to_player {
-            self.adjust_life(p, life_gain as i32);
-            events.push(GameEvent::LifeGained { player: p, amount: life_gain });
+            let applied = self.adjust_life_applied(p, life_gain as i32);
+            if applied > 0 {
+                events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+            }
         }
         remaining
     }
@@ -364,8 +366,10 @@ impl GameState {
         // Scrollwielder), that controller gains life equal to the damage dealt.
         // (Combat damage handles its own lifelink in `combat.rs`.)
         if let Some(seat) = self.noncombat_lifelink_seat(source) {
-            self.adjust_life(seat, amount as i32);
-            events.push(GameEvent::LifeGained { player: seat, amount });
+            let applied = self.adjust_life_applied(seat, amount as i32);
+            if applied > 0 {
+                events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });
+            }
         }
     }
 
