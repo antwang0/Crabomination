@@ -28836,7 +28836,7 @@ fn doomed_dissenter_leaves_a_zombie_when_it_dies() {
     let _ = g.check_state_based_actions();
     drain_stack(&mut g);
     let zombies = g.battlefield.iter().filter(|c| c.controller == 0
-        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie)).count();
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Zombie)).count();
     assert_eq!(zombies, 1, "Doomed Dissenter dies → one 2/2 Zombie");
 }
 
@@ -42132,7 +42132,7 @@ fn lilianas_mastery_makes_and_buffs_zombies() {
     drain_stack(&mut g);
     use crate::card::CreatureType;
     let zombies: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie))
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Zombie))
         .map(|c| c.id).collect();
     assert_eq!(zombies.len(), 2, "two Zombie tokens entered");
     assert_eq!(g.computed_permanent(zombies[0]).unwrap().power, 3, "tokens anthemed to 3/3");
@@ -55500,7 +55500,7 @@ fn spined_sliver_grows_per_blocker() {
 #[test]
 fn vizier_of_many_faces_embalm_token_clones() {
     let mut g = two_player_game();
-    let fatty = g.add_card_to_battlefield(1, catalog::might_sliver()); // 4/4
+    let _fatty = g.add_card_to_battlefield(1, catalog::might_sliver()); // copy source, 4/4
     let viz = g.add_card_to_hand(0, catalog::vizier_of_many_faces());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(2);
