@@ -749,6 +749,8 @@ fn prevention_shield_stops_combat_damage_to_player() {
         gain_life: false,
         source: None,
         one_event: false,
+        reflect: false,
+        source_controller: None,
     });
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -825,6 +827,8 @@ fn skullcrack_damage_cant_be_prevented() {
         gain_life: false,
         source: None,
         one_event: false,
+        reflect: false,
+        source_controller: None,
     });
     let sk = g.add_card_to_hand(0, catalog::skullcrack());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -892,6 +896,8 @@ fn prevention_shield_stops_creature_combat_damage() {
         gain_life: false,
         source: None,
         one_event: false,
+        reflect: false,
+        source_controller: None,
     });
 
     g.step = TurnStep::DeclareAttackers;

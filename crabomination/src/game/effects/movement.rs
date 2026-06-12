@@ -127,6 +127,11 @@ impl GameState {
         let mut prevented = 0u32;
         // CR 615.1 — life gained by `gain_life` shields that soak damage.
         let mut life_gain = 0u32;
+        // Deflecting Palm — damage soaked by `reflect` shields, dealt to
+        // the source's controller after the shield pass (stamped controller
+        // as the fallback when the source has left every visible zone).
+        let mut reflected = 0u32;
+        let mut reflect_ctrl: Option<usize> = None;
         // One-event (Circle of Protection) shields spent in this event.
         let mut spent_one_event: Vec<usize> = Vec::new();
         for (i, shield) in self
@@ -158,6 +163,10 @@ impl GameState {
             if shield.gain_life {
                 life_gain += soak;
             }
+            if shield.reflect {
+                reflected += soak;
+                reflect_ctrl = reflect_ctrl.or(shield.source_controller);
+            }
         }
         // Drop spent "next N" shields and used one-event shields.
         let mut idx = 0;
@@ -173,6 +182,30 @@ impl GameState {
             let applied = self.adjust_life_applied(p, life_gain as i32);
             if applied > 0 {
                 events.push(GameEvent::LifeGained { player: p, amount: applied as u32 });
+            }
+        }
+        // Deflecting Palm's "deals that much damage to that source's
+        // controller". The reflected damage is its own event (source: the
+        // prevention effect, not the original source), so it can itself be
+        // prevented/replaced — bounded because each reflect shield is
+        // one-event and already spent.
+        if reflected > 0 {
+            let ctrl = source
+                .and_then(|src| {
+                    self.battlefield_find(src)
+                        .map(|c| c.controller)
+                        .or_else(|| {
+                            self.stack.iter().find_map(|si| match si {
+                                crate::game::StackItem::Spell { card, caster, .. }
+                                    if card.id == src => Some(*caster),
+                                _ => None,
+                            })
+                        })
+                        .or_else(|| self.died_card_snapshots.get(&src).map(|c| c.controller))
+                })
+                .or(reflect_ctrl);
+            if let Some(ctrl) = ctrl {
+                self.deal_damage_to_from(EntityRef::Player(ctrl), reflected, None, events);
             }
         }
         remaining

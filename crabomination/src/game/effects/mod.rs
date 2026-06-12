@@ -6003,6 +6003,63 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopPayOrTake { count, life } => {
+                // Sword-Point Diplomacy: per revealed card, opponents (turn
+                // order) may pay `life` to deny it; unpaid cards go to hand
+                // (not drawn, CR 121.5), denied cards are exiled.
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let life_amt = self.evaluate_value(life, ctx).max(0);
+                let top: Vec<CardId> = self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top.is_empty() { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let me = Effect::RevealTopPayOrTake { count: count.clone(), life: life.clone() };
+                let opponents: Vec<usize> = self.apnap_sort(
+                    (0..self.players.len())
+                        .filter(|&q| q != p && !self.players[q].eliminated && !self.same_team(q, p))
+                        .collect(),
+                );
+                let mut cursor = 0usize;
+                let mut denied: Vec<CardId> = Vec::new();
+                for cid in &top {
+                    let name = self.players[p].library.iter()
+                        .find(|c| c.id == *cid)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default();
+                    for &opp in &opponents {
+                        // CR 119.4 — can't offer a payment the player can't make.
+                        if self.players[opp].life < life_amt { continue; }
+                        let Some(yes) = self.ask_seat_bool(
+                            &mut cursor,
+                            opp,
+                            format!("Pay {life_amt} life to deny {name}?"),
+                            source,
+                            &me,
+                        ) else { return Ok(()); };
+                        if yes {
+                            let applied = self.adjust_life_applied(opp, -life_amt);
+                            if applied < 0 {
+                                events.push(GameEvent::LifeLost { player: opp, amount: (-applied) as u32 });
+                            }
+                            denied.push(*cid);
+                            break;
+                        }
+                    }
+                }
+                self.clear_answer_log();
+                for cid in &top {
+                    let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) else { continue };
+                    let card = self.players[p].library.remove(pos);
+                    if denied.contains(cid) {
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: *cid });
+                    } else {
+                        self.players[p].hand.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Hideaway { count } => {
                 // CR 702.76 — look at the top N, exile the best (highest-MV)
                 // face down linked to the source, bottom the rest at random.
@@ -8277,18 +8334,32 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextDamageFromChosenSource { filter } => {
+            Effect::PreventNextDamageFromChosenSource { filter, reflect } => {
                 // CR 615.7 — Circle of Protection: a one-event shield around
-                // the controller, restricted to the chosen source.
+                // the controller, restricted to the chosen source. With
+                // `reflect` (Deflecting Palm) the prevented damage is dealt
+                // to the source's controller.
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
+                // Stamp the source's controller now — by damage time a
+                // resolving spell is in no visible zone.
+                let src_ctrl = self
+                    .battlefield_find(chosen)
+                    .map(|c| c.controller)
+                    .or_else(|| self.stack.iter().find_map(|si| match si {
+                        crate::game::StackItem::Spell { card, caster, .. }
+                            if card.id == chosen => Some(*caster),
+                        _ => None,
+                    }));
                 self.prevention_shields.push(crate::game::types::PreventionShield {
                     target: crate::game::types::PreventionTarget::Player(ctx.controller),
                     remaining: None,
                     gain_life: false,
                     source: Some(chosen),
                     one_event: true,
+                    reflect: *reflect,
+                    source_controller: src_ctrl,
                 });
                 Ok(())
             }
@@ -8348,6 +8419,8 @@ impl GameState {
                             gain_life: false,
                             source: None,
                             one_event: false,
+                        reflect: false,
+                            source_controller: None,
                         });
                     }
                 }
@@ -8366,6 +8439,8 @@ impl GameState {
                             gain_life: true,
                             source: None,
                             one_event: false,
+                        reflect: false,
+                            source_controller: None,
                         });
                     }
                 }
@@ -8381,6 +8456,8 @@ impl GameState {
                         gain_life: false,
                         source: None,
                         one_event: false,
+                        reflect: false,
+                        source_controller: None,
                     });
                 }
                 Ok(())

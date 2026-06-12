@@ -201,6 +201,7 @@ impl Effect {
             Effect::SpellsCostLessThisTurn { .. } => false,
             Effect::CastFromHandWithoutPaying { .. } => false,
             Effect::PreventNextDamageFromChosenSource { .. } => false,
+            Effect::RevealTopPayOrTake { .. } => false,
             Effect::Tribute { otherwise, .. } => otherwise.requires_target(),
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {

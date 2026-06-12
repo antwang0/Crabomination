@@ -41626,6 +41626,7 @@ fn circle_of_protection(name: &'static str, color: Color) -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::PreventNextDamageFromChosenSource {
+                reflect: false,
                 filter: SelectionRequirement::HasColor(color),
             },
             ..Default::default()
@@ -51717,6 +51718,233 @@ pub fn fell_stinger() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Utter End — {2}{W}{B} Instant. Exile target nonland permanent.
+pub fn utter_end() -> CardDefinition {
+    CardDefinition {
+        name: "Utter End",
+        cost: cost(&[generic(2), w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Nonland.and(SelectionRequirement::Permanent),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Esper Charm — {W}{U}{B} Instant. Choose one: destroy target enchantment;
+/// draw two; target player discards two.
+pub fn esper_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Esper Charm",
+        cost: cost(&[w(), u(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+                random: false,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kaya's Guile — {1}{W}{B} Instant. Choose two: each opponent sacrifices a
+/// creature; exile all opponents' graveyards; make a 1/1 flying Spirit;
+/// gain 4. Entwine {3}.
+pub fn kayas_guile() -> CardDefinition {
+    CardDefinition {
+        name: "Kaya's Guile",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Entwine(cost(&[generic(3)]))],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Creature,
+                },
+                Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Spirit".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Spirit],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Flying],
+                        colors: vec![Color::White, Color::Black],
+                        ..Default::default()
+                    },
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Damn — {B}{B} Sorcery. Destroy target creature; it can't be regenerated.
+/// Overload {2}{W}{W} (destroy each creature instead).
+pub fn damn() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Damn",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DestroyNoRegen {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), w(), w()]),
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::DestroyNoRegen { what: Selector::TriggerSource }),
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// World Breaker — {6}{G} 5/7 Eldrazi with devoid + reach. Cast trigger:
+/// exile target artifact, enchantment, or land. {2}{C}, sacrifice a land:
+/// return this from your graveyard to your hand.
+pub fn world_breaker() -> CardDefinition {
+    use crate::effect::shortcut::on_cast;
+    CardDefinition {
+        name: "World Breaker",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 5,
+        toughness: 7,
+        keywords: vec![Keyword::Devoid, Keyword::Reach],
+        triggered_abilities: vec![on_cast(Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Land),
+            ),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), colorless(1)]),
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            from_graveyard: true,
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Harbinger of the Tides — {U}{U} 2/2 Merfolk Wizard. May cast at flash
+/// speed for {2} more; ETB: may bounce target tapped creature an opponent
+/// controls.
+pub fn harbinger_of_the_tides() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Harbinger of the Tides",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Return target tapped creature an opponent controls to hand?".into(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Tapped)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        })],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), u(), u()]),
+            flash: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Shacklegeist — {1}{U} 2/2 flying Spirit. Tap two untapped Spirits you
+/// control: tap target creature you don't control. (The "can block only
+/// fliers" rider is dropped.)
+pub fn shacklegeist() -> CardDefinition {
+    CardDefinition {
+        name: "Shacklegeist",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Spirit), 2)),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Deflecting Palm — {R}{W} Instant. Prevent the next damage a source of
+/// your choice would deal to you this turn; the prevented damage is dealt
+/// to that source's controller.
+pub fn deflecting_palm() -> CardDefinition {
+    CardDefinition {
+        name: "Deflecting Palm",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventNextDamageFromChosenSource {
+            filter: SelectionRequirement::Any,
+            reflect: true,
+        },
+        ..Default::default()
+    }
+}
+
+/// Sword-Point Diplomacy — {2}{B} Sorcery. Reveal the top three; for each,
+/// it goes to your hand unless an opponent pays 3 life; the paid-off cards
+/// are exiled.
+pub fn sword_point_diplomacy() -> CardDefinition {
+    CardDefinition {
+        name: "Sword-Point Diplomacy",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RevealTopPayOrTake {
+            count: Value::Const(3),
+            life: Value::Const(3),
+        },
         ..Default::default()
     }
 }

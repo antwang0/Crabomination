@@ -1136,6 +1136,15 @@ pub struct PreventionShield {
     /// damage event, then expires (Circle of Protection).
     #[serde(default)]
     pub one_event: bool,
+    /// Deflecting Palm — damage this shield prevents is dealt to the
+    /// damage source's controller.
+    #[serde(default)]
+    pub reflect: bool,
+    /// The chosen source's controller, stamped when the reflect shield is
+    /// created — the fallback when the source has left every visible zone
+    /// by damage time (a resolving spell).
+    #[serde(default)]
+    pub source_controller: Option<usize>,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither

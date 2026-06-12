@@ -3186,7 +3186,18 @@ pub enum Effect {
     /// damage to you this turn, prevent that damage." A one-event,
     /// source-restricted shield around the controller. Circle of Protection
     /// cycle.
-    PreventNextDamageFromChosenSource { filter: crate::card::SelectionRequirement },
+    PreventNextDamageFromChosenSource {
+        filter: crate::card::SelectionRequirement,
+        /// Deflecting Palm — damage prevented by this shield is dealt to
+        /// the chosen source's controller.
+        #[serde(default)]
+        reflect: bool,
+    },
+    /// "Reveal the top `count` cards of your library. For each of those
+    /// cards, put that card into your hand unless any opponent pays
+    /// `life` life. Then exile the rest." (Sword-Point Diplomacy.)
+    /// Opponents are asked in turn order per card via `ask_seat_bool`.
+    RevealTopPayOrTake { count: Value, life: Value },
     /// CR 714.4 (DFC sagas) — "Exile this Saga, then return it to the
     /// battlefield transformed under your control." The return is a new
     /// object: lore counters clear and the back face's ETB fires. Fable of

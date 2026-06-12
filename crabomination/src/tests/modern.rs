@@ -56279,3 +56279,196 @@ fn fell_stinger_exploit_draws_two_loses_two() {
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
         "a creature was exploited");
 }
+
+// ── Staples batch 2 (June 2026) ──────────────────────────────────────────────
+
+/// Utter End exiles any nonland permanent.
+#[test]
+fn utter_end_exiles_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::utter_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}
+
+/// Esper Charm mode 1 draws two.
+#[test]
+fn esper_charm_draw_mode() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::esper_charm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast Esper Charm");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2);
+}
+
+/// Kaya's Guile runs two chosen modes (default picks: edict + exile
+/// graveyards).
+#[test]
+fn kayas_guile_runs_two_modes() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::kayas_guile());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert!(g.battlefield_find(bear).is_none(), "opponent sacrificed");
+    assert!(g.exile.iter().any(|c| c.id == dead), "opponent graveyard exiled");
+}
+
+/// Damn destroys one creature normally and sweeps on overload.
+#[test]
+fn damn_single_and_overloaded() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::damn());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast_at(&mut g, id, Target::Permanent(a));
+    assert!(g.battlefield_find(a).is_none());
+    assert!(g.battlefield_find(b1).is_some());
+
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id2 = g.add_card_to_hand(0, catalog::damn());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id2, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("overload Damn");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(c1).is_none(),
+        "overload swept every creature");
+}
+
+/// World Breaker's cast trigger exiles a land and it recurs from the
+/// graveyard for {2}{C} + a land sacrifice.
+#[test]
+fn world_breaker_cast_trigger_and_recursion() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::world_breaker());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    cast_at(&mut g, id, Target::Permanent(land));
+    assert!(g.exile.iter().any(|c| c.id == land), "cast trigger exiled the land");
+
+    // Kill it, then recur it.
+    g.battlefield.retain(|c| c.id != id);
+    g.players[0].graveyard.push(crate::card::CardInstance::new(id, catalog::world_breaker(), 0));
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1); // pays the {C}? no — needs real colorless
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    });
+    if res.is_err() {
+        // {C} requires true colorless mana.
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, x_value: None,
+        }).expect("recursion activates from the graveyard");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].has_in_hand(id), "World Breaker back in hand");
+}
+
+/// Harbinger of the Tides bounces a tapped creature on ETB and flashes in
+/// for {2} more.
+#[test]
+fn harbinger_bounces_tapped_attacker() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::harbinger_of_the_tides());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, id);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "tapped bear bounced");
+}
+
+/// Shacklegeist taps two Spirits to tap an opposing creature.
+#[test]
+fn shacklegeist_taps_down_a_creature() {
+    let mut g = two_player_game();
+    let geist = g.add_card_to_battlefield(0, catalog::shacklegeist());
+    let other = g.add_card_to_battlefield(0, catalog::shacklegeist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(geist);
+    g.clear_sickness(other);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: geist, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("tap two Spirits");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target tapped down");
+    assert!(g.battlefield_find(geist).unwrap().tapped && g.battlefield_find(other).unwrap().tapped,
+        "both Spirits paid the cost");
+}
+
+/// Deflecting Palm prevents the chosen source's next hit and reflects it
+/// to the source's controller.
+#[test]
+fn deflecting_palm_reflects_damage() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt at P0");
+    // Respond with Deflecting Palm choosing the Bolt as the source.
+    let palm = g.add_card_to_hand(0, catalog::deflecting_palm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(bolt)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: palm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Palm");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the Bolt was prevented");
+    assert_eq!(g.players[1].life, 17, "3 reflected to the Bolt's controller");
+}
+
+/// Sword-Point Diplomacy: the opponent pays 3 to deny one card; the other
+/// two land in hand; the denied card is exiled.
+#[test]
+fn sword_point_diplomacy_pay_or_take() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::lightning_bolt());
+    let b1 = g.add_card_to_library(0, catalog::island());
+    let c1 = g.add_card_to_library(0, catalog::forest());
+    // Opponent pays for the first revealed card only.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::sword_point_diplomacy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, 17, "opponent paid 3 once");
+    assert!(g.exile.iter().any(|c| c.id == a), "denied card exiled");
+    assert!(g.players[0].has_in_hand(b1) && g.players[0].has_in_hand(c1),
+        "unpaid cards into hand");
+}

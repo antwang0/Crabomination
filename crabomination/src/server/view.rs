@@ -1591,6 +1591,8 @@ mod tests {
             gain_life: false,
             source: None,
             one_event: false,
+            reflect: false,
+            source_controller: None,
         });
         state.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Permanent(bear),
@@ -1598,6 +1600,8 @@ mod tests {
             gain_life: false,
             source: None,
             one_event: false,
+            reflect: false,
+            source_controller: None,
         });
         state.damage_cant_be_prevented_this_turn = true;
         let v = project(&state, 0);

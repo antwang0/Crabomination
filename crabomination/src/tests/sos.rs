@@ -674,6 +674,8 @@ fn impractical_joke_damage_cant_be_prevented() {
         gain_life: false,
         source: None,
         one_event: false,
+        reflect: false,
+        source_controller: None,
     });
     let id = g.add_card_to_hand(0, catalog::impractical_joke());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -700,6 +702,8 @@ fn prevention_shield_stops_noncombat_damage() {
         gain_life: false,
         source: None,
         one_event: false,
+        reflect: false,
+        source_controller: None,
     });
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
