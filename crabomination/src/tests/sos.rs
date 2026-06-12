@@ -9,6 +9,22 @@ use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
 
+/// Put `def` onto `seat`'s battlefield already prepared (one Prepared
+/// counter), returning its id — the standard setup for prepare-spell
+/// casts. Bypasses the ETB path, so it works for trigger-prepared
+/// cards too.
+fn prepared_on_battlefield(
+    g: &mut GameState,
+    seat: usize,
+    def: crate::card::CardDefinition,
+) -> CardId {
+    let id = g.add_card_to_battlefield(seat, def);
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
+        c.add_counters(CounterType::Prepared, 1);
+    }
+    id
+}
+
 // ── White ───────────────────────────────────────────────────────────────────
 
 #[test]
@@ -8171,27 +8187,41 @@ fn ward_allows_opp_activated_ability_when_payer_can_afford() {
     assert_eq!(demo_card.damage, 1, "Ward was paid — ping landed");
 }
 
-// ── Studious First-Year MDFC (new card; push X) ─────────────────────────────
+// ── Studious First-Year preparation card ────────────────────────────────────
 
 #[test]
-fn studious_first_year_back_face_castable_via_castspellback() {
-    // Demonstrates the new `GameAction::CastSpellBack` path: cast the
-    // back face (a sorcery) for {1}{G}, expect the Forest to land tapped.
+fn studious_first_year_is_not_an_mdfc_castspellback_rejected() {
+    // Preparation cards are creature cards with an inset prepare spell —
+    // not MDFCs. CastSpellBack from hand must reject (no back face).
     let mut g = two_player_game();
-    let forest = g.add_card_to_library(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::studious_first_year());
-    // Pay {1}{G} for Rampant Growth back-face cost.
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
-    // Tell the auto-decider to fetch the Forest.
+
+    let err = g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(matches!(err, Err(GameError::NotALand(_))),
+        "preparation card has no back face — CastSpellBack must reject");
+}
+
+#[test]
+fn studious_first_year_prepare_spell_fetches_tapped_forest() {
+    // Cast the inset Rampant Growth via CastPrepareSpell for {1}{G} off a
+    // prepared Studious First-Year; the Forest lands tapped.
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::studious_first_year());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Search(Some(forest)),
     ]));
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Studious First-Year back face castable for {1}{G} (Rampant Growth)");
+    .expect("prepare spell castable for {1}{G} (Rampant Growth)");
     drain_stack(&mut g);
 
     // A tapped Forest should be on the battlefield under P0's control.
@@ -8441,22 +8471,22 @@ fn cast_spell_back_face_rejects_card_without_back_face() {
         "CastSpellBack on a card without a back face should error cleanly");
 }
 
-// ── New MDFCs (mdfcs.rs) ────────────────────────────────────────────────────
-// Each MDFC test pair exercises the front face's printed body
-// (P/T, subtypes, keywords) and the back face's effect via CastSpellBack.
+// ── Preparation cards (mdfcs.rs) ───────────────────────────────────────────
+// Each preparation-card test exercises the inset prepare spell via
+// CastPrepareSpell off a prepared creature on the battlefield.
 
 // Emeritus of Truce // Swords to Plowshares — exile creature, owner gains
 // life equal to its power.
 #[test]
-fn emeritus_of_truce_back_exiles_creature_and_grants_life() {
+fn emeritus_of_truce_prepare_spell_exiles_creature_and_grants_life() {
     let mut g = two_player_game();
     let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::emeritus_of_truce());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_truce());
     g.players[0].mana_pool.add(Color::White, 1);
     let life_before = g.players[1].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(opp_creature)),
         additional_targets: vec![],
         mode: None,
@@ -8472,18 +8502,16 @@ fn emeritus_of_truce_back_exiles_creature_and_grants_life() {
         "Owner should gain life equal to creature's power (2)");
 }
 
-// Elite Interceptor // Rejoinder — counter target creature spell.
-// Honorbound Page // Forum's Favor — pump +1/+1 + gain 1 life.
+// Honorbound Page // Forum's Favor — +1/+0 and flying until end of turn.
 #[test]
-fn honorbound_page_back_face_pumps_and_gains_life() {
+fn honorbound_page_prepare_spell_pumps_and_grants_flying() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::honorbound_page());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::honorbound_page());
     g.players[0].mana_pool.add(Color::White, 1);
-    let life_before = g.players[0].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -8494,26 +8522,26 @@ fn honorbound_page_back_face_pumps_and_gains_life() {
 
     let v = g.computed_permanent(bear).expect("Bear should still be alive");
     assert_eq!(v.power, 2 + 1, "Bear should be +1 power");
-    assert_eq!(v.toughness, 2 + 1, "Bear should be +1 toughness");
-    assert_eq!(g.players[0].life, life_before + 1, "Caster should gain 1 life");
+    assert_eq!(v.toughness, 2, "Forum's Favor grants +1/+0 — toughness unchanged");
+    assert!(v.keywords.contains(&Keyword::Flying), "Bear gains flying EOT");
 }
 
 // Joined Researchers // Secret Rendezvous — each player draws 3.
 #[test]
-fn joined_researchers_back_face_each_player_draws_three() {
+fn joined_researchers_prepare_spell_each_player_draws_three() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::lightning_bolt());
         g.add_card_to_library(1, catalog::lightning_bolt());
     }
-    let id = g.add_card_to_hand(0, catalog::joined_researchers());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::joined_researchers());
     let caster_hand_before = g.players[0].hand.len();
     let opp_hand_before = g.players[1].hand.len();
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: None,
         additional_targets: vec![],
         mode: None,
@@ -8522,23 +8550,22 @@ fn joined_researchers_back_face_each_player_draws_three() {
     .expect("Secret Rendezvous castable for {1}{W}{W}");
     drain_stack(&mut g);
 
-    // Caster: lost the cast card (-1), drew 3 → net +2.
-    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1 + 3);
-    // Opp: gained 3 draws.
+    // The copy never lived in hand — both players just gain 3 draws.
+    assert_eq!(g.players[0].hand.len(), caster_hand_before + 3);
     assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
 }
 
-// Quill-Blade Laureate // Twofold Intent — pump +1/+1 + create Inkling.
+// Quill-Blade Laureate // Twofold Intent — +1/+0 + double strike EOT.
 #[test]
-fn quill_blade_laureate_back_face_pumps_and_makes_inkling() {
+fn quill_blade_laureate_prepare_spell_pumps_and_grants_double_strike() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::quill_blade_laureate());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::quill_blade_laureate());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -8548,23 +8575,26 @@ fn quill_blade_laureate_back_face_pumps_and_makes_inkling() {
     drain_stack(&mut g);
 
     let v = g.computed_permanent(bear).expect("Bear pumped");
-    assert_eq!(v.power, 3);
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Inkling"));
+    assert_eq!(v.power, 3, "Twofold Intent grants +1/+0");
+    assert_eq!(v.toughness, 2, "toughness unchanged");
+    assert!(v.keywords.contains(&Keyword::DoubleStrike), "Bear gains double strike EOT");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Inkling"),
+        "Twofold Intent makes no token");
 }
 
-// Spiritcall Enthusiast // Scrollboost — fan-out +1/+1 counter.
+// Spiritcall Enthusiast // Scrollboost — single target +2/+2 EOT.
 #[test]
-fn spiritcall_enthusiast_back_face_buffs_each_creature() {
+fn spiritcall_enthusiast_prepare_spell_pumps_target_two_two() {
     let mut g = two_player_game();
     let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::spiritcall_enthusiast());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::spiritcall_enthusiast());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
-        target: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: Some(Target::Permanent(b1)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -8572,22 +8602,23 @@ fn spiritcall_enthusiast_back_face_buffs_each_creature() {
     .expect("Scrollboost castable for {1}{W}");
     drain_stack(&mut g);
 
-    for (id, expected) in [(b1, 3), (b2, 3)] {
-        let v = g.computed_permanent(id).expect("Bear alive");
-        assert_eq!(v.power, expected, "Bear got +1/+1 counter");
-    }
+    let v1 = g.computed_permanent(b1).expect("Bear alive");
+    assert_eq!(v1.power, 4, "targeted bear is +2/+2");
+    assert_eq!(v1.toughness, 4);
+    let v2 = g.computed_permanent(b2).expect("Bear alive");
+    assert_eq!(v2.power, 2, "untargeted bear unchanged");
 }
 
 // Encouraging Aviator // Jump — grant flying EOT.
 #[test]
-fn encouraging_aviator_back_face_grants_flying() {
+fn encouraging_aviator_prepare_spell_grants_flying() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::encouraging_aviator());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::encouraging_aviator());
     g.players[0].mana_pool.add(Color::Blue, 1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -8602,18 +8633,18 @@ fn encouraging_aviator_back_face_grants_flying() {
 
 // Harmonized Trio // Brainstorm — draw 3 + put 2 back on top.
 #[test]
-fn harmonized_trio_back_face_draws_three_then_puts_two_back() {
+fn harmonized_trio_prepare_spell_draws_three_then_puts_two_back() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::lightning_bolt());
     }
-    let id = g.add_card_to_hand(0, catalog::harmonized_trio());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::harmonized_trio());
     let hand_before = g.players[0].hand.len();
     let lib_before = g.players[0].library.len();
     g.players[0].mana_pool.add(Color::Blue, 1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: None,
         additional_targets: vec![],
         mode: None,
@@ -8622,23 +8653,23 @@ fn harmonized_trio_back_face_draws_three_then_puts_two_back() {
     .expect("Brainstorm castable for {U}");
     drain_stack(&mut g);
 
-    // Net hand change: -1 (cast) +3 (draw) -2 (back) = 0
-    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Net hand change: +3 (draw) -2 (back) = +1 (the copy never lived in hand)
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
     // Library: -3 drawn + 2 back = -1
     assert_eq!(g.players[0].library.len(), lib_before - 1);
 }
 
 // Cheerful Osteomancer // Raise Dead — return creature card from gy.
 #[test]
-fn cheerful_osteomancer_back_face_returns_creature_from_graveyard() {
+fn cheerful_osteomancer_prepare_spell_returns_creature_from_graveyard() {
     let mut g = two_player_game();
     let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::cheerful_osteomancer());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::cheerful_osteomancer());
     g.players[0].mana_pool.add(Color::Black, 1);
     let hand_size = g.players[0].hand.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear_in_gy)),
         additional_targets: vec![],
         mode: None,
@@ -8647,26 +8678,25 @@ fn cheerful_osteomancer_back_face_returns_creature_from_graveyard() {
     .expect("Raise Dead castable for {B}");
     drain_stack(&mut g);
 
-    // Net: -1 (cast Raise Dead, exiled) + 1 (Bear returns) = 0
-    assert_eq!(g.players[0].hand.len(), hand_size);
+    assert_eq!(g.players[0].hand.len(), hand_size + 1, "Bear returned to hand");
     assert!(g.players[0].hand.iter().any(|c| c.id == bear_in_gy),
         "Bear should be back in hand");
 }
 
 // Emeritus of Woe // Demonic Tutor — search library for any card to hand.
 #[test]
-fn emeritus_of_woe_back_face_searches_library() {
+fn emeritus_of_woe_prepare_spell_searches_library() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
-    let id = g.add_card_to_hand(0, catalog::emeritus_of_woe());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_woe());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Search(Some(bolt)),
     ]));
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: None,
         additional_targets: vec![],
         mode: None,
@@ -8681,18 +8711,18 @@ fn emeritus_of_woe_back_face_searches_library() {
 
 // Scheming Silvertongue // Sign in Blood.
 #[test]
-fn scheming_silvertongue_back_face_draws_two_and_drains_two() {
+fn scheming_silvertongue_prepare_spell_draws_two_and_drains_two() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::lightning_bolt());
     }
-    let id = g.add_card_to_hand(0, catalog::scheming_silvertongue());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::scheming_silvertongue());
     g.players[0].mana_pool.add(Color::Black, 2);
     let hand_before = g.players[0].hand.len();
     let life_before = g.players[0].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Player(0)),
         additional_targets: vec![],
         mode: None,
@@ -8701,20 +8731,20 @@ fn scheming_silvertongue_back_face_draws_two_and_drains_two() {
     .expect("Sign in Blood castable for {B}{B}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2);
     assert_eq!(g.players[0].life, life_before - 2);
 }
 
 // Emeritus of Conflict // Lightning Bolt — 3 damage to any target.
 #[test]
-fn emeritus_of_conflict_back_face_burns_three() {
+fn emeritus_of_conflict_prepare_spell_burns_three() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::emeritus_of_conflict());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_conflict());
     g.players[0].mana_pool.add(Color::Red, 1);
     let life_before = g.players[1].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
         mode: None,
@@ -8726,17 +8756,16 @@ fn emeritus_of_conflict_back_face_burns_three() {
     assert_eq!(g.players[1].life, life_before - 3);
 }
 
-// Goblin Glasswright // Craft with Pride — +2/+0 + haste EOT.
+// Goblin Glasswright // Craft with Pride — create a Treasure token.
 #[test]
-fn goblin_glasswright_back_face_pumps_and_grants_haste() {
+fn goblin_glasswright_prepare_spell_creates_treasure() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::goblin_glasswright());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::goblin_glasswright());
     g.players[0].mana_pool.add(Color::Red, 1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -8744,23 +8773,23 @@ fn goblin_glasswright_back_face_pumps_and_grants_haste() {
     .expect("Craft with Pride castable for {R}");
     drain_stack(&mut g);
 
-    let v = g.computed_permanent(bear).expect("Bear alive");
-    assert_eq!(v.power, 2 + 2);
-    assert!(v.keywords.contains(&Keyword::Haste));
+    let treasure = g.battlefield.iter().find(|c| c.definition.name == "Treasure")
+        .expect("Craft with Pride mints a Treasure token");
+    assert_eq!(treasure.controller, 0);
 }
 
 // Emeritus of Abundance // Regrowth — return any card from gy.
 #[test]
-fn emeritus_of_abundance_back_face_returns_any_card_from_graveyard() {
+fn emeritus_of_abundance_prepare_spell_returns_any_card_from_graveyard() {
     let mut g = two_player_game();
     let bolt_in_gy = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    let id = g.add_card_to_hand(0, catalog::emeritus_of_abundance());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_abundance());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     let hand_size = g.players[0].hand.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bolt_in_gy)),
         additional_targets: vec![],
         mode: None,
@@ -8769,24 +8798,27 @@ fn emeritus_of_abundance_back_face_returns_any_card_from_graveyard() {
     .expect("Regrowth castable for {1}{G}");
     drain_stack(&mut g);
 
-    // -1 (Regrowth exiled on stack resolution) + 1 (Bolt returned) = 0
-    assert_eq!(g.players[0].hand.len(), hand_size);
+    assert_eq!(g.players[0].hand.len(), hand_size + 1, "Bolt returned to hand");
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt_in_gy),
         "Bolt should be back in hand");
 }
 
-// Vastlands Scavenger // Bind to Life — return up to 2 creature cards from gy.
+// Vastlands Scavenger // Bind to Life — mill 7, then return a creature card
+// from the graveyard to the battlefield.
 #[test]
-fn vastlands_scavenger_back_face_reanimates_two_creatures() {
+fn vastlands_scavenger_prepare_spell_mills_seven_and_reanimates() {
     let mut g = two_player_game();
-    let b1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let b2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::vastlands_scavenger());
+    for _ in 0..7 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::vastlands_scavenger());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(4);
+    let lib_before = g.players[0].library.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: None,
         additional_targets: vec![],
         mode: None,
@@ -8795,20 +8827,22 @@ fn vastlands_scavenger_back_face_reanimates_two_creatures() {
     .expect("Bind to Life castable for {4}{G}");
     drain_stack(&mut g);
 
-    assert!(g.battlefield.iter().any(|c| c.id == b1));
-    assert!(g.battlefield.iter().any(|c| c.id == b2));
+    assert_eq!(g.players[0].library.len(), lib_before - 7, "milled 7 cards");
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "the graveyard creature was put onto the battlefield");
 }
 
-// Adventurous Eater // Have a Bite — -3/-3 EOT.
+// Adventurous Eater // Have a Bite — +1/+1 counter + gain 1 life.
 #[test]
-fn adventurous_eater_back_face_shrinks_creature() {
+fn adventurous_eater_prepare_spell_adds_counter_and_gains_life() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::adventurous_eater());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::adventurous_eater());
     g.players[0].mana_pool.add(Color::Black, 1);
+    let life_before = g.players[0].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -8817,22 +8851,23 @@ fn adventurous_eater_back_face_shrinks_creature() {
     .expect("Have a Bite castable for {B}");
     drain_stack(&mut g);
 
-    // Bear was 2/2 with -3/-3 → 0 toughness, dies as SBA.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should die after -3/-3");
+    let v = g.computed_permanent(bear).expect("Bear alive");
+    assert_eq!(v.power, 3, "Bear got a +1/+1 counter");
+    assert_eq!(v.toughness, 3);
+    assert_eq!(g.players[0].life, life_before + 1, "caster gains 1 life");
 }
 
-// Leech Collector // Bloodletting — drain 2.
+// Leech Collector // Bloodletting — each opponent loses 2 (no lifegain).
 #[test]
-fn leech_collector_back_face_drains_two() {
+fn leech_collector_prepare_spell_opponents_lose_two() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::leech_collector());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::leech_collector());
     g.players[0].mana_pool.add(Color::Black, 1);
     let life_before_p1 = g.players[1].life;
     let life_before_p0 = g.players[0].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: None,
         additional_targets: vec![],
         mode: None,
@@ -8841,41 +8876,46 @@ fn leech_collector_back_face_drains_two() {
     .expect("Bloodletting castable for {B}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, life_before_p1 - 2);
-    assert_eq!(g.players[0].life, life_before_p0 + 2);
+    assert_eq!(g.players[1].life, life_before_p1 - 2, "each opponent loses 2");
+    assert_eq!(g.players[0].life, life_before_p0, "Bloodletting grants NO lifegain");
 }
 
 // Spellbook Seeker // Careful Study — draw 2, discard 2.
 #[test]
-fn spellbook_seeker_back_face_loots_two() {
+fn spellbook_seeker_prepare_spell_loots_two() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::lightning_bolt()); }
-    let id = g.add_card_to_hand(0, catalog::spellbook_seeker());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // discard fodder
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::spellbook_seeker());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
     let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Front castable for {3}{U}");
+    .expect("Careful Study castable for {U}");
     drain_stack(&mut g);
 
-    // Front face is a creature ETB; nothing to discard.
-    // Test the back face instead: cast freshly on a different game.
-    let _ = hand_before;
+    // Draw 2, discard 2 → hand unchanged, library -2, graveyard +2.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert_eq!(g.players[0].library.len(), lib_before - 2);
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2,
+        "two discarded cards land in the graveyard (the copy itself does not)");
 }
 
-// Skycoach Conductor // All Aboard — bounce target creature.
+// Skycoach Conductor // All Aboard — flicker a non-Pilot creature you control.
 #[test]
-fn skycoach_conductor_back_face_bounces_creature() {
+fn skycoach_conductor_prepare_spell_flickers_own_creature() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::skycoach_conductor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::skycoach_conductor());
     g.players[0].mana_pool.add(Color::Blue, 1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -8884,39 +8924,46 @@ fn skycoach_conductor_back_face_bounces_creature() {
     .expect("All Aboard castable for {U}");
     drain_stack(&mut g);
 
-    assert!(!g.battlefield.iter().any(|c| c.id == bear));
-    assert!(g.players[1].hand.iter().any(|c| c.id == bear));
+    // Exile + return: the bear is back on the battlefield (a flicker, not
+    // a bounce) — not in hand, not stuck in exile.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"
+            && c.controller == 0),
+        "All Aboard flickers the creature back to the battlefield");
+    assert!(!g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "not a bounce — the creature must not be in hand");
+    assert!(!g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the creature does not linger in exile");
 }
 
-// Landscape Painter // Vibrant Idea — draw 3.
+// Landscape Painter // Vibrant Idea — draw 2.
 #[test]
-fn landscape_painter_back_face_draws_three() {
+fn landscape_painter_prepare_spell_draws_two() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::lightning_bolt()); }
-    let id = g.add_card_to_hand(0, catalog::landscape_painter());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::landscape_painter());
     let hand_before = g.players[0].hand.len();
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Vibrant Idea castable for {4}{U}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "Vibrant Idea draws two");
 }
 
 // Blazing Firesinger // Seething Song — add {R}{R}{R}{R}{R}.
 #[test]
-fn blazing_firesinger_back_face_adds_five_red_mana() {
+fn blazing_firesinger_prepare_spell_adds_five_red_mana() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::blazing_firesinger());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::blazing_firesinger());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Seething Song castable for {2}{R}");
     drain_stack(&mut g);
@@ -8925,34 +8972,52 @@ fn blazing_firesinger_back_face_adds_five_red_mana() {
     assert!(red_mana >= 5, "Should have 5+ red mana after Seething Song; got {}", red_mana);
 }
 
-// Maelstrom Artisan // Rocket Volley.
+// Maelstrom Artisan // Rocket Volley — destroy target nonbasic land.
 #[test]
-fn maelstrom_artisan_back_face_burns_each_opponent_two() {
+fn maelstrom_artisan_prepare_spell_destroys_nonbasic_land() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::maelstrom_artisan());
+    let land = g.add_card_to_battlefield(1, catalog::fields_of_strife());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::maelstrom_artisan());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
-    let life_before = g.players[1].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Rocket Volley castable for {1}{R}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, life_before - 2);
+    assert!(!g.battlefield.iter().any(|c| c.id == land),
+        "Rocket Volley destroys the nonbasic land");
 }
 
-// Scathing Shadelock // Venomous Words — -2/-2 EOT.
+// Maelstrom Artisan // Rocket Volley — can't target a basic land.
 #[test]
-fn scathing_shadelock_back_face_shrinks_creature_two_minus_two() {
+fn maelstrom_artisan_prepare_spell_rejects_basic_land_target() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::scathing_shadelock());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::maelstrom_artisan());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let err = g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: Some(Target::Permanent(forest)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "Rocket Volley only targets NONBASIC lands");
+}
+
+// Scathing Shadelock // Venomous Words — your creature +2/+0 + deathtouch EOT.
+#[test]
+fn scathing_shadelock_prepare_spell_pumps_and_grants_deathtouch() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::scathing_shadelock());
     g.players[0].mana_pool.add(Color::Black, 1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -8961,21 +9026,24 @@ fn scathing_shadelock_back_face_shrinks_creature_two_minus_two() {
     .expect("Venomous Words castable for {B}");
     drain_stack(&mut g);
 
-    // Bear was 2/2; -2/-2 → 0 toughness, dies.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+    let v = g.computed_permanent(bear).expect("Bear alive");
+    assert_eq!(v.power, 2 + 2, "Venomous Words grants +2/+0");
+    assert_eq!(v.toughness, 2, "toughness unchanged");
+    assert!(v.keywords.contains(&Keyword::Deathtouch), "Bear gains deathtouch EOT");
 }
 
-// Infirmary Healer // Stream of Life — gain X life.
+// Infirmary Healer // Stream of Life — target player gains X life.
 #[test]
-fn infirmary_healer_back_face_gains_x_life() {
+fn infirmary_healer_prepare_spell_gains_x_life() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::infirmary_healer());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::infirmary_healer());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(5);
     let life_before = g.players[0].life;
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(5),
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: Some(5),
     })
     .expect("Stream of Life castable for {X=5}{G}");
     drain_stack(&mut g);
@@ -8983,82 +9051,93 @@ fn infirmary_healer_back_face_gains_x_life() {
     assert_eq!(g.players[0].life, life_before + 5);
 }
 
-// Jadzi // Oracle's Gift — draw 2X cards.
+// Jadzi // Oracle's Gift — create X Fractals with X +1/+1 counters each.
+//
+// Regression guard for the `Selector::LastCreatedTokens` fan-out: a
+// per-Fractal ForEach let the SBA sweep the still-0/0 stragglers
+// between iterations (X=2 yielded ONE 2/2 Fractal instead of two), so
+// the counters must land on the whole freshly-minted batch in one shot.
 #[test]
-fn jadzi_back_face_draws_2x_cards() {
+fn jadzi_prepare_spell_creates_x_fractals_with_x_counters() {
     let mut g = two_player_game();
-    for _ in 0..10 { g.add_card_to_library(0, catalog::lightning_bolt()); }
-    let id = g.add_card_to_hand(0, catalog::jadzi_steward_of_fate());
-    let hand_before = g.players[0].hand.len();
+    let id = prepared_on_battlefield(&mut g, 0, catalog::jadzi_steward_of_fate());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(4); // X=2 → 2X = 4 generic
+    g.players[0].mana_pool.add_colorless(4); // X=2 → {X}{X} = 4 generic
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
     })
     .expect("Oracle's Gift castable for {X=2}{X=2}{U}");
     drain_stack(&mut g);
 
-    // Net: -1 cast + 2*2=4 drawn = +3
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 4);
+    let fractals: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Fractal")
+        .collect();
+    assert_eq!(fractals.len(), 2, "X=2 mints two Fractal tokens");
+    for f in &fractals {
+        assert_eq!(f.counter_count(CounterType::PlusOnePlusOne), 2,
+            "each Fractal carries X (=2) +1/+1 counters");
+    }
 }
 
-// Sanar // Wild Idea — each player draws 3.
+// Sanar // Wild Idea — tutor an instant or sorcery to hand.
 #[test]
-fn sanar_back_face_each_player_draws_three() {
+fn sanar_prepare_spell_tutors_instant_or_sorcery() {
     let mut g = two_player_game();
-    for _ in 0..5 {
-        g.add_card_to_library(0, catalog::lightning_bolt());
-        g.add_card_to_library(1, catalog::lightning_bolt());
-    }
-    let id = g.add_card_to_hand(0, catalog::sanar_unfinished_genius());
-    let caster_hand_before = g.players[0].hand.len();
-    let opp_hand_before = g.players[1].hand.len();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::sanar_unfinished_genius());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(bolt)),
+    ]));
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Wild Idea castable for {3}{U}{R}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1 + 3);
-    assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Wild Idea fetched the instant to hand");
 }
 
-// Tam // Deep Sight — Scry 4 + Draw 1.
+// Tam // Deep Sight — draw 1 + gain 1 life.
 #[test]
-fn tam_back_face_scries_and_draws() {
+fn tam_prepare_spell_draws_one_and_gains_one() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::lightning_bolt()); }
-    let id = g.add_card_to_hand(0, catalog::tam_observant_sequencer());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::tam_observant_sequencer());
     let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Deep Sight castable for {G}{U}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Deep Sight draws one");
+    assert_eq!(g.players[0].life, life_before + 1, "Deep Sight gains 1 life");
 }
 
-// Kirol // Pack a Punch — 3 damage.
+// Kirol // Pack a Punch — mill 1, two +1/+1 counters + trample EOT.
 #[test]
-fn kirol_back_face_burns_three() {
+fn kirol_prepare_spell_mills_one_and_packs_a_punch() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::kirol_history_buff());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::kirol_history_buff());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -9067,32 +9146,36 @@ fn kirol_back_face_burns_three() {
     .expect("Pack a Punch castable for {1}{R}{W}");
     drain_stack(&mut g);
 
-    // Bear was 2/2; 3 dmg → dies.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "milled 1 card");
+    let b = g.battlefield_find(bear).expect("Bear alive");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 2,
+        "two +1/+1 counters on target creature");
+    let v = g.computed_permanent(bear).unwrap();
+    assert!(v.keywords.contains(&Keyword::Trample), "Bear gains trample EOT");
 }
 
-// Abigale // Heroic Stanza — pump+lifelink EOT.
+// Abigale // Heroic Stanza — put a +1/+1 counter on target creature.
 #[test]
-fn abigale_back_face_pumps_and_grants_lifelink() {
+fn abigale_prepare_spell_adds_plus_one_counter() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::abigale_poet_laureate());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::abigale_poet_laureate());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     })
-    .expect("Heroic Stanza castable for {1}{B}");
+    .expect("Heroic Stanza castable for {1}{W/B} paying black");
     drain_stack(&mut g);
 
-    let v = g.computed_permanent(bear).expect("Bear alive");
-    assert_eq!(v.power, 2 + 2);
-    assert!(v.keywords.contains(&Keyword::Lifelink));
+    let b = g.battlefield_find(bear).expect("Bear alive");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Heroic Stanza puts a +1/+1 counter on the target");
 }
 
 // GameEvent::SpellCast.face audit log.
@@ -9113,17 +9196,19 @@ fn cast_spell_emits_front_face_event() {
 
 #[test]
 fn cast_spell_back_emits_back_face_event() {
+    // Uses a real MDFC (Pestilent Cauldron // Restorative Burst) — SOS
+    // preparation cards no longer carry a back face.
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::cheerful_osteomancer());
-    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pestilent_cauldron());
     g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
     let events = g.perform_action(GameAction::CastSpellBack {
         card_id: id,
-        target: Some(Target::Permanent(bear_in_gy)),
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    }).expect("Raise Dead castable");
+    }).expect("Restorative Burst castable for {2}{B}");
     let face = events.iter().find_map(|e| match e {
         GameEvent::SpellCast { face, .. } => Some(*face),
         _ => None,
@@ -9182,17 +9267,19 @@ fn potioners_trove_lifegain_rejects_after_creature_cast_only() {
         "Should reject without IS cast (got {:?})", result);
 }
 
-// Pigment Wrangler // Striking Palette — 2 damage.
+// Pigment Wrangler // Striking Palette — copy your next instant/sorcery
+// this turn.
 #[test]
-fn pigment_wrangler_back_face_burns_two() {
+fn pigment_wrangler_prepare_spell_copies_next_instant_or_sorcery() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::pigment_wrangler());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    let id = prepared_on_battlefield(&mut g, 0, catalog::pigment_wrangler());
+    g.players[0].mana_pool.add(Color::Red, 2);
     let life_before = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
-        target: Some(Target::Player(1)),
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
@@ -9200,7 +9287,17 @@ fn pigment_wrangler_back_face_burns_two() {
     .expect("Striking Palette castable for {R}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, life_before - 2);
+    // The next instant this turn gets copied: Bolt deals 3 + 3 via copy.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 6,
+        "Striking Palette copied the Bolt (3 + 3 damage)");
 }
 
 // ── Great Hall of the Biblioplex (push XV) ──────────────────────────────────
@@ -9300,15 +9397,15 @@ fn follow_the_lumarets_pulls_two_with_lifegain_infusion() {
 // printed "attacks → gain 1 life" rider.
 
 #[test]
-fn lluwen_back_face_creates_pest_token_with_lifegain_rider() {
+fn lluwen_prepare_spell_creates_pest_token_with_lifegain_rider() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::lluwen_exchange_student());
-    // Pay {B} for Pest Friend back-face cost ({B/G} hybrid → {B}).
+    let id = prepared_on_battlefield(&mut g, 0, catalog::lluwen_exchange_student());
+    // Pay {B} for the Pest Friend prepare-spell cost ({B/G} hybrid → {B}).
     g.players[0].mana_pool.add(Color::Black, 1);
     let bf_before = g.battlefield.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Pest Friend castable for {B}");
     drain_stack(&mut g);
@@ -10869,7 +10966,7 @@ fn prismari_the_inspiration_is_seven_seven_legendary_dragon_with_ward_five() {
 }
 
 #[test]
-fn campus_composer_is_three_four_ward_one_merfolk_bard() {
+fn campus_composer_is_three_four_ward_two_merfolk_bard() {
     use crate::card::CreatureType;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::campus_composer());
@@ -10879,79 +10976,76 @@ fn campus_composer_is_three_four_ward_one_merfolk_bard() {
     assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(2))));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Merfolk));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Bard));
-    // Back face: Aqueous Aria — draw 3.
-    let back = c.definition.back_face.as_ref().expect("MDFC back face");
-    assert_eq!(back.name, "Aqueous Aria");
+    // Inset prepare spell: Aqueous Aria.
+    let prep = c.definition.prepare_spell.as_ref().expect("prepare spell");
+    assert_eq!(prep.name, "Aqueous Aria");
 }
 
-// Push: Aqueous Aria back face draws for *target* player (faithful to
-// printed Oracle). Aiming at the opponent makes them draw 3; the caster
-// only loses the cast card itself.
+// Aqueous Aria — create a 3/3 blue-and-red Elemental token with flying.
 #[test]
-fn campus_composer_aqueous_aria_targets_player() {
+fn campus_composer_aqueous_aria_creates_elemental_token() {
     let mut g = two_player_game();
-    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
-    let id = g.add_card_to_hand(0, catalog::campus_composer());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::campus_composer());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
-    let caster_hand_before = g.players[0].hand.len();
-    let opp_hand_before = g.players[1].hand.len();
+    let bf_before = g.battlefield.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Aqueous Aria castable for {4}{U}");
     drain_stack(&mut g);
 
-    // Opp drew 3, caster only lost the cast card.
-    assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
-    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1);
+    assert_eq!(g.battlefield.len(), bf_before + 1, "one token minted");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Elemental"
+            && c.controller == 0),
+        "Aqueous Aria mints an Elemental token");
 }
 
 #[test]
-fn emeritus_of_ideation_back_face_draws_three() {
+fn emeritus_of_ideation_prepare_spell_draws_three() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
-    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_ideation());
     g.players[0].mana_pool.add(Color::Blue, 1);
     let hand_before = g.players[0].hand.len();
     let lib_before = g.players[0].library.len();
 
-    // Cast the back face Ancestral Recall — costs {U}. Target self to draw 3.
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    // Cast the inset Ancestral Recall — costs {U}. Target self to draw 3.
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Ancestral Recall castable for {U}");
     drain_stack(&mut g);
 
-    // Net: -1 cast +3 draw = +2 hand. Library -3.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    // The copy never lived in hand: +3 hand. Library -3.
+    assert_eq!(g.players[0].hand.len(), hand_before + 3);
     assert_eq!(g.players[0].library.len(), lib_before - 3);
 }
 
-// Push: Ancestral Recall back face draws for the *targeted* player, not the
-// caster. Aiming at the opponent makes them draw 3 (and is rarely the right
-// play, but exercises the target_filtered(Player) wiring).
+// Ancestral Recall draws for the *targeted* player, not the caster.
+// Aiming at the opponent makes them draw 3 (rarely the right play, but
+// exercises the target_filtered(Player) wiring).
 #[test]
 fn emeritus_of_ideation_ancestral_recall_targets_opponent() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
-    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_ideation());
     g.players[0].mana_pool.add(Color::Blue, 1);
     let opp_hand_before = g.players[1].hand.len();
     let opp_lib_before = g.players[1].library.len();
     let caster_hand_before = g.players[0].hand.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Ancestral Recall castable for {U}");
     drain_stack(&mut g);
 
-    // Opp drew 3; caster lost the cast card (no draw on their side).
+    // Opp drew 3; caster's hand untouched (the copy never lived there).
     assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
     assert_eq!(g.players[1].library.len(), opp_lib_before - 3);
-    assert_eq!(g.players[0].hand.len(), caster_hand_before - 1);
+    assert_eq!(g.players[0].hand.len(), caster_hand_before);
 }
 
 #[test]
@@ -10979,17 +11073,17 @@ fn grave_researcher_front_etb_surveils_one() {
 }
 
 #[test]
-fn grave_researcher_back_face_reanimates_creature_from_graveyard() {
+fn grave_researcher_prepare_spell_reanimates_creature_from_graveyard() {
     let mut g = two_player_game();
     // Seed a creature in P0's graveyard.
     let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let researcher = g.add_card_to_hand(0, catalog::grave_researcher());
+    let researcher = prepared_on_battlefield(&mut g, 0, catalog::grave_researcher());
     g.players[0].mana_pool.add(Color::Black, 1);
     let life_before = g.players[0].life;
 
-    // Cast back face Reanimate for {B}, targeting the bear.
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: researcher,
+    // Cast the inset Reanimate for {B}, targeting the bear.
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: researcher,
         target: Some(Target::Permanent(bear_id)),
         additional_targets: vec![],
         mode: None,
@@ -11013,68 +11107,69 @@ fn grave_researcher_back_face_reanimates_creature_from_graveyard() {
 }
 
 #[test]
-fn strife_scholar_is_three_two_ward_one_orc_sorcerer() {
+fn strife_scholar_is_three_two_ward_pay_two_life_orc_sorcerer() {
     use crate::card::CreatureType;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::strife_scholar());
     let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(c.power(), 3);
     assert_eq!(c.toughness(), 2);
-    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(1))));
+    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::Life(2))),
+        "Strife Scholar has Ward—Pay 2 life");
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Orc));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Sorcerer));
 }
 
 #[test]
-fn strife_scholar_back_face_deals_damage_to_creature() {
+fn strife_scholar_prepare_spell_creates_two_spirits() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::strife_scholar());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::strife_scholar());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(5);
+    let bf_before = g.battlefield.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: Some(Target::Permanent(bear)),
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None,
         additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Awaken the Ages castable for {5}{R}");
     drain_stack(&mut g);
 
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should be dead from 5 damage");
+    assert_eq!(g.battlefield.len(), bf_before + 2, "two tokens minted");
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Spirit" && c.controller == 0)
+        .collect();
+    assert_eq!(spirits.len(), 2, "Awaken the Ages mints two Spirit tokens");
 }
 
 #[test]
-fn awaken_the_ages_exiles_itself_after_resolve_via_exile_on_resolve_flag() {
-    // Push (modern_decks): the "Then exile Awaken the Ages" printed
-    // rider now routes the resolved sorcery to exile (not graveyard)
-    // via the `CardDefinition.exile_on_resolve` flag. The 5-damage
-    // body kills the bear; the spell card itself lands in exile.
+fn awaken_the_ages_copy_ceases_to_exist_after_resolve() {
+    // The cast prepare-spell copy never lingers in any zone after it
+    // resolves (CR 707.10a): not graveyard, not exile, not hand. The
+    // old self-exile rider is gone — it just makes the Spirits.
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::strife_scholar());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::strife_scholar());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(5);
     let exile_before = g.exile.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: Some(Target::Permanent(bear)),
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None,
         additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Awaken the Ages castable for {5}{R}");
     drain_stack(&mut g);
 
-    // Spell card itself went to exile (exile_on_resolve flag).
-    assert!(g.exile.iter().any(|c| c.id == id),
-        "Awaken the Ages should be in the exile zone after resolution");
-    assert_eq!(g.exile.len(), exile_before + 1,
-        "Exile zone gained one card (the spell)");
-    // Bear took 5 damage and died.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "5 damage should kill the bear");
-    // Bump on cards_exiled_this_turn so Ennis-style payoffs see it.
-    assert!(g.players[0].cards_exiled_this_turn >= 1,
-        "cards_exiled_this_turn should bump");
+    // Two Spirits arrived; the copy itself exists in no zone.
+    assert_eq!(g.battlefield.iter()
+        .filter(|c| c.definition.name == "Spirit").count(), 2);
+    let in_some_zone = g.exile.iter().any(|c| c.definition.name == "Awaken the Ages")
+        || g.players[0].graveyard.iter().any(|c| c.definition.name == "Awaken the Ages")
+        || g.players[0].hand.iter().any(|c| c.definition.name == "Awaken the Ages")
+        || g.players[0].library.iter().any(|c| c.definition.name == "Awaken the Ages")
+        || g.battlefield.iter().any(|c| c.definition.name == "Awaken the Ages");
+    assert!(!in_some_zone, "the cast copy ceases to exist after resolution");
+    assert_eq!(g.exile.len(), exile_before, "no self-exile rider anymore");
 }
 
 #[test]
@@ -13119,27 +13214,28 @@ fn social_snub_each_player_sacrifices_and_drains() {
         "Caster should gain 1 life");
 }
 
-// ── Strife Scholar MDFC ─────────────────────────────────────────────────
+// ── Strife Scholar preparation card ─────────────────────────────────────
 
 #[test]
-fn strife_scholar_back_face_deals_five_damage() {
+fn awaken_the_ages_spirits_are_two_two() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::strife_scholar());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::strife_scholar());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(5);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: None,
         additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Awaken the Ages castable for {5}{R}");
     drain_stack(&mut g);
 
-    assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should be destroyed by 5 damage");
+    let spirit = g.battlefield.iter().find(|c| c.definition.name == "Spirit")
+        .expect("Spirit token minted");
+    assert_eq!(spirit.definition.power, 2, "Spirits are 2/2");
+    assert_eq!(spirit.definition.toughness, 2);
 }
 
 // ── Colorstorm Stallion ─────────────────────────────────────────────────
@@ -13615,28 +13711,27 @@ fn ward_does_not_apply_to_own_creatures() {
     .expect("should succeed — Ward doesn't apply to own creatures");
 }
 
-// ── New MDFC card tests ───────────────────────────────────────────────────
+// ── Preparation-card token characteristics ─────────────────────────────────
 
 #[test]
-fn campus_composer_back_face_draws_and_discards() {
+fn campus_composer_aqueous_aria_token_is_three_three_flying() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::campus_composer());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::campus_composer());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
-    for _ in 0..5 {
-        g.add_card_to_library(0, catalog::island());
-    }
-    let hand_before = g.players[0].hand.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("back face castable, targeting self");
+    .expect("Aqueous Aria castable for {4}{U}");
     drain_stack(&mut g);
 
-    // Draw 3 (minus the cast card itself = net +2).
-    let hand_after = g.players[0].hand.len();
-    assert!(hand_after >= hand_before, "should have more cards in hand");
+    let elemental = g.battlefield.iter().find(|c| c.definition.name == "Elemental")
+        .expect("Elemental token minted");
+    assert_eq!(elemental.definition.power, 3);
+    assert_eq!(elemental.definition.toughness, 3);
+    assert!(elemental.definition.keywords.contains(&Keyword::Flying),
+        "the Elemental token has flying");
 }
 
 // ── Fix What's Broken ─────────────────────────────────────────────────────
@@ -14158,17 +14253,17 @@ fn stirring_honormancer_hybrid_pip_payable_with_black() {
 }
 
 #[test]
-fn heroic_stanza_back_hybrid_pip_payable_with_white() {
-    // Abigale's back face Heroic Stanza is {1}{W/B}: pay the hybrid pip
-    // with white → {1}{W}. Target creature gets +2/+2 and lifelink EOT.
+fn heroic_stanza_prepare_hybrid_pip_payable_with_white() {
+    // Abigale's prepare spell Heroic Stanza is {1}{W/B}: pay the hybrid
+    // pip with white → {1}{W}. Puts a +1/+1 counter on target creature.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::abigale_poet_laureate());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::abigale_poet_laureate());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
@@ -14177,22 +14272,25 @@ fn heroic_stanza_back_hybrid_pip_payable_with_white() {
     .expect("Heroic Stanza castable for {1}{W} via hybrid pip");
     drain_stack(&mut g);
 
-    let view = g.computed_permanent(bear).expect("bear still on bf");
-    assert_eq!(view.power, 4, "Bear pumped +2/+2 by Heroic Stanza");
-    assert_eq!(view.toughness, 4);
+    let b = g.battlefield_find(bear).expect("bear still on bf");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Heroic Stanza puts a +1/+1 counter on the bear");
+    let view = g.computed_permanent(bear).unwrap();
+    assert_eq!(view.power, 3, "2/2 + one +1/+1 counter");
+    assert_eq!(view.toughness, 3);
 }
 
 #[test]
-fn pest_friend_back_hybrid_pip_payable_with_green() {
-    // Lluwen's back face Pest Friend is {B/G}: pay the hybrid pip with
-    // green. Creates a 1/1 Pest token.
+fn pest_friend_prepare_hybrid_pip_payable_with_green() {
+    // Lluwen's prepare spell Pest Friend is {B/G}: pay the hybrid pip
+    // with green. Creates a 1/1 Pest token.
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::lluwen_exchange_student());
+    let id = prepared_on_battlefield(&mut g, 0, catalog::lluwen_exchange_student());
     g.players[0].mana_pool.add(Color::Green, 1);
     let bf_before = g.battlefield.len();
 
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id,
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
         target: None,
         additional_targets: vec![],
         mode: None,
@@ -14648,4 +14746,146 @@ fn daydream_flickers_a_creature_and_adds_a_counter() {
     assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1,
         "flicker leaves a +1/+1 counter");
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Daydream"));
+}
+
+// ── SOS Prepare — generic mechanic tests ────────────────────────────────────
+
+#[test]
+fn cast_prepare_spell_happy_path_unprepares_and_copy_vanishes() {
+    let mut g = two_player_game();
+    let id = prepared_on_battlefield(&mut g, 0, catalog::studious_first_year());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("prepared creature's spell is castable");
+    drain_stack(&mut g);
+
+    // Resolved: Forest fetched, the Prepared counter is gone.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest" && c.controller == 0),
+        "Rampant Growth fetched a Forest");
+    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(c.counter_count(CounterType::Prepared), 0, "casting unprepares");
+    // The copy is in NO zone afterwards (CR 707.10a).
+    assert_eq!(g.players[0].graveyard.len(), gy_before,
+        "copy ceases to exist — not in graveyard");
+    let copy_lingers = g.players[0].hand.iter().any(|c| c.definition.name == "Rampant Growth")
+        || g.exile.iter().any(|c| c.definition.name == "Rampant Growth")
+        || g.battlefield.iter().any(|c| c.definition.name == "Rampant Growth")
+        || g.players[0].library.iter().any(|c| c.definition.name == "Rampant Growth");
+    assert!(!copy_lingers, "copy not in hand/exile/battlefield/library either");
+
+    // Second cast without re-preparing must reject.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let r2 = g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(matches!(r2, Err(GameError::NotPrepared(_))),
+        "spent prepared counter — second cast rejects");
+}
+
+#[test]
+fn cast_prepare_spell_rejects_creature_without_prepared_counter() {
+    let mut g = two_player_game();
+    // Straight onto the battlefield WITHOUT a Prepared counter.
+    let id = g.add_card_to_battlefield(0, catalog::studious_first_year());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let r = g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(matches!(r, Err(GameError::NotPrepared(_))),
+        "unprepared creature's spell is not castable");
+}
+
+#[test]
+fn cast_prepare_spell_rejects_opponent_controlled_creature() {
+    let mut g = two_player_game();
+    // Prepared, but controlled by the OPPONENT — P0 may not cast it.
+    let id = prepared_on_battlefield(&mut g, 1, catalog::studious_first_year());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+
+    let r = g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(matches!(r, Err(GameError::NotPrepared(_))),
+        "only the prepared creature's controller may cast the copy");
+}
+
+#[test]
+fn cast_prepare_spell_rejects_creature_not_on_battlefield() {
+    let mut g = two_player_game();
+    let bogus = g.add_card_to_hand(0, catalog::studious_first_year());
+
+    let r = g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: bogus, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(matches!(r, Err(GameError::CardNotOnBattlefield(_))),
+        "creature must be on the battlefield");
+}
+
+#[test]
+fn prepared_counter_never_stacks() {
+    // "A creature can't become prepared if it's already prepared" — the
+    // AddCounter pipeline clamps Prepared at 1. Scathing Shadelock's
+    // first-main trigger prepares it each turn; firing it twice still
+    // leaves exactly one counter.
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::scathing_shadelock());
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::Prepared), 1,
+        "Prepared is a flag — two prepare effects leave one counter");
+}
+
+#[test]
+fn enters_prepared_creature_gets_counter_when_cast_from_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::goblin_glasswright());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Goblin Glasswright castable for {1}{R}");
+    drain_stack(&mut g);
+
+    let c = g.battlefield_find(id).expect("Glasswright on battlefield");
+    assert_eq!(c.counter_count(CounterType::Prepared), 1,
+        "\"This creature enters prepared.\" — one Prepared counter on ETB");
+}
+
+#[test]
+fn prepare_castable_affordance_tracks_mana_availability() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let id = prepared_on_battlefield(&mut g, 0, catalog::studious_first_year());
+
+    // No lands, empty mana pool → the {1}{G} prepare spell is unaffordable.
+    let view = crate::server::view::project(&g, 0);
+    assert!(view.prepare_castable.is_empty(),
+        "no mana → prepare spell not castable");
+
+    // An untapped Forest + a second land cover {1}{G} via auto-tap.
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::island());
+    let view = crate::server::view::project(&g, 0);
+    assert!(view.prepare_castable.contains(&id),
+        "two untapped lands → prepared creature surfaces in prepare_castable");
 }

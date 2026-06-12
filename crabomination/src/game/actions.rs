@@ -1263,6 +1263,76 @@ impl GameState {
         result
     }
 
+    /// SOS Prepare — cast a copy of a prepared creature's inset prepare
+    /// spell. The copy is paid for and timing-checked like a normal spell
+    /// of its card type via the regular `cast_spell` pipeline (a fresh
+    /// `CardInstance` is hopped through the caster's hand the way the
+    /// Muldrotha / library-top paths do), then flagged `is_token` on the
+    /// stack so it ceases to exist when it leaves the stack (CR 707.10a —
+    /// it never hits a graveyard). Casting it removes the creature's
+    /// Prepared counter ("unprepares it").
+    ///
+    /// Only the prepared creature's *current controller* may cast the
+    /// copy — a stolen prepared creature brings its spell along.
+    pub(crate) fn cast_prepare_spell(
+        &mut self,
+        creature_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::CounterType;
+        let p = self.priority.player_with_priority;
+        let Some(creature) = self.battlefield.iter().find(|c| c.id == creature_id) else {
+            return Err(GameError::CardNotOnBattlefield(creature_id));
+        };
+        let prep_def = match creature.definition.prepare_spell.as_deref() {
+            Some(d) if creature.controller == p
+                && creature.counter_count(CounterType::Prepared) > 0 => d.clone(),
+            _ => return Err(GameError::NotPrepared(creature_id)),
+        };
+        // Materialize the copy and run it through the normal cast path —
+        // payment, timing (instant vs sorcery speed), target validation,
+        // and cast triggers all apply to the copy's own characteristics.
+        let copy_id = self.next_id();
+        let copy = crate::card::CardInstance::new(copy_id, prep_def, p);
+        self.players[p].hand.push(copy);
+        let result = self.cast_spell(copy_id, target, additional_targets, mode, x_value);
+        match result {
+            Ok(mut events) => {
+                // CR 707.10a — the cast copy ceases to exist off the stack.
+                // Flagged only now that it sits on the stack; an in-hand
+                // token would be swept by the token SBA.
+                for item in self.stack.iter_mut().rev() {
+                    if let StackItem::Spell { card, .. } = item
+                        && card.id == copy_id
+                    {
+                        card.is_token = true;
+                        break;
+                    }
+                }
+                // Casting the copy unprepares the creature.
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == creature_id)
+                    && c.remove_counters(CounterType::Prepared, 1) > 0
+                {
+                    events.push(GameEvent::CounterRemoved {
+                        card_id: creature_id,
+                        counter_type: CounterType::Prepared,
+                        count: 1,
+                    });
+                }
+                Ok(events)
+            }
+            Err(e) => {
+                // The rejected cast pushed the copy back into the hand —
+                // unmaterialize it.
+                self.players[p].hand.retain(|c| c.id != copy_id);
+                Err(e)
+            }
+        }
+    }
+
     pub(crate) fn cast_spell(
         &mut self,
         card_id: CardId,

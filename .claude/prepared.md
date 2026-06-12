@@ -1,72 +1,80 @@
 # Prepare Mechanic — quick reference
 
-Two halves; only Half 1 ships today.
+Real SOS mechanic (per WotC's "Secrets of Strixhaven Mechanics" article
+and the set's release notes). Reminder text: *"While it's prepared, you
+may cast a copy of its spell. Doing so unprepares it."*
 
-## Half 1 — Prepared cards (the spell side, **wired**)
+> Historical note: the first implementation modeled preparation cards as
+> engine-invented MDFCs whose spell half was cast from hand via
+> `CastSpellBack`. That was wrong — the real cards use an Adventure/Omen
+> style inset frame, are creature cards in **every** zone, and the spell
+> is cast as a **copy, from exile, off the prepared battlefield creature**.
+> The MDFC model was replaced in June 2026.
 
-A "prepared card" is a creature with a back-face *prepare spell* — a
-fully castable spell on the back of an otherwise-vanilla creature
-front. Mechanically these ride the engine's existing MDFC plumbing
-(`back_face: Some(Box<CardDefinition>)` + the
-`GameAction::CastSpell` / `CastSpellBack` action pair). The
-distinguishing feature vs. a real Scryfall MDFC (e.g. pathways) is
-that the **front+back pair is engine-invented** — the front creature
-and back spell each exist in real Magic, but Scryfall has no record of
-them glued together as a double-faced printing.
+## Card model
 
-**Catalog:** `crabomination/src/catalog/sets/sos/mdfcs.rs` (plus a few
-in `sos/creatures.rs`). Helpers: `vanilla_front(...)`, `spell_back(...)`.
+A preparation card is a creature whose `CardDefinition` carries
+`prepare_spell: Some(Box<CardDefinition>)` — the inset spell (own name,
+cost, type, effect). It is **not** a `back_face`: the card is a creature
+for casting, searching, and deck building, and the spell side is never
+castable from hand. Cards printed "This creature enters prepared." set
+`enters_with_counters: Some((CounterType::Prepared, Value::Const(1)))`.
 
-**Examples:** Spellbook Seeker // Careful Study, Pigment Wrangler //
-Striking Palette, Cheerful Osteomancer // Raise Dead, Joined
-Researchers // Secret Rendezvous, Adventurous Eater // Have a Bite,
-Quill-Blade Laureate // Twofold Intent, Spiritcall Enthusiast //
-Scrollboost, Landscape Painter // Vibrant Idea, Scathing Shadelock //
-Venomous Words, Kirol, History Buff // Pack a Punch.
+**Catalog:** `crabomination_catalog/src/sets/sos/mdfcs.rs` (module name
+kept for history; contents are preparation cards) plus Studious
+First-Year in `sos/creatures.rs`.
 
-**Image prefetch:** `crabomination_client::scryfall::download_card_image`
-queries the front name with `face=back` first (the real-MDFC path).
-On HTTP 422 (Scryfall: front isn't double-faced) **or** 404 (front not
-on Scryfall), it falls back to a direct `cards/named` lookup of the
-back name. The back name is always a real Scryfall card on its own,
-so the fallback always succeeds and the runtime renders the spell's
-real art rather than a cardback placeholder. Saved under
-`<back>_back.png` to coexist with any unrelated `<back>.png` front.
+## The prepared designation
 
-If you add a new prepared card, the prefetch handles it automatically
-— no hand-maintained allowlist.
+`CounterType::Prepared` (count-1 flag) on the permanent, surfaced through
+`PermanentView.counters`. Toggle cards (Biblioplex Tomekeeper, Skycoach
+Waypoint) add/remove it via `Effect::AddCounter` / `RemoveCounter`, with
+the printed "(Only creatures with prepare spells can become prepared.)"
+reminder enforced by `SelectionRequirement::HasPrepareSpell` target
+filters. Payoffs read it via
+`SelectionRequirement::WithCounter(CounterType::Prepared)` (Top of the
+Class anthem). Many preparation cards also prepare themselves via
+printed triggers/activations (attack triggers, landfall, etc.).
 
-## Half 2 — The prepared flag (**✅ wired**)
+## Casting the prepare spell
 
-The "prepared" state is modeled as `CounterType::Prepared` (count-1) on
-the permanent, surfaced through `PermanentView.counters` for the client.
-A creature reads as prepared iff it carries ≥1 Prepared counter.
+`GameAction::CastPrepareSpell { creature_id, .. }` →
+`GameState::cast_prepare_spell` (`game/actions.rs`):
 
-**Toggle cards** (✅): set/clear the counter via `Effect::AddCounter` /
-`Effect::RemoveCounter` of `CounterType::Prepared`. The printed reminder
-"(Only creatures with prepare spells can become prepared.)" is enforced
-by an `SelectionRequirement::HasBackFace` filter on the target selector
-— only a creature with a back-face "prepare spell" is a legal target.
-- Biblioplex Tomekeeper — `{4}` 3/4 with ETB choose-mode toggle
-  (prepare or unprepare a target).
-- Skycoach Waypoint — colorless land with `{3},{T}: prepare target`.
+- Legal only while `creature_id` is on the battlefield, controlled by
+  the acting player (a stolen creature brings its spell along), and
+  carries a Prepared counter; else `GameError::NotPrepared`.
+- A fresh `CardInstance` of the prepare spell is hopped through the
+  caster's hand into the regular `cast_spell` pipeline — payment,
+  timing (instant vs sorcery speed), targeting, and cast triggers all
+  apply normally. On success the stack item is flagged `is_token`
+  (CR 707.10a — the copy ceases to exist off the stack and never hits
+  a graveyard) and the Prepared counter is removed ("unprepares it").
+- Known approximation: the engine doesn't model a persistent copy
+  object sitting in exile while prepared, so "cast from exile"
+  zone-watch triggers don't see it; the copy materializes at cast time.
 
-**Payoff cards** (✅): read the flag via
-`SelectionRequirement::WithCounter(CounterType::Prepared)`, which
-`affected_from_requirement` lowers to
-`AffectedPermanents::AllWithCounter { counter: Prepared, .. }` for static
-anthems and which `Predicate::EntityMatches` / `SelectorExists` honor for
-conditional clauses. Recomputes live as creatures become prepared /
-unprepared.
-- Top of the Class — `{2}{W}` enchantment: "Prepared creatures you
-  control get +1/+1 and have flying." (`sos/enchantments.rs`,
-  `StaticEffect::PumpPT` + `GrantKeyword`.)
+**Affordance:** `prepare_castable` (ClientView root) — prepared
+creatures whose spell `would_accept` right now. Feeds the client's
+ability-menu entry and `auto_advance_p0`'s `has_instant_play` hold.
 
-**No new engine surface was needed** — `CounterType::Prepared`,
-`AddCounter`/`RemoveCounter`, `HasBackFace`, and `WithCounter` already
-existed; the missing piece was purely a payoff card. The originally
-proposed `Effect::SetPrepared` / `Predicate::IsPrepared` / "Prepare
-{cost}:" helper are unnecessary — the counter primitives subsume them.
+**Client UX:** right-click (or `M`) on your prepared creature opens the
+ability menu with a "Cast <spell> {cost}" entry (greyed when not
+currently payable/timeable). Targeted spells arm the standard targeting
+cursor via `TargetingState.pending_prepare_source`.
 
-See STRIXHAVEN2.md → "Prepare mechanic" and TODO.md → "Prepare
-Mechanic (SOS)" for the full status.
+**Image prefetch:** prepare-spell names are prefetched as plain fronts
+(`main.rs::visit`) — Scryfall's `cards/named` resolves inset face names
+— so the cast copy has art on the stack.
+
+## Official rulings worth remembering (release notes)
+
+- Only the **current controller** of the prepared creature may cast the
+  copy; casting it counts as casting a spell.
+- A creature can't become prepared while already prepared.
+- The copy ceases to exist if the creature leaves the battlefield or
+  becomes unprepared.
+- Cost reductions / alternative-cost effects apply to the copy.
+- Prepared isn't a copiable value.
+
+See TODO.md → "Prepare Mechanic (SOS)" for per-card status.

@@ -1276,6 +1276,7 @@ impl GameState {
                         card.definition.cost.cmc() <= count
                     }
                     R::HasBackFace => card.definition.back_face.is_some(),
+                    R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
                     R::NameDiffersFromLastMoved => !self.last_moved_cards.iter().any(|id| {
                         self.find_card_anywhere(*id)
                             .is_some_and(|c| c.definition.name == card.definition.name)
@@ -1444,9 +1445,10 @@ impl GameState {
                 let count = self.players[card.controller].graveyard.len() as u32;
                 card.definition.cost.cmc() <= count
             }
-            // Back-face check is a static property of the card
-            // definition — same answer in any zone.
+            // Back-face / prepare-spell checks are static properties of
+            // the card definition — same answer in any zone.
             R::HasBackFace => card.definition.back_face.is_some(),
+            R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
             R::HasNoCounters => {
                 card.counters.values().all(|&n| n == 0)
                     && card.keyword_counters.values().all(|&n| n == 0)

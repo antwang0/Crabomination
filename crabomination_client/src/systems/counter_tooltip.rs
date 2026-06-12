@@ -891,6 +891,9 @@ mod tests {
             impending_counters: None,
             face_down: false,
             face_down_name: None,
+            prepare_spell_name: None,
+            prepare_cost_label: String::new(),
+            prepare_needs_target: false,
         }
     }
 

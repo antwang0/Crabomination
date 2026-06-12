@@ -183,9 +183,9 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
 /// `tap_add_colorless` helper. `{3}, {T}: Target creature becomes
 /// prepared` via `AddCounter` of `CounterType::Prepared`. The
 /// "(only creatures with prepare spells can become prepared)"
-/// reminder is naturally enforced — only Biblioplex Tomekeeper +
-/// Skycoach Waypoint create Prepared counters, so no other card path
-/// can prepare a creature.
+/// reminder is enforced by the target filter:
+/// `SelectionRequirement::HasPrepareSpell` only matches creatures
+/// whose definition carries an inset prepare spell.
 pub fn skycoach_waypoint() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::{CounterType, SelectionRequirement};
@@ -193,7 +193,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
     use crate::effect::ActivatedAbility;
     // Printed reminder: "(Only creatures with prepare spells can
     // become prepared.)" — restrict target to creatures whose
-    // definition has a back face (a "prepare spell").
+    // definition carries an inset prepare spell (`prepare_spell`).
     let prepare_target = ActivatedAbility {
         energy_cost: 0,
         discard_cost: None,
@@ -201,7 +201,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
         mana_cost: cost(&[generic(3)]),
         effect: Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::HasBackFace),
+                SelectionRequirement::Creature.and(SelectionRequirement::HasPrepareSpell),
             ),
             kind: CounterType::Prepared,
             amount: Value::Const(1),

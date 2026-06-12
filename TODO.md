@@ -2924,6 +2924,26 @@ per-card primitive + tests). Still open:
 |---|---|---|
 | Spectral Procession | `{2}{W}` (most-permissive collapse of the three `{2/W}` hybrid pips onto the generic side) | Real Oracle `{(2/W)}{(2/W)}{(2/W)}`. Needs an engine-wide `ManaSymbol::HybridGeneric(u32, Color)` variant before the true hybrid cost is faithful. |
 
+### Prepare Mechanic (SOS)
+
+The June 2026 rework replaced the incorrect MDFC model with the printed
+mechanic (`prepare_spell` + `CastPrepareSpell`; see `.claude/prepared.md`).
+All 36 preparation cards audited against Scryfall oracle. Residual
+approximations (each documented at the card site):
+
+| Card / Feature | Current Approximation | Correct Behaviour |
+|---|---|---|
+| Copy-in-exile object | The spell copy materializes at cast time | A copy sits in exile while the creature is prepared, so "cast from exile" zone-watch triggers should see it |
+| Bot play | Bots never cast prepare spells (their enters-prepared creatures keep the counter) | Bot evaluates `prepare_castable` like other affordances |
+| Emeritus of Truce ETB | Inkling token minted for *you* | "Target player creates…" (needs a trigger-scoped target slot for `CreateToken`) |
+| Harmonized Trio | Activation taps one other untapped creature | "Tap two untapped creatures you control" |
+| Scrollboost | Single target +2/+2 | "One or two target creatures" |
+| Secret Rendezvous | Each player draws 3 (equivalent in 1v1) | "You and target opponent" |
+| Striking Palette | Armed window consumed by the next spell of any type (copy still gated to instant/sorcery) | "When you next cast an instant or sorcery spell this turn, copy it" |
+| Bind to Life | Mill 7, then return a creature from the graveyard | "…from among the milled cards" (needs a scratch selector) |
+| Oracle's Gift | Counters land on the freshly-minted batch only | "…on each Fractal you control" (pre-existing Fractals miss out) |
+| Swords to Plowshares rider | Lifegain approximated off the target's controller-as-resolved | Printed: target's controller gains the life — verify the `PlayerRef::ControllerOf` shape is exact |
+
 ---
 
 ## Engine — Rollback / Undo system (plan)

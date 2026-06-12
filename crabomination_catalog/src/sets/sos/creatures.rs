@@ -467,25 +467,25 @@ pub fn shopkeepers_bane() -> CardDefinition {
     }
 }
 
-/// Studious First-Year // Rampant Growth — modal-double-faced.
+/// Studious First-Year // Rampant Growth — preparation card.
 ///
-/// Front: 1/1 Bear Wizard at {G}. Vanilla body — printed has no rules
-/// text (the back face carries the spell side).
+/// Creature: 1/1 Bear Wizard at {G}. "This creature enters prepared."
 ///
-/// Back: {1}{G} Sorcery — search your library for a basic land card,
-/// put it onto the battlefield tapped, then shuffle.
+/// Prepare spell: {1}{G} Sorcery — search your library for a basic land
+/// card, put it onto the battlefield tapped, then shuffle.
 ///
-/// Wired via the engine's existing MDFC plumbing: the front-face
-/// `CardDefinition` carries a `back_face: Some(Box<...>)` pointer to a
-/// freshly-built sorcery `CardDefinition`. Players cast either face by
-/// emitting `GameAction::CastSpell` (front) or
-/// `GameAction::CastSpellBack` (back, added in this push). The back's
-/// effect is the same body Rampant Growth uses.
+/// Wired via the engine's prepare-spell plumbing: the creature
+/// `CardDefinition` carries `prepare_spell: Some(Box<...>)` pointing at
+/// a freshly-built sorcery `CardDefinition` (it is a creature card in
+/// every zone — the spell is never cast from hand). While the creature
+/// carries its `Prepared` counter, the controller casts the spell via
+/// `GameAction::CastPrepareSpell`. The spell's effect is the same body
+/// Rampant Growth uses.
 pub fn studious_first_year() -> CardDefinition {
-    use crate::card::SelectionRequirement;
+    use crate::card::{CounterType, SelectionRequirement};
     use crate::effect::ZoneDest;
     use crate::mana::g;
-    let back = CardDefinition {
+    let spell = CardDefinition {
         name: "Rampant Growth",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
@@ -509,7 +509,8 @@ pub fn studious_first_year() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        back_face: Some(Box::new(back)),
+        prepare_spell: Some(Box::new(spell)),
+        enters_with_counters: Some((CounterType::Prepared, Value::Const(1))),
         ..Default::default()
     }
 }
@@ -4938,15 +4939,16 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::target_filtered;
     // Printed reminder: "(Only creatures with prepare spells can
-    // become prepared.)" In this set, a "prepare spell" is a back-face
-    // spell on a creature, so the legal-target rule reduces to
-    // `Creature ∧ HasBackFace`. Both modes share the same filter —
-    // unpreparing a creature with no back face is also illegal per
-    // the reminder text (and a no-op anyway since such a creature
-    // can never have acquired the counter through legal play).
+    // become prepared.)" A "prepare spell" is the inset spell on a
+    // preparation card (`prepare_spell.is_some()`), so the legal-target
+    // rule reduces to `Creature ∧ HasPrepareSpell`. Both modes share
+    // the same filter — unpreparing a creature with no prepare spell is
+    // also illegal per the reminder text (and a no-op anyway since such
+    // a creature can never have acquired the counter through legal
+    // play).
     let prepare_target = || {
         target_filtered(
-            SelectionRequirement::Creature.and(SelectionRequirement::HasBackFace),
+            SelectionRequirement::Creature.and(SelectionRequirement::HasPrepareSpell),
         )
     };
     CardDefinition {

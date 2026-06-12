@@ -281,12 +281,25 @@ pub enum GameAction {
     /// `PlayLandBack` but for non-land back faces (creature/instant/
     /// sorcery). The card's `definition` is swapped to the back face's
     /// definition before payment + cast, so cost / type / effect all
-    /// resolve against the back face. Used by SOS MDFCs whose two
-    /// faces are a creature and a spell (Studious First-Year //
-    /// Rampant Growth, Adventurous Eater // Have a Bite, Emeritus of
-    /// Truce // Swords to Plowshares, etc.).
+    /// resolve against the back face. Used by real MDFCs whose two
+    /// faces are both spells (pathway-style cards, STX Deans).
     CastSpellBack {
         card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// SOS Prepare — cast a copy of a prepared creature's inset prepare
+    /// spell. Legal while `creature_id` is on the battlefield, controlled
+    /// by the acting player, and carries a `CounterType::Prepared`
+    /// counter. The copy is paid for and timed like a normal spell of its
+    /// card type and ceases to exist when it leaves the stack (it never
+    /// hits a graveyard); casting it removes the Prepared counter
+    /// ("unprepares it").
+    CastPrepareSpell {
+        creature_id: CardId,
         target: Option<Target>,
         #[serde(default)]
         additional_targets: Vec<Target>,
@@ -843,6 +856,7 @@ impl GameAction {
                 | A::CastSpellReplicate { .. }
                 | A::CastPlotted { .. }
                 | A::CastSpellBack { .. }
+                | A::CastPrepareSpell { .. }
                 | A::CastSpellConvoke { .. }
                 | A::CastSpellDelve { .. }
                 | A::CastSpellAlternative { .. }
@@ -1452,6 +1466,10 @@ pub enum GameError {
     CardNotOnBattlefield(CardId),
     #[error("Card {0:?} is not a land")]
     NotALand(CardId),
+    /// SOS Prepare — `CastPrepareSpell` on a creature that isn't a
+    /// prepared preparation card under the caster's control.
+    #[error("Creature {0:?} isn't a prepared creature you control")]
+    NotPrepared(CardId),
     #[error("Already played a land this turn")]
     AlreadyPlayedLand,
     #[error("Card {0:?} is tapped")]

@@ -112,6 +112,8 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         // both libraries) per candidate. Runs on every accepted action for
         // the priority-holding seat, so it's the projection's hot path.
         castable_hand: affordances.castable,
+        back_castable_hand: affordances.back_castable,
+        prepare_castable: affordances.prepare_castable,
         pitchable_hand: affordances.pitchable,
         kickable_hand: affordances.kickable,
         buyback_hand: affordances.buyback,
@@ -514,6 +516,11 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .back_face
             .as_ref()
             .map(|b| b.name.to_string()),
+        back_needs_target: card
+            .definition
+            .back_face
+            .as_ref()
+            .is_some_and(|b| b.effect.requires_target()),
         has_cycling: cycling_cost.is_some() || cycling_life.is_some(),
         cycling_cost_label: cycling_cost
             .as_ref()
@@ -725,6 +732,24 @@ fn project_permanent(
         face_down_name: (card.face_down && card.controller == viewer_seat)
             .then(|| card.face_up_def.as_ref().map(|d| d.name.to_string()))
             .flatten(),
+        // SOS Prepare — surface the inset spell so the client can offer
+        // "Cast <name> {cost}" on a prepared creature.
+        prepare_spell_name: card
+            .definition
+            .prepare_spell
+            .as_ref()
+            .map(|p| p.name.to_string()),
+        prepare_cost_label: card
+            .definition
+            .prepare_spell
+            .as_ref()
+            .map(|p| format_mana_cost_for_label(&p.cost))
+            .unwrap_or_default(),
+        prepare_needs_target: card
+            .definition
+            .prepare_spell
+            .as_ref()
+            .is_some_and(|p| p.effect.requires_target()),
     }
 }
 

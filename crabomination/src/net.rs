@@ -256,6 +256,19 @@ pub struct ClientView {
     /// doesn't hold priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub castable_hand: Vec<CardId>,
+    /// Hand MDFCs whose **back face** is castable right now via
+    /// `CastSpellBack` — `castable_hand` only probes front faces.
+    /// Feeds the castable highlight and the auto-pass hold logic.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub back_castable_hand: Vec<CardId>,
+    /// SOS Prepare — prepared creatures the viewer controls whose
+    /// prepare spell is castable right now (`CastPrepareSpell` would be
+    /// accepted). Drives the battlefield right-click "Cast <spell>"
+    /// menu entry. Empty off-priority. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub prepare_castable: Vec<CardId>,
     /// CardIds in the viewer's hand with an activatable "from hand" ability
     /// right now (Spirit-Guide pitch: "Exile this from your hand: Add mana").
     /// Lets the client show a pitch affordance separate from the castable
@@ -637,6 +650,13 @@ pub struct KnownCard {
     /// `PlayLand`.
     #[serde(default)]
     pub back_face_name: Option<String>,
+    /// Whether the back face's effect takes a target. `needs_target`
+    /// describes the *front* face only, so a flipped-MDFC cast must
+    /// consult this flag to know whether to arm the targeting cursor
+    /// before submitting `CastSpellBack`. `false` when there is no
+    /// back face. Defaults to `false` for older snapshots.
+    #[serde(default)]
+    pub back_needs_target: bool,
     /// True if this card has `Keyword::Cycling(cost)`. Drives the
     /// client's "Cycle" hand action — when true, the client can submit
     /// `GameAction::Cycle` to discard-and-draw at the cycling cost
@@ -1089,6 +1109,21 @@ pub struct PermanentView {
     /// label its own morph/manifest while keeping it hidden from opponents.
     #[serde(default)]
     pub face_down_name: Option<String>,
+    /// SOS Prepare — the inset prepare spell's name, when this permanent
+    /// is a preparation card. With a Prepared counter in `counters` and
+    /// the id in `ClientView::prepare_castable`, the client offers
+    /// "Cast <name>" on right-click. `None` for non-preparation cards.
+    #[serde(default)]
+    pub prepare_spell_name: Option<String>,
+    /// Pre-rendered prepare-spell mana cost (e.g. "{1}{G}"). Empty when
+    /// `prepare_spell_name` is `None`.
+    #[serde(default)]
+    pub prepare_cost_label: String,
+    /// Whether the prepare spell's effect takes a target, so the client
+    /// knows to arm the targeting cursor before submitting
+    /// `CastPrepareSpell`. `false` when there is no prepare spell.
+    #[serde(default)]
+    pub prepare_needs_target: bool,
 }
 
 impl PermanentView {

@@ -3015,13 +3015,21 @@ pub fn sync_game_visuals(
     }
 
     // ── Rebalance viewer hand slots ──────────────────────────────────────────
-    for (entity, game_id, _transform, stack_card, lift, _flipped_marker) in &hand_cards {
+    for (entity, game_id, _transform, stack_card, lift, flipped_marker) in &hand_cards {
         if stack_card.is_some() { continue; }
         if !hand_ids.contains(&game_id.0) { continue; }
         let Some(new_slot) = viewer_hand.iter().position(|c| c.id() == game_id.0) else { continue };
         let target = hand_card_transform(viewer, viewer, n_seats, new_slot, hand_total, hand_zoom);
         let dist = (lift.base_translation - target.translation).length();
         if dist > 0.1 {
+            // A flipped MDFC keeps its 180° face-flip through the slide —
+            // the fan target rotation alone would silently show the front
+            // again while the click handler still casts the back.
+            let target_rotation = if flipped_marker.is_some() {
+                target.rotation * Quat::from_rotation_y(std::f32::consts::PI)
+            } else {
+                target.rotation
+            };
             commands
                 .entity(entity)
                 .insert(Animating)
@@ -3030,7 +3038,7 @@ pub fn sync_game_visuals(
                     speed: 3.0,
                     start_translation: lift.base_translation,
                     target_translation: target.translation,
-                    target_rotation: target.rotation,
+                    target_rotation,
                 });
         }
         commands.entity(entity).insert(HandCard { slot: new_slot });
@@ -3264,6 +3272,8 @@ pub fn auto_advance_p0(
     // counterspell on the opponent's end step. When that's the case we stop
     // auto-passing and surface the window so the player gets priority.
     let has_instant_play = !cv.castable_hand.is_empty()
+        || !cv.back_castable_hand.is_empty()
+        || !cv.prepare_castable.is_empty()
         || !cv.activatable_permanents.is_empty()
         || !cv.kickable_hand.is_empty()
         || !cv.buyback_hand.is_empty();
@@ -3602,6 +3612,14 @@ pub fn handle_game_input(
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
+                    } else if let Some(src) = targeting.pending_prepare_source {
+                        // SOS Prepare — targeted prepare spell cast.
+                        outbox.submit(GameAction::CastPrepareSpell {
+                            creature_id: src, target: Some(target),
+                            additional_targets: vec![], mode: None, x_value: None,
+                        });
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        return;
                     } else if let Some(pending_id) = targeting.pending_card_id {
                         // Gate on the catalog-enumerated legal set when
                         // it was populated. Empty set falls back to
@@ -3642,6 +3660,14 @@ pub fn handle_game_input(
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
+                    } else if let Some(src) = targeting.pending_prepare_source {
+                        // SOS Prepare — targeted prepare spell cast.
+                        outbox.submit(GameAction::CastPrepareSpell {
+                            creature_id: src, target: Some(target),
+                            additional_targets: vec![], mode: None, x_value: None,
+                        });
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        return;
                     } else if let Some(pending_id) = targeting.pending_card_id {
                         // Gate on the catalog-enumerated legal set when
                         // it was populated. Empty set falls back to
@@ -3698,6 +3724,18 @@ pub fn handle_game_input(
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     }
+                } else if let Some(src) = targeting.pending_prepare_source {
+                    // SOS Prepare — targeted prepare spell from the
+                    // ability menu; the picked target completes the cast.
+                    outbox.submit(GameAction::CastPrepareSpell {
+                        creature_id: src,
+                        target: Some(target),
+                        additional_targets: vec![],
+                        mode: None,
+                        x_value: None,
+                    });
+                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                    return;
                 } else if let Some(pending_id) = targeting.pending_card_id {
                     let legal_set_populated = !legal_targets.permanents.is_empty()
                         || !legal_targets.players.is_empty();
@@ -3771,9 +3809,19 @@ pub fn handle_game_input(
             } else if let Some((game_id, owner)) = hovered_bf.iter().next() {
                 if owner.0 == your_seat {
                     let card_id = game_id.0;
-                    let has_non_mana = cv.battlefield.iter().find(|c| c.id == card_id)
-                        .is_some_and(|c| c.abilities.iter().any(|a| !a.is_mana));
-                    if has_non_mana {
+                    // Open the menu for non-mana activated abilities OR a
+                    // prepared preparation card's "Cast <spell>" entry
+                    // (SOS Prepare) — a vanilla prepared creature has no
+                    // abilities but still offers its spell.
+                    let has_menu_entry = cv.battlefield.iter().find(|c| c.id == card_id)
+                        .is_some_and(|c| {
+                            c.abilities.iter().any(|a| !a.is_mana)
+                                || (c.prepare_spell_name.is_some()
+                                    && c.counters.iter().any(|(k, n)| {
+                                        *k == crabomination::card::CounterType::Prepared && *n > 0
+                                    }))
+                        });
+                    if has_menu_entry {
                         menu_state.card_id = Some(card_id);
                         menu_state.spawn_pos = windows.single().ok()
                             .and_then(|w| w.cursor_position())
@@ -3856,8 +3904,16 @@ pub fn handle_game_input(
             && owner.0 == your_seat
         {
             let card_id = game_id.0;
+            // Same menu-entry test as the right-click path: non-mana
+            // abilities or a prepared preparation card's spell.
             let has_non_mana = cv.battlefield.iter().find(|c| c.id == card_id)
-                .is_some_and(|c| c.abilities.iter().any(|a| !a.is_mana));
+                .is_some_and(|c| {
+                    c.abilities.iter().any(|a| !a.is_mana)
+                        || (c.prepare_spell_name.is_some()
+                            && c.counters.iter().any(|(k, n)| {
+                                *k == crabomination::card::CounterType::Prepared && *n > 0
+                            }))
+                });
             if has_non_mana {
                 menu_state.card_id = Some(card_id);
                 // Centre on the window if there's no cursor position.
@@ -3897,7 +3953,7 @@ pub fn handle_game_input(
         }
 
         let in_main = matches!(cv.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain);
-        if in_main && activate
+        if activate
             && let Some(game_id) = hovered_hand.iter().next()
         {
             // Find card details from the view.
@@ -3907,65 +3963,73 @@ pub fn handle_game_input(
                 use crabomination::card::CardType;
                 let is_flipped = r.flipped_hand.flipped.contains(&card.id);
                 let has_back = card.back_face_name.is_some();
-                if card.card_types.contains(&CardType::Land) {
-                    if is_flipped {
-                        outbox.submit(GameAction::PlayLandBack(card.id));
-                    } else {
-                        outbox.submit(GameAction::PlayLand(card.id));
-                    }
-                } else if has_back && is_flipped {
-                    // Non-land MDFC played via its back face (a creature/
-                    // instant/sorcery on the front means the back is one of
-                    // those — the engine's `cast_spell_back_face` swaps the
-                    // definition before validating cost / type / effect).
-                    // We don't know whether the back face takes a target, so
-                    // play it through the targeting-prompt branch when the
-                    // front does — close-enough for the SOS MDFC cycles
-                    // whose backs are creature-targeting spells.
-                    if card.needs_target {
-                        targeting.active = true;
-                        targeting.pending_card_id = Some(card.id);
-                        targeting.back_face_pending = true;
-                    } else {
-                        outbox.submit(GameAction::CastSpellBack {
-                            card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None,
-                        });
-                    }
-                } else if !card.modal_descriptions.is_empty() {
-                    // Modal "Choose one —" spell: pop the mode-pick modal
-                    // and defer the cast until a mode is selected.
-                    modal_cast.card_id = Some(card.id);
-                    modal_cast.card_name = card.name.clone();
-                    modal_cast.modes = card
-                        .modal_descriptions
-                        .iter()
-                        .zip(card.modal_needs_target.iter().chain(std::iter::repeat(&false)))
-                        .map(|(d, nt)| (d.clone(), *nt))
-                        .collect();
-                } else if card.needs_target {
-                    let legal = crate::systems::legal_target_filter::enumerate_for_cast(
-                        cv,
-                        &card.name,
-                        None,
-                    );
-                    // If we enumerated the filter and nothing is legal (e.g.
-                    // Beaming Defiance with no creatures you control), don't
-                    // arm the targeting cursor — just tell the player.
-                    let no_targets = legal
-                        .as_ref()
-                        .is_some_and(|l| l.permanents.is_empty() && l.players.is_empty());
-                    if no_targets {
-                        log.push(format!("No legal targets for {}.", card.name));
-                    } else {
-                        targeting.active = true;
-                        targeting.pending_card_id = Some(card.id);
-                        targeting.back_face_pending = false;
-                        if let Some(l) = legal {
-                            *legal_targets = l;
+                // Outside a main phase only instant-speed plays make
+                // sense: instants always, and flipped MDFCs whenever the
+                // engine says the back is castable right now (its type
+                // isn't on the wire — `back_castable_hand` already
+                // encodes the timing check). Everything else keeps the
+                // old in-main gate so a stray click on a sorcery during
+                // combat doesn't spam server rejections.
+                let instant_speed = card.card_types.contains(&CardType::Instant)
+                    || (is_flipped && cv.back_castable_hand.contains(&card.id));
+                if in_main || instant_speed {
+                    if card.card_types.contains(&CardType::Land) {
+                        if is_flipped {
+                            outbox.submit(GameAction::PlayLandBack(card.id));
+                        } else {
+                            outbox.submit(GameAction::PlayLand(card.id));
                         }
+                    } else if has_back && is_flipped {
+                        // Non-land MDFC played via its back face (the engine's
+                        // `cast_spell_back_face` swaps the definition before
+                        // validating cost / type / effect). The *back* face's
+                        // own targeting flag decides whether to arm the cursor
+                        // — `needs_target` describes only the front.
+                        if card.back_needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card.id);
+                            targeting.back_face_pending = true;
+                        } else {
+                            outbox.submit(GameAction::CastSpellBack {
+                                card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None,
+                            });
+                        }
+                    } else if !card.modal_descriptions.is_empty() {
+                        // Modal "Choose one —" spell: pop the mode-pick modal
+                        // and defer the cast until a mode is selected.
+                        modal_cast.card_id = Some(card.id);
+                        modal_cast.card_name = card.name.clone();
+                        modal_cast.modes = card
+                            .modal_descriptions
+                            .iter()
+                            .zip(card.modal_needs_target.iter().chain(std::iter::repeat(&false)))
+                            .map(|(d, nt)| (d.clone(), *nt))
+                            .collect();
+                    } else if card.needs_target {
+                        let legal = crate::systems::legal_target_filter::enumerate_for_cast(
+                            cv,
+                            &card.name,
+                            None,
+                        );
+                        // If we enumerated the filter and nothing is legal (e.g.
+                        // Beaming Defiance with no creatures you control), don't
+                        // arm the targeting cursor — just tell the player.
+                        let no_targets = legal
+                            .as_ref()
+                            .is_some_and(|l| l.permanents.is_empty() && l.players.is_empty());
+                        if no_targets {
+                            log.push(format!("No legal targets for {}.", card.name));
+                        } else {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card.id);
+                            targeting.back_face_pending = false;
+                            if let Some(l) = legal {
+                                *legal_targets = l;
+                            }
+                        }
+                    } else {
+                        outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                     }
-                } else {
-                    outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                 }
             }
         }
@@ -4151,6 +4215,7 @@ fn cancel_targeting(
     targeting.pending_decision_target = false;
     targeting.pending_mode = None;
     targeting.pending_equip_source = None;
+    targeting.pending_prepare_source = None;
     targeting.pending_pay_times = None;
     legal.permanents.clear();
     legal.players.clear();

@@ -43,6 +43,7 @@ fn is_cast_action(a: &GameAction) -> bool {
         a,
         GameAction::CastSpell { .. }
             | GameAction::CastSpellBack { .. }
+            | GameAction::CastPrepareSpell { .. }
             | GameAction::CastSpellDelve { .. }
             | GameAction::CastSpellAlternative { .. }
             | GameAction::CastFromCommandZone { .. }
@@ -777,6 +778,9 @@ pub fn cast_action_card_id(action: &GameAction) -> crabomination::card::CardId {
         | GameAction::CastSpellDelve { card_id, .. }
         | GameAction::CastSpellAlternative { card_id, .. }
         | GameAction::CastFromCommandZone { card_id, .. } => *card_id,
+        // The pending-cast tracker keys off the prepared creature — it's
+        // the persistent object the re-armed cast references.
+        GameAction::CastPrepareSpell { creature_id, .. } => *creature_id,
         // Non-cast actions never arm a pending cast; return a sentinel that
         // won't match any real card so the pending cast clears.
         _ => crabomination::card::CardId(u32::MAX),

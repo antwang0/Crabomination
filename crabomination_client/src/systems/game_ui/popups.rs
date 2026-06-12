@@ -25,6 +25,14 @@ pub struct AbilityMenuItem {
     pub ability_index: usize,
 }
 
+/// The "Cast <prepare spell>" entry on a prepared creature's menu
+/// (SOS Prepare). Submits `GameAction::CastPrepareSpell`.
+#[derive(Component)]
+pub struct PrepareCastMenuItem {
+    pub creature_id: CardId,
+    pub needs_target: bool,
+}
+
 /// Spawn or despawn the floating ability context menu based on `AbilityMenuState`.
 pub fn spawn_ability_menu(
     mut commands: Commands,
@@ -63,7 +71,23 @@ pub fn spawn_ability_menu(
             (a.index, label, a.once_per_turn_used || blocked_opp)
         })
         .collect();
-    if abilities.is_empty() { return; }
+    // SOS Prepare — a prepared preparation card the viewer controls
+    // offers "Cast <spell> <cost>". Greyed (but still clickable — the
+    // server reports why) when the engine says the cast isn't legal
+    // right now (cost / timing), mirroring the once-per-turn treatment.
+    let prepared = pv
+        .counters
+        .iter()
+        .any(|(k, n)| *k == crabomination::card::CounterType::Prepared && *n > 0);
+    let prepare_entry: Option<(String, bool, bool)> = match &pv.prepare_spell_name {
+        Some(name) if viewer_controls && prepared => Some((
+            format!("Cast {} {}", name, pv.prepare_cost_label),
+            cv.prepare_castable.contains(&pv.id),
+            pv.prepare_needs_target,
+        )),
+        _ => None,
+    };
+    if abilities.is_empty() && prepare_entry.is_none() { return; }
     let card_name = pv.name.clone();
 
     let pos = menu_state.spawn_pos;
@@ -121,6 +145,30 @@ pub fn spawn_ability_menu(
                     ));
                 });
             }
+            if let Some((label, castable, needs_target)) = prepare_entry {
+                let (bg, fg) = if castable {
+                    (theme::BUTTON_NEUTRAL_BG, theme::TEXT_PRIMARY)
+                } else {
+                    (theme::PANEL_BG_RAISED, theme::TEXT_MUTED)
+                };
+                menu.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        ..default()
+                    },
+                    BackgroundColor(bg),
+                    PrepareCastMenuItem { creature_id: card_id, needs_target },
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        ui_fonts.tf(13.0),
+                        TextColor(fg),
+                        Pickable::IGNORE,
+                    ));
+                });
+            }
         });
 }
 
@@ -131,7 +179,30 @@ pub fn handle_ability_menu(
     mut targeting: ResMut<TargetingState>,
     mut menu_state: ResMut<AbilityMenuState>,
     query: Query<(&Interaction, &AbilityMenuItem), Changed<Interaction>>,
+    prepare_query: Query<(&Interaction, &PrepareCastMenuItem), Changed<Interaction>>,
 ) {
+    // SOS Prepare — "Cast <spell>" entry. Targeted spells arm the same
+    // in-scene targeting cursor abilities use; the picked target resolves
+    // through `CastPrepareSpell` (see `handle_game_input`'s targeting
+    // branch). Untargeted spells submit immediately — the engine
+    // auto-taps mana or comes back with `ManualTapRequired`.
+    for (interaction, item) in &prepare_query {
+        if *interaction != Interaction::Pressed { continue; }
+        if item.needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = None;
+            targeting.pending_prepare_source = Some(item.creature_id);
+        } else if let Some(ob) = &outbox {
+            ob.submit(GameAction::CastPrepareSpell {
+                creature_id: item.creature_id,
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            });
+        }
+        menu_state.card_id = None;
+    }
     for (interaction, item) in &query {
         if *interaction != Interaction::Pressed { continue; }
 

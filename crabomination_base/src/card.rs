@@ -233,15 +233,14 @@ pub enum CounterType {
     /// growth counters …"). Distinct from `Charge` so the static-toggle
     /// variants don't collide.
     Growth,
-    /// Prepared counter — SOS Prepare mechanic (Biblioplex Tomekeeper,
-    /// Skycoach Waypoint). A boolean state flag on a creature; in the
-    /// shipped set the flag itself has no payoff yet (Half 2 of the
-    /// mechanic is still pending — see `.claude/prepared.md`). The
-    /// printed "Only creatures with prepare spells can become prepared"
-    /// reminder is enforced at the *target* via
-    /// `SelectionRequirement::HasBackFace` on the AddCounter / Remove-
-    /// Counter selectors — a creature must have a back-face spell (a
-    /// "prepare spell") to be a legal target.
+    /// Prepared counter — the SOS "prepared" designation (count-1 flag).
+    /// While a creature with a `prepare_spell` carries this counter, its
+    /// controller may cast a copy of that spell from exile via
+    /// `GameAction::CastPrepareSpell`; casting it removes the counter
+    /// ("unprepares it"). The printed "Only creatures with prepare spells
+    /// can become prepared" reminder is enforced at the *target* via
+    /// `SelectionRequirement::HasPrepareSpell` on the AddCounter /
+    /// RemoveCounter selectors. See `.claude/prepared.md`.
     Prepared,
     /// Finality counter — CR 122.1h. One or more finality counters on a
     /// permanent create a replacement effect: "If this permanent would
@@ -1061,14 +1060,14 @@ pub enum SelectionRequirement {
     /// carry a `controller`).
     ManaValueAtMostControllerGraveyard,
     /// True when the candidate has a back-face `CardDefinition` —
-    /// i.e. it's a double-faced card (MDFC). Used by the SOS Prepare
-    /// mechanic, whose printed reminder text reads "(Only creatures
-    /// with prepare spells can become prepared.)" A "prepare spell"
-    /// is a back-face spell on a creature, so the legal-target rule
-    /// reduces to `back_face.is_some()`. Without this predicate,
-    /// Biblioplex Tomekeeper / Skycoach Waypoint could illegally
-    /// prepare a vanilla creature with no back face.
+    /// i.e. it's a double-faced card (MDFC).
     HasBackFace,
+    /// True when the candidate is a preparation card — a creature
+    /// carrying an inset prepare spell (`prepare_spell.is_some()`).
+    /// Enforces the SOS Prepare reminder "(Only creatures with prepare
+    /// spells can become prepared.)" on Biblioplex Tomekeeper /
+    /// Skycoach Waypoint's target filters.
+    HasPrepareSpell,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),
@@ -1299,6 +1298,17 @@ pub struct CardDefinition {
     /// downstream abilities, types, and costs are the back face's. Only the
     /// front face stores `back_face` — the back's `back_face` is `None`.
     pub back_face: Option<Box<CardDefinition>>,
+    /// SOS preparation card — the inset "prepare spell" (Adventure/Omen-
+    /// style frame, *not* an MDFC back face). A preparation card is a
+    /// creature card in every zone; this spell is never castable from
+    /// the hand. While the permanent is prepared (carries a
+    /// `CounterType::Prepared` counter), its current controller may cast
+    /// a copy of this spell from exile via `GameAction::CastPrepareSpell`,
+    /// which unprepares the creature. Cards that printed "This creature
+    /// enters prepared." model it with `enters_with_counters:
+    /// Some((CounterType::Prepared, Value::Const(1)))`.
+    #[serde(default)]
+    pub prepare_spell: Option<Box<CardDefinition>>,
     /// Opening-hand effect ("If this card is in your opening hand…"): start
     /// in play (Leyline of Sanctity, Gemstone Caverns), reveal for a delayed
     /// effect (Chancellor of the Tangle, Chancellor of the Annex), or mark

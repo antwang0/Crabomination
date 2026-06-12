@@ -208,6 +208,8 @@ mod tests {
             day_night: None,
             combat_preview: None,
             castable_hand: vec![],
+            back_castable_hand: vec![],
+            prepare_castable: vec![],
             pitchable_hand: vec![],
             kickable_hand: vec![],
             buyback_hand: vec![],

@@ -150,6 +150,9 @@ pub fn update_castable_highlights(
         let alt = cv
             .dashable_hand
             .iter()
+            // Back-face-only castable MDFCs read as an alternative
+            // path: flip (right-click / F), then cast.
+            .chain(cv.back_castable_hand.iter())
             .chain(cv.blitzable_hand.iter())
             .chain(cv.pitchable_hand.iter())
             .chain(cv.kickable_hand.iter())

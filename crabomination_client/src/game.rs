@@ -157,6 +157,12 @@ pub struct TargetingState {
     /// controlled Equipment; cleared once the equip is submitted (or
     /// cancelled). Takes precedence over the spell/ability target paths.
     pub pending_equip_source: Option<CardId>,
+    /// When `Some`, this targeting session is casting a prepared
+    /// creature's prepare spell (SOS Prepare). The picked target is
+    /// submitted via `GameAction::CastPrepareSpell { creature_id, .. }`.
+    /// Set by the ability-menu "Cast <spell>" entry when the spell takes
+    /// a target; cleared once the cast is submitted (or cancelled).
+    pub pending_prepare_source: Option<CardId>,
     /// When `Some((times, mechanic))`, the pending cast pays its Squad /
     /// Replicate / Multikicker cost `times` times — the eventual submit
     /// routes through the matching `CastSpell*` action. Set by the

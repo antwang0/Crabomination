@@ -134,6 +134,13 @@ fn main() {
         if let Some(back) = def.back_face.as_ref() {
             mdfc_pairs.insert((def.name, back.name));
         }
+        // SOS preparation cards: the cast copy appears on the stack under
+        // the inset spell's own name, so prefetch it as a plain front —
+        // Scryfall's `cards/named` resolves face names (returning the
+        // full preparation card's art, which is the right image).
+        if let Some(prep) = def.prepare_spell.as_ref() {
+            fronts.insert(prep.name);
+        }
     };
     let demo = crabomination::demo::build_demo_state();
     for player in &demo.players {

@@ -261,6 +261,15 @@ pub struct HandAffordances {
     /// CR 709.5e — Room permanents the seat controls with a locked door
     /// whose unlock cost is payable right now (`(card, door)`).
     pub room_unlockable: Vec<(CardId, u8)>,
+    /// SOS Prepare — prepared creatures the seat controls whose prepare
+    /// spell is castable right now (`GameAction::CastPrepareSpell` would
+    /// be accepted: cost payable, timing legal).
+    pub prepare_castable: Vec<CardId>,
+    /// Hand MDFCs whose **back face** is castable right now via
+    /// `GameAction::CastSpellBack`. Complements `castable` (which only
+    /// probes the front face) so back-affordable MDFCs still highlight
+    /// and hold open priority windows.
+    pub back_castable: Vec<CardId>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -4704,6 +4713,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastPrepareSpell {
+                creature_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_prepare_spell(creature_id, target, additional_targets, mode, x_value),
             GameAction::ActivateAbility {
                 card_id,
                 ability_index,

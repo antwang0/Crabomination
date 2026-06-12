@@ -4005,6 +4005,17 @@ impl GameState {
                                 base
                             };
                             if let Some(c) = self.battlefield_find_mut(cid) {
+                                // SOS Prepare — "A creature can't become
+                                // prepared if it's already prepared":
+                                // the designation is a count-1 flag, so
+                                // clamp instead of stacking (you never
+                                // get a second copy of the spell).
+                                let n = if *kind == CounterType::Prepared {
+                                    1u32.saturating_sub(c.counter_count(CounterType::Prepared))
+                                } else {
+                                    n
+                                };
+                                if n == 0 { continue; }
                                 c.add_counters(*kind, n);
                                 events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n });
                             }

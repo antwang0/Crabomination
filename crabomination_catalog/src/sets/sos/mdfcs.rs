@@ -1,14 +1,22 @@
-//! Secrets of Strixhaven (SOS) — Modal Double-Faced Cards.
+//! Secrets of Strixhaven (SOS) — Preparation cards.
 //!
-//! These MDFCs each pair a vanilla-ish creature front face with a
-//! reprinted spell on the back. The engine routes the front cast through
-//! `GameAction::CastSpell` and the back through `GameAction::CastSpellBack`
-//! (added in push X). The back face's `CardDefinition` is constructed
-//! inline because each spell needs slightly different `effect`/cost
-//! plumbing — keeping the helpers out of `super::sorceries` avoids
-//! cluttering the named-spell module with one-off MDFC variants.
+//! Preparation cards pair a creature with an inset "prepare spell"
+//! (Adventure/Omen-style frame). They are **not** MDFCs: a preparation
+//! card is a creature card in every zone, and the inset spell is never
+//! cast from the hand. While the creature on the battlefield is
+//! *prepared* (carries a `CounterType::Prepared` counter), its
+//! controller may cast a copy of the inset spell via
+//! `GameAction::CastPrepareSpell`, which unprepares the creature. The
+//! spell definition rides `CardDefinition.prepare_spell`; "This
+//! creature enters prepared." rides `enters_with_counters:
+//! Some((CounterType::Prepared, Value::Const(1)))`.
 //!
-//! Cards in this module:
+//! The prepare-spell `CardDefinition`s are constructed inline because
+//! each spell needs slightly different `effect`/cost plumbing — keeping
+//! the helpers out of `super::sorceries` avoids cluttering the
+//! named-spell module with one-off preparation variants.
+//!
+//! Cards in this module (creature // prepare spell):
 //! - Elite Interceptor // Rejoinder
 //! - Emeritus of Truce // Swords to Plowshares
 //! - Honorbound Page // Forum's Favor
@@ -24,18 +32,23 @@
 //! - Goblin Glasswright // Craft with Pride
 //! - Emeritus of Abundance // Regrowth
 //! - Vastlands Scavenger // Bind to Life
+//! - …and the rest of the cycle below.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, SelectionRequirement,
-    Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, SelectionRequirement, Subtypes, TriggeredAbility, WardCost,
 };
-use crate::effect::shortcut::{pump_target, target_filtered};
-use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 use crate::card::Zone;
+use crate::effect::shortcut::{
+    cards_in_graveyard_at_least, etb, mint_lorehold_spirits, mint_treasures, on_attack,
+    pump_target, target_filtered,
+};
+use crate::effect::{Duration, PlayerRef, Predicate, Selector, Value, ZoneDest};
+use crate::game::types::TurnStep;
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
-/// Helper: standard plain-creature front face. Strixhaven MDFC creature
-/// front faces are nearly all vanilla bodies with a printed spell back —
+/// Helper: standard plain-creature front. SOS preparation-card creature
+/// halves are nearly all vanilla bodies with an inset prepare spell —
 /// the only varying fields are name, cost, P/T, and creature subtypes.
 fn vanilla_front(
     name: &'static str,
@@ -44,7 +57,7 @@ fn vanilla_front(
     power: i32,
     toughness: i32,
     keywords: Vec<Keyword>,
-    back: CardDefinition,
+    prepare: CardDefinition,
 ) -> CardDefinition {
     CardDefinition {
         name,
@@ -57,12 +70,13 @@ fn vanilla_front(
         power,
         toughness,
         keywords,
-        back_face: Some(Box::new(back)),
+        prepare_spell: Some(Box::new(prepare)),
         ..Default::default()
     }
 }
 
-/// Helper: a back-face spell built from a name/type/cost/effect tuple.
+/// Helper: a prepare-spell definition built from a name/type/cost/effect
+/// tuple.
 fn spell_back(
     name: &'static str,
     cost: ManaCost,
@@ -78,12 +92,39 @@ fn spell_back(
     }
 }
 
-// ── White MDFCs ─────────────────────────────────────────────────────────────
+/// "This creature enters prepared." — CR 614.12 enters-with-counters
+/// replacement carrying one `Prepared` counter.
+fn enters_prepared(mut card: CardDefinition) -> CardDefinition {
+    card.enters_with_counters = Some((CounterType::Prepared, Value::Const(1)));
+    card
+}
+
+/// "… becomes prepared." — drop one `Prepared` counter on the source.
+fn becomes_prepared() -> Effect {
+    Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::Prepared,
+        amount: Value::Const(1),
+    }
+}
+
+// ── White preparation cards ─────────────────────────────────────────────────
 
 /// Emeritus of Truce // Swords to Plowshares — {1}{W}{W} // {W}.
 ///
-/// Front: 3/3 Cat Cleric vanilla. Back: instant — exile target creature;
-/// its controller gains life equal to that creature's power.
+/// Front: 3/3 Cat Cleric. "When this creature enters, target player
+/// creates a 1/1 white and black Inkling creature token with flying.
+/// Then if an opponent controls more creatures than you, this creature
+/// becomes prepared."
+///
+/// Approximation: the engine's `Effect::CreateToken` mints for a
+/// `PlayerRef`, and a trigger-scoped "target player" slot isn't wired
+/// for it — the token is minted for *you* instead of a chosen target
+/// player. The conditional "becomes prepared" rider is faithful via
+/// `Predicate::AnOpponentControlsMoreCreatures`.
+///
+/// Prepare spell: instant — exile target creature; its controller gains
+/// life equal to that creature's power.
 ///
 /// Approximation: the printed Swords to Plowshares lifegain rider keys
 /// off the *target's controller*. The engine has no opponent-directed
@@ -91,7 +132,8 @@ fn spell_back(
 /// approximate as the target's *owner* gaining life. The exile half is
 /// faithful.
 pub fn emeritus_of_truce() -> CardDefinition {
-    let back = spell_back(
+    use super::creatures::inkling_token;
+    let spell = spell_back(
         "Swords to Plowshares",
         cost(&[w()]),
         CardType::Instant,
@@ -105,83 +147,118 @@ pub fn emeritus_of_truce() -> CardDefinition {
             },
         ]),
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Emeritus of Truce",
         cost(&[generic(1), w(), w()]),
         vec![CreatureType::Cat, CreatureType::Cleric],
         3,
         3,
         vec![],
-        back,
-    )
+        spell,
+    );
+    front.triggered_abilities.push(etb(Effect::Seq(vec![
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: inkling_token(),
+        },
+        Effect::If {
+            cond: Predicate::AnOpponentControlsMoreCreatures,
+            then: Box::new(becomes_prepared()),
+            else_: Box::new(Effect::Noop),
+        },
+    ])));
+    front
 }
 
 /// Elite Interceptor // Rejoinder — {W} // {1}{W}.
 ///
-/// Front: 1/2 Human Wizard vanilla. Back: sorcery — counter target
-/// creature spell. (Standard card name "Rejoinder" approximates a
-/// White-coloured creature counterspell.)
+/// Front: 1/2 Human Wizard. This creature enters prepared.
+///
+/// Prepare spell: sorcery — "You may tap or untap target creature.
+/// Draw a card." The "may" is modeled as a third Noop mode on the
+/// `ChooseMode` (decline both tap and untap); the draw is unconditional.
 pub fn elite_interceptor() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Rejoinder",
         cost(&[generic(1), w()]),
         CardType::Sorcery,
-        Effect::CounterSpell {
-            what: target_filtered(
-                SelectionRequirement::IsSpellOnStack
-                    .and(SelectionRequirement::HasCardType(CardType::Creature)),
-            ),
-        },
+        Effect::Seq(vec![
+            Effect::ChooseMode(vec![
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                Effect::Untap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    up_to: None,
+                },
+                Effect::Noop,
+            ]),
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Elite Interceptor",
         cost(&[w()]),
         vec![CreatureType::Human, CreatureType::Wizard],
         1,
         2,
         vec![],
-        back,
-    )
+        spell,
+    ))
 }
 
 /// Honorbound Page // Forum's Favor — {3}{W} // {W}.
 ///
-/// Front: 3/3 Cat Cleric vanilla. Back: sorcery — Forum's Favor: target
-/// creature gets +1/+1 until end of turn. You gain 1 life.
+/// Front: 3/3 Cat Cleric with first strike. This creature enters
+/// prepared.
+///
+/// Prepare spell: sorcery — target creature gets +1/+0 and gains flying
+/// until end of turn.
 pub fn honorbound_page() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Forum's Favor",
         cost(&[w()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            pump_target(1, 1),
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
+            pump_target(1, 0),
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
             },
         ]),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Honorbound Page",
         cost(&[generic(3), w()]),
         vec![CreatureType::Cat, CreatureType::Cleric],
         3,
         3,
-        vec![],
-        back,
-    )
+        vec![Keyword::FirstStrike],
+        spell,
+    ))
 }
 
 /// Joined Researchers // Secret Rendezvous — {1}{W} // {1}{W}{W}.
 ///
-/// Front: 2/2 Human Cleric Wizard vanilla. Back: sorcery — each player
-/// draws three cards. (A symmetrical wheel-style card-draw spell.)
+/// Front: 2/2 Human Cleric Wizard with first strike. "At the beginning
+/// of your end step, if an opponent has more cards in hand than you,
+/// this creature becomes prepared." (In multiplayer the hand-size read
+/// over `PlayerRef::EachOpponent` collapses to the two-player case.)
 ///
-/// Push: each-player fan-out now lands faithfully via
+/// Prepare spell: sorcery — printed "You and target opponent each draw
+/// three cards."
+///
+/// Approximation: kept as the each-player fan-out via
 /// `Selector::Player(PlayerRef::EachPlayer)` (same primitive Wheel of
-/// Fortune uses in `lea::sorceries`). Both players draw 3.
+/// Fortune uses in `lea::sorceries`) — equivalent to the printed text
+/// in two-player games.
 pub fn joined_researchers() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Secret Rendezvous",
         cost(&[generic(1), w(), w()]),
         CardType::Sorcery,
@@ -190,94 +267,112 @@ pub fn joined_researchers() -> CardDefinition {
             amount: Value::Const(3),
         },
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Joined Researchers",
         cost(&[generic(1), w()]),
         vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Wizard],
         2,
         2,
-        vec![],
-        back,
-    )
+        vec![Keyword::FirstStrike],
+        spell,
+    );
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::HandSizeOf(PlayerRef::EachOpponent),
+                Value::Sum(vec![Value::HandSizeOf(PlayerRef::You), Value::Const(1)]),
+            ),
+            then: Box::new(becomes_prepared()),
+            else_: Box::new(Effect::Noop),
+        },
+    });
+    front
 }
 
 /// Quill-Blade Laureate // Twofold Intent — {1}{W} // {1}{W}.
 ///
-/// Front: 1/1 Human Cleric vanilla. Back: sorcery — target creature you
-/// control gets +1/+1 until end of turn. Create a 1/1 white and black
-/// Inkling creature token with flying.
+/// Front: 1/1 Human Cleric with double strike. This creature enters
+/// prepared.
+///
+/// Prepare spell: sorcery — target creature gets +1/+0 and gains double
+/// strike until end of turn.
 pub fn quill_blade_laureate() -> CardDefinition {
-    use super::creatures::inkling_token;
-    let back = spell_back(
+    let spell = spell_back(
         "Twofold Intent",
         cost(&[generic(1), w()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
+            pump_target(1, 0),
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::DoubleStrike,
                 duration: Duration::EndOfTurn,
-            },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: inkling_token(),
             },
         ]),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Quill-Blade Laureate",
         cost(&[generic(1), w()]),
         vec![CreatureType::Human, CreatureType::Cleric],
         1,
         1,
-        vec![],
-        back,
-    )
+        vec![Keyword::DoubleStrike],
+        spell,
+    ))
 }
 
 /// Spiritcall Enthusiast // Scrollboost — {2}{W} // {1}{W}.
 ///
-/// Front: 3/3 Cat Cleric vanilla. Back: sorcery — put a +1/+1 counter on
-/// each creature you control.
+/// Front: 3/3 Cat Cleric. "Whenever one or more tokens you control
+/// enter, this creature becomes prepared." (The engine fires the
+/// enters event per token; `AddCounter` of an already-present Prepared
+/// counter is idempotent at count 1 per the prepared-flag convention.)
+///
+/// Prepare spell: sorcery — printed "One or two target creatures each
+/// get +2/+2 until end of turn."
+///
+/// Approximation: the engine's target plumbing here is single-slot, so
+/// the spell pumps one target creature +2/+2 until end of turn; the
+/// optional second target is dropped.
 pub fn spiritcall_enthusiast() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Scrollboost",
         cost(&[generic(1), w()]),
         CardType::Sorcery,
-        Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            body: Box::new(Effect::AddCounter {
-                what: Selector::TriggerSource,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            }),
-        },
+        pump_target(2, 2),
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Spiritcall Enthusiast",
         cost(&[generic(2), w()]),
         vec![CreatureType::Cat, CreatureType::Cleric],
         3,
         3,
         vec![],
-        back,
-    )
+        spell,
+    );
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::IsToken,
+            }),
+        effect: becomes_prepared(),
+    });
+    front
 }
 
-// ── Blue MDFCs ──────────────────────────────────────────────────────────────
+// ── Blue preparation cards ──────────────────────────────────────────────────
 
 /// Encouraging Aviator // Jump — {2}{U} // {U}.
 ///
-/// Front: 2/3 Bird Wizard vanilla. Back: instant — target creature gains
-/// flying until end of turn.
+/// Front: 2/3 Bird Wizard with flying. "Whenever this creature attacks,
+/// it becomes prepared."
+///
+/// Prepare spell: instant — target creature gains flying until end of
+/// turn.
 pub fn encouraging_aviator() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Jump",
         cost(&[u()]),
         CardType::Instant,
@@ -287,23 +382,33 @@ pub fn encouraging_aviator() -> CardDefinition {
             duration: Duration::EndOfTurn,
         },
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Encouraging Aviator",
         cost(&[generic(2), u()]),
         vec![CreatureType::Bird, CreatureType::Wizard],
         2,
         3,
         vec![Keyword::Flying],
-        back,
-    )
+        spell,
+    );
+    front.triggered_abilities.push(on_attack(becomes_prepared()));
+    front
 }
 
 /// Harmonized Trio // Brainstorm — {U} // {U}.
 ///
-/// Front: 1/1 Merfolk Bard Wizard vanilla. Back: instant — Brainstorm
-/// (draw 3, then put two cards from your hand on top of your library).
+/// Front: 1/1 Merfolk Bard Wizard. "{T}, Tap two untapped creatures you
+/// control: This creature becomes prepared."
+///
+/// Approximation: the engine's `tap_other_filter` activation cost taps
+/// exactly **one** untapped matching permanent, so the cost taps this
+/// creature plus one other untapped creature you control instead of the
+/// printed two.
+///
+/// Prepare spell: instant — Brainstorm (draw 3, then put two cards from
+/// your hand on top of your library).
 pub fn harmonized_trio() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Brainstorm",
         cost(&[u()]),
         CardType::Instant,
@@ -318,25 +423,36 @@ pub fn harmonized_trio() -> CardDefinition {
             },
         ]),
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Harmonized Trio",
         cost(&[u()]),
         vec![CreatureType::Merfolk, CreatureType::Bard, CreatureType::Wizard],
         1,
         1,
         vec![],
-        back,
-    )
+        spell,
+    );
+    front.activated_abilities.push(ActivatedAbility {
+        tap_cost: true,
+        tap_other_filter: Some(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        effect: becomes_prepared(),
+        ..Default::default()
+    });
+    front
 }
 
-// ── Black MDFCs ─────────────────────────────────────────────────────────────
+// ── Black preparation cards ─────────────────────────────────────────────────
 
 /// Cheerful Osteomancer // Raise Dead — {3}{B} // {B}.
 ///
-/// Front: 4/2 Orc Warlock vanilla. Back: sorcery — return target creature
-/// card from your graveyard to your hand.
+/// Front: 4/2 Orc Warlock. This creature enters prepared.
+///
+/// Prepare spell: sorcery — return target creature card from your
+/// graveyard to your hand.
 pub fn cheerful_osteomancer() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Raise Dead",
         cost(&[b()]),
         CardType::Sorcery,
@@ -345,23 +461,27 @@ pub fn cheerful_osteomancer() -> CardDefinition {
             to: ZoneDest::Hand(PlayerRef::You),
         },
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Cheerful Osteomancer",
         cost(&[generic(3), b()]),
         vec![CreatureType::Orc, CreatureType::Warlock],
         4,
         2,
         vec![],
-        back,
-    )
+        spell,
+    ))
 }
 
 /// Emeritus of Woe // Demonic Tutor — {3}{B} // {1}{B}.
 ///
-/// Front: 5/4 Vampire Warlock vanilla. Back: sorcery — search your
-/// library for a card and put it into your hand.
+/// Front: 5/4 Vampire Warlock. This creature enters prepared. "At the
+/// beginning of your end step, if two or more creatures died this turn,
+/// this creature becomes prepared."
+///
+/// Prepare spell: sorcery — search your library for a card and put it
+/// into your hand.
 pub fn emeritus_of_woe() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Demonic Tutor",
         cost(&[generic(1), b()]),
         CardType::Sorcery,
@@ -371,23 +491,38 @@ pub fn emeritus_of_woe() -> CardDefinition {
             to: ZoneDest::Hand(PlayerRef::You),
         },
     );
-    vanilla_front(
+    let mut front = enters_prepared(vanilla_front(
         "Emeritus of Woe",
         cost(&[generic(3), b()]),
         vec![CreatureType::Vampire, CreatureType::Warlock],
         5,
         4,
         vec![],
-        back,
-    )
+        spell,
+    ));
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+        effect: Effect::If {
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::Const(2),
+            },
+            then: Box::new(becomes_prepared()),
+            else_: Box::new(Effect::Noop),
+        },
+    });
+    front
 }
 
 /// Scheming Silvertongue // Sign in Blood — {1}{B} // {B}{B}.
 ///
-/// Front: 1/3 Vampire Warlock vanilla. Back: sorcery — Sign in Blood
-/// (target player draws 2 and loses 2 life).
+/// Front: 1/3 Vampire Warlock with flying and lifelink. "At the
+/// beginning of your second main phase, if you gained 2 or more life
+/// this turn, this creature becomes prepared."
+///
+/// Prepare spell: sorcery — Sign in Blood (target player draws 2 and
+/// loses 2 life).
 pub fn scheming_silvertongue() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Sign in Blood",
         cost(&[b(), b()]),
         CardType::Sorcery,
@@ -402,25 +537,43 @@ pub fn scheming_silvertongue() -> CardDefinition {
             },
         ]),
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Scheming Silvertongue",
         cost(&[generic(1), b()]),
         vec![CreatureType::Vampire, CreatureType::Warlock],
         1,
         3,
-        vec![],
-        back,
-    )
+        vec![Keyword::Flying, Keyword::Lifelink],
+        spell,
+    );
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::PostCombatMain),
+            EventScope::ActivePlayer,
+        ),
+        effect: Effect::If {
+            cond: Predicate::LifeGainedThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(2),
+            },
+            then: Box::new(becomes_prepared()),
+            else_: Box::new(Effect::Noop),
+        },
+    });
+    front
 }
 
-// ── Red MDFCs ───────────────────────────────────────────────────────────────
+// ── Red preparation cards ───────────────────────────────────────────────────
 
 /// Emeritus of Conflict // Lightning Bolt — {1}{R} // {R}.
 ///
-/// Front: 2/2 Human Wizard vanilla. Back: instant — Lightning Bolt
-/// (deal 3 damage to any target).
+/// Front: 2/2 Human Wizard with first strike. "Whenever you cast your
+/// third spell each turn, this creature becomes prepared."
+///
+/// Prepare spell: instant — Lightning Bolt (deal 3 damage to any
+/// target).
 pub fn emeritus_of_conflict() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Lightning Bolt",
         cost(&[r()]),
         CardType::Instant,
@@ -429,54 +582,62 @@ pub fn emeritus_of_conflict() -> CardDefinition {
             amount: Value::Const(3),
         },
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Emeritus of Conflict",
         cost(&[generic(1), r()]),
         vec![CreatureType::Human, CreatureType::Wizard],
         2,
         2,
-        vec![],
-        back,
-    )
+        vec![Keyword::FirstStrike],
+        spell,
+    );
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::SpellsCastThisTurnEquals {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+            },
+        ),
+        effect: becomes_prepared(),
+    });
+    front
 }
 
 /// Goblin Glasswright // Craft with Pride — {1}{R} // {R}.
 ///
-/// Front: 2/2 Goblin Sorcerer vanilla. Back: sorcery — target creature
-/// gets +2/+0 and gains haste until end of turn.
+/// Front: 2/2 Goblin Sorcerer. This creature enters prepared.
+///
+/// Prepare spell: sorcery — create a Treasure token.
 pub fn goblin_glasswright() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Craft with Pride",
         cost(&[r()]),
         CardType::Sorcery,
-        Effect::Seq(vec![
-            pump_target(2, 0),
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Haste,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        mint_treasures(1),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Goblin Glasswright",
         cost(&[generic(1), r()]),
         vec![CreatureType::Goblin, CreatureType::Sorcerer],
         2,
         2,
         vec![],
-        back,
-    )
+        spell,
+    ))
 }
 
-// ── Green MDFCs ─────────────────────────────────────────────────────────────
+// ── Green preparation cards ─────────────────────────────────────────────────
 
 /// Emeritus of Abundance // Regrowth — {2}{G} // {1}{G}.
 ///
-/// Front: 3/4 Elf Druid vanilla. Back: sorcery — return target card from
-/// your graveyard to your hand.
+/// Front: 3/4 Elf Druid with vigilance. This creature enters prepared.
+/// "Whenever this creature attacks, if you control eight or more lands,
+/// it becomes prepared."
+///
+/// Prepare spell: sorcery — return target card from your graveyard to
+/// your hand.
 pub fn emeritus_of_abundance() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Regrowth",
         cost(&[generic(1), g()]),
         CardType::Sorcery,
@@ -485,145 +646,201 @@ pub fn emeritus_of_abundance() -> CardDefinition {
             to: ZoneDest::Hand(PlayerRef::You),
         },
     );
-    vanilla_front(
+    let mut front = enters_prepared(vanilla_front(
         "Emeritus of Abundance",
         cost(&[generic(2), g()]),
         vec![CreatureType::Elf, CreatureType::Druid],
         3,
         4,
-        vec![],
-        back,
-    )
+        vec![Keyword::Vigilance],
+        spell,
+    ));
+    front.triggered_abilities.push(on_attack(Effect::If {
+        cond: Predicate::SelectorCountAtLeast {
+            sel: Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ),
+            n: Value::Const(8),
+        },
+        then: Box::new(becomes_prepared()),
+        else_: Box::new(Effect::Noop),
+    }));
+    front
 }
 
 /// Vastlands Scavenger // Bind to Life — {1}{G}{G} // {4}{G}.
 ///
-/// Front: 4/4 Bear Druid with Trample vanilla. Back: instant — return up
-/// to two target creature cards from your graveyard to the battlefield
-/// under your control. (Faithful via Selector::Take(_, 2).)
+/// Front: 4/4 Bear Druid with deathtouch. This creature enters
+/// prepared.
+///
+/// Prepare spell: instant — printed "Mill seven cards. Then put a
+/// creature card from among them onto the battlefield."
+///
+/// Approximation: the engine has no "from among the milled cards"
+/// scratch selector, so after the mill we return one creature card from
+/// your graveyard (auto-picked) to the battlefield — a pre-existing
+/// graveyard creature can be chosen where the printed text restricts to
+/// the seven just-milled cards.
 pub fn vastlands_scavenger() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Bind to Life",
         cost(&[generic(4), g()]),
         CardType::Instant,
-        Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::Creature,
-                },
-                Value::Const(2),
-            ),
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
+        Effect::Seq(vec![
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(7),
             },
-        },
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        ]),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Vastlands Scavenger",
         cost(&[generic(1), g(), g()]),
         vec![CreatureType::Bear, CreatureType::Druid],
         4,
         4,
-        vec![Keyword::Trample],
-        back,
-    )
+        vec![Keyword::Deathtouch],
+        spell,
+    ))
 }
 
-// ── Adventure-style: Adventurous Eater // Have a Bite ───────────────────────
+// ── Adventurous Eater // Have a Bite ────────────────────────────────────────
 
 /// Adventurous Eater // Have a Bite — {2}{B} // {B}.
 ///
-/// Front: 3/2 Human Warlock vanilla. Back: sorcery — target creature
-/// gets -3/-3 until end of turn.
+/// Front: 3/2 Human Warlock. This creature enters prepared.
+///
+/// Prepare spell: sorcery — put a +1/+1 counter on target creature. You
+/// gain 1 life.
 pub fn adventurous_eater() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Have a Bite",
         cost(&[b()]),
         CardType::Sorcery,
-        Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(-3),
-            toughness: Value::Const(-3),
-            duration: Duration::EndOfTurn,
-        },
+        Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Adventurous Eater",
         cost(&[generic(2), b()]),
         vec![CreatureType::Human, CreatureType::Warlock],
         3,
         2,
         vec![],
-        back,
-    )
+        spell,
+    ))
 }
 
-// ── Bonus: Leech Collector // Bloodletting ──────────────────────────────────
+// ── Leech Collector // Bloodletting ─────────────────────────────────────────
 
 /// Leech Collector // Bloodletting — {1}{B} // {B}.
 ///
-/// Front: 2/2 Human Warlock vanilla. Back: sorcery — each opponent loses
-/// 2 life and you gain 2 life.
+/// Front: 2/2 Human Warlock. "Whenever you gain life for the first time
+/// each turn, this creature becomes prepared."
+///
+/// Prepare spell: sorcery — each opponent loses 2 life.
 pub fn leech_collector() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Bloodletting",
         cost(&[b()]),
         CardType::Sorcery,
-        Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            to: Selector::You,
+        Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(2),
         },
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Leech Collector",
         cost(&[generic(1), b()]),
         vec![CreatureType::Human, CreatureType::Warlock],
         2,
         2,
         vec![],
-        back,
-    )
+        spell,
+    );
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl).once_per_turn(),
+        effect: becomes_prepared(),
+    });
+    front
 }
 
-// ── Bonus: Pigment Wrangler // Striking Palette ─────────────────────────────
+// ── Pigment Wrangler // Striking Palette ────────────────────────────────────
 
 /// Pigment Wrangler // Striking Palette — {4}{R} // {R}.
 ///
-/// Front: 4/4 Orc Sorcerer vanilla. Back: sorcery — Pigment Wrangler
-/// deals 2 damage to any target.
+/// Front: 4/4 Orc Sorcerer with flying. This creature enters prepared.
+///
+/// Prepare spell: sorcery — printed "When you next cast an instant or
+/// sorcery spell this turn, copy that spell. You may choose new targets
+/// for the copy."
+///
+/// Approximation: the engine's `OnYourNextSpellCastThisTurn` delayed
+/// trigger is consumed by the very next spell of *any* type — the body
+/// is gated to copy only when that spell is an instant or sorcery, so
+/// casting a creature first wastes the rider where the printed text
+/// would keep waiting for an instant/sorcery.
 pub fn pigment_wrangler() -> CardDefinition {
-    let back = spell_back(
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    let spell = spell_back(
         "Striking Palette",
         cost(&[r()]),
         CardType::Sorcery,
-        Effect::DealDamage {
-            to: Selector::Target(0),
-            amount: Value::Const(2),
+        Effect::OnYourNextSpellCastThisTurn {
+            body: Box::new(Effect::If {
+                cond: cast_is_instant_or_sorcery(),
+                then: Box::new(Effect::CopySpellMayChooseTargets {
+                    what: Selector::TriggerSource,
+                    count: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
         },
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Pigment Wrangler",
         cost(&[generic(4), r()]),
         vec![CreatureType::Orc, CreatureType::Sorcerer],
         4,
         4,
-        vec![],
-        back,
-    )
+        vec![Keyword::Flying],
+        spell,
+    ))
 }
 
 // ── Spellbook Seeker // Careful Study ───────────────────────────────────────
 
 /// Spellbook Seeker // Careful Study — {3}{U} // {U}.
 ///
-/// Front: 3/3 Bird Wizard with Flying. Back: sorcery — draw 2 cards,
-/// then discard 2 cards (the printed Careful Study oracle).
+/// Front: 3/3 Bird Wizard with flying. This creature enters prepared.
+///
+/// Prepare spell: sorcery — draw 2 cards, then discard 2 cards (the
+/// printed Careful Study oracle).
 pub fn spellbook_seeker() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Careful Study",
         cost(&[u()]),
         CardType::Sorcery,
@@ -639,77 +856,100 @@ pub fn spellbook_seeker() -> CardDefinition {
             },
         ]),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Spellbook Seeker",
         cost(&[generic(3), u()]),
         vec![CreatureType::Bird, CreatureType::Wizard],
         3,
         3,
         vec![Keyword::Flying],
-        back,
-    )
+        spell,
+    ))
 }
 
 // ── Skycoach Conductor // All Aboard ────────────────────────────────────────
 
 /// Skycoach Conductor // All Aboard — {2}{U} // {U}.
 ///
-/// Front: 2/3 Bird Pilot with Flying. Back: instant — return target
-/// creature to its owner's hand.
+/// Front: 2/3 Bird Pilot with flash, flying, and vigilance. This
+/// creature enters prepared.
+///
+/// Prepare spell: instant — exile target non-Pilot creature you
+/// control, then return it to the battlefield under its owner's control
+/// (the Ephemerate flicker shape: the second step re-resolves the bound
+/// target in exile).
 pub fn skycoach_conductor() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "All Aboard",
         cost(&[u()]),
         CardType::Instant,
-        Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
-            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-        },
+        Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::HasCreatureType(CreatureType::Pilot),
+                        ))),
+                ),
+            },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            },
+        ]),
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Skycoach Conductor",
         cost(&[generic(2), u()]),
         vec![CreatureType::Bird, CreatureType::Pilot],
         2,
         3,
-        vec![Keyword::Flying],
-        back,
-    )
+        vec![Keyword::Flash, Keyword::Flying, Keyword::Vigilance],
+        spell,
+    ))
 }
 
 // ── Landscape Painter // Vibrant Idea ───────────────────────────────────────
 
 /// Landscape Painter // Vibrant Idea — {1}{U} // {4}{U}.
 ///
-/// Front: 2/1 Merfolk Wizard. Back: sorcery — draw three cards.
+/// Front: 2/1 Merfolk Wizard. This creature enters prepared.
+///
+/// Prepare spell: sorcery — draw two cards.
 pub fn landscape_painter() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Vibrant Idea",
         cost(&[generic(4), u()]),
         CardType::Sorcery,
         Effect::Draw {
             who: Selector::You,
-            amount: Value::Const(3),
+            amount: Value::Const(2),
         },
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Landscape Painter",
         cost(&[generic(1), u()]),
         vec![CreatureType::Merfolk, CreatureType::Wizard],
         2,
         1,
         vec![],
-        back,
-    )
+        spell,
+    ))
 }
 
 // ── Blazing Firesinger // Seething Song ─────────────────────────────────────
 
 /// Blazing Firesinger // Seething Song — {2}{R} // {2}{R}.
 ///
-/// Front: 2/3 Dwarf Bard. Back: instant — Seething Song: add {R}{R}{R}{R}{R}.
+/// Front: 2/3 Dwarf Bard. This creature enters prepared.
+///
+/// Prepare spell: instant — Seething Song: add {R}{R}{R}{R}{R}.
 pub fn blazing_firesinger() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Seething Song",
         cost(&[generic(2), r()]),
         CardType::Instant,
@@ -720,91 +960,106 @@ pub fn blazing_firesinger() -> CardDefinition {
             ]),
         },
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Blazing Firesinger",
         cost(&[generic(2), r()]),
         vec![CreatureType::Dwarf, CreatureType::Bard],
         2,
         3,
         vec![],
-        back,
-    )
+        spell,
+    ))
 }
 
 // ── Maelstrom Artisan // Rocket Volley ──────────────────────────────────────
 
 /// Maelstrom Artisan // Rocket Volley — {1}{R}{R} // {1}{R}.
 ///
-/// Front: 3/2 Minotaur Sorcerer. Back: sorcery — Rocket Volley deals 2
-/// damage to each opponent and 2 damage to up to one creature an
-/// opponent controls. (Approximation: collapses into "2 damage to each
-/// opp + 2 damage to one creature the auto-decider picks".)
+/// Front: 3/2 Minotaur Sorcerer with haste. This creature enters
+/// prepared.
+///
+/// Prepare spell: sorcery — destroy target nonbasic land.
 pub fn maelstrom_artisan() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Rocket Volley",
         cost(&[generic(1), r()]),
         CardType::Sorcery,
-        Effect::Seq(vec![
-            Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(2),
-            },
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                ),
-                amount: Value::Const(2),
-            },
-        ]),
+        Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Land.and(SelectionRequirement::IsNonbasicLand),
+            ),
+        },
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Maelstrom Artisan",
         cost(&[generic(1), r(), r()]),
         vec![CreatureType::Minotaur, CreatureType::Sorcerer],
         3,
         2,
-        vec![],
-        back,
-    )
+        vec![Keyword::Haste],
+        spell,
+    ))
 }
 
 // ── Scathing Shadelock // Venomous Words ────────────────────────────────────
 
 /// Scathing Shadelock // Venomous Words — {4}{B} // {B}.
 ///
-/// Front: 4/6 Snake Warlock with Deathtouch. Back: instant — target
-/// creature gets -2/-2 until end of turn.
+/// Front: 4/6 Snake Warlock. "At the beginning of your first main
+/// phase, this creature becomes prepared."
+///
+/// Prepare spell: instant — target creature you control gets +2/+0 and
+/// gains deathtouch until end of turn.
 pub fn scathing_shadelock() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Venomous Words",
         cost(&[b()]),
         CardType::Instant,
-        Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(-2),
-            toughness: Value::Const(-2),
-            duration: Duration::EndOfTurn,
-        },
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
     );
-    vanilla_front(
+    let mut front = vanilla_front(
         "Scathing Shadelock",
         cost(&[generic(4), b()]),
         vec![CreatureType::Snake, CreatureType::Warlock],
         4,
         6,
-        vec![Keyword::Deathtouch],
-        back,
-    )
+        vec![],
+        spell,
+    );
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::PreCombatMain),
+            EventScope::ActivePlayer,
+        ),
+        effect: becomes_prepared(),
+    });
+    front
 }
 
 // ── Infirmary Healer // Stream of Life ──────────────────────────────────────
 
 /// Infirmary Healer // Stream of Life — {1}{G} // {X}{G}.
 ///
-/// Front: 2/3 Cat Cleric with Lifelink. Back: sorcery — Stream of Life:
-/// gain X life. (X comes from the spell's `{X}` slot.)
+/// Front: 2/3 Cat Cleric. This creature enters prepared.
+///
+/// Prepare spell: sorcery — Stream of Life: target player gains X life.
+/// (X comes from the spell's `{X}` slot.)
 pub fn infirmary_healer() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Stream of Life",
         ManaCost {
             symbols: vec![
@@ -814,30 +1069,33 @@ pub fn infirmary_healer() -> CardDefinition {
         },
         CardType::Sorcery,
         Effect::GainLife {
-            who: Selector::You,
+            who: target_filtered(SelectionRequirement::Player),
             amount: Value::XFromCost,
         },
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Infirmary Healer",
         cost(&[generic(1), g()]),
         vec![CreatureType::Cat, CreatureType::Cleric],
         2,
         3,
-        vec![Keyword::Lifelink],
-        back,
-    )
+        vec![],
+        spell,
+    ))
 }
 
 // ── Jadzi, Steward of Fate // Oracle's Gift ─────────────────────────────────
 
 /// Jadzi, Steward of Fate // Oracle's Gift — {2}{U} // {X}{X}{U}.
 ///
-/// Front: 2/4 Legendary Human Wizard with Flying. Back: sorcery — draw
-/// 2X cards. (X^2 here would be runaway; we use 2X as a faithful
-/// approximation that scales linearly with the {X} pip.)
+/// Front: 2/4 Legendary Human Wizard. This creature enters prepared.
+/// "When this creature enters, draw two cards, then discard two cards."
+///
+/// Prepare spell: sorcery — create X 0/0 green and blue Fractal
+/// creature tokens, then put X +1/+1 counters on each Fractal you
+/// control.
 pub fn jadzi_steward_of_fate() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Oracle's Gift",
         ManaCost {
             symbols: vec![
@@ -847,21 +1105,48 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
             ],
         },
         CardType::Sorcery,
-        Effect::Draw {
-            who: Selector::You,
-            amount: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
-        },
+        Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                definition: crabomination_base::tokens::fractal_token(),
+            },
+            // Counters land on the freshly-minted batch in one shot —
+            // a per-Fractal ForEach lets the SBA sweep the still-0/0
+            // stragglers between iterations (only the first token
+            // survived). Same pattern as Snarl Song / Wild Hypothesis.
+            //
+            // Approximation: printed text says *each Fractal you
+            // control*; pre-existing Fractals (rare in practice) miss
+            // the counters.
+            Effect::AddCounter {
+                what: Selector::LastCreatedTokens,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            },
+        ]),
     );
-    let mut front = vanilla_front(
+    let mut front = enters_prepared(vanilla_front(
         "Jadzi, Steward of Fate",
         cost(&[generic(2), u()]),
         vec![CreatureType::Human, CreatureType::Wizard],
         2,
         4,
-        vec![Keyword::Flying],
-        back,
-    );
+        vec![],
+        spell,
+    ));
     front.supertypes = vec![crate::card::Supertype::Legendary];
+    front.triggered_abilities.push(etb(Effect::Seq(vec![
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        Effect::Discard {
+            who: Selector::You,
+            amount: Value::Const(2),
+            random: false,
+        },
+    ])));
     front
 }
 
@@ -869,29 +1154,43 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
 
 /// Sanar, Unfinished Genius // Wild Idea — {U}{R} // {3}{U}{R}.
 ///
-/// Front: 0/4 Legendary Goblin Sorcerer. Back: sorcery — Wild Idea: each
-/// player draws three cards. Faithful: each-player fan-out via
-/// `Selector::Player(PlayerRef::EachPlayer)` so every player draws 3.
+/// Front: 0/4 Legendary Goblin Sorcerer. This creature enters prepared.
+/// "{T}: Create a Treasure token. Activate only if you've cast an
+/// instant or sorcery spell this turn."
+///
+/// Prepare spell: sorcery — search your library for an instant or
+/// sorcery card, reveal it, put it into your hand, then shuffle.
 pub fn sanar_unfinished_genius() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Wild Idea",
         cost(&[generic(3), u(), r()]),
         CardType::Sorcery,
-        Effect::Draw {
-            who: Selector::Player(PlayerRef::EachPlayer),
-            amount: Value::Const(3),
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            to: ZoneDest::Hand(PlayerRef::You),
         },
     );
-    let mut front = vanilla_front(
+    let mut front = enters_prepared(vanilla_front(
         "Sanar, Unfinished Genius",
         cost(&[u(), r()]),
         vec![CreatureType::Goblin, CreatureType::Sorcerer],
         0,
         4,
         vec![],
-        back,
-    );
+        spell,
+    ));
     front.supertypes = vec![crate::card::Supertype::Legendary];
+    front.activated_abilities.push(ActivatedAbility {
+        tap_cost: true,
+        effect: mint_treasures(1),
+        condition: Some(Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(1),
+        }),
+        ..Default::default()
+    });
     front
 }
 
@@ -899,19 +1198,21 @@ pub fn sanar_unfinished_genius() -> CardDefinition {
 
 /// Tam, Observant Sequencer // Deep Sight — {2}{G}{U} // {G}{U}.
 ///
-/// Front: 4/3 Legendary Gorgon Wizard. Back: sorcery — Deep Sight:
-/// scry 4, then draw a card.
+/// Front: 4/3 Legendary Gorgon Wizard. "Landfall — Whenever a land you
+/// control enters, Tam becomes prepared."
+///
+/// Prepare spell: sorcery — you draw a card and gain 1 life.
 pub fn tam_observant_sequencer() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Deep Sight",
         cost(&[g(), u()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(4),
-            },
             Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(1),
             },
@@ -925,10 +1226,18 @@ pub fn tam_observant_sequencer() -> CardDefinition {
         vec![CreatureType::Snake, CreatureType::Wizard],
         4,
         3,
-        vec![Keyword::Deathtouch],
-        back,
+        vec![],
+        spell,
     );
     front.supertypes = vec![crate::card::Supertype::Legendary];
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Land,
+            }),
+        effect: becomes_prepared(),
+    });
     front
 }
 
@@ -936,20 +1245,34 @@ pub fn tam_observant_sequencer() -> CardDefinition {
 
 /// Kirol, History Buff // Pack a Punch — {R}{W} // {1}{R}{W}.
 ///
-/// Front: 2/3 Legendary Vampire Cleric with Lifelink. Back: sorcery —
-/// target creature deals damage equal to its power to another target
-/// creature. (Approximation: Pack a Punch deals 3 damage to target
-/// creature; the printed fight pattern needs `Effect::Fight` with two
-/// targets which collapses to single-target here.)
+/// Front: 2/3 Legendary Vampire Cleric. "Whenever one or more cards
+/// leave your graveyard, Kirol becomes prepared." (The engine fires
+/// `CardLeftGraveyard` once per card; the prepared flag is idempotent
+/// at one counter, matching the "one or more" batching.)
+///
+/// Prepare spell: sorcery — mill a card. Put two +1/+1 counters on
+/// target creature. It gains trample until end of turn.
 pub fn kirol_history_buff() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Pack a Punch",
         cost(&[generic(1), r(), w()]),
         CardType::Sorcery,
-        Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(3),
-        },
+        Effect::Seq(vec![
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
     );
     let mut front = vanilla_front(
         "Kirol, History Buff",
@@ -957,10 +1280,14 @@ pub fn kirol_history_buff() -> CardDefinition {
         vec![CreatureType::Vampire, CreatureType::Cleric],
         2,
         3,
-        vec![Keyword::Lifelink],
-        back,
+        vec![],
+        spell,
     );
     front.supertypes = vec![crate::card::Supertype::Legendary];
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+        effect: becomes_prepared(),
+    });
     front
 }
 
@@ -968,22 +1295,21 @@ pub fn kirol_history_buff() -> CardDefinition {
 
 /// Abigale, Poet Laureate // Heroic Stanza — {1}{W}{B} // {1}{W/B}.
 ///
-/// Front: 2/3 Legendary Bird Bard with Flying. Back: sorcery — Heroic
-/// Stanza: target creature gets +2/+2 and gains lifelink until end of
-/// turn. (The `{W/B}` pip is a real `ManaSymbol::Hybrid(White, Black)`.)
+/// Front: 2/3 Legendary Bird Bard with flying. "Whenever you cast a
+/// creature spell, Abigale becomes prepared."
+///
+/// Prepare spell: sorcery — put a +1/+1 counter on target creature.
+/// (The `{W/B}` pip is a real `ManaSymbol::Hybrid(White, Black)`.)
 pub fn abigale_poet_laureate() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Heroic Stanza",
         cost(&[generic(1), crate::mana::hybrid(Color::White, Color::Black)]),
         CardType::Sorcery,
-        Effect::Seq(vec![
-            pump_target(2, 2),
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Lifelink,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
     );
     let mut front = vanilla_front(
         "Abigale, Poet Laureate",
@@ -992,9 +1318,18 @@ pub fn abigale_poet_laureate() -> CardDefinition {
         2,
         3,
         vec![Keyword::Flying],
-        back,
+        spell,
     );
     front.supertypes = vec![crate::card::Supertype::Legendary];
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCardType(CardType::Creature),
+            },
+        ),
+        effect: becomes_prepared(),
+    });
     front
 }
 
@@ -1002,19 +1337,19 @@ pub fn abigale_poet_laureate() -> CardDefinition {
 
 /// Lluwen, Exchange Student // Pest Friend — {2}{B}{G} // {B/G}.
 ///
-/// Front: 3/4 Legendary Elf Druid (vanilla body for Witherbloom finisher
-/// curve). Back: sorcery — create a 1/1 black-and-green Pest creature
-/// token with the printed "Whenever this token attacks, you gain 1 life"
-/// rider. The `{B/G}` pip is a real `ManaSymbol::Hybrid(Black, Green)`,
-/// payable with either black or green (matches the Witherbloom convention
-/// used by Essenceknit Scholar's `{B/G}` and Practiced Scrollsmith's
-/// `{R/W}` pips).
+/// Front: 3/4 Legendary Elf Druid. This creature enters prepared.
+/// "Exile a creature card from your graveyard: This creature becomes
+/// prepared. Activate only as a sorcery."
 ///
-/// This MDFC closes out the Witherbloom (B/G) school in `STRIXHAVEN2.md`
-/// — the only ⏳ row left for the school before this push.
+/// Prepare spell: sorcery — create a 1/1 black-and-green Pest creature
+/// token with the printed "Whenever this token attacks, you gain 1
+/// life" rider. The `{B/G}` pip is a real `ManaSymbol::Hybrid(Black,
+/// Green)`, payable with either black or green (matches the Witherbloom
+/// convention used by Essenceknit Scholar's `{B/G}` and Practiced
+/// Scrollsmith's `{R/W}` pips).
 pub fn lluwen_exchange_student() -> CardDefinition {
     use super::sorceries::pest_token;
-    let back = spell_back(
+    let spell = spell_back(
         "Pest Friend",
         cost(&[crate::mana::hybrid(Color::Black, Color::Green)]),
         CardType::Sorcery,
@@ -1024,16 +1359,22 @@ pub fn lluwen_exchange_student() -> CardDefinition {
             definition: pest_token(),
         },
     );
-    let mut front = vanilla_front(
+    let mut front = enters_prepared(vanilla_front(
         "Lluwen, Exchange Student",
         cost(&[generic(2), b(), g()]),
         vec![CreatureType::Elf, CreatureType::Druid],
         3,
         4,
         vec![],
-        back,
-    );
+        spell,
+    ));
     front.supertypes = vec![crate::card::Supertype::Legendary];
+    front.activated_abilities.push(ActivatedAbility {
+        exile_other_filter: Some((SelectionRequirement::Creature, 1)),
+        sorcery_speed: true,
+        effect: becomes_prepared(),
+        ..Default::default()
+    });
     front
 }
 
@@ -1041,37 +1382,46 @@ pub fn lluwen_exchange_student() -> CardDefinition {
 
 /// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
 ///
-/// Front: 3/4 Merfolk Bard with Ward {2}. Back: sorcery — target player
-/// draws 3 cards.
+/// Front: 3/4 Merfolk Bard with Ward {2}. This creature enters
+/// prepared.
+///
+/// Prepare spell: sorcery — create a 3/3 blue and red Elemental
+/// creature token with flying.
 pub fn campus_composer() -> CardDefinition {
-    let back = spell_back(
+    use super::sorceries::elemental_token;
+    let spell = spell_back(
         "Aqueous Aria",
         cost(&[generic(4), u()]),
         CardType::Sorcery,
-        Effect::Draw {
-            who: Selector::Player(PlayerRef::Target(0)),
-            amount: Value::Const(3),
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: elemental_token(),
         },
     );
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Campus Composer",
         cost(&[generic(3), u()]),
         vec![CreatureType::Merfolk, CreatureType::Bard],
         3,
         4,
-        vec![Keyword::Ward(crate::card::WardCost::generic(2))],
-        back,
-    )
+        vec![Keyword::Ward(WardCost::generic(2))],
+        spell,
+    ))
 }
 
 // ── Emeritus of Ideation // Ancestral Recall ──────────────────────────────
 
 /// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
 ///
-/// Front: 5/5 Human Wizard with Ward {2}. Back: instant — Ancestral Recall:
-/// target player draws 3 cards.
+/// Front: 5/5 Human Wizard with flying and Ward {2}. This creature
+/// enters prepared. "Whenever this creature attacks, you may exile
+/// eight cards from your graveyard. If you do, it becomes prepared."
+///
+/// Prepare spell: instant — Ancestral Recall: target player draws 3
+/// cards.
 pub fn emeritus_of_ideation() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Ancestral Recall",
         cost(&[u()]),
         CardType::Instant,
@@ -1080,26 +1430,52 @@ pub fn emeritus_of_ideation() -> CardDefinition {
             amount: Value::Const(3),
         },
     );
-    vanilla_front(
+    let mut front = enters_prepared(vanilla_front(
         "Emeritus of Ideation",
         cost(&[generic(3), u(), u()]),
         vec![CreatureType::Human, CreatureType::Wizard],
         5,
         5,
-        vec![Keyword::Ward(crate::card::WardCost::generic(2))],
-        back,
-    )
+        vec![Keyword::Flying, Keyword::Ward(WardCost::generic(2))],
+        spell,
+    ));
+    front.triggered_abilities.push(on_attack(Effect::If {
+        cond: cards_in_graveyard_at_least(SelectionRequirement::Any, 8),
+        then: Box::new(Effect::MayDo {
+            description: "Exile eight cards from your graveyard to become prepared".to_string(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Any,
+                        },
+                        Value::Const(8),
+                    ),
+                    to: ZoneDest::Exile,
+                },
+                becomes_prepared(),
+            ])),
+        }),
+        else_: Box::new(Effect::Noop),
+    }));
+    front
 }
 
 // ── Grave Researcher // Reanimate ─────────────────────────────────────────
 
 /// Grave Researcher // Reanimate — {2}{B} // {B}.
 ///
-/// Front: 3/3 Troll Warlock with Surveil 2 ETB. Back: sorcery — Reanimate:
-/// return target creature card from your graveyard to the battlefield; you
-/// lose life equal to its mana value (approximated as fixed 3 life loss).
+/// Front: 3/3 Troll Warlock. "At the beginning of your upkeep, surveil
+/// 1. Then if there are three or more creature cards in your graveyard,
+/// this creature becomes prepared."
+///
+/// Prepare spell: sorcery — Reanimate: return target creature card from
+/// your graveyard to the battlefield; you lose life equal to its mana
+/// value.
 pub fn grave_researcher() -> CardDefinition {
-    let back = spell_back(
+    let spell = spell_back(
         "Reanimate",
         cost(&[b()]),
         CardType::Sorcery,
@@ -1127,14 +1503,25 @@ pub fn grave_researcher() -> CardDefinition {
         3,
         3,
         vec![],
-        back,
+        spell,
     );
-    front.triggered_abilities.push(
-        crate::effect::shortcut::etb(Effect::Surveil {
-            who: PlayerRef::You,
-            amount: Value::Const(2),
-        }),
-    );
+    front.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::ActivePlayer,
+        ),
+        effect: Effect::Seq(vec![
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::If {
+                cond: cards_in_graveyard_at_least(SelectionRequirement::Creature, 3),
+                then: Box::new(becomes_prepared()),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    });
     front
 }
 
@@ -1142,38 +1529,25 @@ pub fn grave_researcher() -> CardDefinition {
 
 /// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
 ///
-/// Front: 3/2 Orc Sorcerer with Ward {1}. Back: sorcery — "Awaken the
-/// Ages deals 5 damage to target creature or planeswalker. Then exile
-/// Awaken the Ages." (exile-on-resolve flag matches the printed
-/// rider; the engine routes the resolved spell to exile instead of
-/// the graveyard.)
+/// Front: 3/2 Orc Sorcerer with "Ward—Pay 2 life." This creature enters
+/// prepared.
+///
+/// Prepare spell: sorcery — create two 2/2 red and white Spirit
+/// creature tokens.
 pub fn strife_scholar() -> CardDefinition {
-    let mut back = spell_back(
+    let spell = spell_back(
         "Awaken the Ages",
         cost(&[generic(5), r()]),
         CardType::Sorcery,
-        Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
-            ),
-            amount: Value::Const(5),
-        },
+        mint_lorehold_spirits(2),
     );
-    back.exile_on_resolve = true;
-    vanilla_front(
+    enters_prepared(vanilla_front(
         "Strife Scholar",
         cost(&[generic(2), r()]),
         vec![CreatureType::Orc, CreatureType::Sorcerer],
         3,
         2,
-        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
-        back,
-    )
+        vec![Keyword::Ward(WardCost::Life(2))],
+        spell,
+    ))
 }
-
-
-// ── Grave Researcher // Reanimate ───────────────────────────────────────────
-
-// ── Strife Scholar // Awaken the Ages ───────────────────────────────────────
-
