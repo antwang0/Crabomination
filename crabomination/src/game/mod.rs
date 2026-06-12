@@ -1901,10 +1901,10 @@ impl GameState {
                             specs.push(*kind);
                         }
                     }
-                    StaticEffect::TypeEntersWithCounter { creature_type, kind } => {
-                        if entering_types.contains(creature_type) || changeling {
-                            specs.push(*kind);
-                        }
+                    StaticEffect::TypeEntersWithCounter { creature_type, kind }
+                        if entering_types.contains(creature_type) || changeling =>
+                    {
+                        specs.push(*kind);
                     }
                     _ => {}
                 }
@@ -9449,10 +9449,10 @@ pub(crate) fn can_block_attacker_computed(
                     return false;
                 }
             }
-            Keyword::CantBeBlockedBy(filter) => {
-                if blocker_matches_block_filter(blocker, blocker_computed, filter) {
-                    return false;
-                }
+            Keyword::CantBeBlockedBy(filter)
+                if blocker_matches_block_filter(blocker, blocker_computed, filter) =>
+            {
+                return false;
             }
             _ => {}
         }

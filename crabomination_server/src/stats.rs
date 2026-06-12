@@ -443,37 +443,29 @@ impl MatchStats {
     /// the denominator so disconnects don't deflate the rate.
     pub(crate) fn decisive_pct(&self) -> u64 {
         let resolved = self.wins + self.draws;
-        if resolved == 0 {
-            0
-        } else {
-            self.wins.saturating_mul(100) / resolved
-        }
+        self.wins.saturating_mul(100).checked_div(resolved).unwrap_or(0)
     }
     /// Percent of wins that closed via something other than lethal face
     /// damage (deckout / poison / mill / win-the-game). Returns 0 when no
     /// wins have been recorded. A rising share flags a stall regression
     /// where bots grind to empty libraries instead of closing on life.
     pub(crate) fn deckout_pct(&self) -> u64 {
-        if self.wins == 0 {
-            0
-        } else {
-            self.deckout_wins.saturating_mul(100) / self.wins
-        }
+        self.deckout_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
     /// Percent of wins in which a losing seat died to poison (CR 104.3c).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn poison_pct(&self) -> u64 {
-        if self.wins == 0 { 0 } else { self.poison_wins.saturating_mul(100) / self.wins }
+        self.poison_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
     /// Percent of wins in which a losing seat decked out (CR 104.3a).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn deck_pct(&self) -> u64 {
-        if self.wins == 0 { 0 } else { self.deck_wins.saturating_mul(100) / self.wins }
+        self.deck_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
     /// Percent of wins via 21+ commander damage (CR 903.10a).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn commander_damage_pct(&self) -> u64 {
-        if self.wins == 0 { 0 } else { self.commander_damage_wins.saturating_mul(100) / self.wins }
+        self.commander_damage_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator

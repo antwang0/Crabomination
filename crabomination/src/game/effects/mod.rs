@@ -78,7 +78,7 @@ pub(crate) fn rank_names_by_frequency<'a>(
             None => order.push((n, 1)),
         }
     }
-    order.sort_by(|a, b| b.1.cmp(&a.1));
+    order.sort_by_key(|&(_, n)| std::cmp::Reverse(n));
     order.into_iter().map(|(n, _)| n.to_string()).collect()
 }
 
@@ -1152,7 +1152,7 @@ impl GameState {
                 let affordable_extra = match &**cost {
                     Effect::Discard { who: Selector::You, amount, random: false } => {
                         let per = self.evaluate_value(amount, ctx).max(0) as usize;
-                        if per == 0 { usize::MAX } else { self.players[ctx.controller].hand.len() / per }
+                        self.players[ctx.controller].hand.len().checked_div(per).unwrap_or(usize::MAX)
                     }
                     _ => usize::MAX,
                 };
@@ -7539,7 +7539,7 @@ impl GameState {
                     })
                     .map(|c| (c.id, c.definition.name, c.definition.cost.cmc()))
                     .collect();
-                candidates.sort_by(|a, b| b.2.cmp(&a.2));
+                candidates.sort_by_key(|&(_, _, mv)| std::cmp::Reverse(mv));
                 let mut picked: Vec<(CardId, u32)> = Vec::new();
                 let mut names: Vec<&str> = Vec::new();
                 for (cid, name, mv) in candidates {
