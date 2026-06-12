@@ -803,6 +803,31 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     lifts at the detainer's next turn; a granted-static "permanents your
     opponents control enter detained" variant (Lavinia of the Tenth) is ⏳.
 
+- ⏳ **Discovered this run (modern_decks staples/cleave/multi-pick run):**
+  - **Engineered Explosives / Zabaz** — both need a counter snapshot that
+    survives the source's sacrifice-as-cost: EE's "destroy each nonland
+    with MV equal to its charge counters" reads the sacrificed source's
+    counters at resolution (extend the `sacrificed_power` scratch family
+    with a counter map, or concretize `ManaValueEqualsSourceCounters` at
+    activation); Zabaz additionally wants a modular-trigger counter-bonus
+    replacement.
+  - **Hogaak, Arisen Necropolis** — needs "you may cast from your
+    graveyard" on the *main* cast path (today only `from_graveyard`
+    activations and flashback leave the graveyard), plus a "can't spend
+    mana on this" gate forcing full Convoke+Delve payment.
+  - **Runed Halo / protection from a card name** — `named_card` exists for
+    ability suppression but not as a protection quality.
+  - **Tidebinder Mage** — "doesn't untap while you control this" wants a
+    linked `PreventUntap` (stamped like `exiled_by`), not a stun counter.
+  - **Hallowed Moonlight / Containment Priest as EOT grant** — needs a
+    turn-scoped `ExileNontokenCreaturesNotCast` (flag on GameState, not a
+    battlefield static).
+  - **Cultivator Colossus** — repeat-until-decline ETB loop primitive.
+  - **Fell Stinger** — exploit payoff is bound to the controller; a real
+    "target player" inside an exploit `MayDo` needs trigger-target plumbing
+    through the reflexive body.
+  - **Shacklegeist** — "can block only creatures with flying" restriction
+    (inverse of CantBlockFlying) not modeled; rider dropped.
 - ⏳ **Discovered (modern_decks landfall/exile batch):**
   - ✅ **`Effect::NthResolutionThisTurn { branches }`** — runs `branches[n]`
     where `n` = times an escalating ability the controller owns has resolved

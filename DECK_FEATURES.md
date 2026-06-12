@@ -31,8 +31,13 @@ graveyard/exile lockdown, graveyard escape/retrace grants, level bands
 leaver-counter collection, X-target destroy-polymorph, Cataclysm
 sacrifice, sideboard wishes, manifest-from-hand, token Role Auras,
 seat-routed yes/no asks (`ask_seat_bool` answer log), Absorb (CR 702.64),
-chosen-color protection grants, `MakeSpellUncounterable`, and
-statics-granted triggers firing from every hardcoded dispatch site). Each entry has at least one functionality test in
+chosen-color protection grants, `MakeSpellUncounterable`,
+statics-granted triggers firing from every hardcoded dispatch site,
+Cleave (CR 702.148 via `AlternativeCost.effect_override`), reflect
+prevention shields (Deflecting Palm), `RevealTopPayOrTake`
+(Sword-Point Diplomacy), restricted colorless mana (Powerstone /
+Eldrazi Temple), and real multi-pick reveals (Dig Through Time,
+Atraxa)). Each entry has at least one functionality test in
 `crabomination/src/tests/modern.rs` (registered via
 `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 
