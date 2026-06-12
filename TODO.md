@@ -370,6 +370,23 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   - **Lightning Storm** — any-player stack activations (the "discard a land,
     choose new targets" response loop).
 
+- ⏳ **Noticed this run (THB / splice / split-picker pass, 2026-06-12):**
+  - **Splice UI/bot** — `CastSpellSpliced` is engine-only; the client has no
+    splice picker and the bot never splices.
+  - **Callaphe, Beloved of the Sea** — wants a "spells your opponents cast
+    that target [your permanents] cost {1} more" static
+    (`extra_cost_for_spell` doesn't see the cast's target today).
+  - **Calix, Destiny's Hand** — -3 wants `ExileUntilSourceLeaves` anchored to
+    a *chosen* permanent rather than the effect source.
+  - **Hateful Eidolon / Bronzehide Lion** — die-with-attached-Aura LKI count
+    and a dies→returns-as-Aura transform are both unmodeled.
+  - **Tectonic Giant** mode 1 grants may-play on both impulsed cards (the
+    printed "choose one of them" pick is dropped); the grant bills MV-generic
+    rather than the card's real cost.
+  - **Fused split casts with targets** — the client's half-picker greys the
+    Fused button when either half targets (the targeting cursor collects one
+    target; fused needs left + right slots).
+
 - ⏳ **Noticed this run (claude/modern_decks, 2026-06-11 second pass):**
   `UnlessPlayerPays` per-seat routing ✅ (rhystic/Kataki taxes now prompt
   the taxed `wants_ui` seat via `ask_seat_bool`). Remaining:

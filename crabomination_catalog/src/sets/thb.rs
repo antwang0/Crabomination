@@ -10,10 +10,6 @@ use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
-fn req(r: SelectionRequirement) -> SelectionRequirement {
-    r
-}
-
 /// Heliod's Intervention — {X}{W}{W} Instant. Choose one — destroy X target
 /// artifacts and/or enchantments; or target player gains twice X life.
 pub fn heliods_intervention() -> CardDefinition {
@@ -137,7 +133,7 @@ pub fn polukranos_unchained() -> CardDefinition {
             mana_cost: cost(&[generic(1), b(), g()]),
             effect: Effect::Fight {
                 attacker: Selector::This,
-                defender: target_filtered(req(SelectionRequirement::Creature)
+                defender: target_filtered(SelectionRequirement::Creature
                     .and(SelectionRequirement::OtherThanSource)),
             },
             ..Default::default()
@@ -164,7 +160,7 @@ pub fn elspeth_conquers_death() -> CardDefinition {
                 1,
                 Effect::Exile {
                     what: target_filtered(
-                        req(SelectionRequirement::Permanent)
+                        SelectionRequirement::Permanent
                             .and(SelectionRequirement::ControlledByOpponent)
                             .and(SelectionRequirement::ManaValueAtLeast(3)),
                     ),
@@ -429,7 +425,7 @@ pub fn shatter_the_sky() -> CardDefinition {
                 body: Box::new(Effect::If {
                     cond: Predicate::SelectorExists(Selector::ControlledBy {
                         who: PlayerRef::Triggerer,
-                        filter: req(SelectionRequirement::Creature)
+                        filter: SelectionRequirement::Creature
                             .and(SelectionRequirement::PowerAtLeast(4)),
                     }),
                     then: Box::new(Effect::Draw {
@@ -462,7 +458,7 @@ pub fn alseid_of_lifes_bounty() -> CardDefinition {
             sac_cost: true,
             effect: Effect::GrantProtectionFromChosenColor {
                 what: target_filtered(
-                    req(SelectionRequirement::Creature)
+                    SelectionRequirement::Creature
                         .or(SelectionRequirement::Enchantment)
                         .and(SelectionRequirement::ControlledByYou),
                 ),
