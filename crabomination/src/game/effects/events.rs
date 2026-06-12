@@ -267,8 +267,7 @@ pub(crate) fn event_matches_spec(
     // Actor-is-opponent rider (Opaline Sliver's "a spell an opponent
     // controls" on a SelfSource targeted trigger).
     if spec.actor_is_opponent
-        && !event_actor(state, event)
-            .is_some_and(|p| !state.same_team(p, source.controller))
+        && event_actor(state, event).is_none_or(|p| state.same_team(p, source.controller))
     {
         return false;
     }

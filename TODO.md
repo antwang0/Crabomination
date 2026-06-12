@@ -308,6 +308,23 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     (escape-with-counters + fight activation), **Elspeth Conquers Death**
     (saga + cost tax + reanimate chapter) — all primitives exist in parts;
     just card work.
+- ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
+  - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
+    bot heuristic that takes the first eligible candidate would make
+    fetch/tutor effects function under bots; many tests assume the decline,
+    so flip carefully.
+  - **Deferred faeries:** Mistbind Clique (champion + tap-lands trigger),
+    Oona, Queen of the Fae (X exile + per-color token mint), Faerie Macabre
+    (discard-from-hand: exile up to two target graveyard cards), Rune Snag
+    (counter-tax scaled by same-name cards in graveyards).
+  - **`EventSpec::per_subject_cap` is per-turn**, so Spined Sliver won't
+    re-trigger in a second combat phase the same turn.
+  - **`ExtraManaOnLandTap` Mirror** mirrors the *first* produced pip; the
+    printed Mana Flare lets the tapping player choose among produced types
+    (matters only for multi-type productions).
+  - **Notorious Throng X** uses `LifeLostThisTurn(EachOpponent)` (a max) —
+    exact in 2P; multiplayer wants a damage-dealt-to-opponents sum.
+
 - ⏳ **Noticed this run (gods / rope / split-second batch):** Rope client
   UI ✅ (`ServerMsg::Rope` + countdown banner), Nylea's may-bin reveal ✅,
   `AutoDecider` empty-`ChooseTarget` fallback ✅. Remaining:

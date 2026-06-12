@@ -2830,7 +2830,6 @@ pub fn prowl(
         mana_cost: cost,
         condition: Some(Predicate::ProwlTypeDealtCombatDamage { types }),
         marks_kicked: true,
-        flash: false,
         ..Default::default()
     }
 }
