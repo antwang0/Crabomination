@@ -1802,7 +1802,7 @@ picking an item up.
   validation ⏳). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
 - ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur). (AutoDecider now flips a real random coin; scripted tests stay deterministic.)
-- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
+- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ strict — cleared at every zone-change funnel; dies-with-counters triggers read the `died_card_snapshots` / `leaves_bf_lki` LKI caches (Felisa, Ambitious Augmenter). `-0/-1` / `-1/-0` counter types ✅.
 - 🟡 **CR 401 — Library** — play-with-top-revealed + play/cast-from-top ✅
   (401.5/401.6 — `StaticEffect::{TopOfLibraryRevealed,PlayFromLibraryTop}`,
   surfaced via `LibraryView.known_top` + a HUD chip; Courser, Oracle of Mul
@@ -2477,15 +2477,14 @@ picking an item up.
   Sprawl); Mana Reflection's doubling already rode
   `mana_production_doublers`.
 
-- ⏳ **CR 122.2-strict counter clearing on zone change** — to be
-  fully compliant we should clear all counters when a card moves
-  between zones. Currently the engine retains them (matching how
-  the Felisa-style die-trigger reads counters off the graveyard
-  copy), but a future "strict" pass should add an opt-in
-  preservation flag and let CR 122.2 do its job by default. This
-  unblocks future `WithCounter`-filtered triggers that *should*
-  not see post-death counters (e.g. an opponent's Felisa-style
-  payoff being kept alive by a counter that should have evaporated).
+- ✅ **CR 122.2-strict counter clearing on zone change** — counters
+  clear at every zone-change funnel (`place_card_in_dest` all arms,
+  `send_to_graveyard`, `route_to_graveyard`). Dies-with-counters
+  readers use LKI instead: filter evaluation prefers
+  `died_card_snapshots` (Felisa's WithCounter), and resolution-time
+  `Value::CountersOn` consults `leaves_bf_lki` under
+  `resolving_lki_source` (Ambitious Augmenter's transfer). Pinned by
+  `cr_122_2_counters_cease_to_exist_on_zone_change` (now strict).
 
 - ⏳ **`StaticEffect::SelfPumpIf` (conditional anthem on the source)** —
   Honor Troll's "as long as you've gained life this turn, gets +2/+0

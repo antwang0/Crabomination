@@ -2045,3 +2045,95 @@ fn concordant_crossroads_grants_haste_to_all() {
     assert!(g.computed_permanent(mine).unwrap().keywords.contains(&crate::card::Keyword::Haste));
     assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&crate::card::Keyword::Haste));
 }
+
+// ── CR 121.5 / multi-pick reveals ────────────────────────────────────────────
+
+/// CR 121.5 — a card put into hand by a look-and-pick (Impulse) is NOT
+/// drawn: no CardDrawn event, and an opponent's "whenever an opponent
+/// draws" trigger (Consecrated Sphinx) doesn't fire.
+#[test]
+fn cr_121_5_look_pick_to_hand_is_not_a_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::consecrated_sphinx());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::impulse());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Impulse");
+    let events = drain_stack(&mut g);
+    assert!(!events.iter().any(|e| matches!(e, GameEvent::CardDrawn { player: 0, .. })),
+        "the Impulse pick is put into hand, not drawn");
+    assert_eq!(g.players[1].hand.len(), p1_hand, "Sphinx never fired");
+}
+
+/// A `wants_ui` Dig Through Time caster gets a real two-card `ChooseCards`
+/// pick over the top seven; the chosen pair lands in hand, the rest bottom.
+#[test]
+fn multi_pick_dig_through_time_chooses_two() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut lib = Vec::new();
+    for _ in 0..7 { lib.push(g.add_card_to_library(0, catalog::island())); }
+    let id = g.add_card_to_hand(0, catalog::dig_through_time());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dig Through Time");
+    g.perform_action(GameAction::PassPriority).expect("active passes");
+    g.perform_action(GameAction::PassPriority).expect("non-active passes → resolve");
+
+    let pd = g.pending_decision.as_ref().expect("the pick is pending");
+    match &pd.decision {
+        crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
+            assert_eq!(candidates.len(), 7, "all seven revealed");
+            assert_eq!((*min, *max), (2, 2), "exactly two picks");
+        }
+        other => panic!("expected ChooseCards, got {other:?}"),
+    }
+    // Pick the 3rd and 6th revealed cards (not the auto top-two).
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(
+        vec![lib[2], lib[5]],
+    ))).expect("submit the pick");
+    assert!(g.players[0].has_in_hand(lib[2]) && g.players[0].has_in_hand(lib[5]),
+        "the chosen pair is in hand");
+    assert_eq!(g.players[0].library.len(), 5, "the rest stay in the library");
+    assert!(!g.players[0].has_in_hand(lib[0]), "the auto top card was not taken");
+}
+
+/// Atraxa's "up to one card of each card type" multi-pick validates the
+/// answer: two picks sharing their only card type keep just the first.
+#[test]
+fn atraxa_take_one_per_type_validates_distinct_types() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    // Top of library (revealed set): two instants + a land.
+    let bolt_a = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bolt_b = g.add_card_to_library(0, catalog::lightning_bolt());
+    let isle = g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::atraxa_grand_unifier());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Atraxa");
+    drain_stack(&mut g);
+
+    let pd = g.pending_decision.as_ref().expect("ETB pick pending");
+    assert!(matches!(pd.decision, crate::decision::Decision::ChooseCards { .. }));
+    // Ask for both Bolts and the Island: the second Bolt is dropped
+    // (Instant already covered), the Island keeps its Land slot.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(
+        vec![bolt_a, bolt_b, isle],
+    ))).expect("submit the pick");
+    assert!(g.players[0].has_in_hand(bolt_a), "first instant taken");
+    assert!(g.players[0].has_in_hand(isle), "land taken");
+    assert!(!g.players[0].has_in_hand(bolt_b), "duplicate-type pick dropped");
+    assert!(g.players[0].library.iter().any(|c| c.id == bolt_b), "it went to the bottom");
+}

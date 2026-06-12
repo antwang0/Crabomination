@@ -640,6 +640,13 @@ impl GameState {
             self.place_card_at_resolved_zone(card, resolved);
             return;
         }
+        // CR 122.2 — counters are not retained when an object changes
+        // zones; they cease to exist. Cleared for every destination (the
+        // battlefield arm additionally re-seeds planeswalker loyalty).
+        // Dies-with-counters triggers read the `died_card_snapshots` /
+        // `leaves_bf_lki` LKI caches, not the new zone's object.
+        card.counters.clear();
+        card.keyword_counters.clear();
         match dest {
             ZoneDest::Hand(who) => {
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);
@@ -768,13 +775,10 @@ impl GameState {
                 card.perm_power_bonus = 0;
                 card.perm_toughness_bonus = 0;
                 card.attached_to = None;
-                // CR 122.2 — counters cease to exist when a permanent leaves
-                // the battlefield; the new object enters with none. Re-seed a
+                // CR 122.2 cleared the counters above; re-seed a
                 // planeswalker's starting loyalty (CR 306.5b) so a reanimated
                 // / blinked planeswalker enters with full base loyalty rather
                 // than its last-known (possibly 0) value.
-                card.counters.clear();
-                card.keyword_counters.clear();
                 if card.definition.is_planeswalker() && card.definition.base_loyalty > 0 {
                     card.counters
                         .insert(CounterType::Loyalty, card.definition.base_loyalty);

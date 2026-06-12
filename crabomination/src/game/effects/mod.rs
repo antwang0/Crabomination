@@ -5965,10 +5965,25 @@ impl GameState {
                             .map(|c| (*id, c.definition.name.to_string()))
                     })
                     .collect();
-                let decision = Decision::SearchLibrary {
-                    player: p,
-                    candidates,
-                    eligible: eligible.clone(),
+                // A single pick rides the SearchLibrary picker; a multi-pick
+                // (Dig Through Time's "put two of them into your hand") gets
+                // a real `ChooseCards` subset decision instead of
+                // auto-filling the remainder.
+                let eligible_count = eligible.as_ref().map_or(top_ids.len(), |v| v.len());
+                let decision = if take > 1 {
+                    Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        prompt: format!("Put {take} cards into your hand"),
+                        candidates,
+                        min: take.min(eligible_count) as u32,
+                        max: take.min(eligible_count) as u32,
+                    }
+                } else {
+                    Decision::SearchLibrary {
+                        player: p,
+                        candidates,
+                        eligible: eligible.clone(),
+                    }
                 };
                 let pending = PendingEffectState::ImpulsePending {
                     player: p,
@@ -6410,7 +6425,6 @@ impl GameState {
             }
 
             Effect::RevealTopTakeOnePerType { who, count } => {
-                use crate::card::CardType;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let revealed: Vec<crate::card::CardId> =
@@ -6418,42 +6432,33 @@ impl GameState {
                 if revealed.is_empty() {
                     return Ok(());
                 }
-                // For each card type, take the first revealed (not-yet-taken)
-                // card bearing that type.
-                const TYPES: [CardType; 8] = [
-                    CardType::Artifact, CardType::Battle, CardType::Creature,
-                    CardType::Enchantment, CardType::Instant, CardType::Land,
-                    CardType::Planeswalker, CardType::Sorcery,
-                ];
-                let mut taken: Vec<crate::card::CardId> = Vec::new();
-                for ty in TYPES {
-                    if let Some(id) = revealed.iter().copied().find(|id| {
-                        !taken.contains(id)
-                            && self.players[p].library.iter()
-                                .find(|c| c.id == *id)
-                                .is_some_and(|c| c.definition.card_types.contains(&ty))
-                    }) {
-                        taken.push(id);
-                    }
+                // "Up to one card of each card type": a wants_ui controller
+                // picks the subset via ChooseCards (validated one-per-type at
+                // apply time); bots keep the greedy first-of-each-type fill.
+                let candidates: Vec<(crate::card::CardId, String)> = revealed
+                    .iter()
+                    .filter_map(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let decision = crate::decision::Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                    prompt: "Put up to one card of each card type into your hand".into(),
+                    candidates,
+                    min: 0,
+                    max: revealed.len() as u32,
+                };
+                let pending = PendingEffectState::TakeOnePerTypePending { player: p, revealed: revealed.clone() };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
                 }
-                // Pull taken cards into hand (preserve library order otherwise).
-                for id in &taken {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *id) {
-                        let card = self.players[p].library.remove(pos);
-                        self.players[p].hand.push(card);
-                    }
-                }
-                // Bottom the remaining revealed cards in a random order (CR 401.4).
-                use rand::seq::SliceRandom;
-                let mut rest: Vec<crate::card::CardId> =
-                    revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
-                rest.shuffle(&mut rand::rng());
-                for id in rest {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
-                        let card = self.players[p].library.remove(pos);
-                        self.players[p].library.push(card);
-                    }
-                }
+                // Auto path: greedy first-of-each-type (the apply step
+                // re-validates, so over-asking is harmless).
+                let answer = crate::decision::DecisionAnswer::Cards(revealed);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
                 Ok(())
             }
 

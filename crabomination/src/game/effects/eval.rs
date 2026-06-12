@@ -189,15 +189,20 @@ impl GameState {
                         EntityRef::Permanent(c) | EntityRef::Card(c) => c,
                         _ => return None,
                     };
-                    // CR 122 — counters persist on a card when it moves
-                    // between zones. So a die-trigger that reads "its
-                    // +1/+1 counters" needs to be able to find the
-                    // freshly-died card in its new graveyard zone. The
-                    // battlefield lookup stays first (the common case),
-                    // then we fall through to graveyards and exile —
-                    // matching the cross-zone search shape of
-                    // `evaluate_requirement_static` for WithCounter.
+                    // CR 122.2 strips counters on zone change, so a
+                    // die-trigger that reads "its +1/+1 counters"
+                    // (Ambitious Augmenter's transfer) consults the
+                    // leaves-battlefield LKI snapshot (CR 603.10) when its
+                    // source is mid-resolution off the battlefield; the
+                    // dispatch-time `died_card_snapshots` cache covers
+                    // filter evaluation before the trigger resolves.
                     self.battlefield_find(cid)
+                        .or_else(|| {
+                            self.resolving_lki_source
+                                .filter(|s| *s == cid)
+                                .and_then(|_| self.leaves_bf_lki.get(&cid))
+                        })
+                        .or_else(|| self.died_card_snapshots.get(&cid))
                         .or_else(|| self.players.iter().find_map(
                             |p| p.graveyard.iter().find(|c| c.id == cid)))
                         .or_else(|| self.exile.iter().find(|c| c.id == cid))
@@ -1060,6 +1065,18 @@ impl GameState {
                 });
                 let card = self
                     .battlefield_find(*cid)
+                    // Dies-trigger filters (Felisa's "with a +1/+1 counter on
+                    // it") read the dying object's last-known battlefield
+                    // state, not the counter-stripped graveyard copy
+                    // (CR 603.10 LKI; CR 122.2 cleared the counters on the
+                    // zone change). Consulted before the terminal zones; the
+                    // cache only holds cards from the in-flight die batch.
+                    .or_else(|| self.died_card_snapshots.get(cid))
+                    .or_else(|| {
+                        self.resolving_lki_source
+                            .filter(|s| s == cid)
+                            .and_then(|_| self.leaves_bf_lki.get(cid))
+                    })
                     .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
                     .or_else(|| self.exile.iter().find(|c| c.id == *cid))
                     .or(stack_card)
@@ -1071,15 +1088,7 @@ impl GameState {
                     // permission-checked at the call site (effects target
                     // the controller's own library).
                     .or_else(|| self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == *cid)))
-                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)))
-                    // Dying-card snapshot, populated at SBA die-time and
-                    // cleared after trigger dispatch.
-                    // Lets predicates like
-                    // `EntityMatches { TriggerSource, HasCreatureType(Pest) }`
-                    // read the dying card's printed types even when the
-                    // card vanished from every zone via CR 111.7c
-                    // (token-ceases-to-exist).
-                    .or_else(|| self.died_card_snapshots.get(cid));
+                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)));
                 let Some(card) = card else { return false; };
                 // Layer-4-aware card types for battlefield permanents
                 // (CR 613.2): an artifact-ized creature (Phyrexian

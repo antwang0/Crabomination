@@ -533,19 +533,15 @@ fn cr_122_2_counters_cease_to_exist_on_zone_change() {
         drain_stack(&mut g);
         if g.battlefield_find(bear).is_none() { break; }
     }
-    // Bear is now in graveyard. Engine approximation note: per
-    // TODO.md "CR 122.2-strict counter clearing on zone change" is ⏳;
-    // the engine intentionally retains counters across zone changes
-    // so that the Felisa / Ambitious Augmenter "dies with counters →
-    // re-emerge with the same counters" pattern is reachable. This
-    // test pins **current engine behavior**: counters persist on the
-    // graveyard copy. When CR 122.2 strict-clearing lands, flip the
-    // assertion to == 0 and mark this CR rule ✅ in TODO.md.
+    // CR 122.2 strict: the graveyard object carries no counters (the
+    // Felisa / Ambitious Augmenter dies-with-counters patterns read the
+    // died-snapshot / leaves-battlefield LKI caches instead).
     let gy_bear = g.players[0].graveyard.iter().find(|c| c.id == bear);
     assert!(gy_bear.is_some(), "bear is in graveyard");
-    // Counter visibility is engine-defined; for CR 122.2 strict semantics
-    // the field would be 0 — today the engine preserves the count.
-    let _ = gy_bear.map(|b| b.counter_count(CounterType::PlusOnePlusOne));
+    assert_eq!(
+        gy_bear.unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "counters cease to exist on zone change"
+    );
 }
 
 /// CR 117.5 — "Each time a player would receive priority, the game first

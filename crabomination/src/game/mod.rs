@@ -2816,6 +2816,10 @@ impl GameState {
     ) -> bool {
         // CR 702.47e — splice changes are lost when the spell leaves the stack.
         card.spliced_effects.clear();
+        // CR 122.2 — counters don't survive the zone change (replacement
+        // riders below add to the new object afterward).
+        card.counters.clear();
+        card.keyword_counters.clear();
         // CR 712.16 — a melded shell dies as its two component cards.
         if !card.meld_parts.is_empty() {
             let mut card = card;
@@ -7530,24 +7534,37 @@ impl GameState {
                 Ok(events)
             }
             PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield } => {
-                let DecisionAnswer::Search(chosen_id) = answer else {
-                    return Err(GameError::DecisionAnswerMismatch);
-                };
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
                     Some(v) => v.contains(id),
                 };
-                // The decision picks the first card; for take>1 (Consult the
-                // Star Charts kicked) the rest auto-fill from the remaining
-                // eligible revealed cards. AutoDecider / empty pick takes the
-                // first eligible.
+                // A single-pick suspend answers `Search`; a take>1 suspend
+                // answers `Cards` (Dig Through Time's real two-card pick).
+                // Out-of-set ids are ignored; any shortfall auto-fills from
+                // the remaining eligible revealed cards (AutoDecider /
+                // empty pick keeps the top-down fill).
                 let mut picks: Vec<CardId> = Vec::with_capacity(take);
-                if let Some(id) = *chosen_id
-                    && revealed.contains(&id)
-                    && is_eligible(&id)
-                {
-                    picks.push(id);
+                match answer {
+                    DecisionAnswer::Search(chosen_id) => {
+                        if let Some(id) = *chosen_id
+                            && revealed.contains(&id)
+                            && is_eligible(&id)
+                        {
+                            picks.push(id);
+                        }
+                    }
+                    DecisionAnswer::Cards(chosen) => {
+                        for id in chosen {
+                            if picks.len() >= take {
+                                break;
+                            }
+                            if revealed.contains(id) && is_eligible(id) && !picks.contains(id) {
+                                picks.push(*id);
+                            }
+                        }
+                    }
+                    _ => return Err(GameError::DecisionAnswerMismatch),
                 }
                 for id in revealed.iter().copied() {
                     if picks.len() >= take {
@@ -7574,8 +7591,10 @@ impl GameState {
                                 &mut events,
                             );
                         } else {
+                            // CR 121.5 — putting a card into hand this way
+                            // is NOT a draw: no CardDrawn event, no
+                            // draw-trigger fire (Sheoldred/Bowmasters).
                             self.players[player].hand.push(card);
-                            events.push(GameEvent::CardDrawn { player, card_id: pick });
                         }
                     }
                 }
@@ -7589,7 +7608,8 @@ impl GameState {
                     if let Some(pos) = self.players[player].library.iter().position(|c| c.id == *rid) {
                         let card = self.players[player].library.remove(pos);
                         if rest_to_graveyard {
-                            self.players[player].send_to_graveyard(card);
+                            // CR 614.6 — honor graveyard-hate redirects.
+                            self.route_to_graveyard(card, &mut events);
                         } else {
                             self.players[player].library.push(card);
                         }
@@ -7609,8 +7629,8 @@ impl GameState {
                 if let Some(pick) = pick
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
                     let card = self.players[player].library.remove(pos);
+                    // CR 121.5 — put into hand, not drawn: no CardDrawn.
                     self.players[player].hand.push(card);
-                    events.push(GameEvent::CardDrawn { player, card_id: pick });
                 }
                 // Exile the rest of the revealed set.
                 for rid in &revealed {
@@ -7621,6 +7641,51 @@ impl GameState {
                     }
                 }
                 Ok(events)
+            }
+            PendingEffectState::TakeOnePerTypePending { player, revealed } => {
+                let DecisionAnswer::Cards(chosen) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // "Up to one card of each card type" — walk the picks in
+                // answer order, assigning each the first of its card types
+                // not yet covered; a pick whose types are all covered (or
+                // that wasn't revealed) is dropped rather than rejected.
+                let mut covered: Vec<crate::card::CardType> = Vec::new();
+                let mut taken: Vec<CardId> = Vec::new();
+                for id in chosen {
+                    if !revealed.contains(id) || taken.contains(id) {
+                        continue;
+                    }
+                    let Some(card) = self.players[player].library.iter().find(|c| c.id == *id) else {
+                        continue;
+                    };
+                    if let Some(ty) = card.definition.card_types.iter()
+                        .find(|t| !covered.contains(t))
+                        .cloned()
+                    {
+                        covered.push(ty);
+                        taken.push(*id);
+                    }
+                }
+                // Picks to hand (CR 121.5 — put, not drawn), rest to the
+                // bottom in a random order (CR 401.4 hidden arrangement).
+                for id in &taken {
+                    if let Some(pos) = self.players[player].library.iter().position(|c| c.id == *id) {
+                        let card = self.players[player].library.remove(pos);
+                        self.players[player].hand.push(card);
+                    }
+                }
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<CardId> =
+                    revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(pos) = self.players[player].library.iter().position(|c| c.id == id) {
+                        let card = self.players[player].library.remove(pos);
+                        self.players[player].library.push(card);
+                    }
+                }
+                Ok(vec![])
             }
             PendingEffectState::PutOnLibraryPending { player, .. } => {
                 let DecisionAnswer::PutOnLibrary(chosen) = answer else {

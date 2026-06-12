@@ -986,6 +986,13 @@ pub enum PendingEffectState {
         player: usize,
         revealed: Vec<CardId>,
     },
+    /// Suspended on a `ChooseCards` pick for `Effect::RevealTopTakeOnePerType`
+    /// (Atraxa, Grand Unifier — "up to one card of each card type"). Picks
+    /// are validated one-per-type at apply time; the rest go to the bottom.
+    TakeOnePerTypePending {
+        player: usize,
+        revealed: Vec<CardId>,
+    },
     PutOnLibraryPending { player: usize, count: usize },
     /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana
     /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks

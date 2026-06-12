@@ -518,7 +518,11 @@ impl Player {
             .map(|i| self.hand.remove(i))
     }
 
-    pub fn send_to_graveyard(&mut self, card: CardInstance) {
+    pub fn send_to_graveyard(&mut self, mut card: CardInstance) {
+        // CR 122.2 — counters cease to exist on zone change; the graveyard
+        // object carries none (dies-with-counters triggers read LKI caches).
+        card.counters.clear();
+        card.keyword_counters.clear();
         self.cards_to_graveyard_this_turn += 1;
         self.graveyard.push(card);
     }

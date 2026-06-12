@@ -756,33 +756,23 @@ pub fn treasure_cruise() -> CardDefinition {
     }
 }
 
-/// Dig Through Time — {6}{U}{U} Instant. Delve. "Look at the top seven
-/// cards of your library. Put two of them into your hand and the rest on
-/// the bottom of your library in any order."
-///
-/// Delve (CR 702.66) is wired via `Keyword::Delve` — a full graveyard
-/// turns this into {U}{U}. The selection half is approximated as
-/// `Scry 7 → Draw 2`: scrying seven lets the controller see the top seven
-/// and arrange them (the two keepers on top, the rest to the bottom),
-/// then drawing two takes the keepers — gameplay-equivalent to the
-/// printed "put two into your hand, the rest on the bottom". Same
-/// approximation pattern as Stress Dream's "look at top 2, take 1".
+/// Dig Through Time — {6}{U}{U} Instant. Delve. Look at the top seven
+/// cards of your library, put two of them into your hand and the rest on
+/// the bottom (real two-card `ChooseCards` pick).
 pub fn dig_through_time() -> CardDefinition {
     CardDefinition {
         name: "Dig Through Time",
         cost: cost(&[generic(6), u(), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(7),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(7),
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: Some(Value::Const(2)),
+            to_battlefield: false,
+        },
         ..Default::default()
     }
 }
