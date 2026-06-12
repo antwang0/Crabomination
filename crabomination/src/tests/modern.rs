@@ -43079,6 +43079,32 @@ fn boseiju_channel_destroys_nonbasic() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == boseiju), "Boseiju discarded to channel");
 }
 
+/// CR 701.19a — an opponent-owned search ("that player may search") routes
+/// the pick to the searched player's seat, not the caster's.
+#[test]
+fn boseiju_opponent_search_routes_to_the_searched_seat() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[1].wants_ui = true;
+    let boseiju = g.add_card_to_hand(0, catalog::boseiju_who_endures());
+    let target = g.add_card_to_battlefield(1, catalog::mishras_factory());
+    let basic = g.add_card_to_library(1, catalog::forest());
+    g.add_card_to_library(1, catalog::swamp());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: boseiju, ability_index: 1, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("channel Boseiju");
+    g.perform_action(GameAction::PassPriority).expect("active passes");
+    g.perform_action(GameAction::PassPriority).expect("resolve");
+    let pd = g.pending_decision.as_ref().expect("search pick pending");
+    assert_eq!(pd.acting_player(), 1, "the searched player answers");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Search(Some(basic))))
+        .expect("opponent picks the basic");
+    assert!(g.battlefield.iter().any(|c| c.id == basic && c.controller == 1 && c.tapped),
+        "fetched basic enters tapped under the searched player");
+}
+
 /// Sokenzan channels for two 1/1 hasty Spirits.
 #[test]
 fn sokenzan_channel_makes_two_spirits() {

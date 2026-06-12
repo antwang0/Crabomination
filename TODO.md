@@ -311,10 +311,10 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 - ⏳ **Noticed this run (gods / rope / split-second batch):** Rope client
   UI ✅ (`ServerMsg::Rope` + countdown banner), Nylea's may-bin reveal ✅,
   `AutoDecider` empty-`ChooseTarget` fallback ✅. Remaining:
-  - **Opponent-owned `Search` decisions** still answer through the
-    resolving controller's decider (Boseiju's "that player may search",
-    Karametra's fetch under a `wants_ui` opponent). Yes/no questions are
-    seat-routed now (`ask_seat_bool`); searches/pickers are not.
+  - ✅ **Opponent-owned `Search` decisions** are seat-routed:
+    `PendingDecision::acting_player` answers `SearchLibrary` with the
+    decision's named searcher (Boseiju test
+    `boseiju_opponent_search_routes_to_the_searched_seat`).
   - **`Selector::LastCreatedTokens` + `GrantKeyword`** (Sokenzan) grants
     haste only to tokens minted in the same resolution — fine today; a
     "they gain haste" rider on `CreateToken` would be tidier.

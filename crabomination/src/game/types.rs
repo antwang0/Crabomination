@@ -551,6 +551,13 @@ pub struct PendingDecision {
 
 impl PendingDecision {
     pub fn acting_player(&self) -> usize {
+        // A library search is answered by the seat the decision names — the
+        // searching player (CR 701.19a), which for an opponent-owned search
+        // (Boseiju, Karametra under a wants_ui opponent) or a cross-library
+        // pick (Seek) is not the resume's owner.
+        if let crate::decision::Decision::SearchLibrary { player, .. } = &self.decision {
+            return *player;
+        }
         // A suspended effect usually wants its answer from the spell's caster
         // / ability's controller. The exception is a forced sacrifice (CR
         // 701.16), where the *sacrificing* player chooses — which for an Edict
