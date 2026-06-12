@@ -47981,7 +47981,10 @@ pub fn spellskite() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[crate::mana::phyrexian(Color::Blue)]),
             effect: Effect::RedirectSpellTargetToSelf {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .or(SelectionRequirement::HasAbilityOnStack),
+                ),
             },
             ..Default::default()
         }],

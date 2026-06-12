@@ -5676,6 +5676,42 @@ impl GameState {
                 let Some(idx) = self.stack.iter().rposition(|si| {
                     matches!(si, StackItem::Spell { card, .. } if card.id == spell_id)
                 }) else {
+                    // CR 115.7 — "spell or ability": retarget a targeted
+                    // triggered/activated ability whose source is the
+                    // selected permanent (topmost if several).
+                    if let Some(tidx) = self.stack.iter().rposition(|si| matches!(
+                        si,
+                        StackItem::Trigger { source, target: Some(_), .. } if *source == spell_id
+                    )) {
+                        let legal = if let StackItem::Trigger { effect, controller, .. } =
+                            &self.stack[tidx]
+                        {
+                            effect
+                                .target_filter_for_slot(0)
+                                .is_none_or(|f| {
+                                    self.evaluate_requirement_static(
+                                        f,
+                                        &Target::Permanent(src),
+                                        *controller,
+                                        Some(spell_id),
+                                    )
+                                })
+                                && self
+                                    .check_target_legality_with_source(
+                                        &Target::Permanent(src),
+                                        ctx.controller,
+                                        Some(spell_id),
+                                    )
+                                    .is_ok()
+                        } else {
+                            false
+                        };
+                        if legal
+                            && let StackItem::Trigger { target, .. } = &mut self.stack[tidx]
+                        {
+                            *target = Some(Target::Permanent(src));
+                        }
+                    }
                     return Ok(());
                 };
                 // CR 115.7 — the new target must be legal for that spell.

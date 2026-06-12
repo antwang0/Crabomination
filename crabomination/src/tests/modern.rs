@@ -52891,6 +52891,30 @@ fn spellskite_redirects_spell_target() {
     assert_eq!(skite_card.damage, 3, "bolt redirected to Spellskite");
 }
 
+/// CR 115.7 — Spellskite also redirects a targeted *ability* on the stack
+/// (Prodigal Sorcerer's ping).
+#[test]
+fn spellskite_redirects_ability_target() {
+    let mut g = two_player_game();
+    let skite = g.add_card_to_battlefield(0, catalog::spellskite());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tim = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(tim);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tim, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("ping the bear");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skite, ability_index: 0,
+        target: Some(Target::Permanent(tim)), x_value: None,
+    }).expect("activate Spellskite at the ability");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "bear untouched");
+    assert_eq!(g.battlefield_find(skite).unwrap().damage, 1, "ping redirected to Spellskite");
+}
+
 // ── P3K horsemanship + conditional auras + Porphyry Nodes + Ravenous Trap ───
 
 /// CR 702.31 — a horsemanship attacker can't be blocked by a vanilla

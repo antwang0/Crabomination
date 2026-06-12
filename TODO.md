@@ -348,7 +348,6 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
     by default).
   - **Lightning Storm** — any-player stack activations (the "discard a land,
     choose new targets" response loop).
-  - **Spellskite** ability-on-stack targets (only spell targets redirect).
 
 - ⏳ **Noticed this run (claude/modern_decks, 2026-06-11 second pass):**
   `UnlessPlayerPays` per-seat routing ✅ (rhystic/Kataki taxes now prompt
