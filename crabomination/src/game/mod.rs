@@ -2563,6 +2563,19 @@ impl GameState {
         })
     }
 
+    /// True while graveyards specifically are locked — Grafdigger's Cage or
+    /// the graveyard-only Kunoros lockdown.
+    pub(crate) fn graveyard_locked(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.graveyard_library_locked()
+            || self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::GraveyardLockdown))
+            })
+    }
+
     /// Soulless Jailer — true while any battlefield permanent locks
     /// graveyard entries and graveyard/exile noncreature casts.
     pub(crate) fn graveyard_exile_locked(&self) -> bool {
@@ -2585,8 +2598,8 @@ impl GameState {
     ) -> bool {
         use crate::card::Zone;
         (def.is_creature()
-            && matches!(zone, Zone::Graveyard | Zone::Library)
-            && self.graveyard_library_locked())
+            && (matches!(zone, Zone::Graveyard) && self.graveyard_locked()
+                || matches!(zone, Zone::Library) && self.graveyard_library_locked()))
             || (def.is_permanent()
                 && zone == Zone::Graveyard
                 && self.graveyard_exile_locked())
@@ -2677,7 +2690,8 @@ impl GameState {
         zone: crate::card::Zone,
     ) -> bool {
         use crate::card::Zone;
-        (matches!(zone, Zone::Graveyard | Zone::Library) && self.graveyard_library_locked())
+        (matches!(zone, Zone::Graveyard) && self.graveyard_locked())
+            || (matches!(zone, Zone::Library) && self.graveyard_library_locked())
             || (!def.is_creature()
                 && matches!(zone, Zone::Graveyard | Zone::Exile)
                 && self.graveyard_exile_locked())
@@ -8983,6 +8997,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::MayCastPermanentsFromGraveyard
             | StaticEffect::ActivationCostReduction { .. }
             | StaticEffect::GraveyardLibraryLockdown
+            | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown
             | StaticEffect::GraveyardCardsHaveEscape { .. }
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn

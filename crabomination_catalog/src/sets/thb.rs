@@ -880,3 +880,125 @@ pub fn enigmatic_incarnation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gallia of the Endless Dance — {R}{G} Legendary Satyr 2/2. Haste; other
+/// Satyrs get +1/+1 and have haste; attack with 3+ creatures → may discard
+/// at random to draw two.
+pub fn gallia_of_the_endless_dance() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Gallia of the Endless Dance",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Satyr], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Satyrs you control get +1/+1",
+                effect: crate::effect::StaticEffect::PumpTeamIf {
+                    condition: Predicate::True,
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Satyr)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Haste],
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::ValueAtLeast(
+                    Value::CreaturesAttackedWithThisTurn(PlayerRef::You),
+                    Value::Const(3),
+                ),
+            ),
+            effect: Effect::MayDo {
+                description: "Discard a card at random to draw two?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: true },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kunoros, Hound of Athreos — {1}{W}{B} Legendary Dog 3/3. Vigilance,
+/// menace, lifelink; creatures can't enter from graveyards; players can't
+/// cast from graveyards.
+pub fn kunoros_hound_of_athreos() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::mana::b as black;
+    CardDefinition {
+        name: "Kunoros, Hound of Athreos",
+        cost: cost(&[generic(1), w(), black()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Menace, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "Creature cards in graveyards can't enter the battlefield; \
+                          players can't cast spells from graveyards",
+            effect: crate::effect::StaticEffect::GraveyardLockdown,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tectonic Giant — {2}{R}{R} Elemental Giant 3/4. Attacks or targeted by
+/// an opponent's spell → 3 to each opponent, or impulse two with a pick.
+pub fn tectonic_giant() -> CardDefinition {
+    let modal = || {
+        Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+            // "Choose one of them" collapses to both getting the may-play
+            // grant (strictly better for the controller; rarely relevant).
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: true,
+                uncast_penalty: None,
+            },
+        ])
+    };
+    CardDefinition {
+        name: "Tectonic Giant",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: modal(),
+            },
+            TriggeredAbility {
+                event: {
+                    let mut e =
+                        EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource);
+                    e.actor_is_opponent = true;
+                    e
+                },
+                effect: modal(),
+            },
+        ],
+        ..Default::default()
+    }
+}

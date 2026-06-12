@@ -7486,6 +7486,9 @@ static THB: &[Factory] = &[
     super::thb::escape_protocol,
     super::thb::protean_thaumaturge,
     super::thb::enigmatic_incarnation,
+    super::thb::gallia_of_the_endless_dance,
+    super::thb::kunoros_hound_of_athreos,
+    super::thb::tectonic_giant,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

@@ -794,3 +794,82 @@ fn enigmatic_incarnation_fetches_on_end_step() {
     assert!(g.battlefield_find(ench).is_none(), "enchantment sacrificed");
     assert!(g.battlefield_find(hill).is_some(), "MV-3 creature fetched onto the battlefield");
 }
+
+/// Gallia pumps other Satyrs and draws two off a random discard when
+/// attacking with three creatures.
+#[test]
+fn gallia_satyr_anthem_and_attack_payoff() {
+    let mut g = two_player_game();
+    let gallia = g.add_card_to_battlefield(0, catalog::gallia_of_the_endless_dance());
+    let satyr = g.add_card_to_battlefield(0, catalog::voyaging_satyr());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(satyr).unwrap().power, 2, "+1/+1 to other Satyrs");
+    assert_eq!(g.computed_permanent(gallia).unwrap().power, 2, "not itself");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "not non-Satyrs");
+
+    for id in [gallia, satyr, bear] {
+        g.clear_sickness(id);
+    }
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: gallia, target: AttackTarget::Player(1) },
+        Attack { attacker: satyr, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack with three");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "discarded one, drew two");
+}
+
+/// Kunoros locks reanimation and graveyard casts, but not library plays.
+#[test]
+fn kunoros_locks_graveyards_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::kunoros_hound_of_athreos());
+    // Creature can't enter from a graveyard (Dread Return fizzles).
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dr = g.add_card_to_hand(0, catalog::dread_return());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dr, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dread Return");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "reanimation locked");
+    // Flashback (cast from graveyard) is locked too.
+    assert!(g.cast_from_zone_blocked(
+        &catalog::lightning_bolt(),
+        crate::card::Zone::Graveyard
+    ));
+    // Library casts are NOT locked (unlike Grafdigger's Cage).
+    assert!(!g.cast_from_zone_blocked(
+        &catalog::lightning_bolt(),
+        crate::card::Zone::Library
+    ));
+}
+
+/// Tectonic Giant's attack trigger mode 0 hits each opponent for 3.
+#[test]
+fn tectonic_giant_attack_burn_mode() {
+    let mut g = two_player_game();
+    let tg = g.add_card_to_battlefield(0, catalog::tectonic_giant());
+    g.clear_sickness(tg);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: tg,
+        target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "mode 0: 3 to each opponent");
+}

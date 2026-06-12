@@ -426,6 +426,10 @@ pub enum StaticEffect {
     /// enter the battlefield, and players can't cast spells from graveyards
     /// or libraries.
     GraveyardLibraryLockdown,
+    /// Kunoros, Hound of Athreos: the graveyard-only sibling — creature
+    /// cards in graveyards can't enter the battlefield and players can't
+    /// cast spells from graveyards (library plays unaffected).
+    GraveyardLockdown,
     /// Soulless Jailer: permanent cards in graveyards can't enter the
     /// battlefield, and players can't cast noncreature spells from
     /// graveyards or exile.
