@@ -1213,18 +1213,20 @@ pub fn exile_browser(
     existing: Query<Entity, With<ExileBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
+    chat: Res<crate::systems::chat::ChatInputState>,
 ) {
+    let key_v = !chat.open && keyboard.just_pressed(KeyCode::KeyV);
     let close_requested = keyboard.just_pressed(KeyCode::Escape)
         || overlay_interaction
             .iter()
             .any(|i| *i == Interaction::Pressed);
-    if !existing.is_empty() && (close_requested || keyboard.just_pressed(KeyCode::KeyV)) {
+    if !existing.is_empty() && (close_requested || key_v) {
         for entity in &existing {
             commands.entity(entity).despawn();
         }
         return;
     }
-    if !existing.is_empty() || !keyboard.just_pressed(KeyCode::KeyV) {
+    if !existing.is_empty() || !key_v {
         return;
     }
     let Some(cv) = view.0.as_ref() else { return };

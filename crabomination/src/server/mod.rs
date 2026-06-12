@@ -749,6 +749,22 @@ fn run_match_inner(
                     publish_snapshot(&state, &snapshot_sink);
                 }
             }
+            ClientMsg::Chat { text } => {
+                if let Some(text) = sanitize_chat(&text) {
+                    let name = state
+                        .players
+                        .get(seat)
+                        .map(|p| p.name.clone())
+                        .unwrap_or_else(|| format!("P{seat}"));
+                    let msg = ServerMsg::Chat { seat, name, text };
+                    for tx in seat_tx.iter().flatten() {
+                        let _ = tx.send(msg.clone());
+                    }
+                    for tx in &spectator_tx {
+                        let _ = tx.send(msg.clone());
+                    }
+                }
+            }
             // Lobby messages are meaningless once a match is under way (the
             // lobby driver consumes them before the match begins).
             ClientMsg::ListLobbies
@@ -763,6 +779,18 @@ fn run_match_inner(
             | ClientMsg::SpectateMatch { .. } => {}
         }
     }
+}
+
+/// Sanitize an inbound chat line: strip control characters, trim, and
+/// clamp to 200 chars (on a char boundary). `None` for an empty result.
+fn sanitize_chat(raw: &str) -> Option<String> {
+    let cleaned: String = raw
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(200)
+        .collect();
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
 }
 
 fn publish_snapshot(state: &GameState, sink: &Option<SnapshotSink>) {
@@ -1213,6 +1241,39 @@ mod tests {
         for _ in 0..3 {
             let _ = seat.rx.recv();
         }
+    }
+
+    #[test]
+    fn chat_relays_to_both_seats_sanitized() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)])
+        });
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        c0.tx.send(ClientMsg::Chat { text: "  gg\u{7} well played  ".into() }).unwrap();
+        for seat in [&c0, &c1] {
+            match seat.rx.recv().unwrap() {
+                ServerMsg::Chat { seat: 0, text, .. } => {
+                    assert_eq!(text, "gg well played", "trimmed + control chars stripped");
+                }
+                other => panic!("expected Chat, got {other:?}"),
+            }
+        }
+        // Whitespace-only chat is dropped (no message arrives; the next
+        // real chat is the next thing both seats see).
+        c1.tx.send(ClientMsg::Chat { text: "   ".into() }).unwrap();
+        c1.tx.send(ClientMsg::Chat { text: "hi".into() }).unwrap();
+        match c0.rx.recv().unwrap() {
+            ServerMsg::Chat { seat: 1, text, .. } => assert_eq!(text, "hi"),
+            other => panic!("expected the second chat, got {other:?}"),
+        }
+        drop(c0);
+        drop(c1);
+        handle.join().unwrap();
     }
 
     #[test]

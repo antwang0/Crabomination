@@ -705,6 +705,17 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
+        .init_resource::<systems::chat::ChatInputState>()
+        .add_systems(
+            Update,
+            (
+                systems::chat::drain_chat_inbox,
+                systems::chat::handle_chat_input,
+                systems::chat::sync_chat_ui,
+            )
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
         .add_systems(
             Update,
             (

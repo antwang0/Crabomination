@@ -66,6 +66,11 @@ pub enum ClientMsg {
     Resume { token: String },
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
     SubmitAction(GameAction),
+    /// In-match chat: relayed to every seat and spectator as
+    /// [`ServerMsg::Chat`] stamped with the sender's seat + display name.
+    /// The server sanitizes (trims, strips control characters, clamps
+    /// length) and drops empty results.
+    Chat { text: String },
     /// Debug-console cheat: bypasses turn order / priority and mutates the
     /// authoritative state directly. Applied as the *sender's* seat — the
     /// server routes it to whichever seat owns the originating channel.
@@ -213,6 +218,9 @@ pub enum ServerMsg {
     /// seat: act within `seconds` or the server auto-acts for you. Sent
     /// once per arming; every accepted action re-arms (and re-sends).
     Rope { seconds: u32 },
+    /// In-match chat from `seat` (display name `name`), already sanitized
+    /// by the server. Relayed to every human seat and spectator.
+    Chat { seat: usize, name: String, text: String },
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────

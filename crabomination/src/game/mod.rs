@@ -7625,7 +7625,6 @@ impl GameState {
                 let pick = chosen_id
                     .filter(|id| revealed.contains(id))
                     .or_else(|| revealed.first().copied());
-                let mut events = vec![];
                 if let Some(pick) = pick
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
                     let card = self.players[player].library.remove(pos);
@@ -7640,7 +7639,7 @@ impl GameState {
                         self.exile.push(card);
                     }
                 }
-                Ok(events)
+                Ok(vec![])
             }
             PendingEffectState::TakeOnePerTypePending { player, revealed } => {
                 let DecisionAnswer::Cards(chosen) = answer else {

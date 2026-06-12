@@ -722,7 +722,11 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   a seat-name resolver, so log lines read "Alice drew…" instead of "P0
   drew…". The display name (plus join address and deck path) now persists
   in the config file across launches.
-- ⏳ **Chat + emotes** (Arena's canned phrases; XMage free chat).
+- 🟡 **Chat + emotes** — free in-match chat ships: `ClientMsg::Chat` →
+  sanitized server relay (`ServerMsg::Chat`, name-stamped, to every seat +
+  spectator) → game-log line; client input bar on `T` (Enter sends, Esc
+  cancels; gameplay hotkeys suppressed while typing). Remaining ⏳: canned
+  emotes, mute, lobby-phase chat.
 - 🟡 **Per-turn / per-game timers, chess-clock, "rope," and timeouts.**
   The per-action rope ships server-side (`CRAB_ACTION_TIMEOUT_SECS` →
   `run_match_inner`'s `action_timeout`; on expiry the actor auto-answers

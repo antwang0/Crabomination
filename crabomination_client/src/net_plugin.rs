@@ -35,6 +35,12 @@ use crabomination::{
 #[allow(dead_code)]
 pub struct NetOutbox(pub mpsc::Sender<ClientMsg>, Mutex<Option<GameAction>>);
 
+/// Inbound chat lines `(seat, name, text)` relayed by the server
+/// (`ServerMsg::Chat`), drained into the game log by
+/// `systems::chat::drain_chat_inbox`.
+#[derive(Resource, Default)]
+pub struct ChatInbox(pub Vec<(usize, String, String)>);
+
 /// True for the player-initiated cast actions that go through the
 /// engine's forced-only mana payment (and can therefore come back as
 /// `ManualTapRequired`).
@@ -203,6 +209,7 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<LobbyState>()
             .init_resource::<ResumeInfo>()
             .init_resource::<RopeClock>()
+            .init_resource::<ChatInbox>()
             .add_systems(PreUpdate, poll_net)
             .add_systems(
                 Update,
@@ -235,6 +242,7 @@ pub fn poll_net(
     mut lobby: ResMut<LobbyState>,
     mut resume: ResMut<ResumeInfo>,
     mut rope: ResMut<RopeClock>,
+    mut chat: ResMut<ChatInbox>,
     time: Res<Time>,
 ) {
     let Some(inbox) = inbox else { return };
@@ -276,6 +284,9 @@ pub fn poll_net(
             // countdown (rendered by `update_rope_banner`).
             ServerMsg::Rope { seconds } => {
                 rope.deadline = Some(time.elapsed_secs_f64() + seconds as f64);
+            }
+            ServerMsg::Chat { seat, name, text } => {
+                chat.0.push((seat, name, text));
             }
             ServerMsg::ActionError(e) => {
                 // `ManualTapRequired`: the player has a choice of which mana

@@ -259,6 +259,7 @@ impl LobbyManager {
             | ClientMsg::ListSpectatable
             | ClientMsg::SpectateMatch { .. }
             | ClientMsg::SubmitAction(_)
+            | ClientMsg::Chat { .. }
             | ClientMsg::Debug(_) => LobbyOutcome::default(),
         }
     }

@@ -80,6 +80,7 @@ pub struct GameInputResources<'w> {
     pub card_names: ResMut<'w, crate::game::CardNames>,
     pub export_prompt: ResMut<'w, crate::systems::export_prompt::ExportPromptState>,
     pub debug_console: ResMut<'w, crate::systems::debug_console::DebugConsoleState>,
+    pub chat: ResMut<'w, crate::systems::chat::ChatInputState>,
     pub legal_targets: ResMut<'w, crate::game::LegalTargets>,
     pub modal_cast: ResMut<'w, crate::game::PendingModalCast>,
     pub pay_times: ResMut<'w, crate::game::PayTimesState>,
@@ -3403,6 +3404,11 @@ pub fn handle_game_input(
     // typing into the buffer shouldn't fire `KeyCode::KeyA` (Attack All)
     // or other gameplay shortcuts.
     if r.debug_console.card_input_focused {
+        return;
+    }
+
+    // And while the chat input bar is open.
+    if r.chat.open {
         return;
     }
 

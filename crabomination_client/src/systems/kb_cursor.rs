@@ -176,6 +176,7 @@ pub fn handle_keyboard_cursor_input(
     auto_rematch: Res<crate::systems::game_over::AutoRematchState>,
     settings: Res<crate::systems::quality::SettingsOpen>,
     esc_consumed: Res<crate::systems::quality::EscConsumed>,
+    chat: Res<crate::systems::chat::ChatInputState>,
 ) {
     // Yield input to focused text fields / modals so typing doesn't
     // move the gameplay cursor. Settings modal also captures all
@@ -183,6 +184,7 @@ pub fn handle_keyboard_cursor_input(
     // pause-style settings panel is open.
     if export_prompt.active
         || debug_console.card_input_focused
+        || chat.open
         || auto_rematch.focused
         || settings.0
     {
