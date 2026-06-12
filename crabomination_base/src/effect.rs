@@ -686,6 +686,11 @@ pub enum Predicate {
     /// library this turn. `PlayerRef::EachOpponent` is satisfied by any one
     /// opponent. Archive Trap's "rather than pay" gate.
     SearchedLibraryThisTurn { who: PlayerRef },
+    /// CR 702.76 — Prowl gate: true if a creature of any listed type under
+    /// the resolving controller's control dealt combat damage to a player
+    /// this turn (`Player.prowl_types_this_turn`; Changeling damage
+    /// satisfies any type).
+    ProwlTypeDealtCombatDamage { types: Vec<crate::card::CreatureType> },
     /// True if any player matching `who` had at least `at_least` cards put
     /// into their graveyard from anywhere this turn (CR 700.4 tally —
     /// `Player.cards_to_graveyard_this_turn`). Ravenous Trap's free

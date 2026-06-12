@@ -50011,3 +50011,186 @@ pub fn sliver_legion() -> CardDefinition {
         ..sliver("Sliver Legion", cost(&[w(), u(), b(), r(), g()]), 7, 7)
     }
 }
+
+// ── Prowl (CR 702.76) — Morningtide rogue tribal ─────────────────────────────
+
+/// 1/1 black Faerie Rogue creature token with flying (Notorious Throng).
+fn faerie_rogue_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Faerie Rogue".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Latchkey Faerie — {3}{U} 3/1 Faerie Rogue, Flying. Prowl {2}{U}; ETB if
+/// the prowl cost was paid, draw a card.
+pub fn latchkey_faerie() -> CardDefinition {
+    CardDefinition {
+        name: "Latchkey Faerie",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        alternative_cost: Some(crate::effect::shortcut::prowl(
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Faerie, CreatureType::Rogue],
+        )),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stinkdrinker Bandit — {3}{B} 2/1 Goblin Rogue. Prowl {1}{B}; whenever a
+/// Rogue you control attacks and isn't blocked, it gets +2/+1 until end of turn.
+pub fn stinkdrinker_bandit() -> CardDefinition {
+    CardDefinition {
+        name: "Stinkdrinker Bandit",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        alternative_cost: Some(crate::effect::shortcut::prowl(
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Goblin, CreatureType::Rogue],
+        )),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Rogue),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Auntie's Snitch — {2}{B} 3/1 Goblin Rogue, can't block. Prowl {1}{B};
+/// whenever a Goblin or Rogue you control deals combat damage to a player,
+/// if this is in your graveyard, you may return it to your hand.
+pub fn aunties_snitch() -> CardDefinition {
+    CardDefinition {
+        name: "Auntie's Snitch",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        alternative_cost: Some(crate::effect::shortcut::prowl(
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Goblin, CreatureType::Rogue],
+        )),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::FromYourGraveyard,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Rogue)),
+            }),
+            effect: Effect::MayDo {
+                description: "Return Auntie's Snitch to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thieves' Fortune — {2}{U} Kindred Instant — Rogue. Prowl {U}. Look at the
+/// top four cards of your library; one to hand, rest on the bottom.
+pub fn thieves_fortune() -> CardDefinition {
+    CardDefinition {
+        name: "Thieves' Fortune",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rogue],
+            ..Default::default()
+        },
+        alternative_cost: Some(crate::effect::shortcut::prowl(
+            cost(&[u()]),
+            vec![CreatureType::Rogue],
+        )),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: None,
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Notorious Throng — {3}{U} Kindred Sorcery — Rogue. Prowl {5}{U}. Create X
+/// 1/1 black Faerie Rogue flying tokens, X = damage dealt to your opponents
+/// this turn (life lost; exact in 2P); extra turn if the prowl cost was paid.
+pub fn notorious_throng() -> CardDefinition {
+    CardDefinition {
+        name: "Notorious Throng",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rogue],
+            ..Default::default()
+        },
+        alternative_cost: Some(crate::effect::shortcut::prowl(
+            cost(&[generic(5), u()]),
+            vec![CreatureType::Rogue],
+        )),
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+                definition: faerie_rogue_token(),
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::TakeExtraTurn {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

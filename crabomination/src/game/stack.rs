@@ -104,14 +104,32 @@ impl GameState {
         self.empty_mana_pools();
 
         // Auto-declare empty blockers if no one blocked.
+        let mut events = vec![];
         if self.step == TurnStep::DeclareBlockers
             && !self.attacking.is_empty()
             && !self.blockers_declared
         {
             self.blockers_declared = true;
+            // CR 509.3g — every attacker went unblocked; "attacks and isn't
+            // blocked" triggers fire on this path too, not just on an
+            // explicit DeclareBlockers action. Dispatch inline: if anything
+            // triggered, stop here (priority round for the trigger) instead
+            // of advancing into combat damage in the same pass.
+            let unblocked: Vec<GameEvent> = self
+                .attacking
+                .iter()
+                .map(|atk| GameEvent::AttackerWentUnblocked { attacker: atk.attacker })
+                .collect();
+            // Dispatched here, not via the returned events — the caller
+            // (`perform_action`) re-dispatches returned events, which would
+            // double-fire the triggers.
+            let stack_before = self.stack.len();
+            self.dispatch_triggers_for_events(&unblocked);
+            if self.stack.len() > stack_before || self.pending_decision.is_some() {
+                self.give_priority_to_active();
+                return Ok(events);
+            }
         }
-
-        let mut events = vec![];
 
         if self.step == TurnStep::Cleanup {
             // All players passed during a CR 514.3a cleanup priority round
@@ -1475,6 +1493,8 @@ impl GameState {
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();
+            pl.prowl_types_this_turn.clear();
+            pl.prowl_any_type_this_turn = false;
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
             pl.spells_uncounterable_this_turn = false;

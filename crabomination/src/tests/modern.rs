@@ -55012,3 +55012,98 @@ fn sliver_legion_per_other_sliver_anthem() {
     let cp = g.computed_permanent(b_).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 4), "opponent's Sliver counts and benefits");
 }
+
+// ── Prowl (CR 702.76) ─────────────────────────────────────────────────────────
+
+/// Helper: attack with `attacker` (a Rogue etc.) and resolve combat damage to P1.
+fn prowl_swing(g: &mut GameState, attacker: crate::card::CardId) {
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(g);
+}
+
+/// Prowl is rejected without tribal combat damage and accepted after a Rogue
+/// connects; the prowl-paid ETB rider draws (Latchkey Faerie).
+#[test]
+fn cr_702_76_prowl_gates_on_tribal_combat_damage() {
+    let mut g = two_player_game();
+    let faerie = g.add_card_to_hand(0, catalog::latchkey_faerie());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastSpellAlternative {
+        card_id: faerie, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no Rogue connected yet — prowl unavailable");
+
+    let rogue = g.add_card_to_battlefield(0, catalog::aunties_snitch());
+    prowl_swing(&mut g, rogue);
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    // Mana pools emptied at each step boundary during the swing — refill.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: faerie, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("prowl cast for {2}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == faerie), "Faerie on the battlefield");
+    // -1 cast +1 prowl-paid draw = net even with the pre-cast hand.
+    assert_eq!(g.players[0].hand.len(), hand_before, "prowl-paid ETB drew a card");
+}
+
+/// Auntie's Snitch returns from the graveyard when a Goblin or Rogue you
+/// control deals combat damage to a player.
+#[test]
+fn cr_702_76_aunties_snitch_returns_from_graveyard_on_rogue_damage() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let snitch = g.add_card_to_graveyard(0, catalog::aunties_snitch());
+    let rogue = g.add_card_to_battlefield(0, catalog::stinkdrinker_bandit());
+    prowl_swing(&mut g, rogue);
+    assert!(g.players[0].hand.iter().any(|c| c.id == snitch), "Snitch returned to hand");
+}
+
+/// Stinkdrinker Bandit pumps an unblocked attacking Rogue +2/+1 (CR 509.3g).
+#[test]
+fn stinkdrinker_bandit_pumps_unblocked_rogue() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stinkdrinker_bandit());
+    let rogue = g.add_card_to_battlefield(0, catalog::aunties_snitch()); // 3/1 Rogue
+    let life_before = g.players[1].life;
+    prowl_swing(&mut g, rogue);
+    assert_eq!(g.players[1].life, life_before - 5, "3/1 hit for 5 with the +2/+1 pump");
+}
+
+/// Notorious Throng mints X fliers (X = opponent life lost this turn) and
+/// takes an extra turn when prowled.
+#[test]
+fn notorious_throng_tokens_and_prowl_extra_turn() {
+    let mut g = two_player_game();
+    let rogue = g.add_card_to_battlefield(0, catalog::aunties_snitch()); // 3 power
+    prowl_swing(&mut g, rogue);
+    let throng = g.add_card_to_hand(0, catalog::notorious_throng());
+    // Cast at sorcery speed on our own post-combat main.
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    let bf_before = g.battlefield.len();
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: throng, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("prowl Notorious Throng");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.len(), bf_before + 3, "three 1/1 fliers for 3 damage");
+    assert!(g.players[0].extra_turns >= 1, "extra turn queued off the prowl rider");
+}

@@ -181,6 +181,16 @@ pub struct Player {
     /// empty for snapshot back-compat.
     #[serde(default)]
     pub creatures_that_damaged_me_this_turn: Vec<crate::card::CardId>,
+    /// Creature types among this player's creatures that dealt combat damage
+    /// to a player this turn (CR 702.76 Prowl). Stamped at the combat-damage
+    /// funnels, cleared at the turn boundary. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub prowl_types_this_turn: Vec<crate::card::CreatureType>,
+    /// A Changeling of this player's dealt combat damage to a player this
+    /// turn — it counts as every creature type for the prowl window.
+    #[serde(default)]
+    pub prowl_any_type_this_turn: bool,
     /// True once this player has declared an attacker this turn (Raid, CR
     /// 702.108 ability word). Set in `declare_attackers`, reset at the turn
     /// boundary in `do_untap`. `#[serde(default)]` for snapshot back-compat.
@@ -422,6 +432,8 @@ impl Player {
             graveyard_cast_types_this_turn: Vec::new(),
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
+            prowl_types_this_turn: Vec::new(),
+            prowl_any_type_this_turn: false,
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
             silenced_this_turn: false,

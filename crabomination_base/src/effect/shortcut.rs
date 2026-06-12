@@ -2818,6 +2818,23 @@ pub fn transmute(cost: crate::mana::ManaCost, mv: u32) -> ActivatedAbility {
     }
 }
 
+/// Prowl (CR 702.76): "You may cast this for [cost] if you dealt combat
+/// damage to a player this turn with a creature of any of `types`."
+/// `marks_kicked` stamps the cast so "if its prowl cost was paid" riders
+/// gate on `Predicate::SpellWasKicked`.
+pub fn prowl(
+    cost: crate::mana::ManaCost,
+    types: Vec<crate::card::CreatureType>,
+) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost: cost,
+        condition: Some(Predicate::ProwlTypeDealtCombatDamage { types }),
+        marks_kicked: true,
+        flash: false,
+        ..Default::default()
+    }
+}
+
 /// Graft N (CR 702.57) — the trigger half: "Whenever another creature
 /// enters, you may move a +1/+1 counter from this creature onto it."
 /// Pair with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`.

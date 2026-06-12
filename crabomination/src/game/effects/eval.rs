@@ -619,6 +619,11 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .iter()
                 .any(|&p| self.players[p].searched_library_this_turn),
+            Predicate::ProwlTypeDealtCombatDamage { types } => {
+                let pl = &self.players[ctx.controller];
+                pl.prowl_any_type_this_turn
+                    || types.iter().any(|t| pl.prowl_types_this_turn.contains(t))
+            }
             Predicate::CardsToGraveyardThisTurnAtLeast { who, at_least } => self
                 .resolve_players(who, ctx)
                 .iter()

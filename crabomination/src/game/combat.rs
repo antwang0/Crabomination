@@ -1791,6 +1791,21 @@ impl GameState {
                     if !self.players[p].creatures_that_damaged_me_this_turn.contains(&atk.id) {
                         self.players[p].creatures_that_damaged_me_this_turn.push(atk.id);
                     }
+                    // CR 702.76 — Prowl window: record the damaging creature's
+                    // types for its controller (Changeling counts as every
+                    // type, recorded via the controller-side any flag).
+                    if let Some(c) = self.battlefield.iter().find(|c| c.id == atk.id) {
+                        let ctrl = c.controller;
+                        if c.definition.keywords.contains(&Keyword::Changeling) {
+                            self.players[ctrl].prowl_any_type_this_turn = true;
+                        }
+                        let types = c.definition.subtypes.creature_types.clone();
+                        for t in types {
+                            if !self.players[ctrl].prowl_types_this_turn.contains(&t) {
+                                self.players[ctrl].prowl_types_this_turn.push(t);
+                            }
+                        }
+                    }
                 }
                 // CR 702.180c — Toxic N adds N poison on combat damage to a
                 // player, on top of any life loss (and stacks with Infect's
