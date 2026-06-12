@@ -576,6 +576,7 @@ impl PendingDecision {
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
             ResumeContext::ActionFloatConfirm { actor, .. } => *actor,
+            ResumeContext::ActionSearchPick { actor, .. } => *actor,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
         }
     }
@@ -781,6 +782,14 @@ pub(crate) enum ResumeContext {
     /// sources). Carries the originating `GameAction` so the resume replays the
     /// exact action — kicker / buyback / flashback / etc. survive the round-trip.
     ActionFloatConfirm {
+        actor: usize,
+        action: Box<GameAction>,
+    },
+    /// CR 702.29e — a `wants_ui` cycler is picking which matching library
+    /// card a landcycle / typecycle fetches. The action suspended before any
+    /// cost was paid and is replayed verbatim with the pick stashed in
+    /// `pending_landcycle_pick`.
+    ActionSearchPick {
         actor: usize,
         action: Box<GameAction>,
     },

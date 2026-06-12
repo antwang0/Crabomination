@@ -1808,8 +1808,8 @@ picking an item up.
   `KnownCard.has_landcycling` + a client Landcycle keybind. Ships Wirewood
   Guardian, Daru Lancer, the LTR cycle (Troll of Khazad-dûm, Lorien
   Revealed, Eagles of the North, Oliphaunt, Generous Ent), Ash Barrens.
-  Remaining: a UI search-prompt to choose *which* card among multiple
-  matches (today it auto-fetches the first match).
+  UI pick among multiple matches ✅ (`ResumeContext::ActionSearchPick` —
+  a `wants_ui` cycler suspends before costs and picks the fetch).
 - 🟡 **CR 117.1 — Order of priority** — APNAP corner cases; see git.
 - 🟡 **CR 301 — Artifacts** — see git.
 - ✅ **CR 701.8 — Destroy / 701.19 Regenerate** — `regeneration_shields` replace destruction on the SBA lethal-damage path, `Effect::Destroy`, and consume one shield (tap + remove-from-combat + heal). `DestroyNoRegen` bypasses. Toughness≤0 SBA correctly ignores shields.
@@ -1939,9 +1939,7 @@ picking an item up.
     destroy a no-counter creature / remove-all counters).
   - ✅ **Typecycling / Landcycling** (CR 702.29e) — `Keyword::Landcycling`
     + `GameAction::Landcycle`; ships Wirewood/Daru/Shoreline/Twisted
-    Abomination/Skirk. Follow-up: a UI search-prompt to choose *which* land
-    among multiple matches (today auto-fetches the first match), and
-    nonbasic-type cycling (e.g. Mistcycling) once those land types exist.
+    Abomination/Skirk. UI multi-match pick ✅.
   - ✅ **"Discard unless they discard an artifact" conditional discard** —
     `Effect::DiscardUnlessKind` (auto-keeps the lowest-MV matching card);
     Wrench Mind is faithful.

@@ -35778,6 +35778,27 @@ fn landcycling_fetches_the_named_basic_land() {
     }
 }
 
+/// CR 702.29e — a `wants_ui` landcycler with multiple matches picks which
+/// card to fetch; the pick suspends before any cost is paid.
+#[test]
+fn landcycling_ui_picks_among_multiple_matches() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.add_card_to_library(0, catalog::swamp());
+    let wanted = g.add_card_to_library(0, catalog::swamp());
+    let id = g.add_card_to_hand(0, catalog::twisted_abomination());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Landcycle { card_id: id }).expect("raise the pick");
+    let pd = g.pending_decision.as_ref().expect("search pick pending");
+    assert_eq!(pd.acting_player(), 0);
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.id == id).count(), 1,
+        "nothing paid or discarded before the pick");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Search(Some(wanted))))
+        .expect("submit the pick");
+    assert!(g.players[0].hand.iter().any(|c| c.id == wanted), "the chosen Swamp was fetched");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cycler discarded");
+}
+
 /// Soul Feast drains the target player for 4 and gains the caster 4 life.
 #[test]
 fn soul_feast_drains_four() {

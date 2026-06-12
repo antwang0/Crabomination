@@ -557,6 +557,13 @@ pub struct GameState {
     /// top of the cast. Never snapshots.
     #[serde(skip, default)]
     pub(crate) pending_cast_spend_float: Option<bool>,
+    /// Transient: the library card a `wants_ui` cycler picked for a
+    /// landcycling / typecycling fetch (CR 702.29e). Set by the
+    /// `ActionSearchPick` resume just before it replays the Landcycle
+    /// action; consumed by `landcycle_card` in lieu of the first-match
+    /// auto-pick. Inner `None` = fail to find. Never snapshots.
+    #[serde(skip, default)]
+    pub(crate) pending_landcycle_pick: Option<Option<crate::card::CardId>>,
     /// Transient: the permanent a `wants_ui` activator picked to satisfy an
     /// activated ability's "Sacrifice another …" cost (`sac_other_filter`).
     /// Set by `submit_decision`'s `ActivateAbilityChoice` resume just before it
@@ -975,6 +982,7 @@ impl Clone for GameState {
             pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
             pending_cast_discards: self.pending_cast_discards.clone(),
             pending_cast_spend_float: self.pending_cast_spend_float,
+            pending_landcycle_pick: self.pending_landcycle_pick,
             pending_ability_sac_other: self.pending_ability_sac_other,
             pending_ability_tap_other: self.pending_ability_tap_other,
             pending_ability_exile_other: self.pending_ability_exile_other.clone(),
@@ -1101,6 +1109,7 @@ impl GameState {
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
             pending_cast_spend_float: None,
+            pending_landcycle_pick: None,
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
             pending_ability_exile_other: None,
@@ -5156,24 +5165,57 @@ impl GameState {
                     .or_else(|| self.granted_typecycling_for(c))
             })
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // Matching library cards, in library order.
+        let matches: Vec<(crate::card::CardId, String)> = {
+            let ids: Vec<(crate::card::CardId, String)> = self.players[seat]
+                .library
+                .iter()
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            ids.into_iter()
+                .filter(|(id, _)| {
+                    self.evaluate_requirement_static(
+                        &filter,
+                        &crate::game::types::Target::Permanent(*id),
+                        seat,
+                        None,
+                    )
+                })
+                .collect()
+        };
+        // CR 702.29e — a `wants_ui` cycler with a real choice picks which
+        // card to fetch. Suspend before any cost is paid; the resume replays
+        // this action with the pick stashed.
+        let stashed_pick = self.pending_landcycle_pick.take();
+        if stashed_pick.is_none() && self.players[seat].wants_ui && matches.len() > 1 {
+            let eligible: Vec<crate::card::CardId> = matches.iter().map(|(id, _)| *id).collect();
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::SearchLibrary {
+                    player: seat,
+                    candidates: matches,
+                    eligible: Some(eligible),
+                },
+                resume: crate::game::types::ResumeContext::ActionSearchPick {
+                    actor: seat,
+                    action: Box::new(GameAction::Landcycle { card_id }),
+                },
+            });
+            return Ok(vec![]);
+        }
         self.players[seat].mana_pool.pay(&cycling_cost).map_err(GameError::Mana)?;
         let mut events = vec![];
         if self.discard_card(seat, card_id, &mut events) {
             events.push(GameEvent::CardCycled { player: seat, card_id });
         }
-        // Search the library for a matching card; reveal + to hand.
-        if let Some(pos) = {
-            let ids: Vec<crate::card::CardId> =
-                self.players[seat].library.iter().map(|c| c.id).collect();
-            ids.into_iter().position(|id| {
-                self.evaluate_requirement_static(
-                    &filter,
-                    &crate::game::types::Target::Permanent(id),
-                    seat,
-                    None,
-                )
-            })
-        } {
+        // Fetch the stashed pick (validated against the match set), else the
+        // first match; reveal + to hand.
+        let chosen = match stashed_pick {
+            Some(pick) => pick.filter(|id| matches.iter().any(|(m, _)| m == id)),
+            None => matches.first().map(|(id, _)| *id),
+        };
+        if let Some(pos) = chosen
+            .and_then(|id| self.players[seat].library.iter().position(|c| c.id == id))
+        {
             let fetched = self.players[seat].library.remove(pos);
             self.place_card_in_dest(
                 fetched,
@@ -7063,6 +7105,18 @@ impl GameState {
                 let _ = actor;
                 self.pending_cast_spend_float = Some(spend);
                 return self.perform_action(*action);
+            }
+            ResumeContext::ActionSearchPick { actor, action } => {
+                // CR 702.29e — the cycler picked which card to fetch. Stash
+                // and replay the originating action.
+                let DecisionAnswer::Search(pick) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let _ = actor;
+                self.pending_landcycle_pick = Some(pick);
+                let r = self.perform_action(*action);
+                self.pending_landcycle_pick = None;
+                return r;
             }
             ResumeContext::ActivateAbilityChoice {
                 activator,
