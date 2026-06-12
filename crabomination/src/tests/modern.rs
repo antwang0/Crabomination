@@ -56373,18 +56373,10 @@ fn world_breaker_cast_trigger_and_recursion() {
     g.battlefield.retain(|c| c.id != id);
     g.players[0].graveyard.push(crate::card::CardInstance::new(id, catalog::world_breaker(), 0));
     g.add_card_to_battlefield(0, catalog::forest());
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::Green, 1); // pays the {C}? no — needs real colorless
-    let res = g.perform_action(GameAction::ActivateAbility {
+    g.players[0].mana_pool.add_colorless(3); // {2} + the true-colorless {C}
+    g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, x_value: None,
-    });
-    if res.is_err() {
-        // {C} requires true colorless mana.
-        g.players[0].mana_pool.add_colorless(1);
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, x_value: None,
-        }).expect("recursion activates from the graveyard");
-    }
+    }).expect("recursion activates from the graveyard");
     drain_stack(&mut g);
     assert!(g.players[0].has_in_hand(id), "World Breaker back in hand");
 }
