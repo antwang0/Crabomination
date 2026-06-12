@@ -50194,3 +50194,107 @@ pub fn notorious_throng() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Triggered mana abilities (CR 605.1b) ─────────────────────────────────────
+
+/// Mana Flare — {2}{R} Enchantment. Whenever a player taps a land for mana,
+/// that player adds one mana of any type that land produced.
+pub fn mana_flare() -> CardDefinition {
+    use crate::effect::{ExtraManaKind, StaticEffect};
+    CardDefinition {
+        name: "Mana Flare",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "A land tapped for mana produces one extra of that type.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: SelectionRequirement::Any,
+                extra: ExtraManaKind::Mirror,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vernal Bloom — {3}{G} Enchantment. Whenever a Forest is tapped for mana,
+/// its controller adds an additional {G}.
+pub fn vernal_bloom() -> CardDefinition {
+    use crate::effect::{ExtraManaKind, StaticEffect};
+    CardDefinition {
+        name: "Vernal Bloom",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Forests tapped for mana add an additional {G}.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: SelectionRequirement::HasLandType(LandType::Forest),
+                extra: ExtraManaKind::Fixed(Color::Green),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wild Growth — {G} Aura. Enchant land; whenever enchanted land is tapped
+/// for mana, its controller adds an additional {G}.
+pub fn wild_growth() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::{ExtraManaKind, StaticEffect};
+    CardDefinition {
+        name: "Wild Growth",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Land },
+        },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land tapped for mana adds an additional {G}.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: true,
+                filter: SelectionRequirement::Any,
+                extra: ExtraManaKind::Fixed(Color::Green),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Utopia Sprawl — {G} Aura. Enchant Forest; as it enters, choose a color;
+/// the enchanted Forest tapped for mana adds one mana of the chosen color.
+pub fn utopia_sprawl() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::{ExtraManaKind, StaticEffect};
+    CardDefinition {
+        name: "Utopia Sprawl",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::HasLandType(LandType::Forest),
+            },
+        },
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ChooseColorForSelf)],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted Forest tapped for mana adds the chosen color.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: true,
+                filter: SelectionRequirement::Any,
+                extra: ExtraManaKind::ChosenColor,
+            },
+        }],
+        ..Default::default()
+    }
+}

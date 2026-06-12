@@ -1770,7 +1770,10 @@ picking an item up.
   attacker's pool, auto-tapping mana sources for any shortfall (atomic
   rollback if unpayable); block tax (509.1d) pays the same way per blocking
   player. Tests `cr_508_1g_*`, `cr_509_1d_block_tax_auto_taps_lands`.
-- 🟡 **CR 605 — Mana Abilities** — triggered-mana-ability fast-path (605.4a).
+- ✅ **CR 605 — Mana Abilities** — triggered mana abilities (605.1b/605.4a)
+  resolve stack-free at the mana-ability fast path via
+  `StaticEffect::ExtraManaOnLandTap` (Mana Flare, Vernal Bloom, Wild
+  Growth, Utopia Sprawl; tests `cr_605_1b_*`).
 - ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
@@ -2162,11 +2165,6 @@ picking an item up.
   minters and a +2/+2 lord in the catalog, a Silverquill Inkling
   tribal pool is now viable.
 
-- ⏳ **Triggered mana ability fast-path** (CR 605.4a) — promoted from
-  the existing TODO entry into the CR-audit row. Same blocker as
-  before: no STX/SOS card requires the fast-path today. First Mana
-  Reflection / Wirewood Channeler-class card would trigger.
-
 - ⏳ **`SelectionRequirement::ManaValueAtMostX`** (push modern_decks
   batch 39 suggested) — the current `ManaValueAtMost(u32)` predicate
   takes a compile-time constant, but several STX/SOS cards print
@@ -2425,14 +2423,11 @@ picking an item up.
   factory's `triggered_abilities` / `static_abilities` / activated-
   ability complexity could flag stale rows automatically.
 
-- ⏳ **Triggered mana ability fast-path (CR 605.1b)** — triggered mana
-  abilities don't currently bypass the stack. The engine handles
-  *activated* mana abilities specially (`activate_ability` resolves
-  them immediately without `StackItem::Trigger` push) but triggered
-  mana abilities like Mana Reflection's "Whenever a permanent taps
-  for mana, that permanent produces twice as much instead" go through
-  the normal dispatcher. No SOS/STX card exercises this today; first
-  card to need it will be the wiring trigger.
+- ✅ **Triggered mana ability fast-path (CR 605.1b)** —
+  `StaticEffect::ExtraManaOnLandTap` resolves stack-free right after the
+  tapping ability (Mana Flare / Vernal Bloom / Wild Growth / Utopia
+  Sprawl); Mana Reflection's doubling already rode
+  `mana_production_doublers`.
 
 - ⏳ **CR 122.2-strict counter clearing on zone change** — to be
   fully compliant we should clear all counters when a card moves

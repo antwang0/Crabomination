@@ -846,6 +846,69 @@ impl crate::game::GameState {
             })
             .sum()
     }
+
+    /// CR 605.1b — resolve `ExtraManaOnLandTap` triggered mana abilities
+    /// after `land_id` (controlled by `p`) was tapped for mana. `resolved`
+    /// is the tapping ability's event batch — `Mirror` reads the produced
+    /// color off its `ManaAdded` events.
+    fn resolve_extra_mana_on_land_tap(
+        &mut self,
+        land_id: crate::card::CardId,
+        p: usize,
+        resolved: &[GameEvent],
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::effect::{ExtraManaKind, StaticEffect};
+        let Some(land) = self.battlefield.iter().find(|c| c.id == land_id) else { return };
+        if !land.definition.is_land() {
+            return;
+        }
+        let land = land.clone();
+        let grants: Vec<(crate::card::CardId, ExtraManaKind)> = self
+            .battlefield
+            .iter()
+            .flat_map(|src| src.definition.static_abilities.iter().map(move |sa| (src, sa)))
+            .filter_map(|(src, sa)| {
+                let StaticEffect::ExtraManaOnLandTap { enchanted_only, filter, extra } =
+                    &sa.effect
+                else {
+                    return None;
+                };
+                if *enchanted_only && src.attached_to != Some(land_id) {
+                    return None;
+                }
+                (crate::game::layers::requirement_matches_card(filter, &land, src.controller))
+                    .then_some((src.id, *extra))
+            })
+            .collect();
+        for (src_id, extra) in grants {
+            let color = match extra {
+                ExtraManaKind::Fixed(c) => Some(c),
+                ExtraManaKind::ChosenColor => self
+                    .battlefield_find(src_id)
+                    .and_then(|c| c.chosen_color),
+                ExtraManaKind::Mirror => resolved.iter().find_map(|e| match e {
+                    GameEvent::ManaAdded { player, color, .. } if *player == p => Some(*color),
+                    _ => None,
+                }),
+            };
+            match color {
+                Some(c) => {
+                    self.players[p].mana_pool.add(c, 1);
+                    events.push(GameEvent::ManaAdded { player: p, color: c, source: Some(src_id) });
+                }
+                // Mirror of a colorless-only production (or no pip found).
+                None => {
+                    if resolved.iter().any(|e| matches!(e,
+                        GameEvent::ColorlessManaAdded { player, .. } if *player == p))
+                    {
+                        self.players[p].mana_pool.add_colorless(1);
+                        events.push(GameEvent::ColorlessManaAdded { player: p, source: Some(src_id) });
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
@@ -7535,7 +7598,14 @@ impl GameState {
             self.mana_production_doublers = self.mana_production_doublers_for(p);
             let resolved = self.continue_ability_resolution(card_id, p, effect, target.clone());
             self.mana_production_doublers = 0;
-            events.append(&mut resolved?);
+            let mut resolved = resolved?;
+            // CR 605.1b — triggered mana abilities ("Whenever a land is
+            // tapped for mana, … adds …") don't use the stack; they resolve
+            // here, right after the tapping ability.
+            if ability.tap_cost {
+                self.resolve_extra_mana_on_land_tap(card_id, p, &resolved, &mut events);
+            }
+            events.append(&mut resolved);
         } else {
             // Non-mana activated ability goes on the stack.
             let ability_target = target.clone();

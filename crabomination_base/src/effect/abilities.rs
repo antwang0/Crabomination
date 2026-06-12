@@ -27,6 +27,17 @@ pub struct StaticAbility {
 /// A continuous effect produced by a static ability. Subsumes the old
 /// `StaticAbilityTemplate` enum; maps 1-to-1 to one or more
 /// `layers::Modification`s.
+/// What a triggered mana ability adds (CR 605.1b — `ExtraManaOnLandTap`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExtraManaKind {
+    /// One mana of a type the land just produced (Mana Flare).
+    Mirror,
+    /// A fixed color (Wild Growth's {G}).
+    Fixed(crate::mana::Color),
+    /// The source's ETB-chosen color (Utopia Sprawl).
+    ChosenColor,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
@@ -596,6 +607,17 @@ pub enum StaticEffect {
     GrantActivatedAbility {
         applies_to: Selector,
         ability: ActivatedAbility,
+    },
+    /// CR 605.1b — triggered mana ability: "Whenever [a matching land] is
+    /// tapped for mana, its controller adds [extra]." Doesn't use the stack;
+    /// resolved immediately at the mana-ability fast path. `enchanted_only`
+    /// restricts to the land this source enchants (Wild Growth);
+    /// `filter` matches the tapped land (Vernal Bloom's Forests).
+    ExtraManaOnLandTap {
+        #[serde(default)]
+        enchanted_only: bool,
+        filter: SelectionRequirement,
+        extra: ExtraManaKind,
     },
     /// "Each [filter] card in each player's hand has typecycling [cost]"
     /// (Homing Sliver's slivercycling grant). Consulted by `landcycle_card`

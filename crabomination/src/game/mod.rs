@@ -8966,6 +8966,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::MinusCounterReduction
             // Hand-zone grant, consulted by `landcycle_card` / the view.
             | StaticEffect::GrantTypecyclingToHandCards { .. }
+            // CR 605.1b — resolved at the mana-ability fast path.
+            | StaticEffect::ExtraManaOnLandTap { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
         })
         .collect()

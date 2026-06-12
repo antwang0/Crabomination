@@ -55107,3 +55107,71 @@ fn notorious_throng_tokens_and_prowl_extra_turn() {
     assert_eq!(g.battlefield.len(), bf_before + 3, "three 1/1 fliers for 3 damage");
     assert!(g.players[0].extra_turns >= 1, "extra turn queued off the prowl rider");
 }
+
+// ── Triggered mana abilities (CR 605.1b) ─────────────────────────────────────
+
+/// Helper: tap `land` for mana via its first effective mana ability.
+fn tap_for_mana(g: &mut GameState, land: crate::card::CardId) {
+    let (idx, _) = g.effective_mana_abilities(land).into_iter().next()
+        .expect("land has a mana ability");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: idx, target: None, x_value: None,
+    }).expect("tap for mana");
+}
+
+/// Wild Growth: the enchanted land adds an additional {G}; an unenchanted
+/// land doesn't (CR 605.1b — no stack, immediate).
+#[test]
+fn cr_605_1b_wild_growth_adds_extra_green_for_enchanted_land_only() {
+    let mut g = two_player_game();
+    let enchanted = g.add_card_to_battlefield(0, catalog::mountain());
+    let plain = g.add_card_to_battlefield(0, catalog::mountain());
+    let aura = g.add_card_to_battlefield(0, catalog::wild_growth());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(enchanted);
+    tap_for_mana(&mut g, enchanted);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "extra {{G}} from Wild Growth");
+    tap_for_mana(&mut g, plain);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "unenchanted land adds nothing");
+}
+
+/// Mana Flare mirrors the produced type for any player's land.
+#[test]
+fn cr_605_1b_mana_flare_mirrors_produced_type_for_all_players() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mana_flare());
+    let yours = g.add_card_to_battlefield(0, catalog::swamp());
+    let theirs = g.add_card_to_battlefield(1, catalog::island());
+    tap_for_mana(&mut g, yours);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2, "your Swamp made {{B}}{{B}}");
+    g.priority.player_with_priority = 1;
+    tap_for_mana(&mut g, theirs);
+    assert_eq!(g.players[1].mana_pool.amount(Color::Blue), 2, "opponent's Island also doubled");
+}
+
+/// Utopia Sprawl adds the ETB-chosen color when the enchanted Forest taps.
+#[test]
+fn cr_605_1b_utopia_sprawl_adds_chosen_color() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    let aura = g.add_card_to_hand(0, catalog::utopia_sprawl());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, aura, Target::Permanent(forest));
+    tap_for_mana(&mut g, forest);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "the Forest's own {{G}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "plus the chosen {{R}}");
+}
+
+/// Vernal Bloom boosts every Forest, not other land types.
+#[test]
+fn cr_605_1b_vernal_bloom_boosts_forests_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vernal_bloom());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    tap_for_mana(&mut g, forest);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "Forest adds an extra {{G}}");
+    tap_for_mana(&mut g, swamp);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "Swamp unaffected");
+}
