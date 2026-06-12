@@ -1570,7 +1570,7 @@ fn cycling_discards_and_draws_a_card() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
     let gy_before = g.players[0].graveyard.len();
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     // -1 hand (discarded the glyph) +1 (drew from library) = 0 net
     assert_eq!(g.players[0].hand.len(), hand_before);
@@ -1585,7 +1585,7 @@ fn cycling_rejects_without_mana_to_pay_the_cost() {
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::strixhaven_cycle_glyph_b143());
     // No mana floating — cycling cost {1}{U} should fail.
-    let result = g.perform_action(GameAction::Cycle { card_id: id });
+    let result = g.perform_action(GameAction::Cycle { card_id: id, x_value: None });
     assert!(result.is_err(), "Cycling rejected without mana");
 }
 
@@ -1602,7 +1602,7 @@ fn cycle_decree_when_cycled_draws_three_cards() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycle-Decree cycling");
     drain_stack(&mut g);
     // -1 hand (discarded Decree) +1 (cycling draw) +3 (cycle trigger) = +3 net
@@ -1635,7 +1635,7 @@ fn silverquill_quillscholar_b144_can_be_cycled() {
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::silverquill_quillscholar_b144());
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
@@ -1748,7 +1748,7 @@ fn pest_carrionbreeder_b144_can_be_cycled() {
     g.add_card_to_library(0, catalog::plains());
     let id = g.add_card_to_hand(0, catalog::pest_carrionbreeder_b144());
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
@@ -1846,7 +1846,7 @@ fn lorehold_embermage_b144_can_be_cycled() {
     g.add_card_to_library(0, catalog::plains());
     let id = g.add_card_to_hand(0, catalog::lorehold_embermage_b144());
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
@@ -1876,7 +1876,7 @@ fn prismari_ember_cantor_b144_can_be_cycled() {
     let id = g.add_card_to_hand(0, catalog::prismari_ember_cantor_b144());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
@@ -1935,7 +1935,7 @@ fn fractal_bookbearer_b144_can_be_cycled() {
     g.add_card_to_library(0, catalog::plains());
     let id = g.add_card_to_hand(0, catalog::fractal_bookbearer_b144());
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
@@ -1967,7 +1967,7 @@ fn silverquill_sage_b145_can_be_cycled() {
     g.add_card_to_library(0, catalog::plains());
     let id = g.add_card_to_hand(0, catalog::silverquill_sage_b145());
     g.players[0].mana_pool.add(Color::White, 1);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
@@ -2010,7 +2010,7 @@ fn witherbloom_vinegrower_b145_can_be_cycled() {
     let id = g.add_card_to_hand(0, catalog::witherbloom_vinegrower_b145());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }
@@ -2119,7 +2119,7 @@ fn quandrix_treetender_b145_can_be_cycled() {
     let id = g.add_card_to_hand(0, catalog::quandrix_treetender_b145());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
 }

@@ -65,6 +65,7 @@ pub use sets::rav::*;
 pub use sets::rtr::*;
 pub use sets::tmp::*;
 pub use sets::zen::*;
+pub use sets::thb::*;
 pub use sets::ths::*;
 pub use sets::decks::*;
 pub use sets::mod_set::*;

@@ -423,7 +423,13 @@ pub enum GameAction {
     /// card to the controller's graveyard, draws a card. Per CR
     /// 702.29c, "When you cycle this card" triggers fire from
     /// whatever zone the card winds up in after the discard.
-    Cycle { card_id: CardId },
+    Cycle {
+        card_id: CardId,
+        /// X paid to an `{X}` symbol in the cycling cost ({X}{1}{U} —
+        /// Shark Typhoon). Ignored for X-less cycling costs.
+        #[serde(default)]
+        x_value: Option<u32>,
+    },
     /// CR 702.77 — Activate a card's Reinforce ability from your hand. `card_id`
     /// must carry a `Keyword::Reinforce(n, cost)`. Pays the cost, discards the
     /// card, then puts N +1/+1 counters on `target`.
@@ -1237,7 +1243,13 @@ pub enum GameEvent {
     /// specific triggers ("When you cycle this card", "Whenever a
     /// player cycles a card") see a distinct event from regular hand
     /// discards.
-    CardCycled { player: usize, card_id: CardId },
+    CardCycled {
+        player: usize,
+        card_id: CardId,
+        /// X paid to an `{X}` in the cycling cost (Shark Typhoon's
+        /// "create an X/X" cycle trigger reads it as the event amount).
+        x: u32,
+    },
     /// CR 104.3a — `player` conceded and left the game. Emitted before the
     /// `GameOver` that the resulting state-based-action pass produces.
     PlayerConceded { player: usize },

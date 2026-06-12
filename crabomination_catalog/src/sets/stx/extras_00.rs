@@ -112,7 +112,7 @@ pub fn reduce_to_memory() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Reduce to Memory",
@@ -536,7 +536,7 @@ pub fn resculpt() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Resculpt",

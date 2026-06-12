@@ -7602,7 +7602,7 @@ fn marauding_mako_has_cycling_and_grows_when_you_cycle_another_card() {
     let other = g.add_card_to_hand(0, catalog::marauding_mako());
     g.add_card_to_library(0, catalog::island());
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: other }).expect("cycle for {2}");
+    g.perform_action(GameAction::Cycle { card_id: other, x_value: None }).expect("cycle for {2}");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(mako).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "cycling a card discards it, pumping the Mako on the battlefield");
@@ -13002,7 +13002,7 @@ fn hieroglyphic_illumination_cycles_for_blue() {
     let id = g.add_card_to_hand(0, catalog::hieroglyphic_illumination());
     g.players[0].mana_pool.add(Color::Blue, 1);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Cycling {U}");
     // Discarded the card (-1) + drew (+1) → net even; card is in graveyard.
     assert_eq!(g.players[0].hand.len(), hand_before);
@@ -33412,7 +33412,7 @@ fn miscalculation_can_be_cycled() {
     let id = g.add_card_to_hand(0, catalog::miscalculation());
     g.players[0].mana_pool.add_colorless(2);
     let h0 = g.players[0].hand.len();
-    g.perform_action(GameAction::Cycle { card_id: id })
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None })
         .expect("Miscalculation cycles for {2}");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cycled card in graveyard");
@@ -44858,7 +44858,7 @@ fn archfiend_of_ifnir_withers_on_cycle() {
     g.players[0].mana_pool.add_colorless(2);
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::Cycle { card_id: cycler }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: cycler, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(opp).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
 }
@@ -46679,7 +46679,7 @@ fn street_wraith_cycles_for_life() {
     g.add_card_to_library(0, catalog::island());
     let wraith = g.add_card_to_hand(0, catalog::street_wraith());
     let hand = g.players[0].hand.len() - 1;
-    g.perform_action(GameAction::Cycle { card_id: wraith }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: wraith, x_value: None }).expect("cycle");
     assert_eq!(g.players[0].life, 18, "paid 2 life");
     assert_eq!(g.players[0].hand.len(), hand + 1, "replaced itself");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == wraith), "discarded");
@@ -47184,7 +47184,7 @@ fn cycling_dual_enters_tapped_and_cycles() {
     let second = g.add_card_to_hand(0, catalog::fetid_pools());
     g.players[0].mana_pool.add_colorless(2);
     let hand = g.players[0].hand.len() - 1;
-    g.perform_action(GameAction::Cycle { card_id: second }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: second, x_value: None }).expect("cycle");
     assert_eq!(g.players[0].hand.len(), hand + 1, "cycled into a card");
 }
 
@@ -47200,7 +47200,7 @@ fn gempalm_incinerator_cycle_burn() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    g.perform_action(GameAction::Cycle { card_id: gp }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: gp, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).is_none(), "2 Goblins = 2 damage killed the bear");
 }
@@ -47214,7 +47214,7 @@ fn curator_of_mysteries_scries_on_cycle() {
     g.add_card_to_library(0, catalog::forest());
     let cy = g.add_card_to_hand(0, catalog::fetid_pools());
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: cy, x_value: None }).expect("cycle");
     // The scry trigger is on the stack; resolving it consults the decider.
     drain_stack(&mut g);
     // No assert on ordering — reaching here without panicking means the
@@ -47268,7 +47268,7 @@ fn horror_grows_on_cycle() {
     g.add_card_to_library(0, catalog::island());
     let cy = g.add_card_to_hand(0, catalog::desert_cerodon());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: cy, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     let cp = g.computed_permanent(horror).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 5), "+2/+1");
@@ -47287,7 +47287,7 @@ fn shefet_monitor_cycle_fetches_land() {
         DecisionAnswer::Bool(true),
         DecisionAnswer::Search(Some(forest)),
     ]));
-    g.perform_action(GameAction::Cycle { card_id: monitor }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: monitor, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     assert!(g.battlefield_find(forest).is_some(), "Forest fetched onto battlefield");
 }
@@ -47314,7 +47314,7 @@ fn architects_of_will_etb_and_hybrid_cycle() {
     g.add_card_to_library(0, catalog::island());
     let second = g.add_card_to_hand(0, catalog::architects_of_will());
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.perform_action(GameAction::Cycle { card_id: second }).expect("hybrid cycle");
+    g.perform_action(GameAction::Cycle { card_id: second, x_value: None }).expect("hybrid cycle");
 }
 
 // ── Ikoria cycling payoffs ──────────────────────────────────────────────────
@@ -47335,7 +47335,7 @@ fn ikoria_cycle_payoffs_fire_on_one_cycle() {
     let c1 = g.add_card_to_hand(0, catalog::imposing_vantasaur());
     let c2 = g.add_card_to_hand(0, catalog::desert_cerodon());
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::Cycle { card_id: c1 }).expect("cycle 1");
+    g.perform_action(GameAction::Cycle { card_id: c1, x_value: None }).expect("cycle 1");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 21, "Healer gained 1");
     assert_eq!(g.players[1].life, 19, "Stinger pinged");
@@ -47343,7 +47343,7 @@ fn ikoria_cycle_payoffs_fire_on_one_cycle() {
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "Rescuer token");
     // Second cycle: Rescuer stays quiet (once per turn), the rest fire again.
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::Cycle { card_id: c2 }).expect("cycle 2");
+    g.perform_action(GameAction::Cycle { card_id: c2, x_value: None }).expect("cycle 2");
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "still one token");
     assert_eq!(g.players[1].life, 18, "Stinger pinged again");
@@ -47386,7 +47386,7 @@ fn savai_thundermane_pays_on_cycle() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: cy, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "2 damage killed the bear");
     assert_eq!(g.players[0].life, 22, "gained 2");
@@ -48840,7 +48840,7 @@ fn fractured_sanity_cycle_trigger_mills_four() {
     let fs = g.add_card_to_hand(0, catalog::fractured_sanity());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::Cycle { card_id: fs }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: fs, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), 4, "cycle trigger milled four");
 }
@@ -55523,4 +55523,151 @@ fn vizier_of_many_faces_embalm_token_clones() {
     assert!(token.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie),
         "embalm token is also a Zombie");
     assert!(g.exile.iter().any(|c| c.id == viz), "Vizier exiled by embalm");
+}
+
+// ── Faerie tribal completion + Pyxis (claude/modern_decks) ───────────────────
+
+/// Rune Snag's tax scales by {2} per Rune Snag in any graveyard.
+#[test]
+fn rune_snag_tax_scales_with_graveyard_copies() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::rune_snag());
+    g.add_card_to_graveyard(1, catalog::rune_snag());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    let snag = g.add_card_to_hand(0, catalog::rune_snag());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // P1 has {5} floating — one short of the {2}+{2}+{2} tax.
+    g.players[1].mana_pool.add_colorless(5);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: snag, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rune Snag");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "Bolt countered — {{6}} unpayable with {{5}} floating");
+}
+
+/// Faerie Macabre discards itself from hand to exile up to two graveyard cards.
+#[test]
+fn faerie_macabre_exiles_two_graveyard_cards() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let fm = g.add_card_to_hand(0, catalog::faerie_macabre());
+    let a = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let b = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fm, ability_index: 0, target: None, x_value: None,
+    }).expect("discard Faerie Macabre");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fm), "Macabre discarded");
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b),
+        "both graveyard cards exiled");
+}
+
+/// Oona's {X}{U/B} exile mints a Faerie per chosen-color card exiled.
+#[test]
+fn oona_x_activation_exiles_and_mints_faeries() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let oona = g.add_card_to_battlefield(0, catalog::oona_queen_of_the_fae());
+    for _ in 0..2 { g.add_card_to_library(1, catalog::lightning_bolt()); }
+    g.add_card_to_library(1, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: oona, ability_index: 0,
+        target: Some(Target::Player(1)), x_value: Some(3),
+    }).expect("activate for X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), 0, "top three exiled");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Faerie Rogue").count(),
+        2,
+        "two red cards exiled → two Faeries"
+    );
+}
+
+/// Mistbind Clique champions a Faerie and taps the targeted player's lands.
+#[test]
+fn mistbind_clique_champion_taps_lands() {
+    let mut g = two_player_game();
+    let faerie = g.add_card_to_battlefield(0, catalog::faerie_macabre());
+    let l1 = g.add_card_to_battlefield(1, catalog::forest());
+    let l2 = g.add_card_to_battlefield(1, catalog::forest());
+    let mb = g.add_card_to_battlefield(0, catalog::mistbind_clique());
+    g.fire_self_etb_triggers(mb, 0);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == faerie), "Faerie championed (exiled)");
+    assert!(g.battlefield_find(l1).unwrap().tapped, "land tapped");
+    assert!(g.battlefield_find(l2).unwrap().tapped, "land tapped");
+    // The championed Faerie returns when the Clique leaves (CR 702.77).
+    let evs = g.remove_to_graveyard_with_triggers(mb);
+    g.dispatch_triggers_for_events(&evs);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(faerie).is_some(), "championed Faerie returns");
+}
+
+/// Champion with no other Faerie sacrifices the Clique (CR 702.77a).
+#[test]
+fn mistbind_clique_sacrificed_without_a_faerie() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let mb = g.add_card_to_battlefield(0, catalog::mistbind_clique());
+    g.fire_self_etb_triggers(mb, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mb).is_none(), "no Faerie to champion → sacrificed");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "no champion → no land tap");
+}
+
+/// Pyxis exiles each player's top card face down; the sacrifice deploys the
+/// permanent cards.
+#[test]
+fn pyxis_of_pandemonium_exiles_then_deploys() {
+    let mut g = two_player_game();
+    let pyxis = g.add_card_to_battlefield(0, catalog::pyxis_of_pandemonium());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pyxis, ability_index: 0, target: None, x_value: None,
+    }).expect("tap Pyxis");
+    drain_stack(&mut g);
+    let exiled_bear = g.exile.iter().find(|c| c.id == bear).expect("bear exiled");
+    assert!(exiled_bear.face_down, "exiled face down");
+    assert_eq!(exiled_bear.exiled_with, Some(pyxis));
+    assert!(g.exile.iter().any(|c| c.id == bolt));
+
+    g.battlefield_find_mut(pyxis).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pyxis, ability_index: 1, target: None, x_value: None,
+    }).expect("sac Pyxis");
+    drain_stack(&mut g);
+    let bf_bear = g.battlefield_find(bear).expect("bear deployed");
+    assert_eq!(bf_bear.controller, 0, "under its owner's control");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt) || g.exile.iter().any(|c| c.id == bolt),
+        "nonpermanent Bolt stays out of play");
+}
+
+/// Changeling Hero's champion sacrifices the Hero when you control no other
+/// creature (CR 702.77a).
+#[test]
+fn changeling_hero_champion_self_sacrifice() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::changeling_hero());
+    g.fire_self_etb_triggers(hero, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hero).is_none(), "nothing to champion → sacrificed");
 }

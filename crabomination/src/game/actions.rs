@@ -183,6 +183,13 @@ pub(crate) fn extra_cost_for_spell(
             }
         }
     }
+    // Turn-scoped taxes (Elspeth Conquers Death II): opponents of the
+    // entry's controller pay until that player's next turn.
+    for t in &state.turn_scoped_spell_taxes {
+        if t.controller != caster && state.evaluate_requirement_on_card(&t.filter, card, caster) {
+            tax += t.amount;
+        }
+    }
 
     tax
 }
@@ -829,22 +836,24 @@ impl crate::game::GameState {
         })
     }
 
-    /// CR 701.10f — number of `StaticEffect::ManaProductionDoubled` permanents
-    /// `player` controls (Mana Reflection). Each doubles a mana ability's pip
-    /// output: the effective multiplier is `2^count`.
-    pub fn mana_production_doublers_for(&self, player: usize) -> u8 {
+    /// CR 701.10f / 614.5 — combined mana-production multiplier from the
+    /// `ManaProductionDoubled` (Mana Reflection) and `ManaProductionTripled`
+    /// (Nyxbloom Ancient) permanents `player` controls. Replacements compose
+    /// multiplicatively: 2^doublers × 3^triplers, clamped to keep pip math
+    /// sane.
+    pub fn mana_production_multiplier_for(&self, player: usize) -> u32 {
         use crate::effect::StaticEffect;
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == player)
-            .map(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .filter(|sa| matches!(sa.effect, StaticEffect::ManaProductionDoubled))
-                    .count() as u8
-            })
-            .sum()
+        let mut mult: u32 = 1;
+        for c in self.battlefield.iter().filter(|c| c.controller == player) {
+            for sa in &c.definition.static_abilities {
+                match sa.effect {
+                    StaticEffect::ManaProductionDoubled => mult = mult.saturating_mul(2),
+                    StaticEffect::ManaProductionTripled => mult = mult.saturating_mul(3),
+                    _ => {}
+                }
+            }
+        }
+        mult.min(1 << 16)
     }
 
     /// CR 605.1b — resolve `ExtraManaOnLandTap` triggered mana abilities
@@ -5578,6 +5587,18 @@ impl GameState {
             // AutoDecider picks mode 0 (Scry); ScriptedDecider::new([Mode(1)])
             // exercises the pump branch.
             let mode = self.pick_trigger_mode(&effect, source, listener_controller);
+            // The cast spell's mana value, so "where X is that spell's mana
+            // value" riders scale (Shark Typhoon).
+            let spell_mv = self
+                .stack
+                .iter()
+                .find_map(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cast_card => {
+                        Some(card.definition.cost.cmc())
+                    }
+                    _ => None,
+                })
+                .unwrap_or(0);
             self.stack.push(
                 TriggerPush::new(source, listener_controller, effect)
                     .target(auto_target)
@@ -5590,6 +5611,7 @@ impl GameState {
                     // Selector::CastSpellTarget.
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
                     .mana_spent(mana_spent)
+                    .event_amount(spell_mv)
                     .build(),
             );
         }
@@ -7592,12 +7614,14 @@ impl GameState {
 
         if is_mana_ab {
             let effect = ability.effect.clone();
-            // CR 701.10f — Mana Reflection doubles a permanent tapped for mana.
-            // Stamp the transient doubler count so the `AddMana` resolver
-            // multiplies pip output; clear it afterward.
-            self.mana_production_doublers = self.mana_production_doublers_for(p);
+            // CR 701.10f / 614.5 — "tap a permanent for mana" multipliers
+            // (Mana Reflection ×2, Nyxbloom Ancient ×3). Stamp the transient
+            // multiplier so the `AddMana` resolver scales pip output; clear
+            // it afterward. Only tapping qualifies per the printed text.
+            self.mana_production_multiplier =
+                if ability.tap_cost { self.mana_production_multiplier_for(p) } else { 1 };
             let resolved = self.continue_ability_resolution(card_id, p, effect, target.clone());
-            self.mana_production_doublers = 0;
+            self.mana_production_multiplier = 1;
             let mut resolved = resolved?;
             // CR 605.1b — triggered mana abilities ("Whenever a land is
             // tapped for mana, … adds …") don't use the stack; they resolve

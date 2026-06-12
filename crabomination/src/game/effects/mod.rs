@@ -2533,10 +2533,10 @@ impl GameState {
                     }
                     other => (other, None),
                 };
-                // CR 701.10f — Mana Reflection doubles every pip this mana
-                // ability produces (`2^doublers`). 1× outside a doubled mana
-                // ability (the field is 0).
-                let mult = 1u32 << self.mana_production_doublers.min(8);
+                // CR 701.10f / 614.5 — mana-production multiplier (Mana
+                // Reflection, Nyxbloom Ancient). 1× outside a tapped mana
+                // ability; 0 (serde default) also reads as 1×.
+                let mult = self.mana_production_multiplier.max(1);
                 let add_one = |state: &mut Self, p: usize, c: Color| match restriction {
                     Some(r) => state.players[p].mana_pool.add_restricted(c, mult, r),
                     None => state.players[p].mana_pool.add(c, mult),
@@ -4513,8 +4513,18 @@ impl GameState {
                 for _ in 0..doublers {
                     n = n.saturating_mul(2);
                 }
+                // Mint-time dynamic P/T (Shark Typhoon's X/X): resolved once
+                // against this resolution's context, stamped as the token's
+                // printed P/T (a mint-time rider, CR 707.2-stable).
+                let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
+                    (self.evaluate_value(pv, ctx), self.evaluate_value(tv, ctx))
+                });
                 for _ in 0..n {
-                    let def = token_to_card_definition(definition);
+                    let mut def = token_to_card_definition(definition);
+                    if let Some((pw, tn)) = dyn_pt {
+                        def.power = pw;
+                        def.toughness = tn;
+                    }
                     self.mint_token_onto_battlefield(def, p, false, events);
                 }
                 Ok(())
@@ -5564,6 +5574,44 @@ impl GameState {
 
             Effect::DestroyTargetsPolymorph { filter } => self.resolve_destroy_targets_polymorph(filter, ctx, events),
 
+            Effect::DestroyTargets { filter } => {
+                // Destroy the X chosen targets (slots 0..X) matching `filter`;
+                // without an {X} in the cost, every given target.
+                let x = if ctx.x_value > 0 { ctx.x_value as usize } else { ctx.targets.len() };
+                let mut seen = std::collections::HashSet::new();
+                for (i, t) in ctx.targets.iter().enumerate().take(x) {
+                    if let Target::Permanent(id) = t
+                        && seen.insert(*id)
+                        && self.evaluate_requirement_static(filter, t, ctx.controller, ctx.source)
+                    {
+                        self.run_effect(
+                            &Effect::Destroy { what: crate::effect::Selector::Target(i as u8) },
+                            ctx,
+                            events,
+                        )?;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Champion { filter } => self.resolve_champion(filter, ctx, events),
+
+            Effect::ExileUpToNFromGraveyards { count } => {
+                self.resolve_exile_up_to_n_from_graveyards(count, ctx, events)
+            }
+
+            Effect::ExileTopMintPerChosenColor { who, amount, token } => {
+                self.resolve_exile_top_mint_per_chosen_color(who, amount, token, ctx, events)
+            }
+
+            Effect::SpellTaxUntilYourNextTurn { amount, filter } => {
+                self.turn_scoped_spell_taxes.push(crate::game::TurnScopedSpellTax {
+                    controller: ctx.controller,
+                    amount: *amount,
+                    filter: filter.clone(),
+                });
+                Ok(())
+            }
 
             Effect::SacrificeAllButOnePerType { who } => self.resolve_sacrifice_all_but_one_per_type(who, ctx, events),
 
@@ -10128,6 +10176,134 @@ impl GameState {
                 Ok(())
             }
 
+    /// CR 702.77 — Champion a [filter]: exile another matching permanent you
+    /// control linked to the source (returned by `return_linked_exiles` when
+    /// the source leaves), or sacrifice the source if nothing was exiled.
+    fn resolve_champion(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(source) = ctx.source else { return Ok(()) };
+        let p = ctx.controller;
+        // Lowest-power match keeps the better body on the battlefield.
+        let pick = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == p
+                    && c.id != source
+                    && self.evaluate_requirement_on_card(filter, c, p)
+            })
+            .min_by_key(|c| (c.power(), c.id))
+            .map(|c| c.id);
+        match pick {
+            Some(cid) => {
+                self.remove_from_battlefield_to_exile(cid);
+                events.push(GameEvent::PermanentExiled { card_id: cid });
+                if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                    c.exiled_by = Some(crate::card::ExileLink {
+                        source,
+                        return_to: crate::card::ExileReturnZone::Battlefield,
+                    });
+                }
+            }
+            None => self.sacrifice_one(source, p, events),
+        }
+        Ok(())
+    }
+
+    /// Exile up to `count` cards from any graveyards, chosen by the
+    /// controller's decider (Faerie Macabre). Optional — bots take none.
+    fn resolve_exile_up_to_n_from_graveyards(
+        &mut self,
+        count: &crate::effect::Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let n = self.evaluate_value(count, ctx).max(0) as u32;
+        if n == 0 {
+            return Ok(());
+        }
+        let candidates: Vec<(CardId, String)> = self
+            .players
+            .iter()
+            .flat_map(|p| p.graveyard.iter())
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        if candidates.is_empty() {
+            return Ok(());
+        }
+        let answer = self.decider.decide(&Decision::ChooseCards {
+            source: ctx.source.unwrap_or(CardId(0)),
+            prompt: format!("Exile up to {n} cards from graveyards"),
+            candidates: candidates.clone(),
+            min: 0,
+            max: n,
+        });
+        if let DecisionAnswer::Cards(ids) = answer {
+            for cid in ids.into_iter().take(n as usize) {
+                if candidates.iter().any(|(c, _)| *c == cid) {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Oona — choose a color, exile the top `amount` cards of the resolved
+    /// player's library, and mint one `token` per exiled card of that color.
+    fn resolve_exile_top_mint_per_chosen_color(
+        &mut self,
+        who: &crate::effect::Selector,
+        amount: &crate::effect::Value,
+        token: &crate::card::TokenDefinition,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::mana::Color;
+        let Some(EntityRef::Player(victim)) = self.resolve_selector(who, ctx).into_iter().next()
+        else {
+            return Ok(());
+        };
+        let n = self.evaluate_value(amount, ctx).max(0) as usize;
+        let answer = self.decider.decide(&Decision::ChooseColor {
+            source: ctx.source.unwrap_or(CardId(0)),
+            legal: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+        });
+        let color = match answer {
+            DecisionAnswer::Color(c) => c,
+            _ => Color::Blue,
+        };
+        let mut matches = 0;
+        for _ in 0..n {
+            if self.players[victim].library.is_empty() {
+                break;
+            }
+            let card = self.players[victim].library.remove(0);
+            if card.definition.cost.colors().contains(&color) {
+                matches += 1;
+            }
+            let cid = card.id;
+            self.place_card_in_dest(card, victim, &ZoneDest::Exile, events);
+            self.last_moved_cards.push(cid);
+        }
+        if matches > 0 {
+            self.run_effect(
+                &Effect::CreateToken {
+                    who: crate::effect::PlayerRef::You,
+                    count: crate::effect::Value::Const(matches),
+                    definition: token.clone(),
+                },
+                ctx,
+                events,
+            )?;
+        }
+        Ok(())
+    }
 
     #[inline(never)]
     fn resolve_sacrifice_all_but_one_per_type(

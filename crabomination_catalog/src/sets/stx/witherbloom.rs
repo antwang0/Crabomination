@@ -14935,7 +14935,7 @@ pub fn witherbloom_verdance_b202() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Witherbloom Verdance (b202)",

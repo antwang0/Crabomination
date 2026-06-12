@@ -447,6 +447,21 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|seat| self.domain_count(seat) as i32)
                 .unwrap_or(0),
+            Value::SameNamedInAllGraveyards => {
+                let Some(name) = ctx.source_name.filter(|n| !n.is_empty()) else { return 0 };
+                self.players
+                    .iter()
+                    .flat_map(|p| p.graveyard.iter())
+                    .filter(|c| c.definition.name == name)
+                    .count() as i32
+            }
+            Value::IfPred { pred, then, else_ } => {
+                if self.evaluate_predicate(pred, ctx) {
+                    self.evaluate_value(then, ctx)
+                } else {
+                    self.evaluate_value(else_, ctx)
+                }
+            }
         }
     }
 
@@ -575,6 +590,15 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.cast_from_escape)
                 .unwrap_or(false),
+            Predicate::SourceChampionedSomething => ctx.source.is_some_and(|cid| {
+                self.exile.iter().any(|c| c.exiled_by.as_ref().is_some_and(|l| l.source == cid))
+            }),
+            Predicate::TriggerBlocksSource => match (ctx.trigger_source, ctx.source) {
+                (Some(EntityRef::Permanent(blocker)), Some(src)) => {
+                    self.block_map.get(&blocker) == Some(&src)
+                }
+                _ => false,
+            },
             Predicate::TriggerObjectNameMatchesNamedCard => {
                 let named = ctx
                     .source

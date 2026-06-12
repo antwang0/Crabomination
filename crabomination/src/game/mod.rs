@@ -69,6 +69,9 @@ mod tests_ogw;
 #[cfg(test)]
 #[path = "../tests/cr_rules.rs"]
 mod tests_cr_rules;
+#[cfg(test)]
+#[path = "../tests/thb.rs"]
+mod tests_thb;
 pub mod types;
 
 #[cfg(test)]
@@ -639,12 +642,13 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
-    /// CR 701.10f — transient mana-production doubler count for the mana
-    /// ability currently resolving (Mana Reflection). Set before a tapped-
-    /// for-mana ability resolves and reset to 0 after; the `AddMana` resolver
-    /// multiplies each pip count by `2^doublers`. 0 = no doubling (1×).
+    /// CR 701.10f / 614.5 — transient mana-production multiplier for the
+    /// mana ability currently resolving (Mana Reflection ×2, Nyxbloom
+    /// Ancient ×3, composed). Set before a tapped-for-mana ability resolves
+    /// and reset to 1 after; the `AddMana` resolver scales each pip count
+    /// by it. 0 (serde default) reads as 1×.
     #[serde(default)]
-    pub(crate) mana_production_doublers: u8,
+    pub(crate) mana_production_multiplier: u32,
     /// Identity of the spell currently resolving — (card id, caster, printed
     /// colors). Stamped around `resolve_effect` in spell resolution so
     /// source-aware damage replacements (Torbran) can read the controller and
@@ -697,6 +701,11 @@ pub struct GameState {
     /// (covers further searches until end of turn). Cleared at cleanup.
     #[serde(default)]
     pub(crate) search_tax_paid_this_turn: Vec<usize>,
+    /// "Spells your opponents cast cost {N} more until your next turn"
+    /// (Elspeth Conquers Death II). Each entry taxes matching spells cast by
+    /// opponents of `controller`; cleared at `controller`'s untap.
+    #[serde(default)]
+    pub(crate) turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
     /// CR 615.7 — sources whose damage is prevented entirely this turn
     /// (Burrenton Forge-Tender's chosen source). Cleared at cleanup.
     #[serde(default)]
@@ -900,6 +909,16 @@ pub(crate) struct TempControl {
     pub(crate) source: Option<CardId>,
 }
 
+/// A turn-scoped spell tax — see `GameState.turn_scoped_spell_taxes`.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct TurnScopedSpellTax {
+    /// The effect's controller: their opponents pay, and the tax clears at
+    /// their untap step.
+    pub(crate) controller: usize,
+    pub(crate) amount: u32,
+    pub(crate) filter: crate::card::SelectionRequirement,
+}
+
 /// A pending copy-reversion entry — see `GameState.temporary_copies`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(crate) struct TempCopy {
@@ -998,7 +1017,7 @@ impl Clone for GameState {
             resolution_answer_log: self.resolution_answer_log.clone(),
             pending_cost_events: self.pending_cost_events.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
-            mana_production_doublers: self.mana_production_doublers,
+            mana_production_multiplier: self.mana_production_multiplier,
             resolving_source: self.resolving_source.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
@@ -1008,6 +1027,7 @@ impl Clone for GameState {
             blocked_attackers: self.blocked_attackers.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
+            turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
             prevention_shields: self.prevention_shields.clone(),
@@ -1125,7 +1145,7 @@ impl GameState {
             resolution_answer_log: Vec::new(),
             pending_cost_events: Vec::new(),
             prevent_combat_damage_this_turn: false,
-            mana_production_doublers: 0,
+            mana_production_multiplier: 1,
             resolving_source: None,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
@@ -1135,6 +1155,7 @@ impl GameState {
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
+            turn_scoped_spell_taxes: Vec::new(),
             damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
             prevention_shields: Vec::new(),
@@ -3775,6 +3796,17 @@ impl GameState {
                     );
                     (n, base_t)
                 }
+                crate::card::DynamicPt::DevotionToToughness { color, base_p } => {
+                    let mut ctx = crate::game::effects::EffectContext::for_spell(
+                        card.controller, None, 0, 0,
+                    );
+                    ctx.source = Some(card.id);
+                    let n = self.evaluate_value(
+                        &crate::effect::Value::DevotionTo(vec![color]),
+                        &ctx,
+                    );
+                    (base_p, n)
+                }
                 crate::card::DynamicPt::ControllerGraveyardSize => {
                     let n = self.players[card.controller].graveyard.len() as i32;
                     (n, n)
@@ -4891,7 +4923,7 @@ impl GameState {
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),
-            GameAction::Cycle { card_id } => self.cycle_card(card_id),
+            GameAction::Cycle { card_id, x_value } => self.cycle_card(card_id, x_value),
             GameAction::Reinforce { card_id, target } => self.reinforce_card(card_id, target),
             GameAction::Landcycle { card_id } => self.landcycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
@@ -5075,7 +5107,11 @@ impl GameState {
     /// from the discarded zone (graveyard); the engine emits
     /// `GameEvent::CardDiscarded` from `discard_card_from_hand` so
     /// discard-matters triggers see the cycle.
-    fn cycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
+    fn cycle_card(
+        &mut self,
+        card_id: crate::card::CardId,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
         let seat = self.player_with_priority();
         // Locate the card in `seat`'s hand and clone the cycling cost —
@@ -5095,9 +5131,12 @@ impl GameState {
         if life_cost > 0 && self.players[seat].life < life_cost as i32 {
             return Err(GameError::InsufficientLife);
         }
-        // Pay the cycling cost from the floated mana pool.
+        // Pay the cycling cost from the floated mana pool; an {X} in the
+        // cost (Shark Typhoon's {X}{1}{U}) is paid as `x_value` generic.
+        let x = x_value.unwrap_or(0);
         if let Some(mc) = &cycling_cost {
-            self.players[seat].mana_pool.pay(mc).map_err(GameError::Mana)?;
+            let mc = if mc.has_x() { mc.with_x_value(x) } else { mc.clone() };
+            self.players[seat].mana_pool.pay(&mc).map_err(GameError::Mana)?;
         }
         if life_cost > 0 {
             self.adjust_life(seat, -(life_cost as i32));
@@ -5113,6 +5152,7 @@ impl GameState {
             events.push(GameEvent::CardCycled {
                 player: seat,
                 card_id,
+                x,
             });
         }
         // Draw a card (Dredge can replace this draw, CR 702.52).
@@ -5258,7 +5298,7 @@ impl GameState {
         self.players[seat].mana_pool.pay(&cycling_cost).map_err(GameError::Mana)?;
         let mut events = vec![];
         if self.discard_card(seat, card_id, &mut events) {
-            events.push(GameEvent::CardCycled { player: seat, card_id });
+            events.push(GameEvent::CardCycled { player: seat, card_id, x: 0 });
         }
         // Fetch the stashed pick (validated against the match set), else the
         // first match; reveal + to hand.
@@ -8371,15 +8411,28 @@ impl GameState {
     /// "lesser mana value than that artifact"), read from the death
     /// snapshot cache (tokens are already gone from every zone).
     pub(crate) fn event_amount_for(&self, ev: &GameEvent) -> u32 {
-        if let GameEvent::CreatureDied { card_id } = ev {
-            return self
+        match ev {
+            GameEvent::CreatureDied { card_id } => self
                 .died_card_snapshots
                 .get(card_id)
                 .or_else(|| self.find_card_anywhere(*card_id))
                 .map(|c| c.definition.cost.cmc())
-                .unwrap_or(0);
+                .unwrap_or(0),
+            // "Where X is that spell's mana value" riders (Shark Typhoon).
+            GameEvent::SpellCast { card_id, .. } => self
+                .stack
+                .iter()
+                .find_map(|item| match item {
+                    StackItem::Spell { card, .. } if card.id == *card_id => {
+                        Some(card.definition.cost.cmc())
+                    }
+                    _ => None,
+                })
+                .or_else(|| self.find_card_anywhere(*card_id).map(|c| c.definition.cost.cmc()))
+                .unwrap_or(0),
+            GameEvent::CardCycled { x, .. } => *x,
+            _ => event_amount(ev),
         }
-        event_amount(ev)
     }
 
     pub(crate) fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
@@ -8959,9 +9012,13 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
             | StaticEffect::DamageCantBePrevented
-            // ManaProductionDoubled — consulted at mana-ability resolution
-            // via `mana_production_doublers_for`; no layer effect.
+            // ManaProductionDoubled / Tripled — consulted at mana-ability
+            // resolution via `mana_production_multiplier_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled
+            | StaticEffect::ManaProductionTripled
+            // PreventDamageByRemovingCounters (Polukranos, Unchained) —
+            // consulted at both damage funnels; no layer effect.
+            | StaticEffect::PreventDamageByRemovingCounters { .. }
             // CreatureActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Cursed Totem); no layer effect.
             | StaticEffect::CreatureActivatedAbilitiesLocked

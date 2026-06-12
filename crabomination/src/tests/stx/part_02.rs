@@ -2322,7 +2322,7 @@ fn drannith_stinger_pings_on_cycle_not_on_cast() {
     g.add_card_to_library(0, catalog::island());
     let cy = g.add_card_to_hand(0, catalog::desert_cerodon());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::Cycle { card_id: cy }).expect("cycle");
+    g.perform_action(GameAction::Cycle { card_id: cy, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 16, "cycle pinged 1");
 }

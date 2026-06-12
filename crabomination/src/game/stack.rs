@@ -1472,6 +1472,9 @@ impl GameState {
         // "Protection from everything until your next turn" expires as that
         // player's turn begins (The One Ring).
         self.players[p].protected_from_everything = false;
+        // "Opponents' spells cost more until your next turn" expires too
+        // (Elspeth Conquers Death II).
+        self.turn_scoped_spell_taxes.retain(|t| t.controller != p);
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {

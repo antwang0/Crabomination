@@ -297,26 +297,29 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **THB cards deferred (each wants one primitive):**
-  - **Heliod's Intervention** — modal X-target destroy ("destroy X target
-    artifacts and/or enchantments"); needs a plain `DestroyTargets` sibling
-    of `DestroyTargetsPolymorph` plus modal-X target collection.
-  - **Shark Typhoon** — X/X token where X = the triggering spell's mana
-    value; `TokenDefinition.power` is a fixed `i32`, so dynamic-P/T token
-    mints need a `Value`-powered mint rider. Also X-cycling.
-  - **Nyxbloom Ancient** (mana tripling), **Polukranos, Unchained**
-    (escape-with-counters + fight activation), **Elspeth Conquers Death**
-    (saga + cost tax + reanimate chapter) — all primitives exist in parts;
-    just card work.
+- ✅ **THB batch shipped** (`catalog::sets::thb`, tests `tests/thb.rs`):
+  Heliod's Intervention (`Effect::DestroyTargets` X-target destroy),
+  Shark Typhoon (`TokenDefinition.dynamic_pt` mint rider + X-cycling via
+  `GameAction::Cycle { x_value }`), Nyxbloom Ancient
+  (`StaticEffect::ManaProductionTripled` — multiplier composes with Mana
+  Reflection), Polukranos, Unchained (`Value::IfPred` escape counters +
+  `StaticEffect::PreventDamageByRemovingCounters`), Elspeth Conquers Death
+  (`Effect::SpellTaxUntilYourNextTurn` + reanimate chapter), plus Dream
+  Trawler, Arasta, Daxos (`DynamicPt::DevotionToToughness`), Tymaret Calls
+  the Dead, Thirst for Meaning, Shatter the Sky, Alseid, Mire Triton,
+  Aphemia, Phoenix of Ash, Underworld Rage-Hound, Nessian Boar
+  (`Predicate::TriggerBlocksSource`), Mystic Repeal, Ox of Agonas.
 - ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
   - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
     bot heuristic that takes the first eligible candidate would make
     fetch/tutor effects function under bots; many tests assume the decline,
     so flip carefully.
-  - **Deferred faeries:** Mistbind Clique (champion + tap-lands trigger),
-    Oona, Queen of the Fae (X exile + per-color token mint), Faerie Macabre
-    (discard-from-hand: exile up to two target graveyard cards), Rune Snag
-    (counter-tax scaled by same-name cards in graveyards).
+  - ✅ **Faerie batch shipped:** Mistbind Clique (`Effect::Champion`
+    CR 702.77 with the self-sacrifice clause — Changeling Hero rides it
+    too — + `Predicate::SourceChampionedSomething` + target-player tap),
+    Oona, Queen of the Fae (`Effect::ExileTopMintPerChosenColor`), Faerie
+    Macabre (`Effect::ExileUpToNFromGraveyards`), Rune Snag
+    (`Value::SameNamedInAllGraveyards` into `CounterUnlessPaid.extra_generic`).
   - **`EventSpec::per_subject_cap` is per-turn**, so Spined Sliver won't
     re-trigger in a second combat phase the same turn.
   - **`ExtraManaOnLandTap` Mirror** mirrors the *first* produced pip; the
@@ -359,7 +362,8 @@ hand-maintained walkers drifting apart** with no exhaustiveness guard.
   (`EquipBonus.conditional`), Ravenous Trap ✅
   (`Player.cards_to_graveyard_this_turn` +
   `Predicate::CardsToGraveyardThisTurnAtLeast`), Spellskite ✅. Remaining:
-  - **Pyxis of Pandemonium / Ojer Taq** — face-down exile piles / DFC god.
+  - **Ojer Taq** — DFC god (Pyxis of Pandemonium ✅ — face-down linked
+    exile piles + deploy).
   - **Witchbane Orb** ships without the destroy-Curses ETB (player-attached
     Curses unmodeled). **Counterbalance**'s reveal is a MayDo (bots decline
     by default).

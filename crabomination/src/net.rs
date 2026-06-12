@@ -1823,7 +1823,7 @@ impl From<&GameEvent> for GameEventWire {
                 target: *target,
                 caster: *caster,
             },
-            GameEvent::CardCycled { player, card_id } => GameEventWire::CardCycled {
+            GameEvent::CardCycled { player, card_id, .. } => GameEventWire::CardCycled {
                 player: *player,
                 card_id: *card_id,
             },

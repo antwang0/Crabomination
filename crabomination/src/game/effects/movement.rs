@@ -91,6 +91,30 @@ impl GameState {
                 }
             }
         }
+        // "If damage would be dealt to this while it has a [kind] counter,
+        // prevent that damage and remove that many counters" (Polukranos,
+        // Unchained). Prevents the whole event; removes min(amount, counters).
+        if let EntityRef::Permanent(cid) = ent
+            && amount > 0
+            && let Some(kind) = self.battlefield_find(cid).and_then(|c| {
+                c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::PreventDamageByRemovingCounters { kind } => {
+                        (c.counter_count(kind) > 0).then_some(kind)
+                    }
+                    _ => None,
+                })
+            })
+        {
+            events.push(GameEvent::DamagePrevented {
+                amount,
+                to_player: None,
+                to_card: Some(cid),
+            });
+            if let Some(c) = self.battlefield_find_mut(cid) {
+                c.remove_counters(kind, amount);
+            }
+            return 0;
+        }
         if self.prevention_shields.is_empty() {
             return amount;
         }

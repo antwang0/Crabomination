@@ -51,7 +51,7 @@ pub enum CreatureType {
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
-    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark,
+    Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
@@ -1257,6 +1257,12 @@ pub struct TokenDefinition {
     /// tokens. Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
+    /// Mint-time dynamic P/T: evaluated against the minting effect's
+    /// context and stamped over `power`/`toughness` (Shark Typhoon's
+    /// "X/X … where X is that spell's mana value"). Type riders chosen at
+    /// mint time survive copies per CR 707.2.
+    #[serde(default)]
+    pub dynamic_pt: Option<(crate::effect::Value, crate::effect::Value)>,
 }
 
 // ── Card definition ───────────────────────────────────────────────────────────
@@ -1773,6 +1779,9 @@ pub enum DynamicPt {
     /// Power = the controller's devotion to `color` (CR 700.5), with a
     /// fixed printed toughness. Anax, Hardened in the Forge (`*/3`).
     DevotionTo { color: crate::mana::Color, base_t: i32 },
+    /// Toughness = the controller's devotion to `color`, with a fixed
+    /// printed power. Daxos, Blessed by the Sun (`2/*`).
+    DevotionToToughness { color: crate::mana::Color, base_p: i32 },
     /// Power = toughness = size of the controller's graveyard. Cruel
     /// Somnophage.
     ControllerGraveyardSize,

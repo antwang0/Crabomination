@@ -3684,7 +3684,7 @@ pub fn handle_game_input(
                     if k.id == card_id && k.has_cycling)
             });
             if has_cycling {
-                outbox.submit(GameAction::Cycle { card_id });
+                outbox.submit(GameAction::Cycle { card_id, x_value: None });
             } else {
                 // No plain Cycling — fall back to Landcycling (CR 702.29e) if
                 // the card has it (fetch a land of the named type to hand).

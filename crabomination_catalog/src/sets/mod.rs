@@ -272,6 +272,7 @@ pub mod pc2;
 pub mod por;
 pub mod rav;
 pub mod rtr;
+pub mod thb;
 pub mod ths;
 pub mod tmp;
 pub mod zen;

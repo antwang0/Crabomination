@@ -541,6 +541,12 @@ pub enum Value {
     /// the resolved player controls (0–5). Powers Tribal Flames / Territorial
     /// Kavu, and (as a generic cost reduction) Leyline Binding.
     DomainCount(PlayerRef),
+    /// Cards in *every* player's graveyard whose name matches the resolving
+    /// spell's name (`EffectContext.source_name`). Rune Snag's counter tax.
+    SameNamedInAllGraveyards,
+    /// Conditional value: `then` when `pred` holds, else `else_`.
+    /// Polukranos, Unchained's "enters with six… escapes with twelve instead".
+    IfPred { pred: Box<Predicate>, then: Box<Value>, else_: Box<Value> },
 }
 
 impl Value {
@@ -656,6 +662,14 @@ pub enum Predicate {
     /// 702.139). Backed by `CardInstance.cast_from_escape`; gates the
     /// "sacrifice it unless it escaped" ETB rider on Kroxa / Uro.
     SourceCastFromEscape,
+    /// CR 702.77 — true if a card in exile is champion-linked to the
+    /// effect's source (`exiled_by` points at it). Gates "when a [type] is
+    /// championed with this creature" riders (Mistbind Clique).
+    SourceChampionedSomething,
+    /// True if the trigger's subject (a blocker) is blocking the listening
+    /// source. Scopes a `Blocks`/`AnyPlayer` trigger to "whenever a creature
+    /// blocks *this* creature" (Nessian Boar).
+    TriggerBlocksSource,
     /// True if the trigger's object (the just-cast spell, `trigger_source`)
     /// has the same name the effect's source stamped via `Effect::NameCard`
     /// (`CardInstance.named_card`). Gates "whenever an opponent casts a spell
@@ -2851,6 +2865,28 @@ pub enum Effect {
     /// artifact or creature card, puts it onto the battlefield, and
     /// shuffles the rest in.
     DestroyTargetsPolymorph { filter: SelectionRequirement },
+    /// Destroy X chosen permanent targets matching `filter` (slots `0..X`
+    /// from the cast's target list) — the plain sibling of
+    /// `DestroyTargetsPolymorph`. Heliod's Intervention mode 0.
+    DestroyTargets { filter: SelectionRequirement },
+    /// CR 702.77 — Champion a [filter]: exile another matching permanent you
+    /// control linked to the source (returns when the source leaves), or
+    /// sacrifice the source if you exile nothing. Mistbind Clique,
+    /// Changeling Hero.
+    Champion { filter: SelectionRequirement },
+    /// Exile up to `count` cards from any graveyards, chosen by the
+    /// controller (Faerie Macabre). A `wants_ui` controller picks via
+    /// `ChooseCards`; the auto path takes the highest-MV opponent cards.
+    ExileUpToNFromGraveyards { count: Value },
+    /// Choose a color, exile the top `amount` cards of `who`'s library, and
+    /// create one `token` per exiled card of the chosen color (Oona, Queen
+    /// of the Fae).
+    ExileTopMintPerChosenColor { who: Selector, amount: Value, token: crate::card::TokenDefinition },
+    /// Spells cast by opponents of the effect's controller that match
+    /// `filter` cost `{amount}` more until the controller's next turn
+    /// (Elspeth Conquers Death chapter II). Cleared at the controller's
+    /// untap step.
+    SpellTaxUntilYourNextTurn { amount: u32, filter: SelectionRequirement },
     /// Cataclysm-family: each resolved player keeps one artifact, one
     /// creature, one enchantment, and one planeswalker from among the
     /// nonland permanents they control (auto-pick keeps the highest mana

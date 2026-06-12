@@ -726,8 +726,17 @@ pub enum StaticEffect {
     /// much of that mana instead." Mana Reflection. Each instance the
     /// controller of the resolving mana ability has on the battlefield
     /// doubles the produced pip count (2 instances → 4×, …). Read by
-    /// `mana_production_doublers_for` just before a mana ability resolves.
+    /// `mana_production_multiplier_for` just before a mana ability resolves.
     ManaProductionDoubled,
+    /// CR 614.5 — "If you tap a permanent for mana, it produces three times
+    /// as much of that mana instead." Nyxbloom Ancient. Composes with
+    /// `ManaProductionDoubled` multiplicatively (2 + 3 → 6×).
+    ManaProductionTripled,
+    /// "If damage would be dealt to this permanent while it has a [kind]
+    /// counter on it, prevent that damage and remove that many [kind]
+    /// counters from it." Polukranos, Unchained. Consulted at both damage
+    /// funnels for the source permanent itself.
+    PreventDamageByRemovingCounters { kind: crate::card::CounterType },
     /// Cursed Totem / Damping Matrix — "Activated abilities of creatures
     /// can't be activated unless they're mana abilities." Global lock
     /// checked in `activate_ability` (sibling of

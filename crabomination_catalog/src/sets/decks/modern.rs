@@ -3528,7 +3528,7 @@ pub fn raise_the_alarm() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         },
         ..Default::default()
@@ -4384,7 +4384,7 @@ pub fn regisaur_alpha() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         })],
         ..Default::default()
@@ -4620,7 +4620,7 @@ pub fn raptor_hatchling() -> CardDefinition {
                     triggered_abilities: vec![],
 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
         }],
@@ -4746,7 +4746,7 @@ pub fn spectral_procession() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         },
         ..Default::default()
@@ -4809,7 +4809,7 @@ pub fn beast_within() -> CardDefinition {
                     triggered_abilities: vec![],
 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
             Effect::Destroy {
@@ -6311,7 +6311,7 @@ pub fn doomed_dissenter() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         })],
         ..Default::default()
@@ -8410,7 +8410,7 @@ pub fn seasoned_pyromancer() -> CardDefinition {
                     triggered_abilities: vec![],
 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
         ]))],
@@ -10440,7 +10440,7 @@ pub fn murmuring_mystic() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         })],
         ..Default::default()
@@ -11469,7 +11469,7 @@ pub fn ophiomancer() -> CardDefinition {
         triggered_abilities: vec![],
 
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Ophiomancer",
@@ -11640,7 +11640,7 @@ pub fn white_suns_zenith() -> CardDefinition {
         triggered_abilities: vec![],
 
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "White Sun's Zenith",
@@ -14707,7 +14707,7 @@ pub fn lingering_souls() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         },
         ..Default::default()
@@ -15210,16 +15210,9 @@ pub fn tolarian_drake() -> CardDefinition {
 }
 
 /// Changeling Hero — {4}{W} 4/4 Shapeshifter. Changeling.
-/// Champion a creature (CR 702.77).
-///
-/// Champion is wired as an ETB linked-exile: the controller exiles another
-/// creature they control via `Effect::ExileUntilSourceLeaves`, and
-/// `return_linked_exiles` returns it when the Hero leaves. The "sacrifice it
-/// unless you exile" clause collapses to "the trigger does nothing if you
-/// control no other creature" (no forced self-sacrifice yet).
+/// Champion a creature (CR 702.77) — exiles another creature you control
+/// linked to the Hero (returns when it leaves), or sacrifices the Hero.
 pub fn changeling_hero() -> CardDefinition {
-    use crate::card::ExileReturnZone;
-    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Changeling Hero",
         cost: cost(&[generic(4), w()]),
@@ -15233,14 +15226,7 @@ pub fn changeling_hero() -> CardDefinition {
         keywords: vec![Keyword::Changeling],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ExileUntilSourceLeaves {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-                return_to: ExileReturnZone::Battlefield,
-            },
+            effect: Effect::Champion { filter: SelectionRequirement::Creature },
         }],
         ..Default::default()
     }
@@ -16368,7 +16354,7 @@ pub fn decree_of_justice() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         },
         ..Default::default()
@@ -16548,7 +16534,7 @@ fn treasure_token() -> TokenDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -17658,7 +17644,7 @@ pub fn young_pyromancer() -> CardDefinition {
                 triggered_abilities: vec![],
 
                 static_abilities: vec![],
-                equipped_bonus: None,
+                ..Default::default()
             },
         })],
         ..Default::default()
@@ -17711,7 +17697,7 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
         }],
 
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Omnath, Locus of Rage",
@@ -18346,7 +18332,7 @@ pub fn kozileks_command() -> CardDefinition {
                     triggered_abilities: vec![],
 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
             Effect::PumpPT {
@@ -18416,7 +18402,7 @@ pub fn eldrazi_confluence() -> CardDefinition {
                     triggered_abilities: vec![],
 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
             Effect::Move {
@@ -18821,7 +18807,7 @@ pub fn kari_zev_skyship_raider() -> CardDefinition {
                     triggered_abilities: vec![],
 
                     static_abilities: vec![],
-                    equipped_bonus: None,
+                    ..Default::default()
                 },
             },
         }],
@@ -20446,7 +20432,7 @@ pub fn esikas_chariot() -> CardDefinition {
                         triggered_abilities: vec![],
 
                         static_abilities: vec![],
-                        equipped_bonus: None,
+                        ..Default::default()
                     },
                 },
             },
@@ -34435,7 +34421,7 @@ pub fn roadkill_rodney() -> CardDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
-        equipped_bonus: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Roadkill Rodney",
@@ -50765,6 +50751,186 @@ pub fn vizier_of_many_faces() -> CardDefinition {
         activated_abilities: vec![crate::effect::shortcut::embalm(cost(&[
             generic(3), u(), u(),
         ]))],
+        ..Default::default()
+    }
+}
+
+// ── Faerie tribal completion + Pyxis (claude/modern_decks) ───────────────────
+
+/// Rune Snag — {1}{U} Instant. Counter target spell unless its controller
+/// pays {2} plus {2} for each card named Rune Snag in each graveyard.
+pub fn rune_snag() -> CardDefinition {
+    CardDefinition {
+        name: "Rune Snag",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(2)]),
+            exile: false,
+            extra_generic: Some(Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::SameNamedInAllGraveyards),
+            )),
+        },
+        ..Default::default()
+    }
+}
+
+/// Faerie Macabre — {1}{B}{B} Faerie Rogue 2/2. Flying. Discard this card:
+/// Exile up to two target cards from graveyards.
+pub fn faerie_macabre() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Faerie Macabre",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oona, Queen of the Fae — {3}{U/B}{U/B}{U/B} Legendary Faerie Wizard 5/5.
+/// Flying. {X}{U/B}: Choose a color; target opponent exiles the top X cards
+/// of their library; a 1/1 flying Faerie Rogue per exiled card of that color.
+pub fn oona_queen_of_the_fae() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let ub = || crate::mana::hybrid(Color::Blue, Color::Black);
+    CardDefinition {
+        name: "Oona, Queen of the Fae",
+        cost: cost(&[generic(3), ub(), ub(), ub()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), ub()]),
+            effect: Effect::ExileTopMintPerChosenColor {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::XFromCost,
+                token: crate::card::TokenDefinition {
+                    name: "Faerie Rogue".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue, Color::Black],
+                    keywords: vec![Keyword::Flying],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mistbind Clique — {3}{U} Faerie Wizard 4/4. Flash, flying, champion a
+/// Faerie; when a Faerie is championed with it, tap all lands target player
+/// controls.
+pub fn mistbind_clique() -> CardDefinition {
+    CardDefinition {
+        name: "Mistbind Clique",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Champion {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Faerie),
+                },
+                Effect::If {
+                    cond: Predicate::SourceChampionedSomething,
+                    then: Box::new(Effect::Tap {
+                        what: Selector::ControlledBy {
+                            who: PlayerRef::Target(0),
+                            filter: SelectionRequirement::Land,
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pyxis of Pandemonium — {1} Artifact. {T}: each player exiles their top
+/// card face down. {7}, {T}, Sacrifice: each player turns those face up and
+/// puts the permanent cards onto the battlefield.
+pub fn pyxis_of_pandemonium() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let permanent_card = SelectionRequirement::Artifact
+        .or(SelectionRequirement::Creature)
+        .or(SelectionRequirement::Enchantment)
+        .or(SelectionRequirement::Land)
+        .or(SelectionRequirement::Planeswalker);
+    CardDefinition {
+        name: "Pyxis of Pandemonium",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::ExileTopOfLibrary {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::ONE,
+                    link_to_source: true,
+                    face_down: true,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(7)]),
+                effect: Effect::ForEach {
+                    selector: Selector::CardExiledWithSource,
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: permanent_card,
+                        },
+                        then: Box::new(Effect::Move {
+                            what: Selector::TriggerSource,
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
+                                tapped: false,
+                            },
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
