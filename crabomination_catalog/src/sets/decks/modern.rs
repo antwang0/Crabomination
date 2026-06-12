@@ -51264,3 +51264,459 @@ pub fn dread_fugue() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Modern staples batch (June 2026) ────────────────────────────────────────
+
+/// Shard Volley — {R} Instant. As an additional cost, sacrifice a land.
+/// Deals 3 damage to any target.
+pub fn shard_volley() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Shard Volley",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Land,
+            count: 1,
+        }],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Insolent Neonate — {R} 1/1 Vampire with menace. Discard a card,
+/// sacrifice this creature: draw a card.
+pub fn insolent_neonate() -> CardDefinition {
+    CardDefinition {
+        name: "Insolent Neonate",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Manic Scribe — {1}{U} 0/3 Human Wizard. ETB: each opponent mills three.
+/// Delirium — at each opponent's upkeep, that player mills three.
+pub fn manic_scribe() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Manic Scribe",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::OpponentControl,
+                )
+                .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::Const(3),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mind Funeral — {1}{U}{B} Sorcery. Target opponent reveals from the top
+/// until four land cards are revealed; all revealed cards go to the
+/// graveyard.
+pub fn mind_funeral() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Funeral",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::MillUntilLands {
+            who: Selector::Player(PlayerRef::Target(0)),
+            lands: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fleet Swallower — {5}{U}{U} 6/6 Fish. Attacks: target player mills half
+/// their library, rounded up.
+pub fn fleet_swallower() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Fleet Swallower",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![on_attack(Effect::Mill {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::HalfLibrarySizeRoundedUp(PlayerRef::Target(0)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Otherworldly Gaze — {U} Instant. Surveil 3. Flashback {1}{U}.
+pub fn otherworldly_gaze() -> CardDefinition {
+    CardDefinition {
+        name: "Otherworldly Gaze",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
+        effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Metallic Rebuke — {2}{U} Instant. Improvise. Counter target spell unless
+/// its controller pays {3}.
+pub fn metallic_rebuke() -> CardDefinition {
+    CardDefinition {
+        name: "Metallic Rebuke",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Improvise],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(3)]),
+            exile: false,
+            extra_generic: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Whirler Rogue — {2}{U}{U} 2/2. ETB: two 1/1 flying Thopters. Tap two
+/// untapped artifacts you control: target creature can't be blocked this
+/// turn.
+pub fn whirler_rogue() -> CardDefinition {
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Whirler Rogue",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You, count: Value::Const(2), definition: thopter,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((SelectionRequirement::Artifact, 2)),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Militia Bugler — {2}{W} 2/3 vigilance. ETB: look at the top four, may
+/// take a creature card with power 2 or less to hand, rest to the bottom.
+pub fn militia_bugler() -> CardDefinition {
+    CardDefinition {
+        name: "Militia Bugler",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+            ),
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ice-Fang Coatl — {G}{U} 1/1 Snow Snake. Flash, flying; ETB draw; has
+/// deathtouch while you control three or more other snow permanents.
+pub fn ice_fang_coatl() -> CardDefinition {
+    CardDefinition {
+        name: "Ice-Fang Coatl",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        static_abilities: vec![StaticAbility {
+            description: "Deathtouch while you control three or more other snow permanents.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasSupertype(Supertype::Snow)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(3),
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Deathtouch],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sorin the Mirthless — {2}{B}{B} Sorin planeswalker, loyalty 4.
+/// +1: may put the top card into your hand for life equal to its mana
+/// value. −2: 2/3 flying lifelink Vampire token. −7: 13 damage any target,
+/// gain 13.
+pub fn sorin_the_mirthless() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Sorin the Mirthless",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Sorin],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::MayDo {
+                    description: "Put the top card into your hand for its mana value in life?"
+                        .into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::LoseLife {
+                            who: Selector::You,
+                            amount: Value::ManaValueOf(Box::new(Selector::TopOfLibrary {
+                                who: PlayerRef::You,
+                                count: Value::ONE,
+                            })),
+                        },
+                        Effect::Move {
+                            what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Vampire".into(),
+                        power: 2,
+                        toughness: 3,
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Vampire],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+                        colors: vec![Color::Black],
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: target_filtered(SelectionRequirement::Any),
+                        amount: Value::Const(13),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(13) },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Omnath, Locus of the Roil — {1}{G}{U}{R} 3/3 Elemental. ETB: damage to
+/// any target equal to your Elementals. Landfall: +1/+1 counter on target
+/// Elemental you control; draw if you control eight or more lands.
+pub fn omnath_locus_of_the_roil() -> CardDefinition {
+    let elementals_you_control = SelectionRequirement::HasCreatureType(CreatureType::Elemental)
+        .and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Omnath, Locus of the Roil",
+        cost: cost(&[generic(1), g(), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
+                    filter: elementals_you_control.clone(),
+                },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: target_filtered(elementals_you_control),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::If {
+                        cond: Predicate::SelectorCountAtLeast {
+                            sel: Selector::EachPermanent(
+                                SelectionRequirement::Land
+                                    .and(SelectionRequirement::ControlledByYou),
+                            ),
+                            n: Value::Const(8),
+                        },
+                        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dwarven Mine — Land — Mountain. Enters tapped unless you control three
+/// or more other Mountains; when it enters untapped, create a 1/1 red
+/// Dwarf token.
+pub fn dwarven_mine() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Dwarven Mine",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Mountain], ..Default::default() },
+        activated_abilities: vec![super::super::tap_add(Color::Red)],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(LandType::Mountain)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                n: Value::Const(3),
+            },
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Dwarf".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Dwarf],
+                        ..Default::default()
+                    },
+                    colors: vec![Color::Red],
+                    ..Default::default()
+                },
+            }),
+            else_: Box::new(Effect::Tap { what: Selector::This }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Flamekin Harbinger — {R} 1/1 Elemental Shaman. ETB: may search your
+/// library for an Elemental card and put it on top.
+pub fn flamekin_harbinger() -> CardDefinition {
+    CardDefinition {
+        name: "Flamekin Harbinger",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Elemental),
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: crate::effect::LibraryPosition::Top,
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fell Stinger — {2}{B} 3/2 deathtouch. Exploit; when it exploits a
+/// creature, target player draws two cards and loses 2 life (bound to the
+/// controller — the payoff target is almost always yourself).
+pub fn fell_stinger() -> CardDefinition {
+    use crate::effect::shortcut::exploit;
+    CardDefinition {
+        name: "Fell Stinger",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Scorpion],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![exploit(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}

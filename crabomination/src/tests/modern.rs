@@ -55977,3 +55977,305 @@ fn cleave_alchemists_retrieval_base_is_own_only() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "bounced to owner's hand");
 }
+
+// ── Modern staples batch (June 2026) ─────────────────────────────────────────
+
+/// Shard Volley sacrifices a land as an additional cost and deals 3.
+#[test]
+fn shard_volley_sacs_a_land_for_three() {
+    let mut g = two_player_game();
+    let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::shard_volley());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Shard Volley");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert!(g.battlefield_find(mtn).is_none(), "the land was sacrificed");
+}
+
+/// Insolent Neonate's activation pays discard + sacrifice and draws.
+#[test]
+fn insolent_neonate_loots_itself_away() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::insolent_neonate());
+    g.add_card_to_hand(0, catalog::mountain()); // discard fodder
+    g.add_card_to_library(0, catalog::island()); // card to draw
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Neonate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "sacrificed itself");
+    assert_eq!(g.players[0].hand.len(), before, "-1 discard +1 draw");
+    assert_eq!(g.players[0].graveyard.len(), 2, "Neonate + the discarded card");
+}
+
+/// Manic Scribe mills three per opponent on ETB and again at each
+/// opponent's upkeep once delirium is on.
+#[test]
+fn manic_scribe_etb_and_delirium_upkeep_mill() {
+    let mut g = two_player_game();
+    for _ in 0..10 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::manic_scribe());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Manic Scribe");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 3, "ETB milled three");
+
+    // Delirium: four card types in P0's graveyard.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());   // instant
+    g.add_card_to_graveyard(0, catalog::mountain());          // land
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());     // creature
+    g.add_card_to_graveyard(0, catalog::thoughtseize());      // sorcery
+    // Fire the opponent-upkeep trigger.
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 6, "delirium upkeep milled three more");
+}
+
+/// Mind Funeral mills the target down to (and including) the fourth land.
+#[test]
+fn mind_funeral_mills_until_four_lands() {
+    let mut g = two_player_game();
+    // Library top-down: bolt, island, island, bolt, island, island, bolt.
+    for def in [catalog::lightning_bolt(), catalog::island(), catalog::island(),
+                catalog::lightning_bolt(), catalog::island(), catalog::island(),
+                catalog::lightning_bolt()] {
+        g.add_card_to_library(1, def);
+    }
+    let id = g.add_card_to_hand(0, catalog::mind_funeral());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mind Funeral");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 6, "milled through the fourth land");
+    assert_eq!(g.players[1].library.len(), 1, "the last card stays");
+}
+
+/// Fleet Swallower's attack trigger mills half the library rounded up.
+#[test]
+fn fleet_swallower_mills_half_rounded_up() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    for _ in 0..7 { g.add_card_to_library(1, catalog::island()); }
+    let fish = g.add_card_to_battlefield(0, catalog::fleet_swallower());
+    g.clear_sickness(fish);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: fish, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 4, "7 → mills ceil(7/2) = 4");
+}
+
+/// Otherworldly Gaze surveils three and flashes back from the graveyard.
+#[test]
+fn otherworldly_gaze_surveil_and_flashback() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::otherworldly_gaze());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    // AutoDecider keeps everything on top (no graveyard sends).
+    cast(&mut g, id);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Gaze in graveyard");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashback Gaze");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == id), "flashback exiles");
+}
+
+/// Metallic Rebuke improvises down to {U} with two artifacts and counters
+/// unless {3} is paid.
+#[test]
+fn metallic_rebuke_improvises_and_taxes() {
+    let mut g = two_player_game();
+    // Seat 1 casts a Bear; seat 0 rebukes with two artifacts + {U}.
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bears cast");
+    let a1 = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let a2 = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let id = g.add_card_to_hand(0, catalog::metallic_rebuke());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellConvoke {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+        convoke_creatures: vec![a1, a2],
+    }).expect("Rebuke castable off {U} + two improvised artifacts");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a1).unwrap().tapped && g.battlefield_find(a2).unwrap().tapped,
+        "both artifacts improvised");
+    assert!(g.battlefield_find(bears).is_none(), "no mana paid for the tax: countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears));
+}
+
+/// Whirler Rogue mints two Thopters and taps two artifacts to make a
+/// creature unblockable.
+#[test]
+fn whirler_rogue_thopters_and_unblockable() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::whirler_rogue());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    let thopters: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Thopter" && c.controller == 0)
+        .map(|c| c.id).collect();
+    assert_eq!(thopters.len(), 2, "two Thopters minted");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("tap two artifacts for unblockable");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(thopters.iter().all(|t| g.battlefield_find(*t).unwrap().tapped),
+        "the Thopters paid the tap cost");
+}
+
+/// Militia Bugler digs four for a small creature and bottoms the rest.
+#[test]
+fn militia_bugler_digs_for_small_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears()); // power 2
+    g.add_card_to_library(0, catalog::serra_angel());              // power 4
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::militia_bugler());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert!(g.players[0].has_in_hand(bear), "the power-2 creature was taken");
+    assert_eq!(g.players[0].library.len(), 3, "rest on the bottom");
+}
+
+/// Ice-Fang Coatl has deathtouch only with three other snow permanents.
+#[test]
+fn ice_fang_coatl_conditional_deathtouch() {
+    let mut g = two_player_game();
+    let coatl = g.add_card_to_battlefield(0, catalog::ice_fang_coatl());
+    assert!(!g.computed_permanent(coatl).unwrap().keywords.contains(&Keyword::Deathtouch));
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::snow_covered_island()); }
+    assert!(g.computed_permanent(coatl).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "three other snow permanents turn deathtouch on");
+}
+
+/// Sorin the Mirthless +1 takes the top card for its mana value in life.
+#[test]
+fn sorin_the_mirthless_plus_one_taxes_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_battlefield(0, catalog::sorin_the_mirthless());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Sorin +1");
+    drain_stack(&mut g);
+    assert!(g.players[0].has_in_hand(bear), "top card in hand");
+    assert_eq!(g.players[0].life, 18, "paid 2 life (its mana value)");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(crate::card::CounterType::Loyalty), 5);
+}
+
+/// Omnath, Locus of the Roil's ETB damage scales with your Elementals and
+/// landfall puts a counter on an Elemental.
+#[test]
+fn omnath_roil_etb_damage_and_landfall_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::flamekin_harbinger()); // 1 elemental
+    let id = g.add_card_to_hand(0, catalog::omnath_locus_of_the_roil());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Omnath");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "two Elementals (Harbinger + Omnath) = 2 damage");
+
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    let total: u32 = g.battlefield.iter().filter(|c| c.controller == 0)
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne)).sum();
+    assert_eq!(total, 1, "landfall added one +1/+1 counter to an Elemental");
+}
+
+/// Dwarven Mine enters tapped without three other Mountains, untapped (and
+/// mints a Dwarf) with them.
+#[test]
+fn dwarven_mine_conditional_tap_and_token() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_hand(0, catalog::dwarven_mine());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(a)).expect("play first Mine");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped, "enters tapped early");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Dwarf"));
+
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::mountain()); }
+    g.players[0].lands_played_this_turn = 0;
+    let b = g.add_card_to_hand(0, catalog::dwarven_mine());
+    g.perform_action(GameAction::PlayLand(b)).expect("play second Mine");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(b).unwrap().tapped, "three other Mountains → untapped");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Dwarf"), "Dwarf minted");
+}
+
+/// Flamekin Harbinger tutors an Elemental to the top of the library.
+#[test]
+fn flamekin_harbinger_tops_an_elemental() {
+    let mut g = two_player_game();
+    let omnath = g.add_card_to_library(0, catalog::omnath_locus_of_the_roil());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(omnath))]));
+    let id = g.add_card_to_hand(0, catalog::flamekin_harbinger());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(omnath),
+        "the Elemental is on top");
+}
+
+/// Fell Stinger's exploit payoff draws two and drains two from the bound
+/// player.
+#[test]
+fn fell_stinger_exploit_draws_two_loses_two() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // exploit fodder
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::fell_stinger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // Accept the exploit; the payoff targets its controller by default.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let before = g.players[0].hand.len();
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "drew two");
+    assert_eq!(g.players[0].life, 18, "lost two");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "a creature was exploited");
+}
