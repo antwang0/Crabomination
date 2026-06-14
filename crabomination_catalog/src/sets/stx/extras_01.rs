@@ -629,7 +629,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Orc, CreatureType::Shaman],
             ..Default::default()
         },
         power: 1,

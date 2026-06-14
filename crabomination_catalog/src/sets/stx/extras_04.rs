@@ -88,7 +88,7 @@ pub fn sneaky_snacker() -> CardDefinition {
         cost: cost(&[u(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Rat, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
             ..Default::default()
         },
         power: 2,
@@ -138,7 +138,7 @@ pub fn soulknife_spy() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Elf, CreatureType::Rogue],
             ..Default::default()
         },
         power: 3,

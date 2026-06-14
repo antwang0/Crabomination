@@ -94,7 +94,7 @@ pub fn spectacle_mage() -> CardDefinition {
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Bird, CreatureType::Shaman],
             ..Default::default()
         },
         power: 2,
@@ -195,7 +195,7 @@ pub fn tome_shredder() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            creature_types: vec![CreatureType::Wolf],
             ..Default::default()
         },
         power: 2,

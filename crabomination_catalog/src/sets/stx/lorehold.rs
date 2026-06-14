@@ -93,7 +93,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Kor, CreatureType::Shaman],
             ..Default::default()
         },
         power: 2,
@@ -252,7 +252,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Shaman],
             ..Default::default()
         },
         power: 2,

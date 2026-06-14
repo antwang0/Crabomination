@@ -28,7 +28,7 @@ pub fn witherbloom_apprentice() -> CardDefinition {
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
             ..Default::default()
         },
         power: 2,

@@ -44,7 +44,7 @@ pub fn spirited_companion() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dog, CreatureType::Spirit],
+            creature_types: vec![CreatureType::Dog],
             ..Default::default()
         },
         power: 1,
@@ -167,7 +167,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Lifelink],
+        keywords: vec![Keyword::Lifelink, Keyword::Menace],
         static_abilities: vec![StaticAbility {
             description: "Spells you cast that target a creature cost {2} less to cast.",
             effect: StaticEffect::CostReductionTargetingFilter {
@@ -234,12 +234,12 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
             ..Default::default()
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -285,12 +285,12 @@ pub fn mavinda_students_advocate() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Bird, CreatureType::Advisor],
             ..Default::default()
         },
         power: 2,
         toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -541,7 +541,7 @@ pub fn selfless_glyphweaver() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -13839,7 +13839,7 @@ pub fn silverquill_apprentice() -> CardDefinition {
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         power: 2,
@@ -13866,7 +13866,7 @@ pub fn shadewing_laureate() -> CardDefinition {
         cost: cost(&[w(), hybrid(Color::White, Color::Black), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird, CreatureType::Warlock],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         power: 2,

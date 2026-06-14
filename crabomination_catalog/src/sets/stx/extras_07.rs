@@ -1547,7 +1547,7 @@ pub fn lorehold_archivist() -> CardDefinition {
         cost: cost(&[generic(1), r(), w(), generic(2), r(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Artificer],
             ..Default::default()
         },
         power: 3,

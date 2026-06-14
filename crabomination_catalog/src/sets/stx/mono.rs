@@ -489,7 +489,7 @@ pub fn professor_of_symbology() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -599,7 +599,7 @@ pub fn unwilling_ingredient() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Pest],
+            creature_types: vec![CreatureType::Frog],
             ..Default::default()
         },
         power: 1,

@@ -93,7 +93,7 @@ pub fn lurking_deadeye() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Snake, CreatureType::Assassin],
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
             ..Default::default()
         },
         power: 4,
@@ -232,7 +232,7 @@ pub fn pillardrop_warden() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dwarf],
             ..Default::default()
         },
         power: 1,
@@ -278,7 +278,7 @@ pub fn devourer_of_memory() -> CardDefinition {
         cost: cost(&[u(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Nightmare, CreatureType::Horror],
+            creature_types: vec![CreatureType::Nightmare],
             ..Default::default()
         },
         power: 2,
@@ -623,7 +623,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Specter, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Giant],
             ..Default::default()
         },
         power: 5,
@@ -669,7 +669,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Giant, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
@@ -707,7 +707,7 @@ pub fn inkfathom_divers() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Soldier],
             ..Default::default()
         },
         power: 3,
@@ -858,7 +858,7 @@ pub fn waker_of_waves() -> CardDefinition {
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
+            creature_types: vec![CreatureType::Whale],
             ..Default::default()
         },
         power: 7,
@@ -1064,7 +1064,7 @@ pub fn wandering_mind() -> CardDefinition {
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Horror],
             ..Default::default()
         },
         power: 2,
@@ -1247,7 +1247,7 @@ pub fn stormwild_capridor() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goat, CreatureType::Beast],
+            creature_types: vec![CreatureType::Bird, CreatureType::Goat],
             ..Default::default()
         },
         power: 1,
@@ -2100,7 +2100,7 @@ pub fn library_larcenist() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Pest, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
             ..Default::default()
         },
         power: 1,
@@ -2168,7 +2168,7 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            creature_types: vec![CreatureType::Human, CreatureType::Ninja],
             ..Default::default()
         },
         power: 1,

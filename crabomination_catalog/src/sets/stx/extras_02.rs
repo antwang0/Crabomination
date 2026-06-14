@@ -841,7 +841,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -1092,7 +1092,7 @@ pub fn skywarp_skaab() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Zombie, CreatureType::Drake],
             ..Default::default()
         },
         power: 2,
@@ -1292,7 +1292,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         cost: cost(&[generic(7), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Plant],
+            creature_types: vec![CreatureType::Fungus, CreatureType::Beast],
             ..Default::default()
         },
         power: 9,
@@ -1683,7 +1683,7 @@ pub fn inkfathom_witch() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
             ..Default::default()
         },
         power: 1,
@@ -2024,7 +2024,7 @@ pub fn spiteful_squad() -> CardDefinition {
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Skeleton],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         keywords: vec![Keyword::Deathtouch],
@@ -2062,7 +2062,7 @@ pub fn master_symmetrist() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Rhino, CreatureType::Druid],
             ..Default::default()
         },
         power: 4,

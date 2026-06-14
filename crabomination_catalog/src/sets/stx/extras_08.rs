@@ -43,7 +43,7 @@ pub fn silverquill_lecturer() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Kor, CreatureType::Wizard],
             ..Default::default()
         },
         power: 3,

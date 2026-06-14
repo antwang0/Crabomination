@@ -238,12 +238,12 @@ pub fn combat_professor() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Bird, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
         toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             // Mentor (CR 702.114): counter goes on a target attacking
@@ -639,7 +639,7 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
         cost: cost(&[generic(1), b(), hybrid(Color::Black, Color::Green), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Demon, CreatureType::Horror],
+            creature_types: vec![CreatureType::Demon],
             ..Default::default()
         },
         power: 7,
@@ -1482,7 +1482,7 @@ pub fn crashing_drawbridge() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Construct],
+            creature_types: vec![CreatureType::Wall],
             ..Default::default()
         },
         toughness: 4,
@@ -1681,7 +1681,7 @@ pub fn codespell_cleric() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 1,
@@ -2148,7 +2148,7 @@ pub fn wandering_archaic() -> CardDefinition {
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Avatar],
             ..Default::default()
         },
         power: 4,

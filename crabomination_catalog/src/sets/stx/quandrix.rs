@@ -36,7 +36,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,

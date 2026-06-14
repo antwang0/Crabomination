@@ -169,7 +169,7 @@ pub fn disciplined_duelist() -> CardDefinition {
         cost: cost(&[g(), w(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
             ..Default::default()
         },
         power: 2,

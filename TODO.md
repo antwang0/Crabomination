@@ -21,219 +21,18 @@ items): effect arms **bypassing the rich centralized funnels** (death /
 discard / zone-move / damage) for a bare cheaper helper, and **parallel
 hand-maintained walkers drifting apart** with no exhaustiveness guard.
 
-### P0 — game-deciding / state corruption
+### P0–P1 — resolved (2026-06-11 audit)
 
-- ✅ **Blocked attackers become unblocked when their blockers die**
-  (`combat.rs:1337-1372` + `stack.rs:2250`). `remove_from_combat` erases the
-  `block_map` entry when a blocker dies and any attacker with empty
-  `blocker_ids` routes to the unblocked branch — full damage to the face.
-  There is no "remains blocked" flag (CR 510.1c). Mis-resolves **every
-  double-strike-vs-blocker combat** (blocker dies in the first-strike step)
-  and every kill-the-blocker-after-blocks line. Coincidentally correct only
-  for trample (CR 702.19g).
-- ✅ **Triggered abilities re-target instead of fizzling** (`mod.rs:7228`).
-  `continue_trigger_resolution_with_source` calls
-  `auto_target_for_effect` when the stored target is illegal at resolution
-  and silently aims the trigger at a *new* target — a global CR 608.2b
-  violation patched in for Elesh-Norn-doubled ETB copies. Correct fix:
-  per-copy target choice at push time; the trigger must fizzle otherwise.
-- ✅ **Target filters unenforced for ~20 targeted effect variants**
-  (`crabomination_base/src/effect/query.rs:1106-1256`).
-  `target_filter_for_slot_in_mode_kicked` (`eff_find`) is the *only*
-  cast-time filter enforcement and ends in `_ => None`; missing arms include
-  `Detain`, `Regenerate`, `Goad`, `Transform`, `LoseAllAbilities`,
-  `LoseKeywordThisTurn`, `ExileUntilSourceLeaves`, `GrantTriggeredAbility`,
-  `MoveCounter`, `SetLoyalty`, `BecomeChosenColor`, … For all of them a
-  client can submit any target (Lyev Skyknight can detain the caster's own
-  land). CR 115.1a/601.2c. Add an exhaustiveness guard across the three
-  sibling walkers (`requires_target` / `primary_target_filter` / `eff_find`).
-- ✅ **Cast pipeline is not atomic — partial state on rejected actions**
-  (all reachable from network client input, CR 601.2h rewind):
-  - ✅ Squad / Multikicker / Replicate / Casualty / sacrifice-reduce /
-    Bargain run through `cast_atomically` (full dry-run on a clone before
-    committing), so a late payment failure can't strand a base-cost cast
-    or cost sacrifices. Test
-    `squad_unaffordable_extra_payment_rejects_whole_cast`.
-  - ✅ `declare_attackers` validates the whole batch (incl. duplicates)
-    before spending the attack tax or tapping; `declare_blockers` defers
-    the block tax until after Menace/Lure/Provoke validation and rejects
-    duplicate blockers.
-  - ✅ `play_land_with_face` restores a rejected back-face land unmodified.
-  - ✅ Madness refunds the paid cost when `cast_card_for_free` fails.
-  - ✅ London mulligan bottoming re-poses until `mulligans_taken` cards
-    actually left the hand (CR 103.5a; test
-    `london_mulligan_repose_on_short_bottoming_answer`).
-- ✅ **`Effect::PumpPT` discards its duration** (`effects/mod.rs:3040`).
-  Always writes the EOT-cleared `power_bonus`/`toughness_bonus` fields, so
-  `Duration::Permanent` pumps expire at cleanup (Wall of Roots's cumulative
-  -0/-1 resets every turn — its mana is free forever) and `EndOfCombat`
-  pumps last the whole turn.
-
-### P1 — rules-visible bugs
-
-- ✅ **Death-funnel bypass family** — arms that route battlefield→graveyard
-  around `remove_to_graveyard_with_triggers`, silently dropping dies
-  triggers, Persist/Undying, `died_card_snapshots`, and tallies (CR 700.4):
-  Fixed this run: `LivingEnd` + `SacrificeAndRemember` route through
-  `remove_to_graveyard_with_triggers` with the full event set;
-  Fading/Vanishing + cumulative upkeep use the shared `sacrifice_one`;
-  Ward `Discard(n)` goes through `discard_card` (CardDiscarded + Madness),
-  and `discard_card` itself now routes the graveyard placement through
-  `route_to_graveyard` (CR 614.6). Ward `SacrificeCreature` and
-  `process_attacking_token_cleanup` now route through `sacrifice_one`
-  (events + die snapshot) — family closed; promote new arms through the
-  rich funnels only.
-- ✅ **Hybrid/Phyrexian permanents read as colorless on the battlefield**
-  (`effects/eval.rs:1040-1045`). `evaluate_requirement_static::HasColor`
-  scans bare `Colored` pips only; the sibling evaluator at `eval.rs:1284`
-  already uses `ManaCost::colors()` with a comment warning about exactly
-  this. CR 105.2/202.2.
-- ✅ **"Each player discards" stops at the first `wants_ui` seat** —
-  `per_seat_continuation` re-runs the effect for every unprocessed seat
-  after the suspended seat answers (Discard / DiscardAnyNumber /
-  DiscardChosen / ExileChosenFromHand / ExileChosenUntilSourceLeaves /
-  ExileFromHandTaxed / Sacrifice). Test
-  `symmetric_discard_reaches_every_ui_seat`.
-- ✅ **`OneSpellPerTurn` reads a stale counter** (`mod.rs:3932`).
-  `spells_cast_this_turn` resets at the player's *own* untap
-  (`stack.rs:1308`), so under Rule of Law a non-active player is locked out
-  of all spells on opponents' turns based on their previous turn's casts.
-  Needs a turn-scoped (not owner-untap-scoped) count.
-- ✅ **Animated lands / crewed Vehicles can't block** (`combat.rs:487`,
-  also the Lure/MustBlock able-blocker scans at `665-778`). Blocker
-  legality reads printed `CardInstance::can_block()`; attacker legality
-  already reads the computed view (comment at `combat.rs:241`). CR 509.1a.
-- ✅ **Lifegain events ignore replacements** — every event-emitting life
-  site now uses `adjust_life_applied` (combat damage, damage funnel,
-  cumulative upkeep, half/X-loss arms). Paid-life costs (Phyrexian pips,
-  alt/ability life costs, Ward life) route through `pay_life_cost`, which
-  queues a `LifeLost` event drained after the action — paid life now fires
-  loss triggers (CR 118.8/119.3c; test `cr_119_3c_*`).
-- ✅ **Every coin flip is heads** (`mod.rs:2563` +
-  `decision.rs:481`). `AutoDecider` answers constant `Bool(true)` for
-  `Decision::CoinFlip` despite the doc promising engine RNG, and no live
-  path installs another decider — deterministic and exploitable.
-- ✅ **Non-combat damage funnel missing Infect/Wither/deathtouch** —
-  `deal_damage_to_from` now lands wither/infect damage as -1/-1 counters
-  (CR 702.80a/702.90e) and flags deathtouch (CR 702.2c); `Effect::Fight`
-  routes both halves through the funnel with their sources (lifelink,
-  protection, computed power). Tests `cr_702_80a_*`, `cr_702_2c_*`,
-  `cr_701_12_fight_applies_lifelink_from_each_half`.
-- ✅ **Combat damage aggregation across sources** — blocker strike-back is
-  now per-source (CR 702.90 / 615.6): each dealing blocker's power is
-  scaled, shielded, and landed (counters vs marked damage, deathtouch,
-  lifelink, `creature_damage` records) as its own event. Tests
-  `cr_702_90_*`.
-- ✅ **Excess non-trample damage vanishes / lethal ignores marked damage** —
-  default split now assigns the full power (excess to the last blocker
-  without trample) and lethal subtracts marked damage at both lethal sites.
-  `resolve_damage_assignment` now also rejects non-trample
-  under-assignment (CR 510.1d; test
-  `cr_510_1d_non_trample_under_assignment_falls_back_to_default`) —
-  row closed.
-- ✅ **Layer timestamps** — `CardInstance.battlefield_timestamp` is
-  stamped from the shared `next_effect_timestamp` counter on battlefield
-  entry (CR 613.7d), attach (613.7e), turn-face-up (613.7f), and transform
-  (613.7g); static-ability effects order by `object_timestamp()` so
-  static-vs-spell cross-comparison is coherent (tests `cr_613_7_*`).
-  EOT keyword grants now join the layer walk as synthetic L6 effects at
-  their grant timestamps (`granted_keywords_eot_ts`, stamped by
-  `grant_keyword_eot`), so a later "gains flying" survives an earlier
-  `RemoveAllAbilities` and vice versa (test
-  `cr_613_7_eot_grant_after_lose_all_abilities_survives`). Untracked
-  grants (tests/legacy snapshots) default to timestamp 0 — the old
-  pre-merge ordering.
-- ✅ **Step triggers skip APNAP** (`stack.rs:309-485`). `fire_step_triggers`
-  queues in battlefield-`Vec` order despite the comment claiming
-  "APNAP-ordered" (CR 603.3b) and bypasses the same-controller
-  `TriggerOrder` choice; the unified event dispatcher does it right
-  (`apnap_rank`, `mod.rs:5432`).
-- ✅ **`drain_trigger_queue` drops trigger batches** — a batch arriving
-  while a decision is pending now auto-targets everything instead of
-  vanishing.
-- ✅ **`GainControl` doesn't set summoning sickness**
-  (`effects/mod.rs:3979-4013`). A Control-Magic-style steal attacks the
-  same turn without haste (CR 302.6); Act-of-Treason effects mask it with
-  redundant haste grants.
-- ✅ **Fizzled flashback/Aftermath spells go to the graveyard**
-  (`mod.rs:6958-6996`). The CR 608.2b fizzle paths call
-  `route_to_graveyard` directly, bypassing the `cast_via_flashback` exile
-  rider consumed only on the success path (`mod.rs:7091`, `7149`) —
-  re-flashbackable (CR 702.34d).
-- ✅ **Mass exilers bypass `move_card_to`** — `note_left_graveyard`
-  (tally + `CardLeftGraveyard`) fires from `ExileAllGraveyards`,
-  `LivingEnd`, `ExilePlayerGraveyard`, `ExileSameNameAsTarget`; `Process`
-  routes through `route_to_graveyard` (CR 614.6). Test
-  `mass_graveyard_exile_fires_left_graveyard_bookkeeping`.
-- ✅ **`DigToHandLoseLife` emits fake draws** (`effects/mod.rs:2110-2158`).
-  Cards put into hand emit `CardDrawn` (CR 121.5 — Sheoldred/Bowmasters
-  fire spuriously) while `cards_drawn_this_turn` is *not* bumped; the
-  rest-to-graveyard branch bypasses `route_to_graveyard`. The engine's own
-  `RevealTopAndDrawIf` (`mod.rs:6037`) cites the rule correctly.
-- ✅ **Hybrid mana payment solver rejects payable costs** — hybrid and
-  mono-hybrid pips are now assigned jointly by backtracking (CR 601.2g),
-  leaving room for the cost's generic/snow drains. Tests
-  `hybrid_solver_tests::*`.
-- ✅ **`CardInstanceWire` drops six persistent fields**
-  (`crabomination_base/src/card.rs:2649-2959`): `kick_count`,
-  `squad_count`, `bargained`, `encoded_on`, `granted_activated_abilities`,
-  `cast_target_was_battlefield`. Snapshots with spells on the stack restore
-  them zeroed (Everflowing Chalice enters with 0 counters; Urza's Saga
-  grants vanish; the 608.2b fizzle flag clears).
-  `TokenDefinition.static_abilities` now round-trips too — the
-  `static_str_serde::StaticStr` alias keeps serde's derive from pinning
-  `StaticAbility` / `CardDefinition` / `Adventure` to `Deserialize<'static>`
-  (test `token_static_abilities_survive_serde`).
-- ✅ **ETB control replacement fires triggers for the wrong controller**
-  (`effects/movement.rs:649-742`). `apply_etb_control_replacement` may
-  reassign `card.controller` (Gather Specimens) but
-  `fire_self_etb_triggers(cid, p)` still passes the stale pre-replacement
-  controller (CR 603.3d); the token funnel does it right (`mod.rs:2402`).
-- ✅ **Cleanup priority** — CR 514.3/514.3a wired: cleanup runs its
-  turn-based actions on step entry with no priority window; if the discard
-  fires triggers or SBAs act, players get priority in cleanup and another
-  cleanup round runs when they pass with an empty stack (`CleanupOutcome`,
-  `do_cleanup`/`finish_cleanup`/`end_turn`). Untap also auto-advances
-  without a phantom pass (CR 502.4). Tests `cr_514_3_*`.
-- ✅ **Batch-relative block validation** — Menace merges `block_map` like
-  its sibling checks (CR 702.110b) and duplicate blockers (in-batch or
-  re-blocking) are rejected. Test `duplicate_blocker_in_batch_rejected`.
-- ✅ **Counter handling inconsistencies** — fixed this run: `Monstrosity`
-  applies doublers, `RemoveAllCounters` clears `keyword_counters`
-  (CR 122.1b), shield-counter depletion removes the 0-count entry
-  (CR 700.9), `AddKeywordCounter` marks `permanents_gained_counter_this_turn`.
-  `Explore` now applies doublers. `GameEvent::KeywordCounterAdded` (+ wire
-  + log line) now surfaces keyword-counter grants — row closed.
-- ✅ **Soulshift fetches from any graveyard**
-  (`crabomination_base/src/effect/shortcut.rs:2048-2062`). The desugar's
-  `InGraveyard` matches all players and routes to the card's owner's hand —
-  can return an opponent's Spirit to the opponent (CR 702.47a is "your
-  graveyard … your hand"). Similarly **Graft** (`shortcut.rs:2825-2844`)
-  scopes to `YourControl` but printed Graft is *any* entering creature
-  (CR 702.58a).
-- ✅ **Detained planeswalkers can still activate loyalty abilities**
-  (`mod.rs:5808`). `activate_loyalty_ability` lacks the `detained_by` gate
-  the regular activation path has (`actions.rs:6387`).
-- ✅ **Day/Night flips wrong on extra turns** (`mod.rs:1130`). During an
-  extra turn `do_untap` resets `spells_cast_this_turn` *before*
-  `check_day_night_transition` reads it — always reads 0, flips Day→Night
-  regardless of casts (CR 502.2).
-- ✅ **Skulk compares computed power to raw power** (`mod.rs:8218`).
-  Blocker side uses layer-computed power, attacker side raw
-  `CardInstance::power()` — anthem-pumped Skulk attackers evaluated
-  unbuffed (CR 702.72a).
-- ✅ **Blood token discard is resolution, not cost**
-  (`crabomination_base/src/tokens.rs:194-242`). Activates with an empty
-  hand and still draws (CR 602.2b). The "isn't expressible as a cost"
-  comment is stale — `ActivatedAbility.discard_cost` exists and Fauna
-  Shaman uses it.
-- ✅ **Inconsistent `CardInstance` helpers** — `has_protection_from` rides
-  `has_keyword` (EOT grants/strips count); `ward()` exposes the full
-  `WardCost` with `ward_cost()` documented as the mana-only shortcut.
-- ✅ **`CopySpellUnlessPaid` duplicates the spell-copy block**
-  (`effects/mod.rs:7028-7134`) and has already diverged from
-  `copy_stack_spell`: missing the `CantBeCopied` guard (CR 707) and the
-  choose-new-targets path.
+All P0 (game-deciding / state-corrupting) and P1 (rules-visible) findings from
+the five-reviewer pass are fixed and regression-tested. Per-finding detail (call
+sites, CR clauses, test names) was elided in a compaction pass — recover it from
+`git log -p -- TODO.md`. Classes closed: blocked-attacker-stays-blocked (510.1c),
+trigger fizzle vs re-target (608.2b), cast-pipeline atomicity (`cast_atomically`),
+pump-duration respect, the death-funnel-bypass family, life/draw/damage
+replacement coverage, real coin-flip RNG, non-combat wither/infect/deathtouch,
+per-source combat-damage aggregation, layer timestamps, and the hybrid-mana
+solver. The two recurring root causes (effect arms bypassing the rich funnels;
+parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ### P2 — performance
 
@@ -1617,188 +1416,82 @@ was elided in a doc-compaction pass — recover it from
 `git log -p -- TODO.md`. Markers are a point-in-time read; re-verify before
 picking an item up.
 
-### Done (✅) — wired, see git/code for detail
-- ✅ **CR 702.148 — Cleave** — rides `AlternativeCost { mana_cost,
-  effect_override }`: the cleave cast pays the alternative cost and
-  resolves the bracket-stripped effect (702.148b text change baked as the
-  override; target filters come from the override on the alt path). Ships
-  Wash Away (+ new `SelectionRequirement::SpellNotCastFromHand`), Dig Up,
-  Fierce Retribution, Path of Peril, Parasitic Grasp, Alchemist's
-  Retrieval, Winged Portent, Dread Fugue. Tests `cleave_*`.
-- ✅ **CR 702.47 — Splice** — `Keyword::Splice(cost, quality)` +
-  `GameAction::CastSpellSpliced`: splice costs paid additionally
-  (atomic rollback), spliced text resolves after the main effect reading
-  targets from `additional_targets[i]`, card stays in hand, changes lost
-  off-stack (702.47e). Glacial Ray / Kodama's Might / Reach Through Mists
-  (`sets::chk`). Tests `cr_702_47_*`. Client splice picker + bot splice
-  awareness still ⏳.
-- ✅ **CR 704.5k — world rule** — timestamp-keyed (newest survives, ties
-  bin all). Concordant Crossroads, Nether Void. Tests `cr_704_5k_*`.
-- ✅ **CR 614.5 / 701.10f — mana-production multipliers compose** —
-  `ManaProductionTripled` (Nyxbloom Ancient) × `ManaProductionDoubled`
-  (Mana Reflection) = 6×; only "tap a permanent for mana" abilities
-  qualify (rituals exempt).
-- ✅ **CR 702.64 — Absorb** — `Keyword::Absorb(n)` soaks N per damage event
-  at the shared prevention funnel (combat + non-combat). Lymph Sliver
-  (grant via `GrantKeyword`). Tests `cr_702_64_*`.
-- ✅ **CR 704.5y — Role uniqueness SBA** — same-controller duplicate Roles
-  on one host: all but the newest (battlefield timestamp) hit the
-  graveyard. Tests `cr_704_5y_*`.
-- ✅ **CR 701.30 — Clash, seat-routed** — both clashing `wants_ui` players
-  get the bottom-or-keep prompt via the resolution answer log
-  (`ask_seat_bool`); reveal events and zone moves stay after the asks so
-  the suspend re-run is idempotent. Test `clash_prompts_each_ui_seat_to_bottom`.
-- ✅ **CR 702.104 — Tribute, seat-routed** — the opponent (not the global
-  decider) answers the tribute question. Test `tribute_question_routes_to_the_opponent`.
-- ✅ **CR 700.4 — "dies" under graveyard→exile replacements** — a creature
-  whose death-placement is redirected to exile (Rest in Peace, Leyline,
-  void/finality, Kalitas) never dies: self/equipment dies triggers, watcher
-  triggers, Persist/Undying, and the died tally are all suppressed. Tests
-  `cr_700_4_*`.
-- ✅ **CR 702.31 — Horsemanship** — block gate was wired; now carded
-  (Sun Quan / Liu Bei / Zhang Fei / Guan Yu) and tested
-  (`cr_702_31_horsemanship_blocks_only_horsemanship`).
-- ✅ **CR 701.30 — Clash** — `Effect::ClashWithOpponent` (both reveal top,
-  may bottom via the synchronous decider, higher MV wins → `on_win`).
-  Recross the Paths. Test `cr_701_30_recross_the_paths_clash_win_returns_to_hand`.
-- ✅ **CR 702.80a / 702.90e / 702.2c — wither / infect / deathtouch on
-  NON-combat damage** — the `deal_damage_to_from` funnel lands -1/-1
-  counters and flags deathtouch; `Effect::Fight` carries per-half sources.
-- ✅ **CR 510.1d — full damage assignment** — non-trample under-assignment
-  rejected; excess to the last blocker.
-- ✅ **CR 701.37 / 712.16 — Meld** — `Effect::Meld` (exile both own+controlled
-  components → mint the melded card; `CardInstance.meld_parts` makes every
-  leave-battlefield funnel unmeld it back into both cards). Urza, Lord
-  Protector + The Mightstone and Weakstone → Urza, Planeswalker, whose
-  CR 606.3 "twice each turn" override rides
-  `CardDefinition.loyalty_twice_each_turn` + the new
-  `CardInstance.loyalty_uses_this_turn` counter. Tests `meld_*`,
-  `urza_planeswalker_twice_per_turn_and_discount`.
-- ✅ **CR 702.146 — Disturb** — `Keyword::Disturb(cost)` +
-  `GameAction::CastDisturb` (sorcery-speed graveyard cast that flips to the
-  back face on the stack); CR 702.146e graveyard→exile rider via
-  `disturb_back_exiles()` at both graveyard funnels. Baithook Angler,
-  Beloved Beggar, Mourning Patrol, Lunarch Veteran. Surfaced as
-  `GraveyardCardView.disturb_cost` + a client browser badge; the bot offers
-  disturb recasts.
-- ✅ **CR 104.3c (with the 104.2 win override)** — `lose_to_empty_draw`
-  funnels every failed-draw site; `StaticEffect::WinInsteadOfDrawFromEmpty`
-  flips it to a win (Laboratory Maniac, Jace, Wielder of Mysteries; Thassa's
-  Oracle gates on `DevotionTo` vs `LibrarySizeOf`).
-- ✅ **"When this card is milled" triggers** — `EventKind::CardMilled`
-  dispatched from the graveyard with SelfSource scope (Narcomoeba, Creeping
-  Chill).
-- ✅ **CR 702.104 — Tribute** — `Effect::Tribute { n, otherwise }` +
-  `shortcut::tribute`; the opponent answers via the synchronous decider
-  (AutoDecider declines → trigger half fires). Fanatic of Xenagos, Oracle
-  of Bones (filtered `CastFromHandWithoutPaying`).
-- ✅ **CR 728 — Ending the Turn** — `Effect::EndTheTurn` exiles the stack
-  (the resolving spell included, 728.1a), clears combat (728.1b), and jumps
-  to cleanup (728.1d) via `do_end_the_turn`. Sundial of the Infinite,
-  Day's Undoing. Tests `cr_728_*`.
-- ✅ **CR 701.19 — Searching** — search-replacement statics:
-  `OpponentsSearchTopN` (Aven Mindcensor) limits an opponent's candidates
-  to the top N; `SearchTax` (Leonin Arbiter) auto-pays {2} from floating
-  mana once per turn, else the search finds nothing (701.19d).
-- ✅ **CR 714.4 — DFC sagas** — `Effect::ExileSelfReturnTransformed`
-  (chapter III exile-and-return-transformed; the returned object is new —
-  lore counters clear). Fable of the Mirror-Breaker // Reflection of
-  Kiki-Jiki, whose token rider rides `DelayedTrigger.bound_token`.
-- ✅ **CR 702.103 — Jump-start** — rides the flashback cast path (own cost +
-  `AdditionalCastCost::Discard{1}`, exile-after); Chemister's Insight,
-  Radical Idea; surfaced as `flashback_cost` in the graveyard view.
-- ✅ **CR 707.2 — continuous copies** — `Effect::BecomeCopyOfFor` (EOT /
-  Permanent durations, leave-revert, 707.2e non-legendary); Echoing
-  Equation, Mirrorform, Vesuva, Thespian's Stage, Shifting Woodland.
-- ✅ **CR 702.43 — Domain** — `Value::DomainCount(PlayerRef)` (distinct basic
-  land types among a player's lands, 0–5) + `StaticEffect::SelfCostReducedByDomain`
-  generic cost reduction. Tribal Flames (X damage = domain), Leyline Binding
-  (Flash enchant, {1} less per basic type, exile-until-leaves). Test
-  `cr_702_43_domain_counts_distinct_basic_land_types`.
-- ✅ **CR 702.6e — Equipment-granted triggered abilities** — `EquipBonus.
-  triggered_abilities` fire as printed on the equipped creature; with
-  `triggers_on_equipment` they resolve with the Equipment as source (Umezawa's
-  Jitte's charge counters). Test `cr_702_6e_equip_trigger_resolves_on_the_equipment`.
-  Combat-damage-**to-a-creature** (CR 510.2) now dispatches too, so an
-  equipment trigger fires when its creature is blocked (Jitte charges).
-- ✅ **CR 510.2 — combat damage to a creature dispatch** — `resolve_combat_
-  damage_with_filter` records creature-vs-creature damage and fires
-  `DealsCombatDamageToCreature` triggers after the step (shared
-  `fire_combat_damage_triggers`). Tests `cr_510_2_*`.
-- ✅ **CR 509.1d — block tax** — `StaticEffect::BlockTaxToController` enforced in
-  `declare_blockers` (Archangel of Tithes). Tests `cr_509_1d_*`.
-- ✅ **CR 702.46 — Cipher** — `Effect::Cipher` + `CardInstance.encoded_on`;
-  combat-damage-to-player dispatch offers a free copy (Shadow Slice). Test
-  `cr_702_46_cipher_encodes_then_recasts_on_combat_damage`.
-- ✅ **CR 702.41 — Affinity (for artifacts)** — rides the existing
-  `CardDefinition.affinity_filter` generic cost reduction (`SelectionRequirement::
-  Artifact`). Somber Hoverguard, Qumulox, Sojourner's Companion, Carapace Forger.
-- ✅ **CR 205.4g — Snow permanents** — `Value::SnowPermanentCountControlledBy`
-  (reads `CardDefinition.is_snow()`); Skred.
-- ✅ **CR 604.3 — Characteristic-defining P/T (artifact count)** —
-  `DynamicPt::ArtifactsControlled` (`dynamic_pt_for_name`); Broodstar's */*.
-- ✅ **CR 702.176 — Bargain** (`Keyword::Bargain` + `GameAction::
-  CastSpellBargain`: optional "sacrifice an artifact, enchantment, or token"
-  additional cost; `CardInstance.bargained` + `Predicate::SpellWasBargained`
-  gate the payoff, surfaced as `PlayerView.bargainable_hand`. Torch the Tower,
-  Candy Grapple, Archon's Glory, Kellan's Lightblades, Stonesplitter Bolt,
-  Troublemaker Ouphe, Tenacious Tomeseeker).
-- ✅ **CR 601.2b — variable-sacrifice cost reduction** (`StaticEffect::
-  SacrificeCostReduction { per }` + `GameAction::CastSpellSacrificeReduce`:
-  sacrifice any number of creatures, {N} less each, threaded through the cast
-  path via a transient `extra_cast_reduction`. Awaken the Blood Avatar).
-- ✅ **CR 702.74 — Evoke** (`AlternativeCost.evoke_sacrifice` + ETB-then-
-  sacrifice on the stack; `shortcut::evoke`. Solitude, Fury, Mulldrifter,
-  Shriekmaw).
-- ✅ **CR 603.3d once-per-turn + exile triggers** — `EventKind::CardExiled`
-  (maps to the central exile-placement funnel's `PermanentExiled`) pairs with
-  `once_per_turn` + `IsTurnOf(You)` for "whenever one or more cards are put into
-  exile during your turn" (Stonebinder's Familiar).
-- ✅ **Cast-from-exile rider** — `CardInstance.cast_from_exile` (stamped in
-  `cast_card_for_free` for suspend/foretell/plot/impulse) + `Predicate::
-  CastSpellFromExile` (Nassari, Dean of Expression). Hone counters
-  (`CounterType::Hone` + `process_hone`) are the timed cast-from-exile path.
-- ✅ **CR 702.26 — Phasing** (`GameState.phased_out` side zone + `do_phasing`
-  at the top of the untap step; `Effect::PhaseOut` for targeted phase-out.
-  Tolarian Drake, Breezekeeper, Vodalian Illusionist, Reality Ripple).
-- ✅ **CR 702.77 — Champion** (ETB linked-exile via `ExileUntilSourceLeaves`;
-  returns on leave. "Sacrifice unless you exile" collapses to a no-op when no
-  other creature is controlled. Changeling Hero).
-- ✅ **CR 702.56 — Forecast** (`ActivatedAbility.from_hand` + upkeep-only
-  `condition` + `once_per_turn`; card stays in hand. Steeling Stance).
-- ✅ **CR 603.3b — Same-controller trigger ordering** (incl. the server suspend path — `ResumeContext::TriggerOrder`).
-- ✅ **CR 702.124 — Addendum** (`shortcut::addendum` / `cast_during_your_main`: a resolution-time `IsTurnOf(You) ∧ main-phase` gate — exact since a main-phase cast resolves in the same step. Sphinx's Insight, Precognitive Perception).
-- ✅ **CR 601.2f — generic cost reduction (graveyard-Affinity)** (`CardDefinition.affinity_graveyard_filter`: {1} less per matching graveyard card, generalizing the old per-name Dawning Archaic hook; clamped generic-only. The bot's `can_afford_in_state` folds in cost reductions too. Tolarian Terror, The Dawning Archaic).
-- ✅ **CR 702.32 — Kicker** (client opt-in affordance; the bot offers kicked casts when affordable). **CR 702.33c — Multikicker ✅** (`CastSpellMultikicked`, kick_count → `Value::TimesKicked`, client pay-times stepper, bot probes the biggest affordable kick count).
-- ✅ **CR 702.164 — Backup** (`shortcut::backup` / `backup_with`).
-- ✅ **CR 702.95 — Soulbond** (auto-pairs lowest-CardId partner; a controller "may"/decline prompt still ⏳).
-- ✅ **CR 702.134 — Mentor** (`shortcut::mentor`).
-- ✅ **CR 702.105 — Dethrone** (primitive only; no simple printed card exists yet).
-- ✅ **CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift** (carded + tested). (Soulshift now fetches only your graveyard via `InYourGraveyard`; Graft watches any entering creature.)
-- ✅ **CR 702.68 / 702.69 / 702.70 — Frenzy / Gravestorm / Poisonous**.
-- ✅ **CR 702.139 — Revolt**.
-- ✅ **CR 702.79 / 702.92 — Persist / Undying** (return on *any* death, not just lethal-damage SBA).
-- ✅ **CR 702.66 — "Spells you cast have delve" static**.
-- ✅ **CR 709 — Split Cards** + **702.102 Fuse** + **702.127 Aftermath** (~23 cards; client half-picker modal + multi-target fused halves still ⏳; 709.4/709.4b dual-name/combined-MV-in-non-stack-zones not modeled).
-- ✅ **CR 510 — Combat Damage Step** (player damage-assignment order/over-assign; the client now ships both the reorder modal (510.1c) and the per-blocker assignment stepper modal (510.1d)).
-- ✅ **CR 114 — Emblems** (`Player.emblems` + `Effect::CreateEmblem`; supersedes the old ⏳ audit row — see FEATURE_ROADMAP Tier 3).
-- ✅ **CR 712 — Transforming Permanents** — `Effect::Transform` toggles a DFC permanent's active face in place (same object; counters/tapped/attachments persist), fires `EventKind::Transformed` for "when this transforms," and round-trips through serde + `GameSnapshot` (front name + `transformed` flag rebuild the back face). Concealing Curtains, Delver of Secrets, Thing in the Ice, The Everflowing Well, Search for Azcanta, Growing Rites of Itlimoc, Kessig Prowler, Village Watch. Still ⏳: DFC sagas, meld, Morph cast-face-down, Disguise/Cloak.
-- 🟡 **CR 708 — Face-Down Permanents** — `CardInstance.face_up_def` + `facedown_creature_definition` (vanilla 2/2), turned face up on leaving the battlefield (708.10) and round-tripped through serde. `Effect::Manifest` / `ManifestDread` (701.34 / 702.166), `GameAction::TurnFaceUp` (708.5, Morph/manifest cost), `EventKind::TurnedFaceUp` (708.8 — "when this is turned face up"). Hauntwoods Shrieker; Morph/Megamorph cast-face-down ✅ via `GameAction::CastFaceDown` (CR 702.36/702.36e), Ainok Survivalist. Still ⏳: Disguise/Cloak (ward + colorless 2/2).
-- ✅ **CR 702.146 — Daybound/Nightbound** — `Keyword::{Daybound,Nightbound}` flip with the day/night cycle (`set_day_night`); daybound entrant makes it day (702.146e). Village Watch // Village Reavers. Still ⏳: cast-a-daybound-spell day entry; the full no-spells night-entry beyond CR 502.2.
-- ✅ **CR 702.114 — Devoid** — `Keyword::Devoid` CDA honored in `colors_from_card` (color base returns empty); colorless despite colored pips. Mist Intruder, Sludge Crawler, Reality Hemorrhage, Touch of the Void.
-- ✅ **CR 702.115 — Ingest** — `shortcut::ingest()` combat-damage trigger + `Effect::ExileTopOfLibrary { who, amount }` (Mill routed to exile). Mist Intruder, Sludge Crawler.
-- ✅ **CR 701.x — Process** (BFZ/OGW) — `Effect::Process { count, then }`: move N exile cards an opponent owns to their graveyards, run `then` only if any were processed ("if you do" rider, reading the trigger's target). Wasteland Strangler, Mind Raker, Blight Herder. Still ⏳: process-onto-battlefield (Oblivion Sower) and process-as-additional-cost (Processor Assault).
-- ✅ **CR 208.2 / 613.7b — Set base P/T** — `Effect::SetBasePT` (layer-7b) now reads `Value::PowerOf/ToughnessOf(TriggerSource)` for "becomes that creature's P/T until end of turn." Eldrazi Mimic.
-- ✅ **CR 702.21 — Ward (discard)** — the `WardCost::Discard(n)` payment menu is exercised by Reality Smasher (corrected from a placeholder Ward {2}).
-- ✅ **CR 602.5b — Return-to-hand activation cost** — `ActivatedAbility.return_self_cost` bounces the source to its owner's hand after tap/mana/life payments (mirrors `sac_cost`). Grinning Ignus (mana), Rootha (spell-copy).
-- ✅ **CR 602.5c — "Abilities can't be activated"** — `Keyword::CantActivateAbilities` read from the *computed* keyword set in `activate_ability` rejects non-mana abilities (mana abilities unaffected). Detention Vortex (Aura grant).
-- ✅ **CR 119.3 — Life gained this turn** — `Value::LifeGainedThisTurn(who)` (reads `Player.life_gained_this_turn`). Accomplished Alchemist's second mana ability.
-- ✅ **CR 603.3d — "Triggers only once each turn"** — `EventSpec::once_per_turn` tracked via `GameState::triggered_once_per_turn_used` (also collapses same-batch fan-out to a single fire). Dramatic Finale.
-- ✅ **CR 602.5 — "Only your opponents may activate"** — `ActivatedAbility.opponents_only` bars the source's controller and lets an opponent activate; affordances surface it cross-seat. Detention Vortex's `{3}: Destroy this Aura`.
-- ✅ **CR 602.5b — Discard-self activation cost** — `ActivatedAbility.discard_self_cost` routes the source hand→graveyard via the shared discard path. Elemental Masterpiece's `{U/R}{U/R}, Discard this card: Treasure`.
-- ✅ **CR 702.97 — Scavenge** — `shortcut::scavenge(cost)` rides the gy-activation + exile-self-cost path; counters = `Value::PowerOf(This)` read off the exiled card's printed power. Dreg Mangler.
-- ✅ **CR 702.53 — Transmute** — `shortcut::transmute(cost, mv)` rides the from-hand + discard-self path; tutors a `ManaValueExactly(mv)` card to hand at sorcery speed. Drift of Phantasms.
-- ✅ **CR 122 / 614.13 — chosen-type enters-with-counter** — `StaticEffect::ChosenTypeEntersWithCounter { kind }` + `chosen_type_etb_counter_specs`, applied at both ETB-counter sites (spell-resolve + move-to-battlefield, so tokens/reanimation count). Metallic Mimic. Counter-doubling (Doubling Season) composes.
+### Done (✅) — wired
+
+One line per wired rule; implementation detail (code symbols, tests) elided —
+recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline.
+
+- ✅ CR 702.148 — Cleave
+- ✅ CR 702.47 — Splice
+- ✅ CR 704.5k — world rule
+- ✅ CR 614.5 / 701.10f — mana-production multipliers compose
+- ✅ CR 702.64 — Absorb
+- ✅ CR 704.5y — Role uniqueness SBA
+- ✅ CR 701.30 — Clash, seat-routed
+- ✅ CR 702.104 — Tribute, seat-routed
+- ✅ CR 700.4 — "dies" under graveyard→exile replacements
+- ✅ CR 702.31 — Horsemanship
+- ✅ CR 701.30 — Clash
+- ✅ CR 510.1d — full damage assignment
+- ✅ CR 701.37 / 712.16 — Meld
+- ✅ CR 702.146 — Disturb
+- ✅ CR 104.3c (with the 104.2 win override)
+- ✅ "When this card is milled" triggers
+- ✅ CR 702.104 — Tribute
+- ✅ CR 728 — Ending the Turn
+- ✅ CR 701.19 — Searching
+- ✅ CR 714.4 — DFC sagas
+- ✅ CR 702.103 — Jump-start
+- ✅ CR 707.2 — continuous copies
+- ✅ CR 702.43 — Domain
+- ✅ CR 702.6e — Equipment-granted triggered abilities
+- ✅ CR 510.2 — combat damage to a creature dispatch
+- ✅ CR 509.1d — block tax
+- ✅ CR 702.46 — Cipher
+- ✅ CR 702.41 — Affinity (for artifacts)
+- ✅ CR 205.4g — Snow permanents
+- ✅ CR 604.3 — Characteristic-defining P/T (artifact count)
+- ✅ CR 702.176 — Bargain
+- ✅ CR 601.2b — variable-sacrifice cost reduction
+- ✅ CR 702.74 — Evoke
+- ✅ CR 603.3d once-per-turn + exile triggers
+- ✅ Cast-from-exile rider
+- ✅ CR 702.26 — Phasing
+- ✅ CR 702.77 — Champion
+- ✅ CR 702.56 — Forecast
+- ✅ CR 603.3b — Same-controller trigger ordering
+- ✅ CR 702.124 — Addendum
+- ✅ CR 601.2f — generic cost reduction (graveyard-Affinity)
+- ✅ CR 702.32 — Kicker
+- ✅ CR 702.164 — Backup
+- ✅ CR 702.95 — Soulbond
+- ✅ CR 702.134 — Mentor
+- ✅ CR 702.105 — Dethrone
+- ✅ CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift
+- ✅ CR 702.68 / 702.69 / 702.70 — Frenzy / Gravestorm / Poisonous
+- ✅ CR 702.139 — Revolt
+- ✅ CR 702.79 / 702.92 — Persist / Undying
+- ✅ CR 702.66 — "Spells you cast have delve" static
+- ✅ CR 709 — Split Cards
+- ✅ CR 510 — Combat Damage Step
+- ✅ CR 114 — Emblems
+- ✅ CR 712 — Transforming Permanents
+- 🟡 CR 708 — Face-Down Permanents
+- ✅ CR 702.146 — Daybound/Nightbound
+- ✅ CR 702.114 — Devoid
+- ✅ CR 702.115 — Ingest
+- ✅ CR 701.x — Process
+- ✅ CR 208.2 / 613.7b — Set base P/T
+- ✅ CR 702.21 — Ward (discard)
+- ✅ CR 602.5b — Return-to-hand activation cost
+- ✅ CR 602.5c — "Abilities can't be activated"
+- ✅ CR 119.3 — Life gained this turn
+- ✅ CR 603.3d — "Triggers only once each turn"
+- ✅ CR 602.5 — "Only your opponents may activate"
+- ✅ CR 602.5b — Discard-self activation cost
+- ✅ CR 702.97 — Scavenge
+- ✅ CR 702.53 — Transmute
+- ✅ CR 122 / 614.13 — chosen-type enters-with-counter
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
@@ -1924,6 +1617,30 @@ picking an item up.
   `scripts/fix_doc_costs.py`, coupled test fixtures rewritten via
   `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
   keep it at zero after adding cards.
+  ✅ **Type-line + keyword sweep (2026-06-14).** `audit_stx_drift.py` only
+  checks cost + P/T; it never inspects type line or keywords. Added
+  `scripts/audit_stx_types.py` to cover those against the cache. Against a
+  freshly-refetched real Scryfall cache it found **49 creature-type + 24
+  keyword drifts**. Fixed: **47 creature types** + **5 keywords** (Mavinda
+  Cleric+Vigilance → Bird Advisor+Flying; Beledros Demon+Trample/Lifelink →
+  Elder Dragon+Flying; Galazeth → Elder Dragon; Killian +Menace; Felisa /
+  Combat Professor −Lifelink/−Vigilance). Full test suite green (8551).
+  **Deliberately left (run `audit_stx_types.py` to see them):**
+  - **4 creature types** — Eyetwitch, Quandrix Pledgemage, Silverquill
+    Pledgemage are synthesized cards whose Pest/Fractal/Inkling *synergy tests*
+    depend on the wrong type (retyping them breaks the tests; needs the card +
+    test reworked together); Eccentric Apprentice's real type *Tiefling* has no
+    `CreatureType` enum variant.
+  - **19 keywords** — mostly **conditional/granted** keywords the catalog models
+    as a base keyword (Leech Fanatic's your-turn-only lifelink, Sticky Fingers'
+    aura-granted menace, Disciplined Duelist's counter-gated double strike), plus
+    a few real bugs on synthesized cards whose tests assert the wrong keyword.
+    A blanket keyword sweep is unsafe — Scryfall's `keywords` array lists
+    conditional/granted keywords, and a card's first `keywords:` literal can be a
+    *nested* token/equip vec. Fix case-by-case.
+  NOTE: many fixed cards are fabricated-real-name collisions above — their
+  cost/PT/type now match Scryfall, but several **bodies are still synthesized**;
+  a correct stat block ≠ a faithful card.
   **Effect-body sweep complete**: Hofri Ghostforge, Fervent Mastery, and
   Strixhaven Stadium (point counters + ten-point `Effect::LoseGame`) are now
   faithful. ✅ this run: **Stonebinder's Familiar**
@@ -2353,8 +2070,14 @@ picking an item up.
   budget" counter, (b) a target-introspection at cast time
   ("targets only a single creature"), and (c) a delayed replacement
   to route the resolving spell to exile instead of graveyard.
-  Currently Mavinda ships as a 1/3 Flying+Vigilance Legendary
-  Cleric body without the static.
+  Update (was stale): the {0} graveyard-cast ability *is* wired
+  (`silverquill.rs::mavinda_students_advocate`) — but as a {0}
+  once-per-turn **activated** ability, not the printed static, and the
+  "targets only a single creature" sub-filter is dropped (any IS card
+  in your graveyard is eligible). The body is 2/3. (Its creature type and
+  keywords were wrong — Human Cleric + Vigilance — and were corrected to
+  Bird Advisor + Flying in the 2026-06-14 type/keyword sweep; see "Fabricated
+  real-name STX cards".)
 
 - ⏳ **Foretell alt-cost primitive** (suggested by push modern_decks's
   Saw It Coming addition) — Foretell ({2} on cast, alt cost {1}{U} on
