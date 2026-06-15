@@ -174,7 +174,7 @@ pub fn disciplined_duelist() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::FirstStrike],
+        keywords: vec![Keyword::DoubleStrike],
         ..Default::default()
     }
 }

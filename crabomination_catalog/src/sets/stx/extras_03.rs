@@ -98,7 +98,7 @@ pub fn lurking_deadeye() -> CardDefinition {
         },
         power: 4,
         toughness: 2,
-        keywords: vec![Keyword::Flash, Keyword::Deathtouch],
+        keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -237,7 +237,7 @@ pub fn pillardrop_warden() -> CardDefinition {
         },
         power: 1,
         toughness: 5,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayPay {
@@ -283,7 +283,7 @@ pub fn devourer_of_memory() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![],
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::This,
@@ -712,7 +712,7 @@ pub fn inkfathom_divers() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Landwalk(LandType::Island)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DiscardChosen {
@@ -2173,7 +2173,7 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![Keyword::Menace],
+        keywords: vec![Keyword::Flying],
         ..Default::default()
     }
 }

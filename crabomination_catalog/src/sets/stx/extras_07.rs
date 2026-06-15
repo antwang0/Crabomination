@@ -1552,7 +1552,7 @@ pub fn lorehold_archivist() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Vigilance],
+        keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Move {

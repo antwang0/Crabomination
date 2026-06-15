@@ -1617,30 +1617,31 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `scripts/fix_doc_costs.py`, coupled test fixtures rewritten via
   `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
   keep it at zero after adding cards.
-  ✅ **Type-line + keyword sweep (2026-06-14).** `audit_stx_drift.py` only
+  ✅ **Type-line + keyword sweep (2026-06-14/15).** `audit_stx_drift.py` only
   checks cost + P/T; it never inspects type line or keywords. Added
-  `scripts/audit_stx_types.py` to cover those against the cache. Against a
-  freshly-refetched real Scryfall cache it found **49 creature-type + 24
-  keyword drifts**. Fixed: **47 creature types** + **5 keywords** (Mavinda
-  Cleric+Vigilance → Bird Advisor+Flying; Beledros Demon+Trample/Lifelink →
-  Elder Dragon+Flying; Galazeth → Elder Dragon; Killian +Menace; Felisa /
-  Combat Professor −Lifelink/−Vigilance). Full test suite green (8551).
-  **Deliberately left (run `audit_stx_types.py` to see them):**
-  - **4 creature types** — Eyetwitch, Quandrix Pledgemage, Silverquill
-    Pledgemage are synthesized cards whose Pest/Fractal/Inkling *synergy tests*
-    depend on the wrong type (retyping them breaks the tests; needs the card +
-    test reworked together); Eccentric Apprentice's real type *Tiefling* has no
-    `CreatureType` enum variant.
-  - **19 keywords** — mostly **conditional/granted** keywords the catalog models
-    as a base keyword (Leech Fanatic's your-turn-only lifelink, Sticky Fingers'
-    aura-granted menace, Disciplined Duelist's counter-gated double strike), plus
-    a few real bugs on synthesized cards whose tests assert the wrong keyword.
-    A blanket keyword sweep is unsafe — Scryfall's `keywords` array lists
-    conditional/granted keywords, and a card's first `keywords:` literal can be a
-    *nested* token/equip vec. Fix case-by-case.
-  NOTE: many fixed cards are fabricated-real-name collisions above — their
-  cost/PT/type now match Scryfall, but several **bodies are still synthesized**;
-  a correct stat block ≠ a faithful card.
+  `scripts/audit_stx_types.py` to cover those (top-level keyword field only, so
+  it skips conditional/granted keywords nested in statics/equip-bonuses/tokens).
+  Against a freshly-refetched real Scryfall cache it found **49 creature-type +
+  ~15 real keyword drifts**. Fixed: **47 creature types** + **20 keywords**
+  (Mavinda Cleric+Vigilance → Bird Advisor+Flying; Beledros Demon+Trample/Lifelink
+  → Elder Dragon+Flying; Galazeth → Elder Dragon; Disciplined Duelist FirstStrike
+  → DoubleStrike; Codespell Cleric → Vigilance; Spectacle Mage Prowess → Flying;
+  Inkfathom Witch → Fear; Inkfathom Divers → Islandwalk; Lone Rider → First
+  strike+Lifelink; etc. — two coupled tests in `tests/stx/part_25.rs` updated,
+  one Intimidate test in `tests/modern.rs` given a Reach blocker). Full suite
+  green (8551). Audits now clean except:
+  - **3 creature types** — Eyetwitch, Quandrix Pledgemage, Silverquill Pledgemage
+    are synthesized cards whose Pest/Fractal/Inkling *synergy tests* depend on the
+    wrong type (retyping breaks the tests; needs card + test reworked together).
+    (Eccentric Apprentice fixed — added `CreatureType::Tiefling`.)
+  - **1 keyword** (Lone Rider) — a benign DFC artifact: the modeled front face is
+    correct (First strike+Lifelink); the flagged Trample is the *back* face only.
+  Note: several conditional/granted keywords were left as the catalog already
+  models them correctly via statics (Leech Fanatic's your-turn lifelink, Sticky
+  Fingers' aura-granted menace, Silverquill Pledgemage's magecraft flying) — the
+  audit no longer flags those. Many fixed cards are fabricated-real-name
+  collisions whose **bodies are still synthesized**; a correct stat block ≠ a
+  faithful card.
   **Effect-body sweep complete**: Hofri Ghostforge, Fervent Mastery, and
   Strixhaven Stadium (point counters + ten-point `Effect::LoseGame`) are now
   faithful. ✅ this run: **Stonebinder's Familiar**

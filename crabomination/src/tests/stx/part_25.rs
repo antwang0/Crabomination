@@ -1511,22 +1511,22 @@ fn eager_first_year_magecraft_pumps_a_creature() {
 }
 
 #[test]
-fn disciplined_duelist_is_two_one_first_strike() {
+fn disciplined_duelist_is_two_one_double_strike() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::disciplined_duelist());
     assert_eq!(g.battlefield_find(id).unwrap().power(), 2);
     assert_eq!(g.battlefield_find(id).unwrap().toughness(), 1);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::FirstStrike),
-        "has first strike");
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::DoubleStrike),
+        "has double strike");
 }
 
 #[test]
-fn codespell_cleric_is_one_one_lifelink() {
+fn codespell_cleric_is_one_one_vigilance() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::codespell_cleric());
     assert_eq!(g.battlefield_find(id).unwrap().power(), 1);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Lifelink),
-        "has lifelink");
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Vigilance),
+        "has vigilance");
 }
 
 #[test]

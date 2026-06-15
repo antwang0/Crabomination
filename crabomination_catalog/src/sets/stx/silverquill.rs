@@ -397,7 +397,7 @@ pub fn silverquill_pledgemage() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![],
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
         ..Default::default()
     }

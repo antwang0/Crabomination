@@ -1686,7 +1686,7 @@ pub fn codespell_cleric() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Lifelink],
+        keywords: vec![Keyword::Vigilance],
         ..Default::default()
     }
 }
@@ -2065,7 +2065,7 @@ pub fn eccentric_apprentice() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Tiefling, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,

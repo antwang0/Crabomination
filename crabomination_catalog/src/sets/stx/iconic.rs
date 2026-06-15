@@ -99,7 +99,7 @@ pub fn spectacle_mage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Prowess],
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![prowess()],
         ..Default::default()
     }

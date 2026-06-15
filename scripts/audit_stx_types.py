@@ -19,10 +19,7 @@ ENGINE_KW = {"Flying","Vigilance","Menace","Trample","Deathtouch","Lifelink",
     "Ward","Indestructible","Shroud","Skulk","Horsemanship","Protection","Prowess",
     "Changeling"}
 
-def vec_field(body, field):
-    """Bracket-balanced contents of `field: vec![ ... ]`, or None."""
-    i = body.find(field + ":")
-    if i < 0: return None
+def _vec_after(body, i):
     j = body.find("vec![", i)
     if j < 0 or j - i > 40: return None
     k, depth = j + 5, 1
@@ -31,6 +28,31 @@ def vec_field(body, field):
         elif body[k] == "]": depth -= 1
         k += 1
     return body[j + 5:k - 1]
+
+def _toplevel_field(body, field):
+    """Contents of the depth-1 `field: vec![...]` — a direct field of the
+    outermost CardDefinition literal, not a nested one (a keyword vec inside
+    StaticEffect/EquipBonus/TokenDefinition lives deeper). None if absent."""
+    cd = body.find("CardDefinition {")
+    if cd < 0: return None
+    depth, k = 1, cd + len("CardDefinition {")
+    while k < len(body) and depth:
+        ch = body[k]
+        if ch == "{": depth += 1
+        elif ch == "}": depth -= 1
+        elif depth == 1 and body.startswith(field + ":", k):
+            return _vec_after(body, k)
+        k += 1
+    return None
+
+def vec_field(body, field):
+    # keywords: must be the top-level card field (exclude granted/conditional
+    # keyword vecs nested in statics/equip bonuses/tokens). creature_types lives
+    # inside the depth-1 `subtypes:` block, so first-occurrence is correct there.
+    if field == "keywords":
+        return _toplevel_field(body, field)
+    i = body.find(field + ":")
+    return _vec_after(body, i) if i >= 0 else None
 
 def ref_type_lines(card):
     out = [card.get("type_line")]
@@ -46,6 +68,11 @@ def ref_subtypes(card):
     return out
 
 def ref_keywords(card):
+    # Union across faces: the catalog factory models one face of a DFC/MDFC, and
+    # which index that is varies (creature-front vs spell-front), so a union is
+    # the most robust match. (Side effect: a DFC whose *back* face adds a keyword
+    # the modeled front lacks shows a benign drift — e.g. Lone Rider's back-face
+    # Trample. Treat single back-only-keyword DFC drifts as expected.)
     out = set(card.get("keywords", []) or [])
     for f in card.get("card_faces", []) or []:
         out |= set(f.get("keywords", []) or [])

@@ -22484,6 +22484,9 @@ fn intimidate_shares_color_counts_hybrid_pip_color() {
     std::sync::Arc::make_mut(&mut g.battlefield_find_mut(mage).unwrap().definition).keywords.push(Keyword::Intimidate);
     g.clear_sickness(mage);
     let goblin = g.add_card_to_battlefield(1, catalog::goblin_guide()); // red
+    // Spectacle Mage flies, so give the blocker reach to isolate the Intimidate
+    // colour check (this test is about colour-sharing, not evasion).
+    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(goblin).unwrap().definition).keywords.push(Keyword::Reach);
 
     g.active_player_idx = 0;
     g.step = TurnStep::DeclareAttackers;

@@ -28,16 +28,18 @@ share Kasmina's loyalty abilities" static
   Phoenix, Possibility Storm, Hindering Light, Detention Sphere) and **Mavinda,
   Students' Advocate stays 🟡** (gy-cast modeled as a {0} activated ability, not
   the printed static).
-- **Cost + P/T match real Scryfall** (`audit_stx_drift.py` → 0 drift). The new
-  `audit_stx_types.py` adds type-line + keyword checks: of **49 creature-type +
-  24 keyword drifts** found on 2026-06-14, **47 types + 5 keywords were fixed**
-  (e.g. Mavinda Cleric+Vigilance → Bird Advisor+Flying; Beledros Demon → Elder
-  Dragon), full suite green. **Left:** 4 types (3 synthesized cards coupled to
-  Pest/Fractal/Inkling synergy tests, + Eccentric Apprentice's *Tiefling* type
-  which lacks an enum variant) and 19 keywords (mostly conditional/granted
-  keywords the catalog models as base keywords — case-by-case, not a sweep).
+- **Stats match real Scryfall.** `audit_stx_drift.py` (cost + P/T) and the new
+  `audit_stx_types.py` (type line + keywords) are both clean. The 2026-06-14/15
+  sweep fixed **47 creature types + 20 keywords** (e.g. Mavinda Cleric+Vigilance →
+  Bird Advisor+Flying; Beledros Demon → Elder Dragon; Disciplined Duelist →
+  Double strike; Inkfathom Witch → Fear), full suite green (8551). Remaining
+  flags are non-bugs: 3 types (synthesized cards coupled to Pest/Fractal/Inkling
+  *synergy tests*) and 1 keyword (Lone Rider — a benign DFC back-face Trample
+  artifact; the modeled front face is correct). Conditional/granted keywords the
+  catalog models via
+  statics (Leech Fanatic, Sticky Fingers, …) are correct and no longer flagged.
   Caveat: many fixed cards are fabricated-real-name collisions whose **bodies are
-  still synthesized** — correct stats ≠ faithful card. Run `audit_stx_types.py`
-  for the remaining list. See TODO.md → "Fabricated real-name STX cards".
+  still synthesized** — correct stats ≠ faithful card. See TODO.md → "Fabricated
+  real-name STX cards".
 
 Full per-card history: `git log -- crabomination_catalog/src/sets/{stx,sos}/`.

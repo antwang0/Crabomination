@@ -1618,7 +1618,7 @@ pub fn lone_rider() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Haste],
+        keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                 .with_filter(Predicate::EntityMatches {

@@ -98,7 +98,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Reach],
+        keywords: vec![Keyword::FirstStrike],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

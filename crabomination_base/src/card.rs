@@ -137,6 +137,8 @@ pub enum CreatureType {
     Eye,
     // Manland animate-into bodies (Mishra's Factory, Inkmoth / Blinkmoth Nexus).
     AssemblyWorker, Blinkmoth,
+    // Strixhaven (Eccentric Apprentice).
+    Tiefling,
 }
 
 /// Land subtypes (basic land types + others).
