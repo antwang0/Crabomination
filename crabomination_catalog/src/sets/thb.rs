@@ -998,3 +998,363 @@ pub fn tectonic_giant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// THB batch — vanilla Nyxborn enchantment creatures, simple ETB/death/
+// constellation/activated bodies on existing primitives.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Constellation trigger helper: "Whenever an enchantment you control enters,
+/// `body`." (CR 702.xx — an `EntersBattlefield`/`YourControl` trigger filtered
+/// to enchantment trigger-sources, the same shape Protean Thaumaturge uses.)
+fn constellation(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Enchantment,
+            }),
+        effect: body,
+    }
+}
+
+/// Shorthand for an Enchantment Creature `CardDefinition` skeleton.
+fn nyxborn(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    types: Vec<CreatureType>,
+    power: i32,
+    toughness: i32,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power,
+        toughness,
+        ..Default::default()
+    }
+}
+
+/// Nyxborn Brute — {3}{R}{R} 7/3 Enchantment Creature — Cyclops (vanilla).
+pub fn nyxborn_brute() -> CardDefinition {
+    nyxborn("Nyxborn Brute", cost(&[generic(3), r(), r()]), vec![CreatureType::Cyclops], 7, 3)
+}
+
+/// Nyxborn Colossus — {3}{G}{G}{G} 6/7 Enchantment Creature — Giant (vanilla).
+pub fn nyxborn_colossus() -> CardDefinition {
+    nyxborn("Nyxborn Colossus", cost(&[generic(3), g(), g(), g()]), vec![CreatureType::Giant], 6, 7)
+}
+
+/// Nyxborn Courser — {1}{W}{W} 2/4 Enchantment Creature — Centaur Scout (vanilla).
+pub fn nyxborn_courser() -> CardDefinition {
+    nyxborn(
+        "Nyxborn Courser",
+        cost(&[generic(1), w(), w()]),
+        vec![CreatureType::Centaur, CreatureType::Scout],
+        2,
+        4,
+    )
+}
+
+/// Nyxborn Marauder — {2}{B}{B} 4/3 Enchantment Creature — Minotaur (vanilla).
+pub fn nyxborn_marauder() -> CardDefinition {
+    nyxborn("Nyxborn Marauder", cost(&[generic(2), b(), b()]), vec![CreatureType::Minotaur], 4, 3)
+}
+
+/// Nyxborn Seaguard — {2}{U}{U} 2/5 Enchantment Creature — Merfolk Soldier (vanilla).
+pub fn nyxborn_seaguard() -> CardDefinition {
+    nyxborn(
+        "Nyxborn Seaguard",
+        cost(&[generic(2), u(), u()]),
+        vec![CreatureType::Merfolk, CreatureType::Soldier],
+        2,
+        5,
+    )
+}
+
+/// Moss Viper — {G} 1/1 Snake with deathtouch.
+pub fn moss_viper() -> CardDefinition {
+    CardDefinition {
+        name: "Moss Viper",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Discordant Piper — {1}{B} 2/1 Zombie Satyr. Dies → create a 0/1 white Goat.
+pub fn discordant_piper() -> CardDefinition {
+    CardDefinition {
+        name: "Discordant Piper",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Satyr],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Goat".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Goat],
+                        ..Default::default()
+                    },
+                    power: 0,
+                    toughness: 1,
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grim Physician — {B} 1/1 Zombie. Dies → target creature an opponent
+/// controls gets -1/-1 until end of turn.
+pub fn grim_physician() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Physician",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Careless Celebrant — {1}{R} 2/1 Satyr Shaman. Dies → 2 damage to target
+/// creature or planeswalker an opponent controls.
+pub fn careless_celebrant() -> CardDefinition {
+    CardDefinition {
+        name: "Careless Celebrant",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Satyr, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rumbling Sentry — {3}{W}{W} 3/6 Giant. ETB scry 1.
+pub fn rumbling_sentry() -> CardDefinition {
+    CardDefinition {
+        name: "Rumbling Sentry",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 3,
+        toughness: 6,
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Elite Instructor — {2}{U} 2/2 Human Wizard. ETB: draw a card, then discard a card.
+pub fn elite_instructor() -> CardDefinition {
+    CardDefinition {
+        name: "Elite Instructor",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Hyrax Tower Scout — {2}{G} 3/3 Human Scout. ETB: untap target creature.
+pub fn hyrax_tower_scout() -> CardDefinition {
+    CardDefinition {
+        name: "Hyrax Tower Scout",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Untap {
+            what: target_filtered(SelectionRequirement::Creature),
+            up_to: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Eidolon of Philosophy — {U} 1/2 Enchantment Creature — Spirit.
+/// {6}{U}, Sacrifice this creature: Draw three cards.
+pub fn eidolon_of_philosophy() -> CardDefinition {
+    CardDefinition {
+        name: "Eidolon of Philosophy",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), u()]),
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            ..ActivatedAbility::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oread of Mountain's Blaze — {1}{R} 1/3 Enchantment Creature — Nymph.
+/// {2}{R}, Discard a card: Draw a card.
+pub fn oread_of_mountains_blaze() -> CardDefinition {
+    CardDefinition {
+        name: "Oread of Mountain's Blaze",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nymph], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..ActivatedAbility::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lampad of Death's Vigil — {1}{B} 1/3 Enchantment Creature — Nymph.
+/// {1}, Sacrifice a creature: Each opponent loses 1 life and you gain 1 life.
+pub fn lampad_of_deaths_vigil() -> CardDefinition {
+    CardDefinition {
+        name: "Lampad of Death's Vigil",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nymph], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            ]),
+            ..ActivatedAbility::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Captivating Unicorn — {4}{W} 4/4 Unicorn. Constellation — tap target
+/// creature an opponent controls.
+pub fn captivating_unicorn() -> CardDefinition {
+    CardDefinition {
+        name: "Captivating Unicorn",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![constellation(Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pious Wayfarer — {W} 1/2 Human Scout. Constellation — target creature gets
+/// +1/+1 until end of turn.
+pub fn pious_wayfarer() -> CardDefinition {
+    CardDefinition {
+        name: "Pious Wayfarer",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![constellation(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sage of Mysteries — {U} 0/2 Human Wizard. Constellation — target player
+/// mills two cards.
+pub fn sage_of_mysteries() -> CardDefinition {
+    CardDefinition {
+        name: "Sage of Mysteries",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        triggered_abilities: vec![constellation(Effect::Mill {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}

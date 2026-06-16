@@ -873,3 +873,245 @@ fn tectonic_giant_attack_burn_mode() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3, "mode 0: 3 to each opponent");
 }
+
+// ── THB batch (modern_decks) — vanilla/ETB/death/constellation/activated ──────
+
+/// Nyxborn Brute is a 7/3 enchantment creature.
+#[test]
+fn nyxborn_brute_is_enchantment_creature() {
+    let c = catalog::nyxborn_brute();
+    assert!(c.card_types.contains(&crate::card::CardType::Enchantment));
+    assert!(c.card_types.contains(&crate::card::CardType::Creature));
+    assert_eq!((c.power, c.toughness), (7, 3));
+}
+
+/// Moss Viper has deathtouch.
+#[test]
+fn moss_viper_has_deathtouch() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::moss_viper());
+    assert!(g.battlefield_find(v).unwrap().has_keyword(&crate::card::Keyword::Deathtouch));
+}
+
+/// Discordant Piper dies → a 0/1 white Goat token appears.
+#[test]
+fn discordant_piper_dies_makes_goat() {
+    let mut g = two_player_game();
+    let piper = g.add_card_to_battlefield(0, catalog::discordant_piper());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(piper)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the piper");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Goat"),
+        "Goat token minted on death");
+}
+
+/// Grim Physician dies → target opponent creature gets -1/-1.
+#[test]
+fn grim_physician_dies_shrinks_opponent() {
+    let mut g = two_player_game();
+    let phys = g.add_card_to_battlefield(0, catalog::grim_physician());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(phys)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own physician");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (1, 1), "opponent bear shrunk -1/-1");
+}
+
+/// Careless Celebrant dies → 2 damage kills an opposing 2/2.
+#[test]
+fn careless_celebrant_dies_pings() {
+    let mut g = two_player_game();
+    let celeb = g.add_card_to_battlefield(0, catalog::careless_celebrant());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(celeb)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own celebrant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage kills the opposing 2/2");
+}
+
+/// Elite Instructor ETB loots: library −1, graveyard +1 (drew then discarded).
+#[test]
+fn elite_instructor_loots_on_etb() {
+    let mut g = two_player_game();
+    let _draw = g.add_card_to_library(0, catalog::grizzly_bears());
+    let inst = g.add_card_to_hand(0, catalog::elite_instructor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: inst, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Elite Instructor");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "drew one");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 1, "discarded one");
+}
+
+/// Hyrax Tower Scout untaps a target creature on ETB.
+#[test]
+fn hyrax_tower_scout_untaps() {
+    let mut g = two_player_game();
+    let dork = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(dork).unwrap().tapped = true;
+    let scout = g.add_card_to_hand(0, catalog::hyrax_tower_scout());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(dork)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: scout, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hyrax Tower Scout");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(dork).unwrap().tapped, "target creature untapped");
+}
+
+/// Eidolon of Philosophy: {6}{U}, sac → draw three.
+#[test]
+fn eidolon_of_philosophy_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let eid = g.add_card_to_battlefield(0, catalog::eidolon_of_philosophy());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eid, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Eidolon");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
+    assert!(g.battlefield_find(eid).is_none(), "sacrificed itself");
+}
+
+/// Lampad of Death's Vigil: {1}, sac a creature → each opp loses 1, you gain 1.
+#[test]
+fn lampad_drains_on_sacrifice() {
+    let mut g = two_player_game();
+    let lampad = g.add_card_to_battlefield(0, catalog::lampad_of_deaths_vigil());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(fodder)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lampad, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Lampad");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert_eq!(g.players[0].life, my_life + 1, "gained 1");
+    assert_eq!(g.players[1].life, opp_life - 1, "opponent lost 1");
+}
+
+/// Captivating Unicorn's constellation taps an opposing creature.
+#[test]
+fn captivating_unicorn_constellation_taps() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::captivating_unicorn());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(opp)),
+    ]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp).unwrap().tapped, "opposing creature tapped");
+}
+
+/// Sage of Mysteries' constellation mills a target player two cards.
+#[test]
+fn sage_of_mysteries_constellation_mills() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sage_of_mysteries());
+    for _ in 0..4 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    let lib = g.players[1].library.len();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib - 2, "milled two");
+}
+
+/// The remaining Nyxborn vanillas are enchantment creatures with the printed P/T.
+#[test]
+fn nyxborn_vanillas_are_enchantment_creatures() {
+    for (def, pt) in [
+        (catalog::nyxborn_colossus(), (6, 7)),
+        (catalog::nyxborn_courser(), (2, 4)),
+        (catalog::nyxborn_marauder(), (4, 3)),
+        (catalog::nyxborn_seaguard(), (2, 5)),
+    ] {
+        assert!(def.card_types.contains(&crate::card::CardType::Enchantment), "{}", def.name);
+        assert!(def.card_types.contains(&crate::card::CardType::Creature), "{}", def.name);
+        assert_eq!((def.power, def.toughness), pt, "{}", def.name);
+    }
+}
+
+/// Rumbling Sentry scries 1 on ETB (top card kept, library size unchanged).
+#[test]
+fn rumbling_sentry_scries_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let sentry = g.add_card_to_hand(0, catalog::rumbling_sentry());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let lib = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: sentry, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rumbling Sentry");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib, "scry keeps card count");
+    assert_eq!(g.battlefield_find(sentry).map(|c| (c.power(), c.toughness())), Some((3, 6)));
+}
+
+/// Oread of Mountain's Blaze: {2}{R}, discard a card → draw a card.
+#[test]
+fn oread_rummages() {
+    let mut g = two_player_game();
+    let oread = g.add_card_to_battlefield(0, catalog::oread_of_mountains_blaze());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // discard fodder
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib = g.players[0].library.len();
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: oread, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Oread");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "drew one");
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "discarded one");
+}
+
+/// Pious Wayfarer's constellation pumps a target creature +1/+1.
+#[test]
+fn pious_wayfarer_constellation_pumps() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pious_wayfarer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "+1/+1 until end of turn");
+}

@@ -96,6 +96,16 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Mystical Archive (STA) remainder** — two cards need new primitives:
+  - **Tainted Pact** — "exile top, may take unless it duplicates a name
+    already exiled this way; repeat." Needs an impulse-exile-until-unique
+    primitive (`Effect::ExileTopUntilDuplicateNameToHand`); a greedy
+    take-first model is a legal but weak approximation.
+  - **Mizzix's Mastery** — exile target instant/sorcery from your graveyard,
+    copy it and cast the copy free; Overload exiles *all* of them. Needs a
+    "cast-copy-of-a-graveyard-card-free" primitive; Overload can ride the
+    existing alt-cost `effect_override` path.
+
 - ✅ **THB batch shipped** (`catalog::sets::thb`, tests `tests/thb.rs`):
   Heliod's Intervention (`Effect::DestroyTargets` X-target destroy),
   Shark Typhoon (`TokenDefinition.dynamic_pt` mint rider + X-cycling via
