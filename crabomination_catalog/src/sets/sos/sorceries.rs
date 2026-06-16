@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
-use crate::mana::{Color, b, cost, generic, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).
@@ -710,7 +710,7 @@ pub fn pursue_the_past() -> CardDefinition {
     };
     CardDefinition {
         name: "Pursue the Past",
-        cost: cost(&[r(), w_mana()]),
+        cost: cost(&[r(), w()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
@@ -1273,7 +1273,7 @@ pub fn planar_engineering() -> CardDefinition {
     use crate::mana::g as gm;
     CardDefinition {
         name: "Planar Engineering",
-        cost: cost(&[generic(3), gm()]),
+        cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {

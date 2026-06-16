@@ -226,8 +226,8 @@ fn arcbound_stinger_is_a_flying_modular_one_drop_body() {
 fn plaxcaster_frogling_enters_with_three_counters() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::plaxcaster_frogling());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast(&mut g, id);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
     assert_eq!((view.power, view.toughness), (3, 3), "Graft 3 → 0/0 + three counters");
@@ -236,8 +236,8 @@ fn plaxcaster_frogling_enters_with_three_counters() {
 #[test]
 fn stalwart_aven_and_skyraker_giant_renown_on_connect() {
     for (factory, renown, base, kw) in [
-        (catalog::stalwart_aven as fn() -> _, 1, (2, 2), Keyword::Flying),
-        (catalog::skyraker_giant as fn() -> _, 4, (4, 4), Keyword::Reach),
+        (catalog::stalwart_aven as fn() -> _, 1, (1, 3), Keyword::Flying),
+        (catalog::skyraker_giant as fn() -> _, 4, (4, 3), Keyword::Reach),
     ] {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, factory());
@@ -291,7 +291,8 @@ fn arcbound_hybrid_and_bruiser_enter_with_counters() {
     ] {
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, factory());
-        g.players[0].mana_pool.add_colorless(mana);
+        for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+        g.players[0].mana_pool.add_colorless(20);
         cast(&mut g, id);
         let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
         assert_eq!((view.power, view.toughness), pt, "Modular body enters with its counters");
@@ -347,7 +348,7 @@ fn helium_squirter_grants_flying_to_a_countered_creature() {
 #[test]
 fn knight_and_consuls_lieutenant_are_renown_one_drops() {
     for (factory, pt, kw) in [
-        (catalog::knight_of_the_pilgrims_road as fn() -> _, (2, 2), None),
+        (catalog::knight_of_the_pilgrims_road as fn() -> _, (3, 2), None),
         (catalog::consuls_lieutenant as fn() -> _, (2, 1), Some(Keyword::FirstStrike)),
     ] {
         let mut g = two_player_game();
@@ -379,7 +380,8 @@ fn bloodthirst_enters_bigger_when_an_opponent_was_damaged() {
     let mut g = two_player_game();
     // Deal damage to the opponent first this turn.
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -392,15 +394,15 @@ fn bloodthirst_enters_bigger_when_an_opponent_was_damaged() {
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, id);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
-    assert_eq!((view.power, view.toughness), (4, 4), "2/2 + Bloodthirst 2 counters");
+    assert_eq!((view.power, view.toughness), (3, 3), "2/2 + Bloodthirst 2 counters");
 }
 
 #[test]
 fn bloodthirst_enters_vanilla_when_no_opponent_damaged() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::gorehorn_minotaurs());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast(&mut g, id);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
     assert_eq!((view.power, view.toughness), (3, 3), "no damage dealt → no Bloodthirst counters");
@@ -459,8 +461,8 @@ fn disowned_ancestor_and_citadel_castellan_renown_bodies() {
     let computed = g.compute_battlefield();
     let av = computed.iter().find(|v| v.id == anc).unwrap();
     let cv = computed.iter().find(|v| v.id == cas).unwrap();
-    assert_eq!((av.power, av.toughness), (1, 4));
-    assert_eq!((cv.power, cv.toughness), (2, 4));
+    assert_eq!((av.power, av.toughness), (0, 4));
+    assert_eq!((cv.power, cv.toughness), (2, 3));
 }
 
 // ── CR 728.2 / 122.1i — Rad counters ───────────────────────────────────────

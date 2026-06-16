@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{dash, etb, on_attack, raid_etb, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, Value};
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::mana::{Color, b, cost, generic, r, u, w};
 
 /// Screamreach Brawler — {2}{R} 3/3 Orc Berserker. Dash {1}{R}.
 pub fn screamreach_brawler() -> CardDefinition {
@@ -23,7 +23,7 @@ pub fn screamreach_brawler() -> CardDefinition {
             creature_types: vec![CreatureType::Orc, CreatureType::Berserker],
             ..Default::default()
         },
-        power: 3,
+        power: 2,
         toughness: 3,
         alternative_cost: Some(dash(cost(&[generic(1), r()]))),
         ..Default::default()
@@ -34,10 +34,10 @@ pub fn screamreach_brawler() -> CardDefinition {
 pub fn mardu_scout() -> CardDefinition {
     CardDefinition {
         name: "Mardu Scout",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[r(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Goblin, CreatureType::Scout],
             ..Default::default()
         },
         power: 3,
@@ -57,7 +57,7 @@ pub fn zurgo_bellstriker() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Orc, CreatureType::Warrior],
             ..Default::default()
         },
         power: 2,
@@ -186,7 +186,7 @@ pub fn seeker_of_the_way() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
             ..Default::default()
         },
         power: 2,
@@ -219,8 +219,8 @@ pub fn jeskai_elder() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Monk],
             ..Default::default()
         },
-        power: 2,
-        toughness: 1,
+        power: 1,
+        toughness: 2,
         keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![
             crate::effect::shortcut::prowess(),
@@ -244,13 +244,13 @@ pub fn bloodsoaked_champion() -> CardDefinition {
     use crate::effect::{Predicate, ZoneDest};
     CardDefinition {
         name: "Bloodsoaked Champion",
-        cost: cost(&[r()]),
+        cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 1,
         keywords: vec![Keyword::CantBlock],
         activated_abilities: vec![ActivatedAbility {
@@ -277,11 +277,11 @@ pub fn mardu_heart_piercer() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
             ..Default::default()
         },
-        power: 3,
-        toughness: 2,
+        power: 2,
+        toughness: 3,
         triggered_abilities: vec![raid_etb(Effect::DealDamage {
             to: target_any(),
             amount: Value::Const(2),

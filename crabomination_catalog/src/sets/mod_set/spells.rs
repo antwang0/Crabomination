@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, StaticEffect, Value};
-use crate::mana::{cost, g, generic, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Disenchant — {1}{W} Instant. Destroy target artifact or enchantment.
 pub fn disenchant() -> CardDefinition {
@@ -196,7 +196,7 @@ pub fn propaganda() -> CardDefinition {
 pub fn sphere_of_safety() -> CardDefinition {
     CardDefinition {
         name: "Sphere of Safety",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you or a planeswalker you control unless their controller pays {X} for each, where X is the number of enchantments you control.",
@@ -218,7 +218,7 @@ pub fn sphere_of_safety() -> CardDefinition {
 pub fn beastmaster_ascension() -> CardDefinition {
     CardDefinition {
         name: "Beastmaster Ascension",
-        cost: cost(&[generic(1), g()]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
@@ -261,7 +261,7 @@ pub fn beastmaster_ascension() -> CardDefinition {
 pub fn aura_shards() -> CardDefinition {
     CardDefinition {
         name: "Aura Shards",
-        cost: cost(&[g(), w()]),
+        cost: cost(&[generic(1), g(), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -428,7 +428,7 @@ pub fn fierce_guardianship() -> CardDefinition {
 pub fn deflecting_swat() -> CardDefinition {
     CardDefinition {
         name: "Deflecting Swat",
-        cost: cost(&[generic(2), crate::mana::r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::Any) },
         ..Default::default()

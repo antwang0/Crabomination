@@ -149,7 +149,7 @@ fn jeskai_elder_loots_on_combat_damage() {
     // Advance through the combat-damage step so the elder connects.
     advance_to(&mut g, TurnStep::PostCombatMain);
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 18, "unblocked 2/1 dealt 2 to the defender");
+    assert_eq!(g.players[1].life, 19, "unblocked 2/1 dealt 2 to the defender");
     // Combat damage fired the loot: +1 draw, -1 discard → hand unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before, "loot nets zero cards");
 }

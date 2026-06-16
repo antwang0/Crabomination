@@ -3691,7 +3691,7 @@ mod stack_response_tests {
         g.priority.player_with_priority = 0;
         // P0 casts a 7-drop.
         let wurm = g.add_card_to_hand(0, catalog::pelakka_wurm());
-        g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 3);
         g.players[0].mana_pool.add_colorless(5);
         g.perform_action(GameAction::CastSpell {
             card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,

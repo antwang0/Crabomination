@@ -6310,7 +6310,7 @@ fn lorehold_the_historian_grants_miracle_two_on_first_is_draw() {
         "Bolt stays in hand when the miracle cost can't be paid",
     );
 
-    // With {2} available, the miracle cast goes through.
+    // With exactly {2} available, the miracle cast goes through and empties the pool.
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastFromZoneWithoutPaying {
         card_id: bolt, target: Some(Target::Player(1)),
@@ -13893,7 +13893,8 @@ fn fix_whats_broken_loses_life_and_returns_from_gy() {
 fn explore_grants_extra_land_play_and_draws() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::explore());
-    g.players[0].mana_pool.add(Color::Green, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     // Add a forest to hand + library cards.
     let _forest = g.add_card_to_hand(0, catalog::forest());
     for _ in 0..3 {

@@ -14,10 +14,10 @@ use crate::mana::{cost, generic, r};
 pub fn dragonkin_berserker() -> CardDefinition {
     CardDefinition {
         name: "Dragonkin Berserker",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dragon, CreatureType::Berserker],
+            creature_types: vec![CreatureType::Human, CreatureType::Berserker],
             ..Default::default()
         },
         power: 2,

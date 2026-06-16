@@ -29,8 +29,24 @@ manifest-from-hand, token Role Auras, Absorb, Cleave, reflect-prevention
 shields, restricted colorless mana, multi-pick reveals, …). Each card has at
 least one test in `crabomination/src/tests/modern.rs`.
 
-All Modern-supplement cards are ✅ and elided (including Karn, Scion of Urza
-and Tezzeret, Cruel Captain, now wired to real oracle text).
+All Modern-supplement cards are wired (including Karn, Scion of Urza and
+Tezzeret, Cruel Captain, on real oracle text).
+
+> **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
+> never audited against Scryfall and carried many synthesized errors (e.g. Grief
+> `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing
+> Cloudskate `{3}{U}`→`{3}{U}{U}`). A catalog-wide sweep against a refetched real
+> Scryfall cache (`scripts/audit_catalog_stats.py` + `fix_catalog_stats.py`)
+> corrected **~150 costs, ~74 P/T, ~80 creature types** in `decks` (plus the
+> mod_set / ths / kld / ktk / lea sets), regenerating the coupled tests; full
+> suite green. Catalog-wide drift fell to **cost 2 / P-T 6 / type 8 / keyword 41**
+> (from 253 / 131 / 120 / 55). So "wired" now means correct cost/P-T/type-line too
+> — but several card *bodies* remain simplified approximations (the abilities, not
+> the stats). The **keyword** pass fixed 13 clear bugs; the ~41 left are
+> conditional/ability-modeling keywords (e.g. evasion modeled as Flying, counter-
+> tax as Ward), DFC back faces, and Protection/Ward args — those need real ability
+> work, not a stat tweak. Run `audit_catalog_stats.py` for the live list. Customs
+> (Cosmogoyf, Crabomination) are excluded — no Scryfall truth.
 
 ## Engine features
 

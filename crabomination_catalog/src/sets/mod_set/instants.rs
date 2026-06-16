@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, mono_hybrid, r, u, w, x};
 
 /// Path to Exile — {W} Instant. Exile target creature; its controller may
 /// search their library for a basic land card, put it onto the battlefield
@@ -787,7 +787,7 @@ pub fn dig_through_time() -> CardDefinition {
 pub fn lose_focus() -> CardDefinition {
     CardDefinition {
         name: "Lose Focus",
-        cost: cost(&[u()]),
+        cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
         effect: Effect::CounterUnlessPaid {
@@ -1312,7 +1312,7 @@ pub fn force_of_vigor() -> CardDefinition {
 pub fn trumpet_blast() -> CardDefinition {
     CardDefinition {
         name: "Trumpet Blast",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
             what: Selector::EachPermanent(SelectionRequirement::IsAttacking),
@@ -1653,7 +1653,7 @@ pub fn teferis_protection() -> CardDefinition {
 pub fn comeuppance() -> CardDefinition {
     CardDefinition {
         name: "Comeuppance",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PreventAllCombatDamageThisTurn,

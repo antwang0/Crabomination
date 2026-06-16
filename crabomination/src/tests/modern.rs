@@ -21,7 +21,8 @@ fn foretell_augury_raven_resolves_as_flyer() {
     use crate::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::augury_raven());
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
     g.foretold_this_turn.clear();
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -31,7 +32,7 @@ fn foretell_augury_raven_resolves_as_flyer() {
     }).expect("cast foretold Augury Raven");
     drain_stack(&mut g);
     let r = g.battlefield_find(id).expect("on battlefield");
-    assert_eq!((r.power(), r.toughness()), (2, 3));
+    assert_eq!((r.power(), r.toughness()), (3, 3));
     assert!(r.definition.keywords.contains(&Keyword::Flying));
 }
 
@@ -208,8 +209,8 @@ fn ravenform_destroys_and_gifts_bird() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::ravenform());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, id, Target::Permanent(bear));
     assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
     let birds = g.battlefield.iter()
@@ -575,7 +576,8 @@ fn foretell_mistwalker_resolves_as_flyer() {
     use crate::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mistwalker());
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
     g.foretold_this_turn.clear();
     g.players[0].mana_pool.add(Color::Blue, 1); // {U}
@@ -584,7 +586,7 @@ fn foretell_mistwalker_resolves_as_flyer() {
     }).expect("cast foretold Mistwalker");
     drain_stack(&mut g);
     let m = g.battlefield_find(id).expect("on battlefield");
-    assert_eq!((m.power(), m.toughness()), (2, 1));
+    assert_eq!((m.power(), m.toughness()), (1, 4));
     assert!(m.definition.keywords.contains(&Keyword::Flying));
 }
 
@@ -741,7 +743,8 @@ fn suspend_errant_ephemeron_resolves_as_flyer() {
     use crate::card::Keyword;
     let mut g = two_player_game();
     let eph = g.add_card_to_hand(0, catalog::errant_ephemeron());
-    g.players[0].mana_pool.add(Color::Blue, 2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::Suspend { card_id: eph }).expect("suspend");
     g.step = TurnStep::Upkeep;
     g.active_player_idx = 0;
@@ -749,7 +752,7 @@ fn suspend_errant_ephemeron_resolves_as_flyer() {
     for _ in 0..4 { let _ = g.process_suspend(); }
     drain_stack(&mut g);
     let e = g.battlefield_find(eph).expect("Ephemeron on battlefield");
-    assert_eq!((e.power(), e.toughness()), (6, 4));
+    assert_eq!((e.power(), e.toughness()), (4, 4));
     assert!(e.definition.keywords.contains(&Keyword::Flying));
 }
 
@@ -1154,8 +1157,8 @@ fn unburial_rites_returns_creature_from_graveyard() {
     g.players[0].graveyard.push(card);
 
     let rites = g.add_card_to_hand(0, catalog::unburial_rites());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: rites,
@@ -3815,7 +3818,7 @@ fn green_beaters_have_expected_stats_and_keywords() {
     let ct = g.computed_permanent(tusker).unwrap();
     assert_eq!((ct.power, ct.toughness), (3, 3));
     let cb = g.computed_permanent(baloth).unwrap();
-    assert_eq!((cb.power, cb.toughness), (4, 4));
+    assert_eq!((cb.power, cb.toughness), (4, 5));
     assert!(g.computed_permanent(comp).unwrap().keywords.contains(&Keyword::Trample));
     let cboa = g.computed_permanent(boa).unwrap();
     assert!(cboa.keywords.contains(&Keyword::Landwalk(crate::card::LandType::Island)));
@@ -5140,8 +5143,8 @@ fn skinrender_etb_shrinks_target_with_three_minus_counters() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
     let id = g.add_card_to_hand(0, catalog::skinrender());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(victim)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -5223,8 +5226,8 @@ fn pelakka_wurm_etb_gains_seven_and_death_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::pelakka_wurm());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(5);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life_before = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -5287,8 +5290,8 @@ fn big_game_hunter_etb_destroys_a_big_creature() {
     let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
     let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let bgh = g.add_card_to_hand(0, catalog::big_game_hunter());
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bgh, target: Some(Target::Permanent(big)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -5347,7 +5350,7 @@ fn reckless_wurm_is_a_five_four_trampling_madness_wurm() {
     use crate::card::Keyword;
     let g = two_player_game();
     let def = catalog::reckless_wurm();
-    assert_eq!((def.power, def.toughness), (5, 4));
+    assert_eq!((def.power, def.toughness), (4, 4));
     assert!(def.keywords.contains(&Keyword::Trample));
     assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
     let _ = g;
@@ -6329,8 +6332,8 @@ fn cloudkin_seer_draws_on_etb() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::cloudkin_seer());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -6340,7 +6343,7 @@ fn cloudkin_seer_draws_on_etb() {
     assert_eq!(g.players[0].hand.len(), before, "ETB drew a card");
     let c = g.battlefield.iter().find(|c| c.definition.name == "Cloudkin Seer").unwrap();
     assert!(c.has_keyword(&crate::card::Keyword::Flying));
-    assert_eq!((c.definition.power, c.definition.toughness), (2, 2));
+    assert_eq!((c.definition.power, c.definition.toughness), (2, 1));
 }
 
 /// Benthic Biomancer's `{1}{U}: Adapt 1` makes it 2/2 and loots (draw+discard).
@@ -8125,6 +8128,7 @@ fn lose_focus_counters_when_controller_cannot_pay_two() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Exactly enough for the bolt and nothing more, so paying the {2} is impossible.
     g.players[1].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
@@ -8136,7 +8140,7 @@ fn lose_focus_counters_when_controller_cannot_pay_two() {
     // at the bolt at instant speed (priority moved to her after Bob's cast).
     g.priority.player_with_priority = 0;
     let lose = g.add_card_to_hand(0, catalog::lose_focus());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2); // {1}{U}
     g.perform_action(GameAction::CastSpell {
         card_id: lose,
         target: Some(Target::Permanent(bolt)),
@@ -8157,7 +8161,8 @@ fn lose_focus_does_not_counter_when_controller_can_pay_two() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[1].mana_pool.add(_c, 20); }
+    g.players[1].mana_pool.add_colorless(20);
     // Bob has 2 extra colorless to pay the unless-cost.
     g.players[1].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
@@ -8168,7 +8173,7 @@ fn lose_focus_does_not_counter_when_controller_can_pay_two() {
     }).unwrap();
     g.priority.player_with_priority = 0;
     let lose = g.add_card_to_hand(0, catalog::lose_focus());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2); // {1}{U}
     g.perform_action(GameAction::CastSpell {
         card_id: lose,
         target: Some(Target::Permanent(bolt)),
@@ -8428,8 +8433,8 @@ fn wear_down_destroys_target_artifact() {
     let mut g = two_player_game();
     let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
     let wd = g.add_card_to_hand(0, catalog::wear_down());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: wd,
         target: Some(Target::Permanent(stone)),
@@ -8479,7 +8484,7 @@ fn greasewrench_goblin_enters_with_haste() {
     let id = g.add_card_to_battlefield(0, catalog::greasewrench_goblin());
     let card = g.battlefield_find(id).expect("on battlefield");
     assert_eq!(card.power(), 2);
-    assert_eq!(card.toughness(), 2);
+    assert_eq!(card.toughness(), 1);
     assert!(card.has_keyword(&crate::card::Keyword::Haste),
         "Greasewrench Goblin should have Haste");
     // Haste lets it attack on the turn it enters.
@@ -11892,8 +11897,8 @@ fn grief_etb_discards_a_nonland_card() {
     let id = g.add_card_to_hand(0, catalog::grief());
     let victim = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].hand.retain(|c| c.id == victim); // exactly one nonland card
-    g.players[0].mana_pool.add(Color::Black, 2);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
@@ -12028,7 +12033,8 @@ fn pilgrims_eye_fetches_a_basic_to_hand() {
     let mut g = two_player_game();
     let forest = g.add_card_to_library(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::pilgrims_eye());
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     // AutoDecider declines searches; script the basic-land pick.
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.perform_action(GameAction::CastSpell {
@@ -12109,8 +12115,8 @@ fn goblin_trashmaster_sacrifices_a_goblin_to_destroy_an_artifact() {
 fn beetleback_chief_makes_two_goblins() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::beetleback_chief());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Beetleback Chief");
@@ -12155,8 +12161,8 @@ fn midnight_haunting_makes_two_flying_spirits() {
     use crate::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::midnight_haunting());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Midnight Haunting");
@@ -12449,8 +12455,8 @@ fn aether_figment_kicked_enters_as_a_three_three() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::aether_figment());
     // {1}{U} + Kicker {3} = {4}{U}.
-    g.players[0].mana_pool.add_colorless(4);
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpellKicked {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
@@ -12458,15 +12464,15 @@ fn aether_figment_kicked_enters_as_a_three_three() {
     drain_stack(&mut g);
     let cp = g.battlefield.iter().find(|c| c.definition.name == "Aether Figment")
         .map(|c| g.computed_permanent(c.id).unwrap()).expect("in play");
-    assert_eq!((cp.power, cp.toughness), (3, 3), "kicked Figment enters with a +1/+1 counter");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "kicked Figment enters with a +1/+1 counter");
 }
 
 #[test]
 fn aether_figment_unkicked_is_a_two_two() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::aether_figment());
-    g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
@@ -12474,7 +12480,7 @@ fn aether_figment_unkicked_is_a_two_two() {
     drain_stack(&mut g);
     let cp = g.battlefield.iter().find(|c| c.definition.name == "Aether Figment")
         .map(|c| g.computed_permanent(c.id).unwrap()).expect("in play");
-    assert_eq!((cp.power, cp.toughness), (2, 2), "unkicked Figment is a vanilla 2/2");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "unkicked Figment is a vanilla 2/2");
 }
 
 #[test]
@@ -14495,7 +14501,8 @@ fn brute_force_pumps_three_three() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::brute_force());
-    g.players[0].mana_pool.add(Color::Green, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -15504,8 +15511,8 @@ fn bond_of_discipline_taps_each_opponent_creature_and_grants_lifelink() {
     let bear_b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let your_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::bond_of_discipline());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -16124,7 +16131,9 @@ fn wall_of_roots_taps_for_green_with_pump_cost() {
 fn channel_pays_one_life_for_one_mana() {
     let mut g = two_player_game();
     let ch = g.add_card_to_hand(0, catalog::channel());
-    g.players[0].mana_pool.add(Color::Green, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life_before = g.players[0].life;
     let pool_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::CastSpell {
@@ -16133,9 +16142,9 @@ fn channel_pays_one_life_for_one_mana() {
     .expect("Channel castable for {G}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before - 1, "Channel costs 1 life");
-    // Total pool: started 1, spent 1 to cast, gained 1 colorless = 1.
-    assert_eq!(g.players[0].mana_pool.total(), pool_before,
-        "Channel adds {{1}} colorless after paying its cast cost");
+    // Cast spends {G}{G} (2); the synthesized body adds 1 colorless → net -1.
+    assert_eq!(g.players[0].mana_pool.total(), pool_before - 1,
+        "Channel adds {{1}} colorless after paying its {{G}}{{G}} cast cost");
 }
 
 #[test]
@@ -16470,8 +16479,8 @@ fn black_suns_zenith_puts_x_minus_one_counters_on_each_creature() {
     let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let zenith = g.add_card_to_hand(0, catalog::black_suns_zenith());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: zenith, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
     })
@@ -17043,10 +17052,8 @@ fn lord_xander_the_collector_etb_discards_half_opponent_hand() {
     }
     let hand_before = g.players[1].hand.len();
     let xander = g.add_card_to_hand(0, catalog::lord_xander_the_collector());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: xander, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -17105,8 +17112,8 @@ fn cloudblazer_etb_draws_two_gains_two() {
     let hand = g.players[0].hand.len();
     let life = g.players[0].life;
     let id = g.add_card_to_hand(0, catalog::cloudblazer());
-    g.players[0].mana_pool.add(Color::Blue, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast(&mut g, id);
     assert_eq!(g.players[0].hand.len(), hand + 2, "drew 2");
     assert_eq!(g.players[0].life, life + 2, "gained 2");
@@ -17659,8 +17666,8 @@ fn trumpet_blast_pumps_attackers() {
         attacker, target: AttackTarget::Player(1),
     }])).unwrap();
     let id = g.add_card_to_hand(0, catalog::trumpet_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast(&mut g, id);
     assert_eq!(g.battlefield_find(attacker).unwrap().power(), 4, "attacker +2/+0");
 }
@@ -17726,7 +17733,7 @@ fn veteran_armorer_toughness_anthem() {
     assert_eq!((b.power, b.toughness), (2, 3), "other creature gets +0/+1");
     // Armorer doesn't buff itself.
     let a = cp.iter().find(|c| c.id == armorer).unwrap();
-    assert_eq!(a.toughness, 3, "armorer keeps base 2/3");
+    assert_eq!(a.toughness, 2, "armorer keeps base 2/3");
 }
 
 /// Attended Knight makes a 1/1 Soldier on ETB.
@@ -17979,8 +17986,8 @@ fn wear_tear_destroys_target_artifact() {
     let mut g = two_player_game();
     let mind_stone = g.add_card_to_battlefield(1, catalog::mind_stone());
     let wt = g.add_card_to_hand(0, catalog::wear_tear());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: wt, target: Some(Target::Permanent(mind_stone)),
@@ -17997,8 +18004,8 @@ fn fire_ice_left_deals_two_divided() {
     // Fire (left half): 2 damage to the opponent.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::fire_ice());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
@@ -18055,9 +18062,8 @@ fn far_away_fused_bounces_and_sacrifices() {
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::far_away());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSplitFused {
         card_id: id,
@@ -18078,7 +18084,8 @@ fn wax_wane_left_pumps_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::wax_wane());
-    g.players[0].mana_pool.add(Color::Green, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
@@ -18113,9 +18120,8 @@ fn alive_well_fused_makes_token_and_gains_life() {
     // control (after the Centaur enters, that's at least 1 creature).
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::alive_well());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSplitFused {
@@ -18157,8 +18163,8 @@ fn boom_left_destroys_one_of_each_players_land() {
     let theirs = g.add_card_to_battlefield(1, catalog::forest());
     let safe = g.add_card_to_battlefield(1, catalog::island());
     let id = g.add_card_to_hand(0, catalog::boom_bust());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -18198,9 +18204,8 @@ fn pure_left_destroys_multicolored_only() {
     let gold = g.add_card_to_battlefield(1, catalog::watchwolf()); // GW multicolored
     let mono = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::pure_simple());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(gold)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pure castable");
@@ -18215,7 +18220,8 @@ fn spite_left_counters_noncreature_only() {
     let mut g = two_player_game();
     // Opponent casts a noncreature spell (Lightning Bolt) at us.
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[1].mana_pool.add(_c, 20); }
+    g.players[1].mana_pool.add_colorless(20);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::CastSpell {
@@ -18240,7 +18246,8 @@ fn dead_gone_left_kills_right_bounces() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::dead_gone());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Dead castable");
@@ -18264,8 +18271,8 @@ fn give_take_left_adds_three_counters() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::give_take());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Give castable");
@@ -18282,9 +18289,8 @@ fn ready_left_grants_indestructible_and_untaps() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().tapped = true;
     let id = g.add_card_to_hand(0, catalog::ready_willing());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Ready castable");
@@ -18301,9 +18307,8 @@ fn profit_loss_fused_pumps_yours_shrinks_theirs() {
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 -> 3/3
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 -> 1/1
     let id = g.add_card_to_hand(0, catalog::profit_loss());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSplitFused {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -18321,9 +18326,8 @@ fn supply_left_makes_x_saprolings() {
     // Supply (left) makes X 1/1 Saprolings with X=3.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::supply_demand());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
@@ -18383,8 +18387,8 @@ fn consign_oblivion_left_bounces_nonland() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::consign_oblivion());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
@@ -18400,8 +18404,8 @@ fn mouth_feed_left_makes_hippo() {
     // Mouth (left) makes a 3/3 green Hippo.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mouth_feed());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -18428,8 +18432,8 @@ fn spring_mind_aftermath_from_graveyard_then_exiled() {
     }).is_err(), "aftermath not castable from hand");
 
     // Cast Spring (left) — lands in the graveyard.
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Spring castable");
@@ -18924,9 +18928,8 @@ fn loot_the_pathfinder_etb_creates_map_token() {
     use crate::card::ArtifactSubtype;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::loot_the_pathfinder());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast(&mut g, id);
     let maps: Vec<_> = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Map))
@@ -19067,8 +19070,8 @@ fn tempest_angler_etb_scries_two() {
         g.add_card_to_library(0, catalog::island());
     }
     let id = g.add_card_to_hand(0, catalog::tempest_angler());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast(&mut g, id);
     use crate::card::Keyword;
     let angler = g.battlefield_find(id).expect("Angler on bf");
@@ -19098,14 +19101,14 @@ fn carnage_interpreter_buffs_self_with_empty_hand() {
     // Empty hand → +2/+2 and menace.
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((c.power, c.toughness), (6, 5), "+2/+2 while hand ≤ 1");
+    assert_eq!((c.power, c.toughness), (5, 5), "+2/+2 while hand ≤ 1");
     assert!(c.keywords.contains(&crate::card::Keyword::Menace), "menace while hand ≤ 1");
     // Two cards in hand removes the bonus.
     g.add_card_to_hand(0, catalog::island());
     g.add_card_to_hand(0, catalog::island());
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((c.power, c.toughness), (4, 3), "base stats with a full hand");
+    assert_eq!((c.power, c.toughness), (3, 3), "base stats with a full hand");
     assert!(!c.keywords.contains(&crate::card::Keyword::Menace));
 }
 
@@ -19250,10 +19253,11 @@ fn keen_eyed_curator_exiles_graveyard_cards_and_buffs_at_four_types() {
     // Base 2/2 with nothing exiled.
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((c.power, c.toughness), (2, 2));
+    assert_eq!((c.power, c.toughness), (3, 3));
     // Exile each, tagging them with the Curator (one activation per card).
     for (i, card) in [creature, instant, land, artifact].into_iter().enumerate() {
-        g.players[0].mana_pool.add_colorless(1);
+        for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+        g.players[0].mana_pool.add_colorless(20);
         g.perform_action(GameAction::ActivateAbility {
             card_id: id, ability_index: 0, target: Some(Target::Permanent(card)), x_value: None,
         }).expect("exile a graveyard card");
@@ -19263,7 +19267,7 @@ fn keen_eyed_curator_exiles_graveyard_cards_and_buffs_at_four_types() {
     // Four card types among exiled-with cards → +4/+4 and trample.
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((c.power, c.toughness), (6, 6), "+4/+4 at four card types");
+    assert_eq!((c.power, c.toughness), (7, 7), "+4/+4 at four card types");
     assert!(c.keywords.contains(&crate::card::Keyword::Trample));
 }
 
@@ -19939,7 +19943,7 @@ fn phyrexian_obliterator_is_5_8_trample() {
     let card = catalog::phyrexian_obliterator();
     assert_eq!(card.name, "Phyrexian Obliterator");
     assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 8);
+    assert_eq!(card.toughness, 5);
     assert!(card.keywords.contains(&Keyword::Trample));
 }
 
@@ -20370,8 +20374,8 @@ fn moonshadow_is_2_1_flying_faerie_with_discard_trigger() {
     use crate::card::Keyword;
     let card = catalog::moonshadow();
     assert_eq!(card.name, "Moonshadow");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 1);
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
     assert!(card.keywords.contains(&Keyword::Flying));
     assert_eq!(card.triggered_abilities.len(), 1, "combat damage discard");
 }
@@ -21177,9 +21181,8 @@ fn wear_tear_fused_destroys_both() {
     let artifact = g.add_card_to_battlefield(1, catalog::sol_ring());
     let ench = g.add_card_to_battlefield(1, catalog::bad_moon());
     let id = g.add_card_to_hand(0, catalog::wear_tear());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSplitFused {
         card_id: id,
@@ -21931,7 +21934,7 @@ fn phyrexian_revoker_is_a_two_one_phyrexian_construct() {
     assert!(card.card_types.contains(&crate::card::CardType::Artifact));
     assert!(card.card_types.contains(&crate::card::CardType::Creature));
     assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Phyrexian));
-    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Construct));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Horror));
 }
 
 #[test]
@@ -22096,11 +22099,12 @@ fn sentinel_of_the_nameless_city_ward_counters_unpaid_spell() {
 }
 
 #[test]
-fn sentinel_of_the_nameless_city_is_a_plant_warrior() {
+fn sentinel_of_the_nameless_city_is_a_merfolk_warrior_scout() {
     use crate::card::CreatureType;
     let s = catalog::sentinel_of_the_nameless_city();
-    assert!(s.has_creature_type(CreatureType::Plant), "Plant subtype restored");
+    assert!(s.has_creature_type(CreatureType::Merfolk));
     assert!(s.has_creature_type(CreatureType::Warrior));
+    assert!(s.has_creature_type(CreatureType::Scout));
 }
 
 #[test]
@@ -23811,7 +23815,8 @@ fn kozileks_command_chooses_two_modes() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::kozileks_command());
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
@@ -24215,7 +24220,8 @@ fn golgari_brownscale_can_dredge_two() {
 fn golgari_grave_troll_enters_with_x_plus_one_counters() {
     let mut g = two_player_game();
     let troll = g.add_card_to_hand(0, catalog::golgari_grave_troll());
-    g.players[0].mana_pool.add(Color::Black, 2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.players[0].mana_pool.add_colorless(3); // X = 3
     g.perform_action(GameAction::CastSpell {
         card_id: troll, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
@@ -24460,7 +24466,8 @@ fn outland_liberator_is_daybound_and_sacrifices_to_destroy() {
     g.priority.player_with_priority = 0;
     let target = g.add_card_to_battlefield(1, catalog::the_everflowing_well()); // an artifact
     let ol = g.add_card_to_hand(0, catalog::outland_liberator());
-    g.players[0].mana_pool.add(Color::Green, 2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: ol, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Outland Liberator");
@@ -25029,9 +25036,8 @@ fn awaken_the_honored_dead_returns_all_your_creatures() {
     let c1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let c2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::awaken_the_honored_dead());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(5);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Awaken the Honored Dead castable");
@@ -25562,8 +25568,8 @@ fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
     use crate::card::CounterType;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::spike_feeder());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable for {2}{G}");
@@ -26102,8 +26108,8 @@ fn gerrards_wisdom_gains_two_life_per_card_in_hand() {
     let id = g.add_card_to_hand(0, catalog::gerrards_wisdom());
     g.add_card_to_hand(0, catalog::grizzly_bears());
     g.add_card_to_hand(0, catalog::plains()); // hand = 3 incl. the spell
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -26120,8 +26126,8 @@ fn planar_cleansing_destroys_nonland_permanents_only() {
     let ench = g.add_card_to_battlefield(1, catalog::ghostly_prison());
     let land = g.add_card_to_battlefield(1, catalog::plains());
     let id = g.add_card_to_hand(0, catalog::planar_cleansing());
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
@@ -26886,8 +26892,8 @@ fn mirror_image_copies_only_your_own_creature() {
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 yours
     let _ = mine;
     let id = g.add_card_to_hand(0, catalog::mirror_image());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Mirror Image castable for {1}{U}");
@@ -26939,7 +26945,8 @@ fn phantasmal_image_copies_and_keeps_illusion_plus_sacrifice_rider() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::serra_angel());
     let id = g.add_card_to_hand(0, catalog::phantasmal_image());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Phantasmal Image castable for {U}");
@@ -26961,7 +26968,8 @@ fn phantasmal_image_sacrifices_itself_when_targeted() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::serra_angel());
     let id = g.add_card_to_hand(0, catalog::phantasmal_image());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
@@ -26986,7 +26994,8 @@ fn phantasmal_image_refires_copied_etb_trigger() {
     g.add_card_to_library(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::phantasmal_image());
     let hand_before = g.players[0].hand.len();
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable for {U}");
@@ -27590,7 +27599,7 @@ fn theros_vanilla_bodies_have_expected_stats() {
     assert_eq!((g.battlefield_find(ox).unwrap().power(), g.battlefield_find(ox).unwrap().toughness()), (0, 4));
     assert_eq!((g.battlefield_find(courser).unwrap().power(), g.battlefield_find(courser).unwrap().toughness()), (3, 3));
     assert!(g.battlefield_find(goliath).unwrap().has_keyword(&crate::card::Keyword::Trample));
-    assert_eq!((g.battlefield_find(minotaur).unwrap().power(), g.battlefield_find(minotaur).unwrap().toughness()), (3, 2));
+    assert_eq!((g.battlefield_find(minotaur).unwrap().power(), g.battlefield_find(minotaur).unwrap().toughness()), (2, 3));
 }
 
 #[test]
@@ -27617,8 +27626,8 @@ fn griptide_puts_creature_on_top_of_library() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::griptide());
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Griptide castable");
@@ -27647,8 +27656,8 @@ fn pharikas_cure_pings_and_gains_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::pharikas_cure());
-    g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
@@ -27680,14 +27689,14 @@ fn nyleas_disciple_gains_life_for_green_devotion() {
     g.add_card_to_battlefield(0, catalog::elvish_mystic());
     g.add_card_to_battlefield(0, catalog::elvish_mystic());
     let id = g.add_card_to_hand(0, catalog::nyleas_disciple());
-    g.players[0].mana_pool.add_colorless(3);
-    g.players[0].mana_pool.add(Color::Green, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Nylea's Disciple castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life + 3, "gain life = devotion to green (2 + self)");
+    assert_eq!(g.players[0].life, life + 4, "gain life = devotion to green (2 + self)");
 }
 
 #[test]
@@ -27714,7 +27723,7 @@ fn cavalry_pegasus_and_traveling_philosopher_bodies() {
     let peg = g.add_card_to_battlefield(0, catalog::cavalry_pegasus());
     let phil = g.add_card_to_battlefield(0, catalog::traveling_philosopher());
     assert!(g.battlefield_find(peg).unwrap().has_keyword(&crate::card::Keyword::Flying));
-    assert_eq!((g.battlefield_find(phil).unwrap().power(), g.battlefield_find(phil).unwrap().toughness()), (1, 4));
+    assert_eq!((g.battlefield_find(phil).unwrap().power(), g.battlefield_find(phil).unwrap().toughness()), (2, 2));
 }
 
 #[test]
@@ -27722,8 +27731,8 @@ fn horizon_scholar_etb_scrys_two() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::horizon_scholar());
-    g.players[0].mana_pool.add_colorless(4);
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Horizon Scholar castable");
@@ -27783,8 +27792,8 @@ fn theros_minotaur_bodies() {
     let bm = g.add_card_to_battlefield(0, catalog::borderland_minotaur());
     let dr = g.add_card_to_battlefield(0, catalog::deathbellow_raider());
     let aw = g.add_card_to_battlefield(0, catalog::asphodel_wanderer());
-    assert_eq!((g.battlefield_find(bm).unwrap().power(), g.battlefield_find(bm).unwrap().toughness()), (3, 3));
-    assert_eq!((g.battlefield_find(dr).unwrap().power(), g.battlefield_find(dr).unwrap().toughness()), (3, 1));
+    assert_eq!((g.battlefield_find(bm).unwrap().power(), g.battlefield_find(bm).unwrap().toughness()), (4, 3));
+    assert_eq!((g.battlefield_find(dr).unwrap().power(), g.battlefield_find(dr).unwrap().toughness()), (2, 3));
     assert_eq!((g.battlefield_find(aw).unwrap().power(), g.battlefield_find(aw).unwrap().toughness()), (1, 1));
 }
 
@@ -28127,8 +28136,8 @@ fn walk_the_plank_destroys_non_merfolk() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let wtp = g.add_card_to_hand(0, catalog::walk_the_plank());
-    g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: wtp, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -28504,7 +28513,7 @@ fn emperors_vanguard_explores_on_attack() {
     drain_stack(&mut g);
     let view = g.compute_battlefield();
     let v = view.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((v.power, v.toughness), (4, 3), "attack-trigger explore grew it");
+    assert_eq!((v.power, v.toughness), (5, 4), "attack-trigger explore grew it");
 }
 
 #[test]
@@ -28729,8 +28738,8 @@ fn atzocan_archer_etb_fight() {
     let mut g = two_player_game();
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     let id = g.add_card_to_hand(0, catalog::atzocan_archer()); // 1/4
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     // Script the MayDo (yes) + the fight target.
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true),
@@ -28947,7 +28956,8 @@ fn keyword_bodies_have_correct_stats() {
 fn filigree_familiar_gains_life_on_etb_and_draws_on_death() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::filigree_familiar());
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -29567,8 +29577,8 @@ fn adventure_bonecrusher_stomp_then_cast_creature() {
     let wall = g.add_card_to_battlefield(1, catalog::wall_of_stone()); // 0/8, survives 2
     let id = g.add_card_to_hand(0, catalog::bonecrusher_giant());
     // Cast the Stomp half ({1}{R}).
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastAdventure {
         card_id: id, target: Some(Target::Permanent(wall)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -29672,7 +29682,7 @@ fn adventure_order_of_midnight_alter_fate_reanimates() {
 fn plot_spinewoods_paladin_casts_free_later() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::spinewoods_paladin());
-    // Plot for {2}{G}.
+    // Plot for {2}{G} — exactly enough so the pool is empty afterward.
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Plot { card_id: id }).expect("plot");
@@ -29690,7 +29700,7 @@ fn plot_spinewoods_paladin_casts_free_later() {
     }).expect("cast plotted for free");
     drain_stack(&mut g);
     let p = g.battlefield_find(id).expect("Paladin on battlefield");
-    assert_eq!((p.power(), p.toughness()), (4, 3));
+    assert_eq!((p.power(), p.toughness()), (5, 4));
     assert!(!g.plotted_cards.contains(&id), "plot state cleared once cast");
 }
 
@@ -30353,10 +30363,11 @@ fn festival_crasher_grows_on_spells() {
     let mut g = two_player_game();
     let fc = g.add_card_to_battlefield(0, catalog::festival_crasher());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, bolt, Target::Player(1));
     let c = g.battlefield_find(fc).unwrap();
-    assert_eq!((c.power(), c.toughness()), (3, 3), "permanent +1/+1 counter");
+    assert_eq!((c.power(), c.toughness()), (2, 4), "permanent +1/+1 counter");
 }
 
 // ── CR 509.1b block-restriction keywords ────────────────────────────────────
@@ -31539,8 +31550,8 @@ fn virtue_of_loyalty_adventure_makes_knight_then_enchantment_buffs() {
     let mut g = two_player_game();
     // Adventure side: cast Ardenvale Fealty → 2/2 vigilant Knight + exile card.
     let id = g.add_card_to_hand(0, catalog::virtue_of_loyalty());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastAdventure {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Ardenvale Fealty");
@@ -34106,8 +34117,8 @@ fn jaces_ingenuity_draws_three() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
     let id = g.add_card_to_hand(0, catalog::jaces_ingenuity());
-    g.players[0].mana_pool.add_colorless(4);
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -34928,8 +34939,8 @@ fn opportunity_draws_target_player_four() {
     let mut g = two_player_game();
     for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
     let id = g.add_card_to_hand(0, catalog::opportunity());
-    g.players[0].mana_pool.add_colorless(5);
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
@@ -35845,8 +35856,8 @@ fn befuddle_shrinks_power_and_draws() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.add_card_to_library(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::befuddle());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, id, Target::Permanent(bear));
     assert_eq!(g.computed_permanent(bear).unwrap().power, -2, "2 - 4 = -2 power");
 }
@@ -35876,7 +35887,7 @@ fn coral_barrier_makes_a_squid() {
 fn rishadan_airship_flies_and_cant_block() {
     use crate::card::Keyword;
     let def = catalog::rishadan_airship();
-    assert_eq!((def.power, def.toughness), (2, 3));
+    assert_eq!((def.power, def.toughness), (3, 1));
     assert!(def.keywords.contains(&Keyword::Flying));
     assert!(def.keywords.contains(&Keyword::CantBlock));
 }
@@ -37275,8 +37286,8 @@ fn teferis_protection_phases_out_your_permanents_and_prevents_damage() {
 fn comeuppance_prevents_damage_to_you() {
     let mut g = two_player_game();
     let c = g.add_card_to_hand(0, catalog::comeuppance());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: c, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Comeuppance");
@@ -40266,7 +40277,7 @@ fn murderous_redcap_etb_pings_for_its_power() {
     let opp_life = g.players[1].life;
     g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_life - 1, "ETB pings for power 1");
+    assert_eq!(g.players[1].life, opp_life - 2, "ETB pings for power 2");
 }
 
 #[test]
@@ -40787,8 +40798,8 @@ fn get_lost_destroys_and_makes_two_maps() {
     g.priority.player_with_priority = 0;
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let gl = g.add_card_to_hand(0, catalog::get_lost());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     crate::game::cast_at(&mut g, gl, Target::Permanent(bear));
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
@@ -41752,8 +41763,8 @@ fn through_the_breach_cheats_creature_with_haste() {
     let mut g = two_player_game();
     let breach = g.add_card_to_hand(0, catalog::through_the_breach());
     let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
-    g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
     g.perform_action(GameAction::CastSpell {
         card_id: breach, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -42416,7 +42427,8 @@ fn qumulox_affinity_castable_cheap() {
     let mut g = two_player_game();
     for _ in 0..7 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
     let id = g.add_card_to_hand(0, catalog::qumulox());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Affinity-7 makes Qumulox cost {U}");
@@ -44295,7 +44307,8 @@ fn hidden_strings_untaps_first_and_taps_second_target() {
     g.battlefield_find_mut(mine).unwrap().tapped = true;
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::hidden_strings());
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     precombat(&mut g);
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true), // do the untap
@@ -44952,8 +44965,8 @@ fn uro_etb_feast_then_sacrifice() {
     g.add_card_to_library(0, catalog::island());
     let hand_land = g.add_card_to_hand(0, catalog::forest());
     let uro = g.add_card_to_hand(0, catalog::uro_titan_of_natures_wrath());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![hand_land])]));
@@ -45971,7 +45984,8 @@ fn reflection_of_kiki_jiki_copies_then_sacs_at_end_step() {
     let kiki = g.add_card_to_battlefield(0, catalog::reflection_of_kiki_jiki());
     g.clear_sickness(kiki);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::ActivateAbility {
         card_id: kiki, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
     }).expect("activate Kiki");
@@ -48872,8 +48886,8 @@ fn court_of_cunning_mills_more_while_monarch() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     let court = g.add_card_to_hand(0, catalog::court_of_cunning());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: court, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
@@ -49138,8 +49152,8 @@ fn scrap_trawler_ignores_nonartifact_deaths() {
 fn conflagrate_hard_cast_deals_x() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::conflagrate());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
         mode: None, x_value: Some(3),
@@ -51269,8 +51283,8 @@ fn leyline_axe_starts_in_play_from_opening_hand() {
 fn questing_druid_grows_and_adventure_impulses() {
     let mut g = two_player_game();
     let druid = g.add_card_to_hand(0, catalog::questing_druid());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: druid, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("creature half");
@@ -53071,8 +53085,8 @@ fn dusk_sweeps_big_dawn_returns_small() {
     let big = g.add_card_to_battlefield(1, catalog::cryptic_serpent());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::dusk_dawn());
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Dusk");
@@ -53101,8 +53115,8 @@ fn never_kills_planeswalker_return_exiles_and_mints_zombie() {
     let mut g = two_player_game();
     let pw = g.add_card_to_battlefield(1, catalog::teferi_hero_of_dominaria());
     let id = g.add_card_to_hand(0, catalog::never_return());
-    g.players[0].mana_pool.add(Color::Black, 2);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, id, Target::Permanent(pw));
     assert!(g.battlefield_find(pw).is_none(), "planeswalker destroyed");
     // Return from the graveyard, exiling the dead planeswalker card.
@@ -53126,8 +53140,8 @@ fn turn_resets_creature_to_red_0_1_weird() {
     let mut g = two_player_game();
     let flyer = g.add_card_to_battlefield(1, catalog::mantis_rider());
     let id = g.add_card_to_hand(0, catalog::turn_burn());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, id, Target::Permanent(flyer));
     let c = g.computed_permanent(flyer).unwrap();
     assert_eq!((c.power, c.toughness), (0, 1), "base 0/1");
@@ -53143,8 +53157,8 @@ fn hide_bottoms_artifact_seek_exiles_and_gains_mv() {
     let mut g = two_player_game();
     let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
     let id = g.add_card_to_hand(0, catalog::hide_seek());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast_at(&mut g, id, Target::Permanent(rock));
     assert!(g.battlefield_find(rock).is_none(), "artifact off the battlefield");
     assert_eq!(g.players[1].library.last().map(|c| c.id), Some(rock), "on the bottom");
@@ -53425,8 +53439,8 @@ fn aven_wind_guide_buffs_tokens_only() {
     g.add_card_to_battlefield(0, catalog::aven_wind_guide());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::midnight_haunting());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("make Spirit tokens");

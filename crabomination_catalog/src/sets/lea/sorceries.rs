@@ -20,7 +20,7 @@ pub fn wrath_of_god() -> CardDefinition {
 pub fn armageddon() -> CardDefinition {
     CardDefinition {
         name: "Armageddon",
-        cost: cost(&[generic(2), w(), w()]),
+        cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
             what: Selector::EachPermanent(SelectionRequirement::Land),

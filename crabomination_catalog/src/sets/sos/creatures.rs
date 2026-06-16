@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb_gain_life;
 use crate::effect::{Duration, PlayerRef, Predicate, Selector, StaticAbility, StaticEffect, Value};
-use crate::mana::{Color, ManaCost, b, cost, generic, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, mono_hybrid, r, u, w};
 
 // ── Strixhaven token helpers ────────────────────────────────────────────────
 
@@ -815,7 +815,7 @@ pub fn stirring_honormancer() -> CardDefinition {
         name: "Stirring Honormancer",
         // {2}{W}{W/B}{B}: the {W/B} pip is a real `ManaSymbol::Hybrid`
         // (CMC 5), payable with either white or black.
-        cost: cost(&[generic(2), w(), crate::mana::hybrid(Color::White, Color::Black), b()]),
+        cost: cost(&[generic(2), w(), hybrid(Color::White, Color::Black), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             // No "Rhino" subtype yet — bridge through Bard alone.
@@ -3083,7 +3083,7 @@ pub fn abstract_paintmage() -> CardDefinition {
     use crate::mana::{r, u, SpendRestriction};
     CardDefinition {
         name: "Abstract Paintmage",
-        cost: cost(&[u(), crate::mana::hybrid(Color::Blue, Color::Red), r()]),
+        cost: cost(&[u(), hybrid(Color::Blue, Color::Red), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Sorcerer],
@@ -3330,7 +3330,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
     );
     CardDefinition {
         name: "Practiced Scrollsmith",
-        cost: cost(&[r(), crate::mana::hybrid(Color::Red, Color::White), wm()]),
+        cost: cost(&[r(), hybrid(Color::Red, Color::White), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dwarf, CreatureType::Cleric],
@@ -3381,7 +3381,7 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
     use crate::mana::{r, w as wm};
     CardDefinition {
         name: "Colossus of the Blood Age",
-        cost: cost(&[generic(4), r(), wm()]),
+        cost: cost(&[generic(4), r(), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Construct],
@@ -3440,7 +3440,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
     use crate::mana::w;
     CardDefinition {
         name: "Soaring Stoneglider",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
@@ -4098,7 +4098,7 @@ pub fn paradox_surveyor() -> CardDefinition {
     use crate::mana::{g, u};
     CardDefinition {
         name: "Paradox Surveyor",
-        cost: cost(&[g(), crate::mana::hybrid(Color::Green, Color::Blue), u()]),
+        cost: cost(&[g(), hybrid(Color::Green, Color::Blue), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -4883,7 +4883,7 @@ pub fn essenceknit_scholar() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
         name: "Essenceknit Scholar",
-        cost: cost(&[b(), crate::mana::hybrid(Color::Black, Color::Green), g()]),
+        cost: cost(&[b(), hybrid(Color::Black, Color::Green), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dryad, CreatureType::Warlock],

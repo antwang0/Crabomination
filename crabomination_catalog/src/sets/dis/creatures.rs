@@ -10,10 +10,10 @@ use crate::mana::{Color, cost, g, generic, hybrid, u, w};
 pub fn azorius_first_wing() -> CardDefinition {
     CardDefinition {
         name: "Azorius First-Wing",
-        cost: cost(&[generic(1), w(), u()]),
+        cost: cost(&[w(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Griffin],
             ..Default::default()
         },
         power: 2,
@@ -27,7 +27,7 @@ pub fn azorius_first_wing() -> CardDefinition {
 pub fn aquastrand_spider() -> CardDefinition {
     CardDefinition {
         name: "Aquastrand Spider",
-        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spider],
@@ -44,10 +44,10 @@ pub fn aquastrand_spider() -> CardDefinition {
 pub fn plaxcaster_frogling() -> CardDefinition {
     CardDefinition {
         name: "Plaxcaster Frogling",
-        cost: cost(&[generic(2), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Frog, CreatureType::Beast],
+            creature_types: vec![CreatureType::Frog, CreatureType::Mutant],
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
@@ -92,10 +92,10 @@ pub fn cytoplast_root_kin() -> CardDefinition {
 pub fn simic_initiate() -> CardDefinition {
     CardDefinition {
         name: "Simic Initiate",
-        cost: cost(&[hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Mutant],
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
@@ -109,7 +109,7 @@ pub fn simic_initiate() -> CardDefinition {
 pub fn vigean_graftmage() -> CardDefinition {
     CardDefinition {
         name: "Vigean Graftmage",
-        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
@@ -140,7 +140,7 @@ pub fn vigean_graftmage() -> CardDefinition {
 pub fn helium_squirter() -> CardDefinition {
     CardDefinition {
         name: "Helium Squirter",
-        cost: cost(&[generic(4), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Mutant],

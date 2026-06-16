@@ -396,7 +396,7 @@ pub fn goryos_vengeance() -> CardDefinition {
 pub fn prismatic_ending() -> CardDefinition {
     CardDefinition {
         name: "Prismatic Ending",
-        cost: cost(&[w()]),
+        cost: cost(&[x(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::If {
             cond: Predicate::ValueAtMost(

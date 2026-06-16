@@ -1608,6 +1608,28 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
+- ✅ **Catalog-wide stat sweep (2026-06-16) — same problem beyond STX.** The
+  modern supplement (`decks/`, `mod_set/`) and small older sets carried the same
+  synthesized-stat drift. New tooling `scripts/audit_catalog_stats.py` (cost +
+  P/T + creature-type + keyword, all sets) and `scripts/fix_catalog_stats.py`
+  (cost/P-T/type fixer with a custom-card exclude list) drove a sweep across
+  `decks`/`mod_set`/`ths`/`kld`/`ktk`/`lea`/`dis`/`khm`/`sos`, regenerating coupled
+  tests via `fix_test_mana.py` + `regen_test_assertions.py`. Catalog-wide drift:
+  **cost 253→2, P/T 131→6, type 120→8, keyword 55→41** (full suite green, 8551).
+  Lessons baked into the tooling: cost rebuilds use the *front* face (don't sum
+  split halves), the cost field is found as the depth-1 `CardDefinition.cost`
+  (never a nested `mana_cost:`/deferred-Pact/`GrantMiracle` cost), and the keyword
+  audit reads only the top-level vec. **Keyword pass:** 13 clear simple-keyword
+  bugs fixed (spurious/wrong/missing — e.g. Shriekmaw Menace→Fear, Mockingbird
+  Flash→Flying, Loot +Double-strike/Haste); the other ~41 are deliberately left —
+  conditional keywords modeled as base (Paradise Druid's untapped-only hexproof),
+  keywords that *model an evasion ability* (Silhana/Signal Pest "blocked only
+  by…" as Flying, Reality Smasher/Frost Titan counter-tax as Ward), DFC
+  back-face keywords, Protection/Ward that need a quality/arg, and manlands
+  (Mutavault). Those need real ability modeling, not a stat tweak. **Other
+  remaining:** cost/PT/type leftovers are CDA P/T, the 3 synergy-coupled
+  synthesized types, missing enum variants, and the 2 excluded customs (Cosmogoyf,
+  Crabomination). Run `python3 scripts/audit_catalog_stats.py` for the live table.
 - ⚠️ **Fabricated real-name STX cards (correctness sweep).** Many STX factories
   reuse *real* STX card names but carry invented cost/types/oracle text (the
   synthesizer collided with real names). **Cost + P/T are now fully swept**:

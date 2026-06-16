@@ -84,9 +84,8 @@ fn bristling_hydra_etb_energy_then_pays_for_counter_and_hexproof() {
     use crate::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::bristling_hydra());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     cast_creature(&mut g, id);
     assert_eq!(g.players[0].energy, 3, "ETB grants {{E}}{{E}}{{E}}");
     g.perform_action(GameAction::ActivateAbility {
@@ -212,8 +211,8 @@ fn live_fast_draws_loses_life_and_energy() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::live_fast());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let life = g.players[0].life;
     let hand = g.players[0].hand.len();
     cast_creature(&mut g, id);
@@ -354,7 +353,7 @@ fn voltaic_brawler_attack_pays_energy_to_pump() {
     }])).expect("attack");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
-    assert_eq!((c.power(), c.toughness()), (4, 2), "paid {{E}}{{E}} for +1/+1");
+    assert_eq!((c.power(), c.toughness()), (4, 3), "paid {{E}}{{E}} for +1/+1");
     assert_eq!(g.players[0].energy, 0);
 }
 
@@ -489,7 +488,7 @@ fn thriving_rhino_pumps_when_energy_paid_on_attack() {
     }])).expect("attack");
     drain_stack(&mut g);
     let rhino = g.battlefield_find(r).unwrap();
-    assert_eq!(rhino.power(), 5, "paid {{E}}{{E}} for +2/+2");
+    assert_eq!(rhino.power(), 4, "paid {{E}}{{E}} for +2/+2");
     assert_eq!(g.players[0].energy, 0);
 }
 

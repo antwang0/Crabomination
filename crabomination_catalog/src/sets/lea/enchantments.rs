@@ -3,7 +3,7 @@ use crate::card::{
     StaticAbility, StaticEffect, TriggeredAbility,
 };
 use crate::effect::{PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, generic, r, w};
+use crate::mana::{b, cost, generic, r, u, w};
 
 /// Glorious Anthem — {1}{W}{W} Enchantment
 /// Creatures you control get +1/+1.
@@ -34,7 +34,7 @@ pub fn glorious_anthem() -> CardDefinition {
 pub fn smoke() -> CardDefinition {
     CardDefinition {
         name: "Smoke",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[r(), r()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures don't untap during their controllers' untap steps.",

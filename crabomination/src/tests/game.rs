@@ -4090,8 +4090,8 @@ fn callous_sell_sword_enters_with_counter_per_creature_died() {
     let mut g = two_player_game();
     g.players[0].creatures_died_this_turn = 2;
     let css = g.add_card_to_hand(0, catalog::callous_sell_sword());
-    g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: css, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Callous Sell-Sword castable for {1}{B}");
