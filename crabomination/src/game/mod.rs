@@ -9175,6 +9175,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::SelfCostReducedByGreatestPower
             // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
             | StaticEffect::SelfCostReducedByDomain { .. }
+            // SelfCostReducedByDevotion (Daybreak Chimera) — same, off the spell.
+            | StaticEffect::SelfCostReducedByDevotion { .. }
             // SacrificeCostReduction (Awaken the Blood Avatar) — an optional
             // additional cost consulted by `cast_spell_sacrifice_reduce`; no
             // continuous-layer effect.

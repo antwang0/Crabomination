@@ -2035,6 +2035,7 @@ static DECKS: &[Factory] = &[
     super::decks::familiars_ruse,
     super::decks::thieving_sprite,
     super::decks::quickling,
+<<<<<<< HEAD
     super::decks::wash_away,
     super::decks::dig_up,
     super::decks::fierce_retribution,
@@ -2071,6 +2072,10 @@ static DECKS: &[Factory] = &[
     super::decks::boggart_ram_gang,
     super::decks::eyeblights_ending,
     super::decks::barkhide_troll,
+=======
+    super::decks::enraged_revolutionary,
+    super::decks::grenzos_cutthroat,
+>>>>>>> 2dd048f (Functionality: devotion cost reduction (CR 700.5), Heroic (CR 702.85), Dethrone carded (CR 702.105) + 5 cards)
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,
@@ -7558,6 +7563,7 @@ static THB: &[Factory] = &[
     super::thb::captivating_unicorn,
     super::thb::pious_wayfarer,
     super::thb::sage_of_mysteries,
+    super::thb::daybreak_chimera,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,
@@ -7588,6 +7594,8 @@ static THS: &[Factory] = &[
     super::ths::asphodel_wanderer,
     super::ths::returned_centaur,
     super::ths::baleful_eidolon,
+    super::ths::hero_of_the_pride,
+    super::ths::phalanx_leader,
     super::ths::hopeful_eidolon,
     super::ths::gray_merchant_of_asphodel,
     super::ths::nylea_god_of_the_hunt,

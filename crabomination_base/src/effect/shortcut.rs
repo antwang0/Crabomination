@@ -1834,6 +1834,17 @@ pub fn mentor() -> TriggeredAbility {
     }
 }
 
+/// Heroic (CR 702.85): "Whenever you cast a spell that targets this creature,
+/// `body`." A `SpellCast / YourControl` trigger gated on
+/// `Predicate::CastSpellTargetsSource`.
+pub fn heroic(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellTargetsSource),
+        effect: body,
+    }
+}
+
 /// Dethrone (CR 702.105): "Whenever this creature attacks the player with
 /// the most life or tied for most life, put a +1/+1 counter on it." An
 /// `Attacks / SelfSource` trigger gated on `PlayerHasMostLife` for the

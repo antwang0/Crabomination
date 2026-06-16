@@ -8,6 +8,7 @@
 //! triggers resolving on the Equipment (CR 702.6e).
 
 use crate::catalog;
+use crate::card::CounterType;
 use crate::game::types::{Attack, AttackTarget};
 use crate::mana::Color;
 use crate::game::two_player_game;
@@ -2046,6 +2047,7 @@ fn concordant_crossroads_grants_haste_to_all() {
     assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&crate::card::Keyword::Haste));
 }
 
+<<<<<<< HEAD
 // ── CR 121.5 / multi-pick reveals ────────────────────────────────────────────
 
 /// CR 121.5 — a card put into hand by a look-and-pick (Impulse) is NOT
@@ -2136,4 +2138,57 @@ fn atraxa_take_one_per_type_validates_distinct_types() {
     assert!(g.players[0].has_in_hand(isle), "land taken");
     assert!(!g.players[0].has_in_hand(bolt_b), "duplicate-type pick dropped");
     assert!(g.players[0].library.iter().any(|c| c.id == bolt_b), "it went to the bottom");
+=======
+// ── CR 702.85 — Heroic ────────────────────────────────────────────────────────
+
+/// Hero of the Pride's Heroic fires when a spell you cast targets it: every
+/// creature you control gets +1/+0 (seen on a non-targeted teammate).
+#[test]
+fn cr_702_85_heroic_pumps_team_when_targeted() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::hero_of_the_pride());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, not targeted
+    let spell = g.add_card_to_hand(0, catalog::infuriate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(hero)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infuriate targeting the hero");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "Heroic gave the team +1/+0");
+}
+
+/// Heroic does NOT fire when the spell targets a different creature.
+#[test]
+fn cr_702_85_heroic_silent_when_not_targeted() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hero_of_the_pride());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::infuriate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), // targets the bear, not the hero
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infuriate on the bear");
+    drain_stack(&mut g);
+    // Bear got only Infuriate's +3/+2 (5/4), not an extra heroic +1/+0.
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 5, "no heroic pump");
+}
+
+/// Phalanx Leader's Heroic puts a +1/+1 counter on each creature you control.
+#[test]
+fn cr_702_85_phalanx_leader_counters_team() {
+    let mut g = two_player_game();
+    let leader = g.add_card_to_battlefield(0, catalog::phalanx_leader());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::infuriate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(leader)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infuriate targeting Phalanx Leader");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "teammate got a +1/+1 counter");
+>>>>>>> 2dd048f (Functionality: devotion cost reduction (CR 700.5), Heroic (CR 702.85), Dethrone carded (CR 702.105) + 5 cards)
 }

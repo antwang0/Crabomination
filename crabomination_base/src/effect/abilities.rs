@@ -171,6 +171,13 @@ pub enum StaticEffect {
     /// among the caster's lands (0–5). Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByDomain { per: u32 },
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is your
+    /// devotion to `colors`" (Theros — Daybreak Chimera, etc.). Read by
+    /// `cost_reduction_for_spell` off the *spell being cast*; the count is the
+    /// caster's devotion (each colored pip in those colors among permanents
+    /// they control, CR 700.5). Generic-only; clamped by
+    /// `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByDevotion { colors: Vec<crate::mana::Color> },
     /// "This spell costs {N} less to cast for each card you've discarded
     /// this turn" (Hollow One). Card-intrinsic; read by
     /// `cost_reduction_for_spell` off `Player.cards_discarded_this_turn`.

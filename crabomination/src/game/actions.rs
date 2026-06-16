@@ -324,6 +324,13 @@ pub(crate) fn cost_reduction_for_spell(
             reduction = reduction.saturating_add(per * state.domain_count(caster) as u32);
         }
     }
+    // Card-intrinsic "costs {X} less, where X is your devotion to [colors]"
+    // (Theros — Daybreak Chimera). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedByDevotion { colors } = &sa.effect {
+            reduction = reduction.saturating_add(state.devotion_to(caster, colors) as u32);
+        }
+    }
     // One-shot "the next instant or sorcery you cast this turn costs {N}
     // less" discounts (Thundertrap Trainer). Each was stamped with the
     // caster's instant/sorcery tally at grant time; it applies only while

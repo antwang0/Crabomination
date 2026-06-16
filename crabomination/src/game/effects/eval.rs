@@ -896,6 +896,26 @@ impl GameState {
                 // artifact/enchantment/token sacrificed) at cast time.
                 ctx.bargained
             }
+            Predicate::CastSpellTargetsSource => {
+                // CR 702.85 — Heroic. The just-cast spell (trigger source,
+                // a card on the stack) targets this trigger's own source.
+                match (ctx.source, ctx.trigger_source) {
+                    (Some(src), Some(EntityRef::Card(spell_id))) => {
+                        self.stack.iter().any(|si| match si {
+                            StackItem::Spell { card, target, additional_targets, .. }
+                                if card.id == spell_id =>
+                            {
+                                target
+                                    .iter()
+                                    .chain(additional_targets.iter())
+                                    .any(|t| matches!(t, Target::Permanent(p) if *p == src))
+                            }
+                            _ => false,
+                        })
+                    }
+                    _ => false,
+                }
+            }
             Predicate::OpponentControlsMoreLandsThanYou => {
                 // Walk the battlefield, count lands per seat. True iff
                 // any opponent of `ctx.controller` has strictly more

@@ -55784,6 +55784,7 @@ fn quickling_bounce_or_sacrifice() {
     assert!(g.battlefield_find(q2).is_none(), "no bounce target → sacrificed");
 }
 
+<<<<<<< HEAD
 // ── Cleave (CR 702.148) ──────────────────────────────────────────────────────
 
 /// Wash Away's base mode only counters a spell not cast from its owner's
@@ -56576,4 +56577,24 @@ fn barkhide_troll_counter_for_hexproof() {
     let c = g.battlefield_find(id).unwrap();
     assert_eq!(c.counter_count(crate::card::CounterType::PlusOnePlusOne), 0, "counter paid");
     assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Hexproof));
+=======
+/// Enraged Revolutionary's printed Dethrone grows it when it attacks the
+/// highest-life player (CR 702.105, carded — not test-granted).
+#[test]
+fn enraged_revolutionary_dethrone_on_card() {
+    let mut g = two_player_game();
+    let rev = g.add_card_to_battlefield(0, catalog::enraged_revolutionary());
+    g.clear_sickness(rev);
+    g.players[1].life = 25; // defender has the most life
+    g.players[0].life = 20;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rev, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rev).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Dethrone counter from the printed keyword");
+>>>>>>> 2dd048f (Functionality: devotion cost reduction (CR 700.5), Heroic (CR 702.85), Dethrone carded (CR 702.105) + 5 cards)
 }

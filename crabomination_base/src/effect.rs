@@ -860,6 +860,12 @@ pub enum Predicate {
     /// "if this spell was kicked, …" riders (Tear Asunder). Non-spell
     /// contexts default `kicked` to `false`.
     SpellWasKicked,
+    /// CR 702.85 — Heroic. True when the just-cast spell (the trigger source,
+    /// an `EntityRef::Card` on the stack) targets the trigger's own source
+    /// permanent (`ctx.source`). Gates "Whenever you cast a spell that targets
+    /// this creature, …" triggers. Reads the cast spell's `target` /
+    /// `additional_targets` off the stack.
+    CastSpellTargetsSource,
     /// CR 702.176 — true iff the Bargain additional cost was paid (an
     /// artifact, enchantment, or token sacrificed) at cast time. Reads
     /// `EffectContext.bargained`, stamped from `CardInstance.bargained`.

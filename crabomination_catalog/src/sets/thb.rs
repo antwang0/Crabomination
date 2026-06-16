@@ -1358,3 +1358,23 @@ pub fn sage_of_mysteries() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Daybreak Chimera — {3}{W}{W} 3/3 flying Chimera. This spell costs {X} less
+/// to cast, where X is your devotion to white (CR 700.5).
+pub fn daybreak_chimera() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Daybreak Chimera",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Chimera], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is your devotion to white",
+            effect: crate::effect::StaticEffect::SelfCostReducedByDevotion { colors: vec![Color::White] },
+        }],
+        ..Default::default()
+    }
+}

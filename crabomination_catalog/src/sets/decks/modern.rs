@@ -52011,3 +52011,40 @@ pub fn barkhide_troll() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Dethrone (CR 702.105) — exercises `shortcut::dethrone` on real cards ──────
+
+/// Enraged Revolutionary — {2}{R} 2/1 Human Warrior with Dethrone.
+pub fn enraged_revolutionary() -> CardDefinition {
+    CardDefinition {
+        name: "Enraged Revolutionary",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::dethrone()],
+        ..Default::default()
+    }
+}
+
+/// Grenzo's Cutthroat — {1}{R} 1/1 Goblin Rogue with first strike and Dethrone.
+pub fn grenzos_cutthroat() -> CardDefinition {
+    CardDefinition {
+        name: "Grenzo's Cutthroat",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![crate::effect::shortcut::dethrone()],
+        ..Default::default()
+    }
+}

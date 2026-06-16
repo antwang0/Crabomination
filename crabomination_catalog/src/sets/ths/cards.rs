@@ -461,3 +461,52 @@ pub fn baleful_eidolon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hero of the Pride — {1}{W} 2/2 Cat Soldier. Heroic (CR 702.85): when you
+/// cast a spell that targets it, creatures you control get +1/+0 until EOT.
+pub fn hero_of_the_pride() -> CardDefinition {
+    CardDefinition {
+        name: "Hero of the Pride",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::heroic(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: crate::effect::Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Phalanx Leader — {W}{W} 1/1 Human Soldier. Heroic: put a +1/+1 counter on
+/// each creature you control.
+pub fn phalanx_leader() -> CardDefinition {
+    CardDefinition {
+        name: "Phalanx Leader",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::heroic(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: crate::card::CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}

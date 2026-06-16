@@ -137,8 +137,13 @@ pub enum CreatureType {
     Eye,
     // Manland animate-into bodies (Mishra's Factory, Inkmoth / Blinkmoth Nexus).
     AssemblyWorker, Blinkmoth,
+<<<<<<< HEAD
     // Strixhaven (Eccentric Apprentice).
     Tiefling,
+=======
+    // Theros Chimera (Daybreak Chimera, Loathsome Chimera).
+    Chimera,
+>>>>>>> 2dd048f (Functionality: devotion cost reduction (CR 700.5), Heroic (CR 702.85), Dethrone carded (CR 702.105) + 5 cards)
 }
 
 /// Land subtypes (basic land types + others).

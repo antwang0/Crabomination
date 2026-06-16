@@ -1115,3 +1115,19 @@ fn pious_wayfarer_constellation_pumps() {
     let c = g.battlefield_find(bear).unwrap();
     assert_eq!((c.power(), c.toughness()), (3, 3), "+1/+1 until end of turn");
 }
+
+/// Daybreak Chimera's devotion cost reduction: with devotion 2 to white its
+/// {3}{W}{W} cost drops to {1}{W}{W} (CR 700.5 / SelfCostReducedByDevotion).
+#[test]
+fn daybreak_chimera_devotion_reduces_generic() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // {3}{W}{W} → +2 white devotion
+    let chimera = g.add_card_to_hand(0, catalog::daybreak_chimera());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1); // only {1} generic — exact after the {2} discount
+    g.perform_action(GameAction::CastSpell {
+        card_id: chimera, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for {1}{W}{W} after devotion discount");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(chimera).is_some(), "Daybreak Chimera resolved");
+}
