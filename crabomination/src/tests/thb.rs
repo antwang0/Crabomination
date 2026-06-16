@@ -1270,3 +1270,39 @@ fn eutropia_constellation_counter_and_flying() {
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::Flying),
         "gains flying");
 }
+
+/// Brine Giant's affinity for enchantments cuts its generic cost by one per
+/// enchantment you control (here {6}{U} → {4}{U} with two enchantments).
+#[test]
+fn brine_giant_affinity_for_enchantments() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.add_card_to_battlefield(0, catalog::escape_protocol());
+    let giant = g.add_card_to_hand(0, catalog::brine_giant());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4); // {4}{U} after the {2} discount
+    g.perform_action(GameAction::CastSpell {
+        card_id: giant, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Brine Giant for {4}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some(), "Brine Giant resolved at the reduced cost");
+}
+
+/// Loathsome Chimera can be cast from the graveyard for its Escape cost.
+#[test]
+fn loathsome_chimera_escapes() {
+    let mut g = two_player_game();
+    let chimera = g.add_card_to_graveyard(0, catalog::loathsome_chimera());
+    let fodder: Vec<_> =
+        (0..3).map(|_| g.add_card_to_graveyard(0, catalog::grizzly_bears())).collect();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastEscape {
+        card_id: chimera, exile_cards: fodder, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape Loathsome Chimera for {4}{G} + exile three");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(chimera).is_some(), "escaped onto the battlefield");
+}

@@ -1653,3 +1653,35 @@ pub fn eutropia_the_twice_favored() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Brine Giant — {6}{U} 5/6 Giant. Affinity for enchantments (costs {1} less
+/// per enchantment you control, CR 702.41-style generic reduction).
+pub fn brine_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Brine Giant",
+        cost: cost(&[generic(6), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        affinity_filter: Some(
+            SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+        ),
+        ..Default::default()
+    }
+}
+
+/// Loathsome Chimera — {2}{G} 4/1 Chimera. Escape—{4}{G}, exile three other
+/// cards from your graveyard (CR 702.139).
+pub fn loathsome_chimera() -> CardDefinition {
+    CardDefinition {
+        name: "Loathsome Chimera",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Chimera], ..Default::default() },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Escape(cost(&[generic(4), g()]), 3)],
+        ..Default::default()
+    }
+}

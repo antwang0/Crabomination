@@ -7571,6 +7571,8 @@ static THB: &[Factory] = &[
     super::thb::rage_scarred_berserker,
     super::thb::leonin_of_the_lost_pride,
     super::thb::eutropia_the_twice_favored,
+    super::thb::brine_giant,
+    super::thb::loathsome_chimera,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,
