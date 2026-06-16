@@ -7561,6 +7561,16 @@ static THB: &[Factory] = &[
     super::thb::pious_wayfarer,
     super::thb::sage_of_mysteries,
     super::thb::daybreak_chimera,
+    super::thb::hero_of_the_games,
+    super::thb::eidolon_of_inspiration,
+    super::thb::favored_of_iroas,
+    super::thb::glory_bearers,
+    super::thb::pheres_band_brawler,
+    super::thb::nyleas_huntmaster,
+    super::thb::reverent_hoplite,
+    super::thb::rage_scarred_berserker,
+    super::thb::leonin_of_the_lost_pride,
+    super::thb::eutropia_the_twice_favored,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

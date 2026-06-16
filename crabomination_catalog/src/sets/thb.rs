@@ -1378,3 +1378,278 @@ pub fn daybreak_chimera() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// THB batch 2 — heroic / constellation / begin-combat / devotion bodies.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Hero of the Games — {2}{R} 3/2 Human Soldier. Heroic: team +1/+0 EOT.
+pub fn hero_of_the_games() -> CardDefinition {
+    CardDefinition {
+        name: "Hero of the Games",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::heroic(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Eidolon of Inspiration — {1}{W}{W} 2/2 Enchantment Creature — Spirit. At
+/// the beginning of combat on your turn, target creature you control gets
+/// +2/+0 until end of turn.
+pub fn eidolon_of_inspiration() -> CardDefinition {
+    CardDefinition {
+        name: "Eidolon of Inspiration",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Favored of Iroas — {2}{W} 2/2 Human Soldier. Constellation — this creature
+/// gains double strike until end of turn.
+pub fn favored_of_iroas() -> CardDefinition {
+    CardDefinition {
+        name: "Favored of Iroas",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![constellation(Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::DoubleStrike,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Glory Bearers — {3}{W} 3/4 Enchantment Creature — Human Cleric. Whenever
+/// another creature you control attacks, it gets +0/+1 until end of turn.
+pub fn glory_bearers() -> CardDefinition {
+    CardDefinition {
+        name: "Glory Bearers",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(0),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pheres-Band Brawler — {4}{G}{G} 4/4 Centaur Warrior. ETB: it fights up to
+/// one target creature you don't control.
+pub fn pheres_band_brawler() -> CardDefinition {
+    CardDefinition {
+        name: "Pheres-Band Brawler",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Fight {
+            attacker: Selector::This,
+            defender: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nylea's Huntmaster — {3}{G} 4/3 Centaur Shaman. ETB: target creature you
+/// control gets +X/+0 until end of turn, where X is your devotion to green.
+pub fn nyleas_huntmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Nylea's Huntmaster",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::DevotionTo(vec![Color::Green]),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Reverent Hoplite — {4}{W} 1/2 Human Soldier. ETB: create a number of 1/1
+/// white Human Soldier tokens equal to your devotion to white.
+pub fn reverent_hoplite() -> CardDefinition {
+    CardDefinition {
+        name: "Reverent Hoplite",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::DevotionTo(vec![Color::White]),
+            definition: TokenDefinition {
+                name: "Human Soldier".into(),
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+                    ..Default::default()
+                },
+                power: 1,
+                toughness: 1,
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Rage-Scarred Berserker — {4}{B} 5/4 Minotaur Berserker. ETB: target
+/// creature you control gets +1/+0 and gains indestructible until end of turn.
+pub fn rage_scarred_berserker() -> CardDefinition {
+    CardDefinition {
+        name: "Rage-Scarred Berserker",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Leonin of the Lost Pride — {1}{W} 3/1 Cat Warrior. Dies: exile target card
+/// from a graveyard. (Printed "opponent's graveyard"; rides the graveyard-card
+/// target primitive, the controller picks which card.)
+pub fn leonin_of_the_lost_pride() -> CardDefinition {
+    CardDefinition {
+        name: "Leonin of the Lost Pride",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Any),
+                to: ZoneDest::Exile,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eutropia the Twice-Favored — {1}{G}{U} 2/2 legendary Human Wizard.
+/// Constellation — put a +1/+1 counter on target creature; it gains flying EOT.
+pub fn eutropia_the_twice_favored() -> CardDefinition {
+    CardDefinition {
+        name: "Eutropia the Twice-Favored",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![constellation(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}

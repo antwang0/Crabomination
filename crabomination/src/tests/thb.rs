@@ -1131,3 +1131,142 @@ fn daybreak_chimera_devotion_reduces_generic() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(chimera).is_some(), "Daybreak Chimera resolved");
 }
+
+// ── THB batch 2 tests ─────────────────────────────────────────────────────────
+
+/// Hero of the Games' Heroic pumps the team +1/+0 when a spell targets it.
+#[test]
+fn hero_of_the_games_heroic_pumps_team() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::hero_of_the_games());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::infuriate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(hero)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Infuriate on the hero");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "team +1/+0");
+}
+
+/// Eidolon of Inspiration pumps a creature you control +2/+0 at begin-combat.
+#[test]
+fn eidolon_of_inspiration_begin_combat_pump() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.add_card_to_battlefield(0, catalog::eidolon_of_inspiration());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 4, "+2/+0 at begin-combat");
+}
+
+/// Favored of Iroas gains double strike on constellation.
+#[test]
+fn favored_of_iroas_constellation_double_strike() {
+    let mut g = two_player_game();
+    let fav = g.add_card_to_battlefield(0, catalog::favored_of_iroas());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(fav).unwrap().keywords.contains(&crate::card::Keyword::DoubleStrike));
+}
+
+/// Pheres-Band Brawler fights an opposing creature on ETB.
+#[test]
+fn pheres_band_brawler_fights_on_etb() {
+    let mut g = two_player_game();
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let brawler = g.add_card_to_hand(0, catalog::pheres_band_brawler());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(opp)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: brawler, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Pheres-Band Brawler");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp).is_none(), "4/4 fights and kills the 2/2");
+}
+
+/// Reverent Hoplite mints devotion-to-white 1/1 Soldiers on ETB.
+#[test]
+fn reverent_hoplite_makes_devotion_soldiers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // {3}{W}{W} → 2 white devotion
+    let hoplite = g.add_card_to_hand(0, catalog::reverent_hoplite());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let before = g.battlefield.iter().filter(|c| c.definition.name == "Human Soldier").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: hoplite, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reverent Hoplite");
+    drain_stack(&mut g);
+    // Devotion = Serra (WW=2) + Hoplite's own {W} (1) = 3.
+    let after = g.battlefield.iter().filter(|c| c.definition.name == "Human Soldier").count();
+    assert_eq!(after - before, 3, "one token per white pip on the battlefield");
+}
+
+/// Rage-Scarred Berserker grants +1/+0 and indestructible on ETB.
+#[test]
+fn rage_scarred_berserker_grants_indestructible() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let zerk = g.add_card_to_hand(0, catalog::rage_scarred_berserker());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: zerk, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rage-Scarred Berserker");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 3, "+1/+0");
+    assert!(c.keywords.contains(&crate::card::Keyword::Indestructible), "granted indestructible");
+}
+
+/// Leonin of the Lost Pride exiles an opposing graveyard card on death.
+#[test]
+fn leonin_dies_exiles_opponent_graveyard() {
+    let mut g = two_player_game();
+    let leonin = g.add_card_to_battlefield(0, catalog::leonin_of_the_lost_pride());
+    let gy = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(gy)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(leonin)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own Leonin");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gy), "opponent graveyard card exiled");
+}
+
+/// Eutropia's constellation adds a +1/+1 counter and grants flying.
+#[test]
+fn eutropia_constellation_counter_and_flying() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::eutropia_the_twice_favored());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "+1/+1 counter");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::Flying),
+        "gains flying");
+}

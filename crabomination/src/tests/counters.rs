@@ -285,7 +285,7 @@ fn tuskguard_and_mer_ek_anthems_buff_countered_creatures() {
 
 #[test]
 fn arcbound_hybrid_and_bruiser_enter_with_counters() {
-    for (factory, mana, pt, kw) in [
+    for (factory, _mana, pt, kw) in [
         (catalog::arcbound_hybrid as fn() -> _, 3, (2, 2), Some(Keyword::Haste)),
         (catalog::arcbound_bruiser as fn() -> _, 4, (3, 3), None),
     ] {
