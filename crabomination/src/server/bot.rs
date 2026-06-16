@@ -557,6 +557,50 @@ fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
     set
 }
 
+/// Choose which land to play this turn. Among the lands the engine would
+/// accept, prefer the one that covers the most colors the bot's hand wants
+/// but can't yet produce from the lands it already controls — basic
+/// mana-fixing so a green hand doesn't strand its spells behind a Mountain.
+/// Falls back to the first playable land when nothing improves color
+/// coverage (or no land needs fixing).
+fn pick_land_to_play(state: &GameState, seat: usize) -> Option<CardId> {
+    use crate::mana::{Color, ColorSet};
+    const WUBRG: [Color; 5] =
+        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+
+    // Colors already producible from battlefield lands the bot controls.
+    let have = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_land())
+        .fold(ColorSet::empty(), |acc, c| acc.union(land_color_output(&c.definition)));
+    // Colors the bot's nonland hand cards want to be cast.
+    let mut want = ColorSet::empty();
+    for c in state.players[seat].hand.iter().filter(|c| !c.definition.is_land()) {
+        for col in c.definition.cost.colors() {
+            want.insert(col);
+        }
+    }
+    // The colors still missing from the bot's mana base.
+    let needed: Vec<Color> =
+        WUBRG.into_iter().filter(|&col| want.contains(col) && !have.contains(col)).collect();
+
+    let mut best: Option<(CardId, usize)> = None;
+    for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
+        if !state.would_accept(GameAction::PlayLand(c.id)) {
+            continue;
+        }
+        let out = land_color_output(&c.definition);
+        let coverage = needed.iter().filter(|&&col| out.contains(col)).count();
+        // Higher coverage wins; the first playable land is the fallback (so a
+        // colorless/utility land still gets played when nothing needs fixing).
+        if best.is_none_or(|(_, s)| coverage > s) {
+            best = Some((c.id, coverage));
+        }
+    }
+    best.map(|(id, _)| id)
+}
+
 /// Bot policy for `Decision::OptionalTrigger`: take the trigger unless its
 /// matching `MayDo` body imposes a clear self-cost (lose life / sacrifice /
 /// discard on the bot). `AutoDecider` declines *every* optional trigger,
@@ -1367,9 +1411,9 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
     // Exploration / Azusa-style ExtraLandPerTurn static lets the bot
     // play a second land in the same turn (CR 305.2).
     if state.can_player_play_land(seat)
-        && let Some(land) = state.players[seat].hand.iter().find(|c| c.definition.is_land())
+        && let Some(land_id) = pick_land_to_play(state, seat)
     {
-        let action = GameAction::PlayLand(land.id);
+        let action = GameAction::PlayLand(land_id);
         if state.would_accept(action.clone()) {
             return action;
         }
@@ -3730,5 +3774,19 @@ mod stack_response_tests {
         let action = bot.next_action(&g, 1).expect("bot acts");
         assert!(matches!(action, GameAction::PassPriority),
             "a 2-drop bear isn't worth the counter: {action:?}");
+    }
+
+    /// The bot plays a color-fixing land over an off-color one: with a green
+    /// spell in hand and no green source, it plays the Forest, not the Mountain.
+    #[test]
+    fn bot_plays_color_fixing_land() {
+        let mut g = two_player_game();
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        let _mountain = g.add_card_to_hand(0, catalog::mountain());
+        let forest = g.add_card_to_hand(0, catalog::forest());
+        g.add_card_to_hand(0, catalog::grizzly_bears()); // wants green
+        assert_eq!(pick_land_to_play(&g, 0), Some(forest),
+            "fixes the missing green over the off-color Mountain");
     }
 }

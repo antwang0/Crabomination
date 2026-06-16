@@ -70,6 +70,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Protection(_) => "Pro",
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
+        // Combat-relevant statuses worth a glance on the board.
+        CantBlock => "NoBlk",
+        Decayed => "Dcy",
+        Flanking => "Flk",
         _ => return None,
     })
 }
@@ -193,5 +197,29 @@ pub fn sync_keyword_labels(
             GlobalZIndex(KW_Z),
             InGameRoot,
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::keyword_strip;
+    use crabomination::card::Keyword;
+
+    #[test]
+    fn strip_dedupes_and_orders_combat_keywords() {
+        let kws = vec![
+            Keyword::Flying,
+            Keyword::Deathtouch,
+            Keyword::Flying, // duplicate — dropped
+            Keyword::CantBlock,
+            Keyword::Decayed,
+        ];
+        assert_eq!(keyword_strip(&kws), "Fly DT NoBlk Dcy");
+    }
+
+    #[test]
+    fn strip_skips_non_displayable_keywords() {
+        // Flash isn't a board-glance combat status → no badge.
+        assert_eq!(keyword_strip(&[Keyword::Flash]), "");
     }
 }
