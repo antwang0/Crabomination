@@ -55784,7 +55784,6 @@ fn quickling_bounce_or_sacrifice() {
     assert!(g.battlefield_find(q2).is_none(), "no bounce target → sacrificed");
 }
 
-<<<<<<< HEAD
 // ── Cleave (CR 702.148) ──────────────────────────────────────────────────────
 
 /// Wash Away's base mode only counters a spell not cast from its owner's
@@ -56577,7 +56576,8 @@ fn barkhide_troll_counter_for_hexproof() {
     let c = g.battlefield_find(id).unwrap();
     assert_eq!(c.counter_count(crate::card::CounterType::PlusOnePlusOne), 0, "counter paid");
     assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Hexproof));
-=======
+}
+
 /// Enraged Revolutionary's printed Dethrone grows it when it attacks the
 /// highest-life player (CR 702.105, carded — not test-granted).
 #[test]
@@ -56596,5 +56596,4 @@ fn enraged_revolutionary_dethrone_on_card() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(rev).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "Dethrone counter from the printed keyword");
->>>>>>> 2dd048f (Functionality: devotion cost reduction (CR 700.5), Heroic (CR 702.85), Dethrone carded (CR 702.105) + 5 cards)
 }

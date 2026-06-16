@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{dash, etb, on_attack, raid_etb, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, Value};
-use crate::mana::{Color, b, cost, generic, r, u, w};
+use crate::mana::{b, cost, generic, r, u, w};
 
 /// Screamreach Brawler — {2}{R} 3/3 Orc Berserker. Dash {1}{R}.
 pub fn screamreach_brawler() -> CardDefinition {

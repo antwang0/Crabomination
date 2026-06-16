@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, Predicate, Selector, Value, ZoneDest};
-use crate::mana::{Color, ManaCost, b, cost, g, generic, mono_hybrid, r, u, w, x};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Path to Exile — {W} Instant. Exile target creature; its controller may
 /// search their library for a basic land card, put it onto the battlefield

@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, StaticEffect, Value};
-use crate::mana::{Color, b, cost, g, generic, r, u, w};
+use crate::mana::{cost, g, generic, r, u, w};
 
 /// Disenchant — {1}{W} Instant. Destroy target artifact or enchantment.
 pub fn disenchant() -> CardDefinition {

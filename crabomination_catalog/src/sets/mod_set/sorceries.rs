@@ -6,7 +6,7 @@ use crate::card::{
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::effects::treasure_token;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, mono_hybrid, r, u, w, x};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w, x};
 
 /// Anger of the Gods — {1}{R}{R} Sorcery. Deals 3 damage to each creature.
 /// If a creature would die this turn, exile it instead.

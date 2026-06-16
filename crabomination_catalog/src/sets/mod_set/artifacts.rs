@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{Color, ManaCost, cost, g, generic, phyrexian, u, w, x};
+use crate::mana::{Color, ManaCost, cost, generic, phyrexian};
 
 /// Ornithopter — {0} Artifact Creature 0/2 with Flying. Pure vanilla; no
 /// abilities beyond Flying.

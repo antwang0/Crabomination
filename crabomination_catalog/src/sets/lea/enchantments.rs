@@ -3,7 +3,7 @@ use crate::card::{
     StaticAbility, StaticEffect, TriggeredAbility,
 };
 use crate::effect::{PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::mana::{b, cost, generic, r, w};
 
 /// Glorious Anthem — {1}{W}{W} Enchantment
 /// Creatures you control get +1/+1.

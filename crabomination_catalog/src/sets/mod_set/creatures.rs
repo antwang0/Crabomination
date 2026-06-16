@@ -474,7 +474,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
 /// targeting time per CR 702.21) and the Plant subtype is restored
 /// (`CreatureType::Plant` is enumerated).
 pub fn sentinel_of_the_nameless_city() -> CardDefinition {
-    use crate::card::{TokenDefinition, WardCost};
+    use crate::card::TokenDefinition;
     CardDefinition {
         name: "Sentinel of the Nameless City",
         cost: cost(&[generic(2), g()]),

@@ -2047,7 +2047,6 @@ fn concordant_crossroads_grants_haste_to_all() {
     assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&crate::card::Keyword::Haste));
 }
 
-<<<<<<< HEAD
 // ── CR 121.5 / multi-pick reveals ────────────────────────────────────────────
 
 /// CR 121.5 — a card put into hand by a look-and-pick (Impulse) is NOT
@@ -2138,7 +2137,8 @@ fn atraxa_take_one_per_type_validates_distinct_types() {
     assert!(g.players[0].has_in_hand(isle), "land taken");
     assert!(!g.players[0].has_in_hand(bolt_b), "duplicate-type pick dropped");
     assert!(g.players[0].library.iter().any(|c| c.id == bolt_b), "it went to the bottom");
-=======
+}
+
 // ── CR 702.85 — Heroic ────────────────────────────────────────────────────────
 
 /// Hero of the Pride's Heroic fires when a spell you cast targets it: every
@@ -2190,5 +2190,4 @@ fn cr_702_85_phalanx_leader_counters_team() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "teammate got a +1/+1 counter");
->>>>>>> 2dd048f (Functionality: devotion cost reduction (CR 700.5), Heroic (CR 702.85), Dethrone carded (CR 702.105) + 5 cards)
 }

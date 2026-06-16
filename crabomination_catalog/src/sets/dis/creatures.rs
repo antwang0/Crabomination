@@ -4,7 +4,7 @@ use crate::card::{
 };
 use crate::effect::Duration;
 use crate::effect::shortcut::target_filtered;
-use crate::mana::{Color, cost, g, generic, hybrid, u, w};
+use crate::mana::{cost, g, generic, u, w};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
 pub fn azorius_first_wing() -> CardDefinition {

@@ -2035,7 +2035,6 @@ static DECKS: &[Factory] = &[
     super::decks::familiars_ruse,
     super::decks::thieving_sprite,
     super::decks::quickling,
-<<<<<<< HEAD
     super::decks::wash_away,
     super::decks::dig_up,
     super::decks::fierce_retribution,
@@ -2072,10 +2071,8 @@ static DECKS: &[Factory] = &[
     super::decks::boggart_ram_gang,
     super::decks::eyeblights_ending,
     super::decks::barkhide_troll,
-=======
     super::decks::enraged_revolutionary,
     super::decks::grenzos_cutthroat,
->>>>>>> 2dd048f (Functionality: devotion cost reduction (CR 700.5), Heroic (CR 702.85), Dethrone carded (CR 702.105) + 5 cards)
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,

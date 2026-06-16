@@ -6,7 +6,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, Value,
 };
 use crate::effect::{PlayerRef, ZoneDest, shortcut::etb, shortcut::target_filtered};
-use crate::mana::{Color, b, cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Sedge Scorpion — {G} Creature — Scorpion 1/1. Deathtouch.
 pub fn sedge_scorpion() -> CardDefinition {

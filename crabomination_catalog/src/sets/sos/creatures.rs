@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb_gain_life;
 use crate::effect::{Duration, PlayerRef, Predicate, Selector, StaticAbility, StaticEffect, Value};
-use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, mono_hybrid, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, generic, hybrid, w};
 
 // ── Strixhaven token helpers ────────────────────────────────────────────────
 
@@ -3317,7 +3317,7 @@ pub fn exhibition_tidecaller() -> CardDefinition {
 /// `ManaSymbol::Hybrid(Red, White)`, payable with either red or white.
 pub fn practiced_scrollsmith() -> CardDefinition {
     use crate::effect::ZoneDest;
-    use crate::mana::{r, w as wm};
+    use crate::mana::r;
     let nonperm_in_gy = SelectionRequirement::Nonland
         .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)));
     let target_card = Selector::take(
@@ -3378,7 +3378,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
 /// a `DecisionAnswer::Discard(picked_ids)` to opt into discarding any
 /// subset of the hand. Tests: `colossus_of_the_blood_age_death_trigger_*`.
 pub fn colossus_of_the_blood_age() -> CardDefinition {
-    use crate::mana::{r, w as wm};
+    use crate::mana::r;
     CardDefinition {
         name: "Colossus of the Blood Age",
         cost: cost(&[generic(4), r(), w()]),

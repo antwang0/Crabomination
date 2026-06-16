@@ -18,7 +18,7 @@ use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, on_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
-use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x};
+use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, hybrid, phyrexian, r, u, w, x};
 
 // ── Cantrips & card selection ────────────────────────────────────────────────
 
@@ -16946,7 +16946,7 @@ pub fn blazing_rootwalla() -> CardDefinition {
 /// Trample. Madness {1}{R}. "Whenever Anje's Ravager attacks, discard your
 /// hand, then draw three cards."
 pub fn anjes_ravager() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, Keyword, Supertype, TriggeredAbility};
+    use crate::card::{EventKind, EventScope, EventSpec, Supertype, TriggeredAbility};
     CardDefinition {
         name: "Anje's Ravager",
         cost: cost(&[generic(2), r()]),
@@ -51954,7 +51954,7 @@ pub fn stern_lesson() -> CardDefinition {
 
 /// Boggart Ram-Gang — {R/G}{R/G}{R/G} 3/3 Goblin Warrior. Haste, wither.
 pub fn boggart_ram_gang() -> CardDefinition {
-    let rg = || crate::mana::hybrid(Color::Red, Color::Green);
+    let _rg = || crate::mana::hybrid(Color::Red, Color::Green);
     CardDefinition {
         name: "Boggart Ram-Gang",
         cost: cost(&[hybrid(Color::Red, Color::Green), hybrid(Color::Red, Color::Green), hybrid(Color::Red, Color::Green)]),

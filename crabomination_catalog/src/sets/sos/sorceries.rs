@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).
@@ -700,7 +700,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
 /// graveyard.
 pub fn pursue_the_past() -> CardDefinition {
     use crate::card::Keyword;
-    use crate::mana::{ManaCost, ManaSymbol, r, w as w_mana};
+    use crate::mana::{ManaCost, ManaSymbol, r};
     let flashback_cost = ManaCost {
         symbols: vec![
             ManaSymbol::Generic(2),
@@ -1270,7 +1270,7 @@ pub fn killians_confidence() -> CardDefinition {
 /// the auto-decider picks each basic in turn.
 pub fn planar_engineering() -> CardDefinition {
     use crate::effect::ZoneDest;
-    use crate::mana::g as gm;
+    
     CardDefinition {
         name: "Planar Engineering",
         cost: cost(&[generic(3), g()]),
