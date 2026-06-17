@@ -99,7 +99,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **CHK cards/primitives deferred this run:**
+- ⏳ **CHK cards/primitives deferred:**
   - Yosei taps **up to five** target permanents (modeled as tapping all of the
     target player's board); a true "up to N target permanents that player
     controls" clause needs the Tier-2 "up to N targets" work.
@@ -109,6 +109,21 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
     devotion-counter conditional, flip cards (CR 710) for the CHK flip
     creatures.
+  - **Exile-instead-of-dying damage rider** (Kumano, Frostwielder; the existing
+    `ExileIfWouldDieThisTurn` on Yamabushi's Storm is a one-shot effect, not a
+    source-bound replacement) — model as a per-source replacement so creatures
+    damaged by the source this turn are exiled if they'd die.
+  - **Conditional granted activated ability** (Villainous Ogre's Demon-gated
+    `{B}: Regenerate`) — host-state-conditional ability grant; CantBlock body
+    ships, regen omitted.
+  - Cranial Extraction (name a card → exile all copies from gy/hand/library);
+    Soratami Seer (discard hand, draw that many); Cut the Tethers (per-Spirit
+    "return unless pay {3}"); Petals of Insight (look-3, bottom-or-draw with
+    conditional self-return); Devouring Greed / Devouring Rage (additional-cost
+    "sacrifice any number of Spirits" that scales the spell — needs cast-time
+    variable sac feeding `Value`).
+  - Generalize `Player.zuberas_died_this_turn` into a type-filtered
+    died-this-turn count if another tribe ever needs it.
 - 🟡 **Bot: general value-activated-ability generator.** `pick_removal_ping`
   now fires single-target "{cost}: deal damage to any target" abilities that
   kill an opposing creature outright (constant amount, or Kiku's
