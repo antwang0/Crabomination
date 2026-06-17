@@ -99,12 +99,15 @@ Each unblocks a large swath of cards.
 - ✅ **APNAP trigger ordering** — inter-player (`apnap_rank`) plus
   same-controller ordering with a real server suspend (`ResumeContext::
   TriggerOrder`), so networked seats are prompted.
-- 🟡 **Divided damage** — `Effect::DealDamageDivided` + `Decision::DivideDamage`
-  (Forked Bolt, Pyrokinesis, Crackle with Power). Remaining: divided non-damage
-  riders, "choose targets as it resolves".
+- 🟡 **Divided damage / counters** — `Effect::DealDamageDivided` +
+  `Effect::DistributeCounters` (Jugan) share `Decision::DivideDamage` (the modal
+  is noun-aware). Forked Bolt, Pyrokinesis, Crackle with Power. Remaining:
+  "choose targets as it resolves".
 - 🟡 **Targeting refinements:** resolution-time legality re-check (608.2b) ships
-  for single/multi-target spells and Auras. Remaining: "up to N targets",
-  "target each", protection-from-color re-check.
+  for single/multi-target spells and Auras, and now resolves `{X}`-from-cost
+  target filters (Hearth Kami's "artifact with mana value X" via
+  `ManaValueExactlyXFromCost`). Remaining: "up to N targets", "target each",
+  protection-from-color re-check.
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
   land-type statics ✅ (Blood Moon, Urborg). Remaining: CDA corners, full
   text-box swaps, "becomes a copy of" layer interaction.

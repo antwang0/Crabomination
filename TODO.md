@@ -80,8 +80,11 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   catalog effect for `TargetFiltered` slots and asserts
   `target_filter_for_slot_in_mode_kicked` surfaces each one (caught + fixed
   `DiscardChosen` / `ManaClash` holes; ChooseN gets a cast-time fallback
-  filter). Remaining: the two `evaluate_requirement` evaluators and
-  printed-vs-computed combat checks still lack guards.
+  filter). `evaluate_requirement_static` no longer `unreachable!`s on
+  zone-agnostic atoms (HasSpellSubtype/HasEnchantmentSubtype/…) — it delegates
+  to `evaluate_requirement_on_card` against the located card. Remaining: the
+  printed-vs-computed combat checks still lack guards, and the two requirement
+  walkers should be unified rather than kept in delegation lockstep.
 - ✅ **Card-name-keyed hack tables inside a ~720-line god function**
   (`gather_continuous_effects_inner`) — all retired. Werebear / Elvish
   Reclaimer / Honor Troll / Tenured Concocter / Ulna Alley Shopkeep ride
@@ -96,6 +99,21 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **CHK cards/primitives deferred this run:**
+  - Yosei taps **up to five** target permanents (modeled as tapping all of the
+    target player's board); a true "up to N target permanents that player
+    controls" clause needs the Tier-2 "up to N targets" work.
+  - Sosuke's Warrior-damage destroy is **immediate** (printed "at end of
+    combat"); wants a delayed end-of-combat destroy trigger.
+  - Genju aura cycle (animate-a-land aura that returns to hand when the
+    creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
+    devotion-counter conditional, flip cards (CR 710) for the CHK flip
+    creatures.
+- ⏳ **Bot: general value-activated-ability generator.** The bot fires energy /
+  equip / loyalty / graveyard-recursion / free-mana abilities but has no path
+  for "sacrifice/tap: deal damage / destroy" value abilities (Frostling, Hearth
+  Kami, Goblin Bombardment). Add a sweep that offers profitable removal
+  activations (with X-value selection mirroring the spell path).
 - ⏳ **THB cards deferred this run (need new primitives):**
   - Devotion-mana rock (Nyx Lotus): `{T}: choose a color, add devotion-to-it`
     — needs a choose-color + `Value::DevotionOfChosenColor` mana ability.
