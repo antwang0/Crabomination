@@ -3006,3 +3006,66 @@ pub fn otherworldly_journey() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Phantom Wings — {1}{U} Aura. Enchanted creature has flying. Sacrifice this
+/// Aura: Return enchanted creature to its owner's hand.
+pub fn phantom_wings() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Phantom Wings",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        // "Sacrifice this Aura: Return enchanted creature to its owner's hand."
+        // Returning the creature unattaches the Aura, which the 704.5m SBA then
+        // bins — modeling the sacrifice via the effect rather than a `sac_cost`
+        // (whose post-sacrifice attachment LKI doesn't survive onto the stack).
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Move {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Squelch — {1}{U} Instant. Counter target activated ability. Draw a card.
+pub fn squelch() -> CardDefinition {
+    CardDefinition {
+        name: "Squelch",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterAbility { what: target_filtered(SelectionRequirement::Permanent) },
+            Effect::Draw { who: Selector::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Psychic Spear — {B} Sorcery. Target player reveals their hand; you choose a
+/// Spirit or Arcane card from it and that player discards it.
+pub fn psychic_spear() -> CardDefinition {
+    CardDefinition {
+        name: "Psychic Spear",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DiscardChosen {
+            from: Selector::Player(PlayerRef::Target(0)),
+            count: Value::ONE,
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane)),
+        },
+        ..Default::default()
+    }
+}

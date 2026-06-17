@@ -1786,3 +1786,69 @@ fn otherworldly_journey_blinks_with_counter() {
     assert!(back.is_some_and(|c| c.counter_count(CounterType::PlusOnePlusOne) == 1),
         "returned with a +1/+1 counter");
 }
+
+/// Phantom Wings grants flying; sacrificing it returns the enchanted creature.
+#[test]
+fn phantom_wings_grants_flying_then_bounces() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wings = g.add_card_to_hand(0, catalog::phantom_wings());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wings, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Phantom Wings");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "grants flying");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wings, ability_index: 0, target: None, x_value: None,
+    }).expect("sac to bounce");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "enchanted creature returned to hand");
+}
+
+/// Squelch counters a target activated ability and draws a card.
+#[test]
+fn squelch_counters_activated_ability_and_draws() {
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.clear_sickness(stone);
+    g.players[1].mana_pool.add_colorless(1);
+    g.add_card_to_library(1, catalog::island());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 1, target: None, x_value: None,
+    }).expect("activate draw ability");
+    g.priority.player_with_priority = 0;
+    let sq = g.add_card_to_hand(0, catalog::squelch());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_hand = g.players[1].hand.len();
+    let my_hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: sq, target: Some(Target::Permanent(stone)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Squelch");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand, "opp draw ability countered");
+    assert_eq!(g.players[0].hand.len(), my_hand, "cast Squelch (-1) then drew (+1) = net 0");
+}
+
+/// Psychic Spear makes a player discard a chosen Spirit/Arcane card.
+#[test]
+fn psychic_spear_discards_spirit_or_arcane() {
+    let mut g = two_player_game();
+    let arcane_card = g.add_card_to_hand(1, catalog::counsel_of_the_soratami()); // not Arcane
+    let spirit_card = g.add_card_to_hand(1, catalog::gnarled_mass()); // Spirit
+    let spell = g.add_card_to_hand(0, catalog::psychic_spear());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Psychic Spear");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spirit_card), "Spirit card discarded");
+    assert!(g.players[1].hand.iter().any(|c| c.id == arcane_card), "non-matching card kept");
+}

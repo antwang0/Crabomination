@@ -197,6 +197,9 @@ static CHK: &[Factory] = &[
     super::chk::hold_the_line,
     super::chk::reciprocate,
     super::chk::otherworldly_journey,
+    super::chk::phantom_wings,
+    super::chk::squelch,
+    super::chk::psychic_spear,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
