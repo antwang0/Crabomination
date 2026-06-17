@@ -1921,3 +1921,66 @@ pub fn nezumi_bone_reader() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Patron of the Nezumi — {5}{B}{B} Legendary Spirit 6/6. Rat offering.
+/// Whenever a permanent is put into an opponent's graveyard, that player
+/// loses 1 life. (Filtered to permanent-type cards; also fires for a
+/// permanent card milled/discarded into an opponent's graveyard.)
+pub fn patron_of_the_nezumi() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Patron of the Nezumi",
+        cost: cost(&[generic(5), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 6,
+        toughness: 6,
+        alternative_cost: Some(offering(cost(&[generic(5), b(), b()]), CreatureType::Rat)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Permanent,
+                }),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cage of Hands — {2}{W} Aura. Enchant creature. Enchanted creature can't
+/// attack or block. {1}{W}: Return this Aura to its owner's hand.
+pub fn cage_of_hands() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Cage of Hands",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

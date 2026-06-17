@@ -130,38 +130,6 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   wired for `wants_ui` players (AutoDecider takes the first card; a client
   modal + suspend/resume loop is the follow-up).
 
-- ✅ **Mystical Archive (STA) complete** — Tainted Pact rides the new
-  `Effect::ExileUntilDuplicateName` (per-card "you may keep digging" via
-  `OptionalTrigger`; AutoDecider takes the first uniquely-named card).
-  Mizzix's Mastery exiles the targeted I/S and free-casts it via
-  `CastWithoutPayingImmediate`; Overload rides the alt-cost `effect_override`
-  with a `ForEach`-over-graveyard that free-casts each I/S
-  (`TriggerSource`-bound, not `LastMoved`). Tests in `tests/stx/part_31.rs`.
-
-- ✅ **THB batch shipped** (`catalog::sets::thb`, tests `tests/thb.rs`):
-  Heliod's Intervention (`Effect::DestroyTargets` X-target destroy),
-  Shark Typhoon (`TokenDefinition.dynamic_pt` mint rider + X-cycling via
-  `GameAction::Cycle { x_value }`), Nyxbloom Ancient
-  (`StaticEffect::ManaProductionTripled` — multiplier composes with Mana
-  Reflection), Polukranos, Unchained (`Value::IfPred` escape counters +
-  `StaticEffect::PreventDamageByRemovingCounters`), Elspeth Conquers Death
-  (`Effect::SpellTaxUntilYourNextTurn` + reanimate chapter), plus Dream
-  Trawler, Arasta, Daxos (`DynamicPt::DevotionToToughness`), Tymaret Calls
-  the Dead, Thirst for Meaning, Shatter the Sky, Alseid, Mire Triton,
-  Aphemia, Phoenix of Ash, Underworld Rage-Hound, Nessian Boar
-  (`Predicate::TriggerBlocksSource`), Mystic Repeal, Ox of Agonas.
-- ⏳ **Noticed this run (Kamigawa Offering batch):**
-  - **Patron of the Nezumi** punted — its "whenever a permanent is put into
-    an opponent's graveyard, that player loses 1 life" needs a generic
-    *card-enters-a-graveyard-from-anywhere* event (only `CreatureDied` /
-    `CardMilled` / `CardDiscarded` exist today). Add `EventKind::
-    CardEnteredGraveyard` to finish the 5th Patron.
-  - **Cage of Hands / Hearth Kami** punted: Cage wants an Aura that bounces
-    *itself* via an activated ability (`simple_aura` has no ability slot);
-    Hearth Kami wants `{X}, Sac: destroy target artifact with mana value X`
-    (no exact-MV-equals-X target filter yet).
-  - **Kami of the Crescent Moon** punted — no symmetric "each player draws an
-    extra card during their draw step" static.
 - ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
   - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
     bot heuristic that takes the first eligible candidate would make

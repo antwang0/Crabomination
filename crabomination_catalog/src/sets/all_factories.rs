@@ -144,6 +144,8 @@ static CHK: &[Factory] = &[
     super::chk::bile_urchin,
     super::chk::cursed_ronin,
     super::chk::nezumi_bone_reader,
+    super::chk::patron_of_the_nezumi,
+    super::chk::cage_of_hands,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

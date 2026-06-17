@@ -899,3 +899,56 @@ fn batch5_keyword_bodies() {
     assert!(!catalog::kami_of_empty_graves().triggered_abilities.is_empty(), "Soulshift");
     assert!(catalog::nezumi_ronin().keywords.contains(&Keyword::Bushido(1)));
 }
+
+/// Patron of the Nezumi: an opponent's permanent dying costs that player 1 life.
+#[test]
+fn patron_of_the_nezumi_drains_on_opponent_permanent_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::patron_of_the_nezumi());
+    // Player 0's Pain Kami burns down player 1's bear; the bear hits player 1's
+    // graveyard, firing Patron. Pain Kami's own death (player 0's graveyard) must
+    // NOT trigger it.
+    let kami = g.add_card_to_battlefield(0, catalog::pain_kami());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(kami);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: Some(2),
+    }).expect("X=2 sac burn");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear killed");
+    assert_eq!(g.players[1].life, before - 1, "opponent lost 1 life to Patron");
+}
+
+/// Cage of Hands locks a creature down, then bounces itself back to hand.
+#[test]
+fn cage_of_hands_pacifies_then_returns_to_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let cage = g.add_card_to_hand(0, catalog::cage_of_hands());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cage, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cage castable");
+    drain_stack(&mut g);
+    assert!(g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
+        .keywords.contains(&Keyword::CantAttack), "creature pacified");
+    // {1}{W}: return Cage to its owner's hand.
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cage, ability_index: 0, target: None, x_value: None,
+    }).expect("bounce ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cage).is_none(), "Cage left the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == cage), "Cage returned to hand");
+    assert!(!g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
+        .keywords.contains(&Keyword::CantAttack), "pacify lifted once Cage left");
+}
