@@ -1382,3 +1382,76 @@ fn soratami_savant_counters_unless_paid() {
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (unpaid)");
 }
+
+/// Pull Under shrinks a creature -5/-5, killing most bodies.
+#[test]
+fn pull_under_shrinks_and_kills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let pu = g.add_card_to_hand(0, catalog::pull_under());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pu, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pull Under castable");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "-5/-5 killed the 2/2");
+}
+
+/// Kiku's Shadow makes a creature deal its own power to itself.
+#[test]
+fn kikus_shadow_self_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let ks = g.add_card_to_hand(0, catalog::kikus_shadow());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ks, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Kiku's Shadow castable");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "2 power → 2 self-damage killed the 2/2");
+}
+
+/// Swallowing Plague burns a creature for X and gains X life.
+#[test]
+fn swallowing_plague_burns_and_gains() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let sp = g.add_card_to_hand(0, catalog::swallowing_plague());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    let before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sp, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("Swallowing Plague castable");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "2 damage killed the 2/2");
+    assert_eq!(g.players[0].life, before + 2, "gained X = 2 life");
+}
+
+/// Innocence Kami untaps itself whenever you cast a Spirit or Arcane spell.
+#[test]
+fn innocence_kami_untaps_on_spiritcraft() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::innocence_kami());
+    g.battlefield_find_mut(kami).unwrap().tapped = true;
+    let reach = g.add_card_to_hand(0, catalog::reach_through_mists()); // Arcane
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: reach, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(kami).unwrap().tapped, "Innocence Kami untapped");
+}
+
+/// Villainous Ogre can't block.
+#[test]
+fn villainous_ogre_cant_block() {
+    assert!(catalog::villainous_ogre().keywords.contains(&Keyword::CantBlock));
+}

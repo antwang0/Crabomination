@@ -2302,6 +2302,98 @@ pub fn frostwielder() -> CardDefinition {
     }
 }
 
+/// Pull Under — {5}{B} Instant — Arcane. Target creature gets -5/-5 until end
+/// of turn.
+pub fn pull_under() -> CardDefinition {
+    CardDefinition {
+        name: "Pull Under",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-5),
+            toughness: Value::Const(-5),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Kiku's Shadow — {B}{B} Sorcery. Target creature deals damage to itself equal
+/// to its power.
+pub fn kikus_shadow() -> CardDefinition {
+    CardDefinition {
+        name: "Kiku's Shadow",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::PowerOf(Box::new(Selector::Target(0))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Swallowing Plague — {X}{B}{B} Sorcery — Arcane. Deals X damage to target
+/// creature and you gain X life.
+pub fn swallowing_plague() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Swallowing Plague",
+        cost: cost(&[x(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::XFromCost,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Innocence Kami — {3}{W}{W} Spirit 2/3. {W}, {T}: Tap target creature.
+/// Whenever you cast a Spirit or Arcane spell, untap this creature.
+pub fn innocence_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Innocence Kami",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::Untap {
+            what: Selector::This,
+            up_to: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Villainous Ogre — {2}{B} Ogre Warrior 3/2. Can't block. (The Demon-gated
+/// regeneration grant is omitted.)
+pub fn villainous_ogre() -> CardDefinition {
+    CardDefinition {
+        name: "Villainous Ogre",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Warrior]),
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::CantBlock],
+        ..Default::default()
+    }
+}
+
 /// Kumano, Master Yamabushi — {3}{R}{R} Legendary Human Shaman 4/4. {1}{R}:
 /// Deals 1 damage to any target. (The "creatures it damages are exiled instead
 /// of dying" replacement rider is omitted.)
