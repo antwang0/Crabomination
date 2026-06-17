@@ -7607,6 +7607,13 @@ static THB: &[Factory] = &[
     super::thb::omen_of_the_dead,
     super::thb::nessian_hornbeetle,
     super::thb::phalanx_tactics,
+    super::thb::revoke_existence,
+    super::thb::sentinels_eyes,
+    super::thb::indomitable_will,
+    super::thb::triumphant_surge,
+    super::thb::final_flare,
+    super::thb::iroass_blessing,
+    super::thb::dreadful_apathy,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

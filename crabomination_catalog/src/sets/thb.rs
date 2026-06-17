@@ -2363,3 +2363,144 @@ pub fn phalanx_tactics() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB batch 8 — white/red removal, escape auras, sacrifice burn ─────────────
+
+/// Revoke Existence — {1}{W} Sorcery. Exile target artifact or enchantment.
+pub fn revoke_existence() -> CardDefinition {
+    CardDefinition {
+        name: "Revoke Existence",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Sentinel's Eyes — {W} Aura with Escape—{W}, exile two. Enchanted creature
+/// gets +1/+1 and has vigilance.
+pub fn sentinels_eyes() -> CardDefinition {
+    CardDefinition {
+        name: "Sentinel's Eyes",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Escape(cost(&[w()]), 2)],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Vigilance],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Indomitable Will — {1}{W} Flash Aura. Enchanted creature gets +1/+2.
+pub fn indomitable_will() -> CardDefinition {
+    CardDefinition {
+        name: "Indomitable Will",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Triumphant Surge — {3}{W} Instant. Destroy target creature with power 4 or
+/// greater. You gain 3 life.
+pub fn triumphant_surge() -> CardDefinition {
+    CardDefinition {
+        name: "Triumphant Surge",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Final Flare — {2}{R} Instant. Additional cost: sacrifice a creature or an
+/// enchantment. Deals 5 damage to target creature.
+pub fn final_flare() -> CardDefinition {
+    CardDefinition {
+        name: "Final Flare",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+            count: 1,
+        }],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}
+
+/// Iroas's Blessing — {3}{R} Aura on a creature you control. ETB: 4 damage to
+/// a creature or planeswalker an opponent controls. Enchanted creature gets
+/// +1/+1.
+pub fn iroass_blessing() -> CardDefinition {
+    CardDefinition {
+        name: "Iroas's Blessing",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(4),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dreadful Apathy — {2}{W} Aura. Enchanted creature can't attack or block.
+/// {2}{W}: Exile enchanted creature.
+pub fn dreadful_apathy() -> CardDefinition {
+    CardDefinition {
+        name: "Dreadful Apathy",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::Move {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                to: ZoneDest::Exile,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

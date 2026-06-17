@@ -1721,3 +1721,121 @@ fn nessian_hornbeetle_grows_with_a_big_ally() {
     assert_eq!(g.battlefield_find(beetle).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "grows with a power-4+ ally");
 }
+
+// ── THB batch 8 ──────────────────────────────────────────────────────────────
+
+/// Revoke Existence exiles a target enchantment.
+#[test]
+fn revoke_existence_exiles_enchantment() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::omen_of_the_sun());
+    let spell = g.add_card_to_hand(0, catalog::revoke_existence());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(ench)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Revoke Existence");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == ench), "enchantment exiled");
+}
+
+/// Sentinel's Eyes grants +1/+1 and vigilance.
+#[test]
+fn sentinels_eyes_pumps_and_grants_vigilance() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::sentinels_eyes());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sentinel's Eyes");
+    drain_stack(&mut g);
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
+    assert!(c.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+}
+
+/// Triumphant Surge destroys a power-4+ creature and gains 3 life.
+#[test]
+fn triumphant_surge_destroys_big_creature() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let spell = g.add_card_to_hand(0, catalog::triumphant_surge());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(wurm)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Triumphant Surge");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(), "big creature destroyed");
+    assert_eq!(g.players[0].life, life + 3, "gained 3");
+}
+
+/// Final Flare sacrifices a creature as an additional cost and deals 5.
+#[test]
+fn final_flare_sacrifices_and_burns() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    let spell = g.add_card_to_hand(0, catalog::final_flare());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Final Flare");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed a creature as cost");
+    assert!(g.battlefield_find(victim).is_none(), "5 damage killed the 6/4");
+}
+
+/// Iroas's Blessing burns an opposing creature on ETB and pumps the enchanted
+/// one.
+#[test]
+fn iroass_blessing_burns_and_pumps() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::iroass_blessing());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(theirs)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Iroas's Blessing");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "4 damage killed the 2/2");
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == mine).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "enchanted creature +1/+1");
+}
+
+/// Dreadful Apathy's {2}{W} exiles the enchanted creature.
+#[test]
+fn dreadful_apathy_exiles_enchanted() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::dreadful_apathy());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dreadful Apathy");
+    drain_stack(&mut g);
+    let aura_id = g.battlefield.iter().find(|c| c.definition.name == "Dreadful Apathy").unwrap().id;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura_id, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Dreadful Apathy");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "enchanted creature exiled");
+}
