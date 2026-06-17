@@ -166,6 +166,7 @@ pub fn update_castable_highlights(
             .chain(cv.reinforceable_hand.iter())
             .chain(cv.squadable_hand.iter())
             .chain(cv.replicatable_hand.iter())
+            .chain(cv.conspirable_hand.iter())
             .copied()
             .filter(|id| !hard.contains(id))
             .collect();

@@ -3047,6 +3047,15 @@ Cross-references the detailed entries below where one exists.
   only color), text scaling, reduced-motion toggle, finish keyboard-only
   play; see "Theme variants".
 
+### Conspire cast UI (follow-up)
+
+Conspirable hand cards now highlight as alt-castable (`ClientView.
+conspirable_hand`, surfaced via the legal-play chain in `systems/ui.rs`).
+Remaining: a creature-picker flow to actually submit `CastSpellConspire`
+(choose exactly two untapped creatures sharing a color, like the
+sacrifice/convoke pickers) — until then the client can only cast such cards
+without the conspire copy. Engine + affordance + server view all ship.
+
 ### UI Roadmap (push claude/modern_decks — session-derived)
 
 Ordering layer over the detailed items below. Cross-references existing
