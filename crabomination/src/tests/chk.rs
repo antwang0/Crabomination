@@ -830,3 +830,72 @@ fn veterans_reflexes_pumps_and_untaps() {
     assert!(!c.tapped, "untapped");
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 → 3 power");
 }
+
+// ── CHK batch 5 ──────────────────────────────────────────────────────────────
+
+/// Scuttling Death sacrifices to shrink a creature -1/-1 and carries Soulshift.
+#[test]
+fn scuttling_death_sacs_to_shrink() {
+    let mut g = two_player_game();
+    let death = g.add_card_to_battlefield(0, catalog::scuttling_death());
+    let victim = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    g.clear_sickness(death);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: death, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("sac to shrink");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(death).is_none(), "Scuttling Death sacrificed");
+    assert!(g.battlefield_find(victim).is_none(), "1/1 shrank to 0/0 and died");
+}
+
+/// Bile Urchin sacrifices to drain a player 1 life.
+#[test]
+fn bile_urchin_sacs_to_drain() {
+    let mut g = two_player_game();
+    let urchin = g.add_card_to_battlefield(0, catalog::bile_urchin());
+    g.clear_sickness(urchin);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: urchin, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac to drain");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(urchin).is_none(), "Bile Urchin sacrificed");
+    assert_eq!(g.players[1].life, before - 1, "target lost 1 life");
+}
+
+/// Cursed Ronin firebreathes +1/+1 for {B}.
+#[test]
+fn cursed_ronin_firebreathes() {
+    let mut g = two_player_game();
+    let ronin = g.add_card_to_battlefield(0, catalog::cursed_ronin());
+    g.clear_sickness(ronin);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ronin, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ronin).unwrap().power, 2, "+1/+1 → 2 power");
+}
+
+/// Nezumi Bone-Reader sacrifices a creature to make a player discard.
+#[test]
+fn nezumi_bone_reader_sacs_for_discard() {
+    let mut g = two_player_game();
+    let reader = g.add_card_to_battlefield(0, catalog::nezumi_bone_reader());
+    g.add_card_to_battlefield(0, catalog::frostling()); // fodder
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.clear_sickness(reader);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: reader, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac for discard");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "target player discarded their card");
+}
+
+/// Kami of Empty Graves / Nezumi Ronin carry their printed keywords.
+#[test]
+fn batch5_keyword_bodies() {
+    assert!(!catalog::kami_of_empty_graves().triggered_abilities.is_empty(), "Soulshift");
+    assert!(catalog::nezumi_ronin().keywords.contains(&Keyword::Bushido(1)));
+}

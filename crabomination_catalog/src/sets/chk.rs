@@ -1794,3 +1794,130 @@ pub fn veterans_reflexes() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── CHK batch 5 (black rats & spirits) ───────────────────────────────────────
+
+/// Nezumi Ronin — {2}{B} Rat Samurai 3/1. Bushido 1.
+pub fn nezumi_ronin() -> CardDefinition {
+    CardDefinition {
+        name: "Nezumi Ronin",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Samurai]),
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Bushido(1)],
+        ..Default::default()
+    }
+}
+
+/// Kami of Empty Graves — {3}{B} Spirit 4/1. Soulshift 3.
+pub fn kami_of_empty_graves() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of Empty Graves",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(3)],
+        ..Default::default()
+    }
+}
+
+/// Scuttling Death — {4}{B} Spirit 4/2. Sacrifice this creature: Target
+/// creature gets -1/-1 until end of turn. Soulshift 4.
+pub fn scuttling_death() -> CardDefinition {
+    CardDefinition {
+        name: "Scuttling Death",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bile Urchin — {B} Spirit 1/1. Sacrifice this creature: Target player loses
+/// 1 life.
+pub fn bile_urchin() -> CardDefinition {
+    CardDefinition {
+        name: "Bile Urchin",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cursed Ronin — {3}{B} Human Samurai 1/1. Bushido 1; {B}: This creature gets
+/// +1/+1 until end of turn.
+pub fn cursed_ronin() -> CardDefinition {
+    CardDefinition {
+        name: "Cursed Ronin",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Bushido(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nezumi Bone-Reader — {1}{B} Rat Shaman 1/1. {B}, Sacrifice a creature:
+/// Target player discards a card. Activate only as a sorcery.
+pub fn nezumi_bone_reader() -> CardDefinition {
+    CardDefinition {
+        name: "Nezumi Bone-Reader",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Shaman]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sorcery_speed: true,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+                random: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

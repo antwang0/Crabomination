@@ -138,6 +138,12 @@ static CHK: &[Factory] = &[
     super::chk::frost_ogre,
     super::chk::blind_with_anger,
     super::chk::veterans_reflexes,
+    super::chk::nezumi_ronin,
+    super::chk::kami_of_empty_graves,
+    super::chk::scuttling_death,
+    super::chk::bile_urchin,
+    super::chk::cursed_ronin,
+    super::chk::nezumi_bone_reader,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
