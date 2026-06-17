@@ -1852,3 +1852,85 @@ fn psychic_spear_discards_spirit_or_arcane() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spirit_card), "Spirit card discarded");
     assert!(g.players[1].hand.iter().any(|c| c.id == arcane_card), "non-matching card kept");
 }
+
+/// Orochi Sustainer taps for {G}.
+#[test]
+fn orochi_sustainer_taps_for_green() {
+    let mut g = two_player_game();
+    let dork = g.add_card_to_battlefield(0, catalog::orochi_sustainer());
+    g.clear_sickness(dork);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for green");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 1);
+}
+
+/// Child of Thorns sacrifices to pump a target +1/+1.
+#[test]
+fn child_of_thorns_sacs_to_pump() {
+    let mut g = two_player_game();
+    let child = g.add_card_to_battlefield(0, catalog::child_of_thorns());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: child, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("sac to pump");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(child).is_none(), "Child sacrificed");
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "bear pumped +1/+1");
+}
+
+/// Foratog sacrifices a Forest to get +2/+2.
+#[test]
+fn foratog_sacs_forest_for_pump() {
+    let mut g = two_player_game();
+    let atog = g.add_card_to_battlefield(0, catalog::foratog());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(atog);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: atog, ability_index: 0, target: None, x_value: None,
+    }).expect("sac Forest to pump");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_none(), "Forest sacrificed");
+    assert_eq!(g.battlefield_find(atog).unwrap().power(), 3, "Foratog is 3/4");
+}
+
+/// Serpent Skin grants +1/+1 and can regenerate its host.
+#[test]
+fn serpent_skin_pumps_and_regenerates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let skin = g.add_card_to_hand(0, catalog::serpent_skin());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: skin, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Serpent Skin");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 granted");
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skin, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate host");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().regeneration_shields, 1, "host has a regen shield");
+}
+
+/// Loam Dweller's spiritcraft puts a land from hand onto the battlefield tapped.
+#[test]
+fn loam_dweller_spiritcraft_ramps_a_land() {
+    let mut g = two_player_game();
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    g.add_card_to_battlefield(0, catalog::loam_dweller());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    let arcane = g.add_card_to_hand(0, catalog::vital_surge()); // Arcane spell
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![land])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast an Arcane spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some_and(|c| c.tapped), "ramped land entered tapped");
+}

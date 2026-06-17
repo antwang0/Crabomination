@@ -3069,3 +3069,135 @@ pub fn psychic_spear() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Orochi Sustainer — {1}{G} Snake Shaman 1/2. {T}: Add {G}.
+pub fn orochi_sustainer() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Orochi Sustainer",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Shaman]),
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![crate::mana::Color::Green]),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vital Surge — {1}{G} Instant — Arcane. You gain 3 life. Splice onto Arcane {1}{G}.
+pub fn vital_surge() -> CardDefinition {
+    CardDefinition {
+        name: "Vital Surge",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(1), g()]), SpellSubtype::Arcane)],
+        effect: gain_life(3),
+        ..Default::default()
+    }
+}
+
+/// Child of Thorns — {G} Spirit 1/1. Sacrifice this creature: target creature
+/// gets +1/+1 until end of turn.
+pub fn child_of_thorns() -> CardDefinition {
+    CardDefinition {
+        name: "Child of Thorns",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Foratog — {2}{G} Atog 1/2. {G}, Sacrifice a Forest: This creature gets
+/// +2/+2 until end of turn.
+pub fn foratog() -> CardDefinition {
+    CardDefinition {
+        name: "Foratog",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Atog]),
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_other_filter: Some((SelectionRequirement::HasLandType(LandType::Forest), 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Serpent Skin — {2}{G} Aura (Flash). Enchanted creature gets +1/+1.
+/// {G}: Regenerate enchanted creature.
+pub fn serpent_skin() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Serpent Skin",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::Regenerate { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Loam Dweller — {1}{G} Spirit 2/2. Whenever you cast a Spirit or Arcane spell,
+/// you may put a land card from your hand onto the battlefield tapped.
+pub fn loam_dweller() -> CardDefinition {
+    CardDefinition {
+        name: "Loam Dweller",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                count: Value::ONE,
+                tapped: true,
+                haste: false,
+                sacrifice_eot: false,
+            },
+        )],
+        ..Default::default()
+    }
+}

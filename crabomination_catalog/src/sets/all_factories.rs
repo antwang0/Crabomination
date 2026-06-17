@@ -200,6 +200,12 @@ static CHK: &[Factory] = &[
     super::chk::phantom_wings,
     super::chk::squelch,
     super::chk::psychic_spear,
+    super::chk::orochi_sustainer,
+    super::chk::vital_surge,
+    super::chk::child_of_thorns,
+    super::chk::foratog,
+    super::chk::serpent_skin,
+    super::chk::loam_dweller,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
