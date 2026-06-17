@@ -2112,6 +2112,8 @@ static EOE: &[Factory] = &[
     super::eoe::keen_buccaneer,
     super::eoe::skystreak_engineer,
     super::eoe::mai_jaded_edge,
+    super::eoe::stampeding_scurryfoot,
+    super::eoe::mindspring_merfolk,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

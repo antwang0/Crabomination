@@ -2380,3 +2380,43 @@ fn cr_702_177_mai_jaded_edge_double_strike_counter() {
     assert!(g.computed_permanent(m).unwrap().keywords.contains(&Keyword::DoubleStrike),
         "gained a double strike counter");
 }
+
+/// Stampeding Scurryfoot's exhaust adds a +1/+1 counter and makes a 3/3
+/// Elephant, once.
+#[test]
+fn cr_702_177_stampeding_scurryfoot_exhaust() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::stampeding_scurryfoot());
+    g.clear_sickness(s);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Elephant"
+        && (c.power(), c.toughness()) == (3, 3)), "made a 3/3 Elephant");
+}
+
+/// Mindspring Merfolk's X-cost exhaust draws X and counters each Merfolk you
+/// control (including itself), once.
+#[test]
+fn cr_702_177_mindspring_merfolk_x_draw_and_counters() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let m = g.add_card_to_battlefield(0, catalog::mindspring_merfolk());
+    let other = g.add_card_to_battlefield(0, catalog::mindspring_merfolk());
+    g.clear_sickness(m);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 0, target: None, x_value: Some(2),
+    }).expect("exhaust X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew X=2");
+    assert_eq!(g.battlefield_find(m).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "each Merfolk you control got a counter");
+}

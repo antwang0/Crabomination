@@ -242,3 +242,79 @@ pub fn mai_jaded_edge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Stampeding Scurryfoot — {G} 1/1 Mouse. "Exhaust — {3}{G}: Put a +1/+1
+/// counter on this creature. Create a 3/3 green Elephant creature token."
+pub fn stampeding_scurryfoot() -> CardDefinition {
+    use crabomination_base::mana::Color;
+    let elephant = TokenDefinition {
+        name: "Elephant".into(),
+        power: 3,
+        toughness: 3,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Stampeding Scurryfoot",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mouse], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: elephant },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mindspring Merfolk — {U} 1/1 Merfolk Wizard. "Exhaust — {X}{U}{U}, {T}:
+/// Draw X cards. Put a +1/+1 counter on each Merfolk creature you control."
+pub fn mindspring_merfolk() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Mindspring Merfolk",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[x(), u(), u()]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+                Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
