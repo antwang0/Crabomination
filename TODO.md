@@ -132,6 +132,18 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   the Dead, Thirst for Meaning, Shatter the Sky, Alseid, Mire Triton,
   Aphemia, Phoenix of Ash, Underworld Rage-Hound, Nessian Boar
   (`Predicate::TriggerBlocksSource`), Mystic Repeal, Ox of Agonas.
+- ⏳ **Noticed this run (Kamigawa Offering batch):**
+  - **Patron of the Nezumi** punted — its "whenever a permanent is put into
+    an opponent's graveyard, that player loses 1 life" needs a generic
+    *card-enters-a-graveyard-from-anywhere* event (only `CreatureDied` /
+    `CardMilled` / `CardDiscarded` exist today). Add `EventKind::
+    CardEnteredGraveyard` to finish the 5th Patron.
+  - **Cage of Hands / Hearth Kami** punted: Cage wants an Aura that bounces
+    *itself* via an activated ability (`simple_aura` has no ability slot);
+    Hearth Kami wants `{X}, Sac: destroy target artifact with mana value X`
+    (no exact-MV-equals-X target filter yet).
+  - **Kami of the Crescent Moon** punted — no symmetric "each player draws an
+    extra card during their draw step" static.
 - ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
   - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
     bot heuristic that takes the first eligible candidate would make

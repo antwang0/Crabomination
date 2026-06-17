@@ -608,6 +608,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         }
         K::Daybound => "If it's neither day nor night, it becomes day; transforms when it becomes night.",
         K::Nightbound => "Transforms back when it becomes day.",
+        K::Conspire => "As you cast it, you may tap two untapped creatures that share a color with it to copy it.",
         _ => return None,
     })
 }

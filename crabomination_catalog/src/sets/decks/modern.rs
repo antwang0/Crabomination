@@ -2278,6 +2278,7 @@ pub fn snuff_out() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -3684,6 +3685,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -6530,6 +6532,7 @@ pub fn rout() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
             ..Default::default()
         }),
         ..Default::default()

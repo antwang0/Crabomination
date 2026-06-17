@@ -91,6 +91,8 @@ pub enum CreatureType {
     Glimmer,
     // Ninjutsu creature subtype (Fallen Shinobi, etc.).
     Ninja,
+    // Kamigawa Samurai subtype (Bushido — Kitsune Blademaster).
+    Samurai,
     // Outlaws of Thunder Junction Mount subtype (Saddle, CR 702.171).
     Mount,
     // Eldraine Peasant subtype (Curious Pair, Giant Killer).
@@ -866,6 +868,9 @@ pub enum SelectionRequirement {
     HasLandType(LandType),
     HasArtifactSubtype(ArtifactSubtype),
     HasEnchantmentSubtype(EnchantmentSubtype),
+    /// Spell subtype on an instant/sorcery (Arcane — Kamigawa spiritcraft
+    /// triggers gate on `Spirit creature OR Arcane`).
+    HasSpellSubtype(SpellSubtype),
     PowerAtLeast(i32),
     ToughnessAtLeast(i32),
     /// Candidate's power + toughness (layer-computed) is at most `n`. Used
@@ -1970,6 +1975,14 @@ pub struct AlternativeCost {
     /// that turns into a creature once the counters tick off.
     #[serde(default)]
     pub impending: u32,
+    /// CR 702.48 — Offering. When `Some(filter)`, this alternative cost may be
+    /// paid any time you could cast an instant (grants flash) by sacrificing a
+    /// permanent you control matching `filter` (the offering's creature type)
+    /// and reducing `mana_cost` by that permanent's whole mana cost, color
+    /// included (`ManaCost::reduce_by_cost`). The auto-picker sacrifices the
+    /// highest-MV match for maximum reduction. The five Kamigawa Patrons.
+    #[serde(default)]
+    pub offering: Option<SelectionRequirement>,
 }
 
 impl CardDefinition {

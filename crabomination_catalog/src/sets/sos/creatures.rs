@@ -3257,6 +3257,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -3467,6 +3468,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }

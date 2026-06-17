@@ -1181,6 +1181,7 @@ pub fn blustersquall() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -1231,6 +1232,7 @@ pub fn electrickery() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -1300,6 +1302,7 @@ pub fn teleportal() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -1353,6 +1356,7 @@ pub fn street_spasm() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }

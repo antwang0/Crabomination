@@ -1436,6 +1436,7 @@ impl GameState {
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
             R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
             R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
+            R::HasSpellSubtype(s) => card.definition.subtypes.spell_subtypes.contains(s),
             R::IsToken => card.is_token,
             R::NotToken => !card.is_token,
             // CR 603.4 — entered this turn (hidden-zone cards are never

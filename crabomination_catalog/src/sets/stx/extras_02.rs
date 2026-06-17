@@ -194,6 +194,7 @@ pub fn mizzium_mortars() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -326,6 +327,7 @@ pub fn past_in_flames() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }
@@ -420,6 +422,7 @@ pub fn resurgent_belief() -> CardDefinition {
             marks_kicked: false,
             emerge: None,
             impending: 0,
+            offering: None,
         }),
         ..Default::default()
     }

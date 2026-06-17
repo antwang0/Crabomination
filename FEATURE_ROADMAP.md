@@ -184,7 +184,10 @@ Each a small targeted feature; sweep batch by batch.
 - **Fading family:** ✅ Fading, Vanishing (`process_fading_vanishing`). Remaining:
   Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,
-  Miracle, Bloodrush, Unleash, Scavenge, Transmute, Bestow, Tribute. ⏳ Offering.
+  Miracle, Bloodrush, Unleash, Scavenge, Transmute, Bestow, Tribute, Offering
+  (CR 702.48 — `AlternativeCost.offering` + `ManaCost::reduce_by_cost`; the
+  Kamigawa Patron cycle). Spiritcraft "cast a Spirit or Arcane spell" triggers
+  ride `SelectionRequirement::HasSpellSubtype` + `shortcut::spiritcraft`.
 
 ## Tier 5 — Mana & cost system
 

@@ -540,7 +540,21 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 );
                 st.evaluate_predicate(c, &ctx)
             });
-            cond_ok && !(a.not_your_turn_only && st.active_player_idx == card.owner)
+            // CR 702.48 — Offering greys out unless the caster controls a
+            // creature of the offered type to sacrifice.
+            let offering_ok = a.offering.as_ref().is_none_or(|filter| {
+                st.battlefield.iter().any(|c| {
+                    c.controller == card.owner
+                        && c.definition.is_creature()
+                        && st.evaluate_requirement_static(
+                            filter,
+                            &crate::game::types::Target::Permanent(c.id),
+                            card.owner,
+                            None,
+                        )
+                })
+            });
+            cond_ok && offering_ok && !(a.not_your_turn_only && st.active_player_idx == card.owner)
         }),
         back_face_name: card
             .definition

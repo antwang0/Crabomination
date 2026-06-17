@@ -2420,3 +2420,39 @@ fn cr_702_177_mindspring_merfolk_x_draw_and_counters() {
     assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "each Merfolk you control got a counter");
 }
+
+/// CR 702.48 — Offering. Patron of the Akki ({4}{R}{R}) cast via Goblin
+/// offering: sacrifice a {1}{R} Goblin, the cost drops by its whole mana
+/// cost (color included) to {3}{R}, and the Patron resolves.
+#[test]
+fn cr_702_48_offering_reduces_cost_by_sacrificed_creature() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::goblin_instigator()); // {1}{R}
+    let id = g.add_card_to_hand(0, catalog::patron_of_the_akki());
+    // {3}{R} = the reduced offering cost (full {4}{R}{R} minus the Goblin's {1}{R}).
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("offering cast for {3}{R} after sacrificing a {1}{R} Goblin");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "Goblin sacrificed to offering");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Patron resolved");
+}
+
+/// Offering is illegal with no creature of the offered type to sacrifice.
+#[test]
+fn cr_702_48_offering_requires_the_offered_creature_type() {
+    let mut g = two_player_game();
+    // A non-Goblin creature doesn't satisfy Goblin offering.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::patron_of_the_akki());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "no Goblin → offering rejected");
+}

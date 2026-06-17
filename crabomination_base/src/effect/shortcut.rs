@@ -633,6 +633,21 @@ pub fn magecraft(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// Spiritcraft: "Whenever you cast a Spirit or Arcane spell, `effect`."
+/// (Kamigawa — Teller of Tales, Kami of Fire's Roar.)
+pub fn spiritcraft(effect: Effect) -> TriggeredAbility {
+    use crate::card::{CreatureType, SpellSubtype};
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::CastSpellMatches(
+                SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                    .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane)),
+            ),
+        ),
+        effect,
+    }
+}
+
 /// "Whenever you cast a colorless spell, `effect`." (Kozilek's Sentinel.)
 /// `SelectionRequirement::Colorless` reads cost pips, so genuinely colorless
 /// (generic-cost) spells match; Devoid spells with colored pips slip through
@@ -2839,6 +2854,21 @@ pub fn prowl(
         mana_cost: cost,
         condition: Some(Predicate::ProwlTypeDealtCombatDamage { types }),
         marks_kicked: true,
+        ..Default::default()
+    }
+}
+
+/// Offering (CR 702.48): "[Type] offering" — cast at instant speed by
+/// sacrificing a creature of `creature_type`, reducing the cost by the
+/// sacrificed creature's whole mana cost (color included).
+pub fn offering(
+    cost: crate::mana::ManaCost,
+    creature_type: crate::card::CreatureType,
+) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost: cost,
+        flash: true,
+        offering: Some(crate::card::SelectionRequirement::HasCreatureType(creature_type)),
         ..Default::default()
     }
 }

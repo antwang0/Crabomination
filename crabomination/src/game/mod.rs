@@ -72,6 +72,9 @@ mod tests_cr_rules;
 #[cfg(test)]
 #[path = "../tests/thb.rs"]
 mod tests_thb;
+#[cfg(test)]
+#[path = "../tests/chk.rs"]
+mod tests_chk;
 pub mod types;
 
 #[cfg(test)]

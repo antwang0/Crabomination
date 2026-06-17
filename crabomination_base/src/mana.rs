@@ -325,6 +325,37 @@ impl ManaCost {
         self.symbols = new_syms;
         applied
     }
+
+    /// Reduce this cost by another whole mana cost, color included
+    /// (CR 702.48 Offering — "paying the difference in mana costs … Mana cost
+    /// includes color."). Each colored pip in `other` removes one matching
+    /// colored pip here; everything else (generic/colorless/hybrid/Phyrexian/
+    /// snow, plus colored pips with no match) folds into a generic reduction.
+    pub fn reduce_by_cost(&mut self, other: &ManaCost) -> u32 {
+        let mut generic_pool = 0u32;
+        for sym in &other.symbols {
+            match sym {
+                ManaSymbol::Colored(c) => {
+                    if let Some(pos) = self
+                        .symbols
+                        .iter()
+                        .position(|s| matches!(s, ManaSymbol::Colored(sc) if sc == c))
+                    {
+                        self.symbols.remove(pos);
+                    } else {
+                        generic_pool += 1;
+                    }
+                }
+                ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => generic_pool += *n,
+                ManaSymbol::Hybrid(..)
+                | ManaSymbol::Phyrexian(_)
+                | ManaSymbol::MonoHybrid(..)
+                | ManaSymbol::Snow => generic_pool += 1,
+                ManaSymbol::X => {}
+            }
+        }
+        self.reduce_generic(generic_pool)
+    }
 }
 
 /// A "spend this mana only to …" restriction carried by certain mana

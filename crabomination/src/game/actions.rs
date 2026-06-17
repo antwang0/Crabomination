@@ -5271,6 +5271,35 @@ impl GameState {
                 (None, 0)
             };
 
+        // CR 702.48 — Offering: pick the creature to sacrifice (auto: highest
+        // MV for max reduction) and record its whole mana cost. Rejected up
+        // front if the caster controls no matching creature. Sacrificed after
+        // payment; the cost reduction is by the full cost, color included.
+        let offering_pick: Option<(CardId, crate::mana::ManaCost)> =
+            if let Some(filter) = &alt.offering {
+                let best = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && c.definition.is_creature()
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                None,
+                            )
+                    })
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| (c.id, c.definition.cost.clone()));
+                match best {
+                    Some(x) => Some(x),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            } else {
+                None
+            };
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
@@ -5379,6 +5408,9 @@ impl GameState {
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
+        if let Some((_, ref sac_cost)) = offering_pick {
+            mana_cost.reduce_by_cost(sac_cost);
+        }
         apply_spell_cost_floor(self, &mut mana_cost);
         // CR 601.2g — float-spend confirmation. The spell card is back-in-hand
         // safe to restore (nothing else is committed yet — pitch/gy-exile/
@@ -5480,6 +5512,16 @@ impl GameState {
         {
             auto_events.push(GameEvent::PermanentSacrificed { card_id: sac_cid, who: p });
             let mut die_evs = self.remove_to_graveyard_with_triggers(sac_cid);
+            auto_events.append(&mut die_evs);
+        }
+
+        // CR 702.48 — Offering: sacrifice the offered creature now that the
+        // (reduced) cost is paid.
+        if let Some((sac_cid, _)) = &offering_pick
+            && self.battlefield_find(*sac_cid).is_some()
+        {
+            auto_events.push(GameEvent::PermanentSacrificed { card_id: *sac_cid, who: p });
+            let mut die_evs = self.remove_to_graveyard_with_triggers(*sac_cid);
             auto_events.append(&mut die_evs);
         }
 

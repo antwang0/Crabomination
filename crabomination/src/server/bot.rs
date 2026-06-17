@@ -1409,6 +1409,9 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
                 && a.exile_from_graveyard_count == 0
                 && a.life_cost == 0
                 && !a.evoke_sacrifice
+                // Offering (CR 702.48) sacrifices one of the bot's own
+                // creatures for a tempo cut it rarely wants — cast normally.
+                && a.offering.is_none()
         })
     }) {
         let effect = c
