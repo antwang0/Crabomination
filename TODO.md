@@ -116,6 +116,19 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   - Genju aura cycle (animate-a-land aura that returns to hand when the
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
     devotion-counter conditional.
+  - Kamigawa cards skipped this run for want of a primitive: Feral
+    Deceiver / Brutal Deceiver / Callous Deceiver (reveal-top-then-conditional
+    self-pump — needs a "reveal top, branch on its type" effect);
+    Matsu-Tribe Decoy / Matsu-Tribe Sniper (a "target creature must block this"
+    grant + tap-and-skip-untap-on-combat-damage); Masumaro / Adamaro (CDA on
+    *twice* / *opponent's-max* hand size — extend `DynamicPt::ControllerHandSize`
+    with a multiplier and an opponent-max variant); Kitsune Riftwalker
+    (protection from a creature **type** / spell **subtype** — Protection only
+    models color/creatures/spells today); Sokenzan Renegade / Kiyomaro
+    (hand-size-gated keyword grants + "player with most cards" predicate).
+  - Generalize "target player discards" auto-targeting so an ETB
+    `Discard { who: Player(Target(0)) }` picks an opponent (Kemuri-Onna is
+    modeled as `EachOpponent` to sidestep this).
   - Cranial Extraction (name a card → exile all copies from gy/hand/library);
     Soratami Seer (discard hand, draw that many); Cut the Tethers (per-Spirit
     "return unless pay {3}"); Petals of Insight (look-3, bottom-or-draw with
