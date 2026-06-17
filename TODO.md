@@ -96,6 +96,22 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **THB cards deferred this run (need new primitives):**
+  - Devotion-mana rock (Nyx Lotus): `{T}: choose a color, add devotion-to-it`
+    — needs a choose-color + `Value::DevotionOfChosenColor` mana ability.
+  - Cast-from-graveyard cost-reduction static (Gravebreaker Lamia).
+  - "Up to N targets" (Sea God's Scorn bounce-3, Wrap in Flames 1-to-each-of-3)
+    — the Tier-2 targeting gap; unblocks a swath of cards.
+  - Damage-dealt amount trigger (Towering-Wave Mystic "mill that many").
+  - Opponents'-turn cost reduction static (Naiad of Hidden Coves).
+  - Aura-reanimation (Storm Herald), aura-death card draw (Hateful Eidolon),
+    linked attack-exile / dies-return (Underworld Sentinel).
+  - THB gods + planeswalkers (Klothys, Athreos, Calix, Elspeth Sun's Nemesis,
+    Ashiok Nightmare Muse) — devotion-gated god states + loyalty bodies.
+- ⏳ **Tainted Pact UI**: the per-iteration "keep digging?" decision isn't
+  wired for `wants_ui` players (AutoDecider takes the first card; a client
+  modal + suspend/resume loop is the follow-up).
+
 - ✅ **Mystical Archive (STA) complete** — Tainted Pact rides the new
   `Effect::ExileUntilDuplicateName` (per-card "you may keep digging" via
   `OptionalTrigger`; AutoDecider takes the first uniquely-named card).
