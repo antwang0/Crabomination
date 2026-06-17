@@ -2082,3 +2082,146 @@ pub fn tymaret_chosen_from_death() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB batch 6 — devotion shrinks, escape, sacrifice payoffs, trample lord ───
+
+/// Final Death — {4}{B} Instant. Exile target creature.
+pub fn final_death() -> CardDefinition {
+    CardDefinition {
+        name: "Final Death",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Fruit of Tizerus — {B} Sorcery with Escape—{3}{B}, exile three. Target
+/// player loses 2 life.
+pub fn fruit_of_tizerus() -> CardDefinition {
+    CardDefinition {
+        name: "Fruit of Tizerus",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Escape(cost(&[generic(3), b()]), 3)],
+        effect: Effect::LoseLife {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Skophos Warleader — {4}{R} 4/5 Minotaur Warrior. {R}, Sacrifice another
+/// creature or an enchantment: this gets +1/+0 and gains menace until EOT.
+pub fn skophos_warleader() -> CardDefinition {
+    CardDefinition {
+        name: "Skophos Warleader",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Threnody Singer — {1}{U} 1/3 Flash Flying Siren. ETB: target creature an
+/// opponent controls gets -X/-0, X = your devotion to blue.
+pub fn threnody_singer() -> CardDefinition {
+    CardDefinition {
+        name: "Threnody Singer",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Siren], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Diff(Box::new(Value::ZERO), Box::new(Value::DevotionTo(vec![Color::Blue]))),
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Blight-Breath Catoblepas — {4}{B}{B} 3/2 Beast. ETB: target creature an
+/// opponent controls gets -X/-X, X = your devotion to black.
+pub fn blight_breath_catoblepas() -> CardDefinition {
+    let neg_devotion =
+        Value::Diff(Box::new(Value::ZERO), Box::new(Value::DevotionTo(vec![Color::Black])));
+    CardDefinition {
+        name: "Blight-Breath Catoblepas",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: neg_devotion.clone(),
+            toughness: neg_devotion,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nylea's Forerunner — {4}{G} 5/3 Beast. Trample; other creatures you control
+/// have trample.
+pub fn nyleas_forerunner() -> CardDefinition {
+    CardDefinition {
+        name: "Nylea's Forerunner",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Other creatures you control have trample",
+            effect: crate::effect::StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..Default::default()
+    }
+}

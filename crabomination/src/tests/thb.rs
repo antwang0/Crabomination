@@ -1545,3 +1545,84 @@ fn battle_cry_pumps_other_attackers() {
     assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "other attacker +1/+0");
     assert_eq!(g.battlefield_find(driver).unwrap().power(), 2, "battle cry doesn't pump itself");
 }
+
+// ── THB batch 6 ──────────────────────────────────────────────────────────────
+
+/// Final Death exiles the target creature (not to the graveyard).
+#[test]
+fn final_death_exiles_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::final_death());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Final Death");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature removed");
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled, not in graveyard");
+}
+
+/// Fruit of Tizerus drains the target player for 2.
+#[test]
+fn fruit_of_tizerus_drains_two() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::fruit_of_tizerus());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fruit of Tizerus");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+/// Skophos Warleader sacrifices a creature to pump itself and gain menace.
+#[test]
+fn skophos_warleader_sac_pumps_and_grants_menace() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let leader = g.add_card_to_battlefield(0, catalog::skophos_warleader());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: leader, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Skophos");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == leader).unwrap();
+    assert_eq!(c.power, 5, "+1/+0");
+    assert!(c.keywords.contains(&Keyword::Menace), "gained menace");
+}
+
+/// Blight-Breath Catoblepas shrinks an opposing creature by your devotion to
+/// black (its own {B}{B} = 2) → a 2/2 dies.
+#[test]
+fn blight_breath_shrinks_by_devotion() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::blight_breath_catoblepas());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Catoblepas");
+    drain_stack(&mut g);
+    // Catoblepas itself has {B}{B} → devotion 2 → bear -2/-2 → dies.
+    assert!(g.battlefield_find(bear).is_none(), "2/2 shrunk to 0/0 and died");
+}
+
+/// Nylea's Forerunner grants trample to your other creatures.
+#[test]
+fn nyleas_forerunner_grants_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nyleas_forerunner());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::Trample), "other creature has trample");
+}

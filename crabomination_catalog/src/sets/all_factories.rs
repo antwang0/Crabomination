@@ -7596,6 +7596,12 @@ static THB: &[Factory] = &[
     super::thb::underworld_charger,
     super::thb::pharikas_spawn,
     super::thb::tymaret_chosen_from_death,
+    super::thb::final_death,
+    super::thb::fruit_of_tizerus,
+    super::thb::skophos_warleader,
+    super::thb::threnody_singer,
+    super::thb::blight_breath_catoblepas,
+    super::thb::nyleas_forerunner,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,
