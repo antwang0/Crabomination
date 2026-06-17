@@ -3535,6 +3535,57 @@ pub fn cunning_bandit() -> CardDefinition {
     }
 }
 
+/// Kuro's Taken — {1}{B} Rat Samurai 1/1. Bushido 1; "{1}{B}: Regenerate this."
+pub fn kuros_taken() -> CardDefinition {
+    CardDefinition {
+        name: "Kuro's Taken",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Samurai]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Bushido(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Painwracker Oni — {3}{B}{B} Demon Spirit 5/4. Fear; at the beginning of
+/// your upkeep, sacrifice a creature unless you control an Ogre.
+pub fn painwracker_oni() -> CardDefinition {
+    use crate::effect::Predicate;
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "Painwracker Oni",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Demon, CreatureType::Spirit]),
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Fear],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ogre),
+                }))),
+                then: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Creature,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Initiate of Blood // Goka the Unjust — {3}{R} Ogre Shaman 2/2.
 /// "{T}: This deals 1 damage to target creature that was dealt damage this
 /// turn. When that creature dies this turn, flip this creature." Goka:

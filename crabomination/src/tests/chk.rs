@@ -2426,3 +2426,37 @@ fn initiate_of_blood_cannot_target_undamaged_creature() {
     });
     assert!(err.is_err(), "can't target a creature that wasn't dealt damage this turn");
 }
+
+/// Kuro's Taken regenerates itself for {1}{B}.
+#[test]
+fn kuros_taken_regenerates() {
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::kuros_taken());
+    g.clear_sickness(rat);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rat, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rat).unwrap().regeneration_shields >= 1, "regen shield set up");
+}
+
+/// Painwracker Oni forces an upkeep sacrifice unless its controller has an Ogre.
+#[test]
+fn painwracker_oni_upkeep_sacrifice_unless_ogre() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::painwracker_oni());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // No Ogre controlled → the next player-0 upkeep trigger sacrifices a creature.
+    let mut iters = 0;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 3)
+        && iters < 300
+    {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        iters += 1;
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_creature()).count(), 1,
+        "exactly one creature sacrificed at upkeep");
+}
