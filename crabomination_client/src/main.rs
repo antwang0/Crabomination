@@ -10,7 +10,7 @@ use bevy::anti_alias::contrast_adaptive_sharpening::ContrastAdaptiveSharpening;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy::post_process::bloom::Bloom;
 use bevy::render::view::Hdr;
-use bevy::{anti_alias::smaa::Smaa, color::palettes::basic::SILVER, prelude::*};
+use bevy::{anti_alias::smaa::Smaa, prelude::*};
 
 mod audit;
 mod card;
@@ -948,10 +948,12 @@ fn setup(
         },
     ));
 
-    // Ground plane
+    // Ground plane. Dark slate keeps glare off the card faces and lets the
+    // (lit) cards read as the brightest thing on the table.
+    const TABLE_COLOR: Color = Color::srgb(0.20, 0.20, 0.23);
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(90.0, 90.0).subdivisions(quality.ground_subdivisions()))),
-        MeshMaterial3d(materials.add(Color::from(SILVER))),
+        MeshMaterial3d(materials.add(TABLE_COLOR)),
         GroundPlane,
     ));
 
