@@ -806,6 +806,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Fate => "Fate",
         CounterType::Ice => "Ice",
         CounterType::Void => "Void",
+        CounterType::Ki => "Ki",
     }
 }
 

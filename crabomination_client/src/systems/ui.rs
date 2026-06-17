@@ -1188,7 +1188,7 @@ pub fn graveyard_browser(
 
                 // Close hint
                 panel.spawn((
-                    Text::new("Click outside or press Esc to close"),
+                    Text::new("Press Esc or click outside to close"),
                     ui_fonts.tf(11.0),
                     TextColor(theme::TEXT_MUTED),
                     Pickable::IGNORE,
@@ -1382,7 +1382,7 @@ pub fn exile_browser(
                 });
         }
         panel.spawn((
-            Text::new("V / Esc / click outside to close"),
+            Text::new("Press V or Esc, or click outside to close"),
             ui_fonts.tf(11.0),
             TextColor(theme::TEXT_MUTED),
             Pickable::IGNORE,
