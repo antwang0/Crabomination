@@ -1934,3 +1934,85 @@ fn loam_dweller_spiritcraft_ramps_a_land() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_some_and(|c| c.tapped), "ramped land entered tapped");
 }
+
+/// Kumano's Pupils exiles creatures it deals (combat) damage to that would die.
+#[test]
+fn kumanos_pupils_exiles_what_it_kills() {
+    let mut g = two_player_game();
+    let pupils = g.add_card_to_battlefield(0, catalog::kumanos_pupils()); // 3/3
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(pupils);
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: pupils, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, pupils)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "the blocker is exiled, not killed");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+}
+
+/// Ire of Kaminari deals damage equal to Arcane cards in your graveyard.
+#[test]
+fn ire_of_kaminari_scales_with_arcane_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::glacial_ray()); // Arcane
+    g.add_card_to_graveyard(0, catalog::vital_surge()); // Arcane
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // not Arcane
+    let spell = g.add_card_to_hand(0, catalog::ire_of_kaminari());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ire of Kaminari");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 Arcane cards → 2 damage");
+}
+
+/// Waking Nightmare makes a player discard two cards.
+#[test]
+fn waking_nightmare_discards_two() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::waking_nightmare());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Waking Nightmare");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before - 2, "discarded two cards");
+}
+
+/// Pus Kami sacrifices to destroy a nonblack creature.
+#[test]
+fn pus_kami_sacs_to_destroy_nonblack() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::pus_kami());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green, nonblack
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("sac to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(kami).is_none(), "Pus Kami sacrificed");
+    assert!(g.battlefield_find(bear).is_none(), "nonblack creature destroyed");
+}
+
+/// Ronin Cavekeeper is a 4/3 with Bushido 2.
+#[test]
+fn ronin_cavekeeper_bushido_2() {
+    let d = catalog::ronin_cavekeeper();
+    assert_eq!((d.power, d.toughness), (4, 3));
+    assert!(d.keywords.contains(&Keyword::Bushido(2)));
+}

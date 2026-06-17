@@ -3201,3 +3201,113 @@ pub fn loam_dweller() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kumano's Pupils — {4}{R} Human Shaman 3/3. Creatures it deals damage to are
+/// exiled instead of dying.
+pub fn kumanos_pupils() -> CardDefinition {
+    CardDefinition {
+        name: "Kumano's Pupils",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Shaman]),
+        power: 3,
+        toughness: 3,
+        damage_exiles_if_dies: true,
+        ..Default::default()
+    }
+}
+
+/// Ronin Cavekeeper — {5}{R} Human Samurai 4/3. Bushido 2.
+pub fn ronin_cavekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Ronin Cavekeeper",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Bushido(2)],
+        ..Default::default()
+    }
+}
+
+/// Ire of Kaminari — {3}{R} Instant — Arcane. Deals damage to any target equal
+/// to the number of Arcane cards in your graveyard.
+pub fn ire_of_kaminari() -> CardDefinition {
+    CardDefinition {
+        name: "Ire of Kaminari",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::CardsInGraveyardMatching {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Waking Nightmare — {2}{B} Sorcery — Arcane. Target player discards two cards.
+pub fn waking_nightmare() -> CardDefinition {
+    CardDefinition {
+        name: "Waking Nightmare",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::Discard {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(2),
+            random: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Pus Kami — {5}{B}{B} Spirit 3/3. {B}, Sacrifice this creature: Destroy
+/// target nonblack creature. Soulshift 6.
+pub fn pus_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Pus Kami",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(
+                        crate::mana::Color::Black,
+                    ))),
+                )),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(6)],
+        ..Default::default()
+    }
+}
+
+/// Kami of Tattered Shoji — {4}{W} Spirit 2/5. Whenever you cast a Spirit or
+/// Arcane spell, it gains flying until end of turn.
+pub fn kami_of_tattered_shoji() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of Tattered Shoji",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 5,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}

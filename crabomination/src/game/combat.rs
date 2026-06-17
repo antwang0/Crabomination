@@ -1707,6 +1707,18 @@ impl GameState {
             }
         }
 
+        // CR 614 — a source with the exile-on-death damage rider (Kumano's
+        // Pupils, Kumano) exiles instead of buries any creature it damaged
+        // this turn that would die. Mirrors the non-combat path in
+        // `deal_damage_to_from`.
+        for &(source, damaged, _) in &creature_damage {
+            if self
+                .battlefield_find(source)
+                .is_some_and(|c| c.definition.damage_exiles_if_dies)
+            {
+                self.dies_to_exile_eot.insert(damaged);
+            }
+        }
         // CR 510.2 — now that all combat damage in this step has been dealt,
         // put `DealsCombatDamageToCreature` triggers on the stack.
         for (source, damaged, amount) in creature_damage {

@@ -326,6 +326,10 @@ pub enum Value {
     /// Backed by `Player.creatures_attacked_this_turn`.
     CreaturesAttackedWithThisTurn(PlayerRef),
     GraveyardSizeOf(PlayerRef),
+    /// Number of cards in `who`'s graveyard matching `filter`. Powers
+    /// "equal to the number of Arcane cards in your graveyard" (Ire of
+    /// Kaminari) and similar graveyard-count payoffs.
+    CardsInGraveyardMatching { who: PlayerRef, filter: SelectionRequirement },
     /// Maximum graveyard size across **every alive player** in the game.
     /// Reads `players[*].graveyard.len()` and returns the max. Backs
     /// "if a graveyard has 20 or more cards" payoffs (Visions of Beyond,

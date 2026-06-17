@@ -206,6 +206,12 @@ static CHK: &[Factory] = &[
     super::chk::foratog,
     super::chk::serpent_skin,
     super::chk::loam_dweller,
+    super::chk::kumanos_pupils,
+    super::chk::ronin_cavekeeper,
+    super::chk::ire_of_kaminari,
+    super::chk::waking_nightmare,
+    super::chk::pus_kami,
+    super::chk::kami_of_tattered_shoji,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
