@@ -7696,6 +7696,7 @@ static SHM: &[Factory] = &[
     super::shm::rally_the_galadhrim,
     super::shm::aethertow,
     super::shm::giantbaiting,
+    super::shm::traitors_roar,
 ];
 static TMP: &[Factory] = &[
     super::tmp::reanimate,

@@ -192,3 +192,26 @@ pub fn giantbaiting() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Traitor's Roar — {4}{B/R} Sorcery. "Tap target untapped creature. It deals
+/// damage equal to its power to its controller. Conspire."
+pub fn traitors_roar() -> CardDefinition {
+    CardDefinition {
+        name: "Traitor's Roar",
+        cost: cost(&[generic(4), hybrid(Color::Black, Color::Red)]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Conspire],
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::Untapped),
+                ),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}

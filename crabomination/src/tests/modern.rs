@@ -56863,3 +56863,25 @@ fn conspire_giantbaiting_makes_two_then_exiles() {
     assert!(!g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Giant Warrior"),
         "both Giant Warriors exiled at end step");
 }
+
+/// Traitor's Roar taps a creature and makes it deal damage equal to its power
+/// to its controller (conspired; copy is redundant on the same target).
+#[test]
+fn conspire_traitors_roar_taps_and_burns_controller() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::traitors_roar());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    // Opponent's 2/2 to turn against them.
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b0 = g.add_card_to_battlefield(0, catalog::gravedigger());
+    let b1 = g.add_card_to_battlefield(0, catalog::gravedigger());
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [b0, b1],
+        target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Traitor's Roar");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "victim tapped");
+    assert_eq!(g.players[1].life, life - 2, "controller took 2 (the creature's power)");
+}
