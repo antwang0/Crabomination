@@ -2302,6 +2302,76 @@ pub fn frostwielder() -> CardDefinition {
     }
 }
 
+/// Kumano, Master Yamabushi — {3}{R}{R} Legendary Human Shaman 4/4. {1}{R}:
+/// Deals 1 damage to any target. (The "creatures it damages are exiled instead
+/// of dying" replacement rider is omitted.)
+pub fn kumano_master_yamabushi() -> CardDefinition {
+    CardDefinition {
+        name: "Kumano, Master Yamabushi",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Shaman]),
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target()),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Teardrop Kami — {U} Spirit 1/1. Sacrifice this creature: You may tap or
+/// untap target creature.
+pub fn teardrop_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Teardrop Kami",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::ChooseMode(vec![
+                Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+                Effect::Untap { what: target_filtered(SelectionRequirement::Creature), up_to: None },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soratami Savant — {2}{U}{U} Moonfolk Wizard 2/2, Flying. {3}, Return a land
+/// you control to its owner's hand: Counter target spell unless its controller
+/// pays {3}.
+pub fn soratami_savant() -> CardDefinition {
+    CardDefinition {
+        name: "Soratami Savant",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Moonfolk, CreatureType::Wizard]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::CounterUnlessPaid {
+                what: crate::effect::shortcut::target(),
+                mana_cost: cost(&[generic(3)]),
+                exile: false,
+                extra_generic: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Goblin Cohort — {R} Goblin Warrior 2/2. Can't attack unless you've cast a
 /// creature spell this turn.
 pub fn goblin_cohort() -> CardDefinition {

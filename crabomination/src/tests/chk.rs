@@ -1321,3 +1321,64 @@ fn zubera_deaths_accumulate_this_turn() {
     assert_eq!(g.players[0].zuberas_died_this_turn, 2, "two Zubera counted");
     assert_eq!(g.players[0].life, before + 8, "each Zubera gained 2 per the 2 deaths");
 }
+
+/// Kumano taps... er, pays {1}{R} to ping a 1/1 dead.
+#[test]
+fn kumano_pings_for_one() {
+    let mut g = two_player_game();
+    let kumano = g.add_card_to_battlefield(0, catalog::kumano_master_yamabushi());
+    let frostling = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    g.clear_sickness(kumano);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kumano, ability_index: 0, target: Some(Target::Permanent(frostling)), x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(frostling).is_none(), "1/1 pinged dead");
+}
+
+/// Teardrop Kami sacrifices to tap a target creature (mode 0).
+#[test]
+fn teardrop_kami_sacs_to_tap() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::teardrop_kami());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(kami);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Mode(0), // tap
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("sac to tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(kami).is_none(), "Teardrop Kami sacrificed");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target creature tapped");
+}
+
+/// Soratami Savant returns a land to counter a spell its controller can't pay for.
+#[test]
+fn soratami_savant_counters_unless_paid() {
+    let mut g = two_player_game();
+    let savant = g.add_card_to_battlefield(0, catalog::soratami_savant());
+    g.add_card_to_battlefield(0, catalog::island()); // bounce fodder
+    g.clear_sickness(savant);
+    // Opponent casts a creature spell with no mana left to pay the tax.
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crate::mana::Color::Green, 2);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a creature");
+    // Savant's controller responds with the counter ability.
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: savant, ability_index: 0, target: Some(Target::Permanent(spell)), x_value: None,
+    }).expect("activate counter ability");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (unpaid)");
+}

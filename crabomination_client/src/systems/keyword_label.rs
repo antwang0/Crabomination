@@ -72,6 +72,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Toxic(_) => "Tox",
         // Combat-relevant statuses worth a glance on the board.
         CantBlock => "NoBlk",
+        // "Can't attack" (Pacifism / Cage of Hands) and the conditional
+        // Goblin-Cohort lock both read at a glance on the board.
+        CantAttack => "NoAtk",
+        CantAttackUnlessCastCreatureThisTurn => "Atk?",
         Decayed => "Dcy",
         Flanking => "Flk",
         // Generalized menace — "can't be blocked except by N or more."
@@ -230,5 +234,14 @@ mod tests {
     fn strip_surfaces_generalized_menace_and_lure() {
         assert_eq!(keyword_strip(&[Keyword::CantBeBlockedExceptByN(3)]), "Men+");
         assert_eq!(keyword_strip(&[Keyword::MustBeBlocked]), "Lure");
+    }
+
+    #[test]
+    fn strip_surfaces_cant_attack_statuses() {
+        assert_eq!(keyword_strip(&[Keyword::CantAttack]), "NoAtk");
+        assert_eq!(
+            keyword_strip(&[Keyword::CantAttackUnlessCastCreatureThisTurn]),
+            "Atk?"
+        );
     }
 }
