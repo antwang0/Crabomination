@@ -461,14 +461,15 @@ fn velomachus_attack_exiles_is_card_from_top_of_library_and_grants_may_play() {
 
 #[test]
 fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
-    // Mavinda's {0} activation: target IS card in your gy moves to
-    // exile with may_play_until + exile_after stamped. Once-per-turn
-    // gate enforced.
+    // Mavinda's {2} activation: target IS card in your gy moves to exile
+    // with may_play_until + exile_after + pay-own-cost stamped (cost +{2},
+    // not free). Once-per-turn gate enforced.
     let mut g = two_player_game();
     let mavinda = g.add_card_to_battlefield(0, catalog::mavinda_students_advocate());
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mavinda) {
         c.summoning_sick = false; c.tapped = false;
     }
+    g.players[0].mana_pool.add_colorless(2);
     // Seed a Lightning Bolt in P0's graveyard.
     let mut bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
     bolt.controller = 0;
@@ -477,7 +478,7 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(bolt_id)), x_value: None }).expect("Mavinda activation (cost {0})");
+        target: Some(crate::game::types::Target::Permanent(bolt_id)), x_value: None }).expect("Mavinda activation (cost {2})");
     drain_stack(&mut g);
 
     let exiled = g.exile.iter().find(|c| c.id == bolt_id)
@@ -485,8 +486,13 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
     let perm = exiled.may_play_until.expect("may_play stamped");
     assert!(perm.exile_after, "Mavinda's permission has exile_after=true");
     assert_eq!(perm.player, 0, "permission goes to Mavinda's controller");
+    // Pay-own-cost: the may-play cast isn't free — Bolt's own {R} is stamped.
+    assert_eq!(exiled.granted_alt_cast_cost_eot.as_ref().map(|c| c.cmc()), Some(1),
+        "cast-this-way pays the spell's own cost (+{{2}} paid on activation)");
 
-    // Second activation in the same turn → rejected (once-per-turn).
+    // Second activation in the same turn → rejected (once-per-turn), with
+    // mana available so the rejection is specifically the once-per-turn gate.
+    g.players[0].mana_pool.add_colorless(2);
     let mut bolt2 = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
     bolt2.controller = 0;
     let bolt2_id = bolt2.id;

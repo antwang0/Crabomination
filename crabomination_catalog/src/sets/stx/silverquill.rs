@@ -261,19 +261,12 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 /// Mavinda, Students' Advocate — {2}{W}, 2/3 Legendary Human Cleric,
 /// Flying + Vigilance.
 ///
-/// Push (modern_decks, batch 73): the `{0}` cast-from-graveyard
-/// activated ability is **now wired** via the Move(target → Exile) +
-/// `GrantMayPlay { exile_after: true }` permission-grant pattern (same
-/// shape as Nita Forum Conciliator's activation, which lands a gy IS
-/// card in exile with may-play-this-turn + exile-on-resolve). Cost
-/// {0} + `once_per_turn: true` (printed "Activate only once each
-/// turn"). The target filter is "Instant ∨ Sorcery" in your graveyard
-/// — the printed "that targets only a single creature" sub-filter is
-/// approximated to all IS cards (the engine has no "card in gy that
-/// would target only a creature" introspection since gy cards aren't
-/// on the stack — non-creature-target IS spells in your gy can still
-/// be picked, a minor convenience extension over the printed Oracle).
-/// Body/flying/vigilance unchanged.
+/// Once each turn, cast an instant/sorcery from your graveyard by paying
+/// {2} more rather than its mana cost; exile it if it would hit the
+/// graveyard. Modeled as a once-per-turn {2} ability that moves the card
+/// to exile and grants a pay-own-cost, exile-after may-play — so the total
+/// is the spell's cost + {2}, matching the printed surcharge. (The "targets
+/// only a single creature" sub-filter is approximated to all IS cards.)
 pub fn mavinda_students_advocate() -> CardDefinition {
     let target_is_in_your_gy = crate::effect::shortcut::target_filtered(
         SelectionRequirement::HasCardType(CardType::Instant)
@@ -295,7 +288,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: ManaCost::default(),
+            mana_cost: ManaCost::new(vec![generic(2)]),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: target_is_in_your_gy,
@@ -306,7 +299,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: true,
-                    pay_own_cost: false, any_color: false,
+                    pay_own_cost: true, any_color: false,
                 },
             ]),
             once_per_turn: true,
@@ -4984,9 +4977,7 @@ pub fn silverquill_sealwright() -> CardDefinition {
 // Magecraft templates. Each card uses existing engine primitives — no
 // engine changes required. All 22 are ✅ status; each has a lock-in
 // test in `tests::stx`. After this batch the Silverquill school is
-// fully closed-out (only Mavinda, Students' Advocate stays 🟡 pending
-// the cast-from-graveyard-targeting-only-a-single-creature engine
-// primitive — tracked separately).
+// fully closed-out.
 //
 // Names verified against `crabomination/src/catalog/sets/` for
 // uniqueness; "Silverquill Vanguard" already exists upstream, so this

@@ -30,9 +30,11 @@ share Kasmina's loyalty abilities" static
 - **~195 cards ship with documented approximations** (≈66 SOS, ≈129 STX —
   grep the catalogs for `Approximation` / `omitted` / `dropped`). Most capture
   the headline play pattern; a handful are near-vanilla/stub (e.g. Arclight
-  Phoenix, Possibility Storm, Hindering Light, Detention Sphere) and **Mavinda,
-  Students' Advocate stays 🟡** (gy-cast modeled as a {0} activated ability, not
-  the printed static).
+  Phoenix, Possibility Storm, Hindering Light, Detention Sphere). Mavinda,
+  Students' Advocate is now ✅ (gy-cast modeled as a once-per-turn {2} ability
+  granting a pay-own-cost, exile-after may-play — total = spell cost + {2},
+  matching the printed surcharge; only the "targets a single creature"
+  sub-filter is approximated).
 - **Stats match real Scryfall.** `audit_stx_drift.py` (cost + P/T) and the new
   `audit_stx_types.py` (type line + keywords) are both clean. The 2026-06-14/15
   sweep fixed **47 creature types + 20 keywords** (e.g. Mavinda Cleric+Vigilance →
