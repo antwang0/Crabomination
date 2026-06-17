@@ -1107,6 +1107,62 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Conspire (CR 702.78): for any hand card with `Keyword::Conspire`, tap
+    // the first two untapped creatures sharing a color with it to copy the
+    // spell. The bot conspires whenever it can — the copy is strictly upside
+    // for the targeted/value spells it appears on. `would_accept` confirms the
+    // base cost is still payable after the (free, tap-only) conspire cost.
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Conspire))
+    {
+        let spell_colors = c.definition.printed_colors();
+        let pair: Vec<CardId> = state
+            .battlefield
+            .iter()
+            .filter(|p| {
+                p.controller == seat
+                    && !p.tapped
+                    && p.definition.is_creature()
+                    && state
+                        .computed_permanent(p.id)
+                        .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                        .unwrap_or(false)
+            })
+            .map(|p| p.id)
+            .take(2)
+            .collect();
+        if pair.len() < 2 {
+            continue;
+        }
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellConspire {
+            card_id: c.id,
+            conspire_creatures: [pair[0], pair[1]],
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            // Prefer conspiring over the plain cast of the same card — the
+            // extra copy is value the bot's spell eval doesn't otherwise see.
+            let cid = c.id;
+            castable.retain(|a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid));
+            castable.push(action);
+        }
+    }
+
     // Kicker (CR 702.32): for any hand card with `Keyword::Kicker`, offer a
     // `CastSpellKicked` candidate. Targets come from the effect tree, whose
     // slot-0 filter resolves to the kicked (typically broader) branch, so a
@@ -2899,6 +2955,28 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never cast the adventure half");
+    }
+
+    /// CR 702.78 — the bot conspires Burn Trail when it controls two untapped
+    /// creatures sharing its color, tapping them to copy the spell.
+    #[test]
+    fn bot_conspires_burn_trail_when_able() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::burn_trail());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.add_card_to_battlefield(0, catalog::goblin_guide());
+        g.add_card_to_battlefield(0, catalog::goblin_guide());
+        let mut bot = RandomBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastSpellConspire { card_id, .. } = action {
+                assert_eq!(card_id, id, "bot conspires Burn Trail");
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never conspired");
     }
 
     /// When forced to chump (life threatened, no clean kill), the bot
