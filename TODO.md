@@ -109,11 +109,12 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
     devotion-counter conditional, flip cards (CR 710) for the CHK flip
     creatures.
-- ⏳ **Bot: general value-activated-ability generator.** The bot fires energy /
-  equip / loyalty / graveyard-recursion / free-mana abilities but has no path
-  for "sacrifice/tap: deal damage / destroy" value abilities (Frostling, Hearth
-  Kami, Goblin Bombardment). Add a sweep that offers profitable removal
-  activations (with X-value selection mirroring the spell path).
+- 🟡 **Bot: general value-activated-ability generator.** `pick_removal_ping`
+  now fires single-target "{cost}: deal damage to any target" abilities that
+  kill an opposing creature outright (constant amount, or Kiku's
+  damage-equal-to-its-power shape). Remaining: "sac: destroy" abilities
+  (Goblin Bombardment), X-value selection for scalable pings, and pointing a
+  ping at the opponent's face for reach.
 - ⏳ **THB cards deferred this run (need new primitives):**
   - Devotion-mana rock (Nyx Lotus): `{T}: choose a color, add devotion-to-it`
     — needs a choose-color + `Value::DevotionOfChosenColor` mana ability.

@@ -1549,6 +1549,14 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Fire a "{cost}: deal damage to any target" value ability (Frostwielder's
+    // {T} ping, Kiku's tap-and-burn, Pain Kami-style sac burn) when it kills an
+    // opposing creature outright. Dry-run-gated so cost / timing / target
+    // legality bottom out in `would_accept`.
+    if let Some(action) = pick_removal_ping(state, seat) {
+        return action;
+    }
+
     // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
     // manifested creature card) when the turn-up cost is affordable. Dry-run-
     // gated, so the cost / timing / "manifested noncreature can't turn up"
@@ -1570,6 +1578,60 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
         .filter(|c| c.controller == seat && c.face_down && c.face_up_def.is_some())
         .map(|c| GameAction::TurnFaceUp { card_id: c.id })
         .find(|a| state.would_accept(a.clone()))
+}
+
+/// Fire a single-target "deal damage to any target" activated ability that
+/// kills an opposing creature outright. Handles a constant damage amount
+/// (Frostwielder, Pain Kami at fixed X) and the "damage equal to its own power"
+/// shape (Kiku, Night's Flower). Targets the highest-power killable opponent
+/// creature; dry-run-gated so cost / sorcery timing / target legality all
+/// bottom out in `would_accept`. Conservative: never points the ability at a
+/// player (no chip damage) and never at the bot's own creatures.
+fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{Selector, Value};
+    // Opposing creatures, highest computed power first (best removal value).
+    let mut foes: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
+        .collect();
+    foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            // The effect must be a bare single-target DealDamage whose target
+            // can be a creature (not a self/own-board selector).
+            let Effect::DealDamage { to, amount } = &ab.effect else { continue };
+            if !matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. }) {
+                continue;
+            }
+            for (foe, foe_pow) in &foes {
+                let Some(cp) = state.computed_permanent(*foe) else { continue };
+                // Lethal check: a constant amount, or "equal to its own power"
+                // (Kiku) where the creature dies if power ≥ toughness.
+                let lethal = match amount {
+                    Value::Const(n) => *n >= cp.toughness,
+                    Value::PowerOf(s) if matches!(**s, Selector::Target(_)) => {
+                        *foe_pow >= cp.toughness
+                    }
+                    _ => false,
+                };
+                if !lethal {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(*foe)),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Find an affordable graveyard-activated ability whose cost exiles the source
@@ -2687,6 +2749,28 @@ mod tests {
         // With too little energy the bot leaves it alone.
         g.players[0].energy = 1;
         assert!(pick_energy_payoff(&g, 0).is_none(), "won't activate without enough energy");
+    }
+
+    /// The bot fires Frostwielder's `{T}: 1 damage` ping to kill a 1/1, but
+    /// won't waste it when no opposing creature dies to it.
+    #[test]
+    fn bot_pings_a_killable_creature() {
+        let mut g = two_player_game();
+        let fw = g.add_card_to_battlefield(0, catalog::frostwielder());
+        g.clear_sickness(fw);
+        let frostling = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+        let action = pick_removal_ping(&g, 0).expect("bot pings the 1/1");
+        match action {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, fw);
+                assert_eq!(target, Some(Target::Permanent(frostling)));
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // A 2/2 survives a 1-damage ping → the bot holds the ability.
+        g.battlefield.retain(|c| c.id != frostling);
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        assert!(pick_removal_ping(&g, 0).is_none(), "won't waste a ping on a survivor");
     }
 
     /// The bot recurs a creature from the graveyard via Embalm when it can
