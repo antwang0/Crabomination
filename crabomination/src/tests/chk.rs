@@ -2214,6 +2214,78 @@ fn budoka_gardener_flips_to_dokai_at_ten_lands() {
     assert_eq!((cp.power, cp.toughness), (10, 10), "X/X where X = lands you control");
 }
 
+/// Sakura-Tribe Elder sacrifices itself to ramp a basic land tapped.
+#[test]
+fn sakura_tribe_elder_sacs_to_fetch_a_basic() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let elder = g.add_card_to_battlefield(0, catalog::sakura_tribe_elder());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.clear_sickness(elder);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("sac for land");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == elder), "Elder sacrificed");
+    let f = g.battlefield_find(forest).expect("forest fetched to battlefield");
+    assert!(f.tapped, "fetched land enters tapped");
+}
+
+/// Kodama's Reach ramps one basic tapped and one to hand.
+#[test]
+fn kodamas_reach_ramps_one_tapped_one_to_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::forest());
+    let b = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)), DecisionAnswer::Search(Some(b)),
+    ]));
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let kr = g.add_card_to_hand(0, catalog::kodamas_reach());
+    cast(&mut g, kr);
+    let on_bf = [a, b].iter().filter(|id| g.battlefield_find(**id).is_some()).count();
+    let in_hand = [a, b].iter().filter(|id| g.players[0].hand.iter().any(|c| c.id == **id)).count();
+    assert_eq!((on_bf, in_hand), (1, 1), "one basic to battlefield, one to hand");
+}
+
+/// Kokusho drains 5 from each opponent on death (gain equal in 1v1).
+#[test]
+fn kokusho_drains_five_on_death() {
+    let mut g = two_player_game();
+    let kokusho = g.add_card_to_battlefield(0, catalog::kokusho_the_evening_star());
+    let (my_life, opp_life) = (g.players[0].life, g.players[1].life);
+    let events = g.remove_to_graveyard_with_triggers(kokusho);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 5, "opponent loses 5");
+    assert_eq!(g.players[0].life, my_life + 5, "you gain the life lost");
+}
+
+/// Azusa grants two additional land plays per turn (3 total).
+#[test]
+fn azusa_grants_two_extra_land_plays() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::azusa_lost_but_seeking());
+    assert_eq!(g.max_lands_per_turn(0), 3, "1 base + 2 from Azusa");
+}
+
+/// Commune with Nature digs five and takes a creature to hand.
+#[test]
+fn commune_with_nature_takes_a_creature() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    let cc = g.add_card_to_hand(0, catalog::commune_with_nature());
+    cast(&mut g, cc);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature pulled to hand");
+}
+
 /// CR 711.6 — a flip card reverts to its unflipped face as it leaves the
 /// battlefield.
 #[test]

@@ -4305,3 +4305,118 @@ pub fn budoka_gardener() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sakura-Tribe Elder — {1}{G} Snake Shaman 1/1. "Sacrifice this creature:
+/// Search your library for a basic land card, put it onto the battlefield
+/// tapped, then shuffle."
+pub fn sakura_tribe_elder() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Sakura-Tribe Elder",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Shaman]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kodama's Reach — {2}{G} Sorcery — Arcane. Search for up to two basic lands;
+/// put one onto the battlefield tapped, the other into your hand.
+pub fn kodamas_reach() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Kodama's Reach",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kokusho, the Evening Star — {4}{B}{B} Legendary Dragon Spirit 5/5. Flying;
+/// when it dies, each opponent loses 5 life and you gain life equal to the
+/// life lost this way.
+pub fn kokusho_the_evening_star() -> CardDefinition {
+    CardDefinition {
+        name: "Kokusho, the Evening Star",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Dragon, CreatureType::Spirit]),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(5),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Azusa, Lost but Seeking — {2}{G} Legendary Human Monk 1/2. "You may play two
+/// additional lands on each of your turns."
+pub fn azusa_lost_but_seeking() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Azusa, Lost but Seeking",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Monk]),
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility { description: "Play an additional land.", effect: StaticEffect::ExtraLandPerTurn },
+            StaticAbility { description: "Play an additional land.", effect: StaticEffect::ExtraLandPerTurn },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Commune with Nature — {G} Sorcery. Look at the top five cards of your
+/// library; you may put a creature card from among them into your hand, the
+/// rest on the bottom.
+pub fn commune_with_nature() -> CardDefinition {
+    CardDefinition {
+        name: "Commune with Nature",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Creature),
+            take: None,
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
