@@ -3131,6 +3131,17 @@ pub enum Effect {
         miss_dest: RevealMissDest,
     },
 
+    /// CR-style "impulse exile until a unique name" — Tainted Pact. Exile
+    /// the top card of `who`'s library; they may put it into their hand
+    /// unless it shares a name with a card already exiled this way, in which
+    /// case the process ends with that card exiled. Repeat until a card is
+    /// taken or a duplicate name is exiled (or the library empties). The
+    /// "you may keep digging" choice is asked of the controller via
+    /// `Decision::OptionalTrigger`; the default (AutoDecider) takes the first
+    /// uniquely-named card, and a `Bool(true)` answer means "decline, keep
+    /// digging."
+    ExileUntilDuplicateName { who: PlayerRef },
+
     /// Grant the controller one additional land play this turn. Used by
     /// Explore, Dryad of the Ilysian Grove, Oracle of Mul Daya, and similar
     /// "you may play an additional land" effects. Bumps

@@ -122,3 +122,107 @@ fn natural_order_sacrifices_and_fetches() {
     assert!(g.battlefield_find(sac).is_none(), "green creature sacrificed as cost");
     assert!(g.battlefield_find(big).is_some(), "fetched creature on battlefield");
 }
+
+/// Tainted Pact (auto-decider) exiles the top card and takes it into hand.
+#[test]
+fn tainted_pact_takes_top_card() {
+    let mut g = two_player_game();
+    let bear = g.next_id();
+    g.players[0].add_to_library_top(bear, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::tainted_pact());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tainted Pact");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "top card put into hand");
+    assert!(g.exile.iter().all(|c| c.id != bear), "taken card is not left in exile");
+}
+
+/// Declining each uniquely-named card digs until a duplicate name is exiled;
+/// that card (and the misses) stay in exile and nothing reaches hand.
+#[test]
+fn tainted_pact_digs_until_duplicate_name() {
+    let mut g = two_player_game();
+    // Library top → bottom: Forest, Grizzly Bears, Grizzly Bears.
+    let g1 = g.next_id();
+    g.players[0].add_to_library_top(g1, catalog::grizzly_bears());
+    let g2 = g.next_id();
+    g.players[0].add_to_library_top(g2, catalog::grizzly_bears());
+    let forest = g.next_id();
+    g.players[0].add_to_library_top(forest, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::tainted_pact());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Decline the two uniquely-named cards (Forest, first Grizzly).
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tainted Pact");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().all(|c| c.id != forest && c.id != g1 && c.id != g2),
+        "nothing reached hand");
+    assert!(g.players[0].library.is_empty(), "library emptied while digging");
+    for id in [forest, g1, g2] {
+        assert!(g.exile.iter().any(|c| c.id == id), "card {id:?} ended in exile");
+    }
+}
+
+/// Mizzix's Mastery exiles the targeted instant from the graveyard and
+/// free-casts it (the copy auto-targets the opponent).
+#[test]
+fn mizzixs_mastery_recasts_graveyard_instant() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let spell = g.add_card_to_hand(0, catalog::mizzixs_mastery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    // Confirm the "cast without paying?" prompt.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mizzix's Mastery");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life - 3, "recast Bolt dealt 3");
+}
+
+/// Overloaded Mizzix's Mastery free-casts every instant/sorcery in the
+/// graveyard (Bolt for 3 + Shock for 2 = 5 to the opponent).
+#[test]
+fn mizzixs_mastery_overload_recasts_each() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::shock());
+    let spell = g.add_card_to_hand(0, catalog::mizzixs_mastery());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spell, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("overload Mizzix's Mastery");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life - 5, "both spells recast for 3 + 2");
+}

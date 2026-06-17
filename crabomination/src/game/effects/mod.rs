@@ -7829,6 +7829,45 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileUntilDuplicateName { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut seen: Vec<String> = Vec::new();
+                loop {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let card = &self.players[p].library[0];
+                    let cid = card.id;
+                    let name = card.definition.name.to_string();
+                    let dup = seen.contains(&name);
+                    // Exile the top card (face up).
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if dup {
+                        // Same name as a card already exiled this way → the
+                        // process ends with this card exiled, none to hand.
+                        break;
+                    }
+                    seen.push(name);
+                    // Unique name → the controller may take it into hand
+                    // (ending the process) or keep digging. AutoDecider takes
+                    // it; a `Bool(true)` answer declines and continues.
+                    let keep_digging = matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source,
+                            description: "Tainted Pact: decline this card and keep digging?".to_string(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    );
+                    if !keep_digging {
+                        self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                        break;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BecomeCopyOf {
                 what,
                 source,

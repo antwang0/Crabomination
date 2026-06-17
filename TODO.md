@@ -96,15 +96,13 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Mystical Archive (STA) remainder** — two cards need new primitives:
-  - **Tainted Pact** — "exile top, may take unless it duplicates a name
-    already exiled this way; repeat." Needs an impulse-exile-until-unique
-    primitive (`Effect::ExileTopUntilDuplicateNameToHand`); a greedy
-    take-first model is a legal but weak approximation.
-  - **Mizzix's Mastery** — exile target instant/sorcery from your graveyard,
-    copy it and cast the copy free; Overload exiles *all* of them. Needs a
-    "cast-copy-of-a-graveyard-card-free" primitive; Overload can ride the
-    existing alt-cost `effect_override` path.
+- ✅ **Mystical Archive (STA) complete** — Tainted Pact rides the new
+  `Effect::ExileUntilDuplicateName` (per-card "you may keep digging" via
+  `OptionalTrigger`; AutoDecider takes the first uniquely-named card).
+  Mizzix's Mastery exiles the targeted I/S and free-casts it via
+  `CastWithoutPayingImmediate`; Overload rides the alt-cost `effect_override`
+  with a `ForEach`-over-graveyard that free-casts each I/S
+  (`TriggerSource`-bound, not `LastMoved`). Tests in `tests/stx/part_31.rs`.
 
 - ✅ **THB batch shipped** (`catalog::sets::thb`, tests `tests/thb.rs`):
   Heliod's Intervention (`Effect::DestroyTargets` X-target destroy),

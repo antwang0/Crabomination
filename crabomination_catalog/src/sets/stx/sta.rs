@@ -5,12 +5,12 @@
 //! homes so the Strixhaven draft/cube pools can pull them as one slice.
 
 use crate::card::{
-    AdditionalCastCost, CardDefinition, CardType, Effect, Keyword, Predicate, Selector,
-    SelectionRequirement, Value,
+    AdditionalCastCost, AlternativeCost, CardDefinition, CardType, Effect, Keyword, Predicate,
+    Selector, SelectionRequirement, Value, Zone,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, PlayerRef, RevealMissDest, ZoneDest};
-use crate::mana::{cost, g, generic, r, u, x, Color};
+use crate::effect::{Duration, PlayerRef, RevealMissDest, ZoneDest, ZoneRef};
+use crate::mana::{b, cost, g, generic, r, u, x, Color};
 
 // ── Infuriate ────────────────────────────────────────────────────────────────
 
@@ -119,6 +119,65 @@ pub fn natural_order() -> CardDefinition {
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             filter: SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Green)),
         },
+        ..Default::default()
+    }
+}
+
+/// Tainted Pact — {1}{B} Instant. Exile the top card of your library; you may
+/// put it into your hand unless it shares a name with a card already exiled
+/// this way, which ends the process. Repeat until you take a card or hit a
+/// duplicate name.
+pub fn tainted_pact() -> CardDefinition {
+    CardDefinition {
+        name: "Tainted Pact",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileUntilDuplicateName { who: PlayerRef::You },
+        ..Default::default()
+    }
+}
+
+/// Mizzix's Mastery — {3}{R} Sorcery. Exile target instant/sorcery from your
+/// graveyard and cast a copy of it for free. Overload {5}{R}{R}{R}: do that
+/// for each instant/sorcery in your graveyard.
+///
+/// The exiled card itself is cast from exile (a faithful-enough stand-in for
+/// "copy it"); under overload each card is exiled and free-cast in turn.
+pub fn mizzixs_mastery() -> CardDefinition {
+    let is_filter = SelectionRequirement::HasCardType(CardType::Instant)
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery));
+    let free_cast = |what| Effect::CastWithoutPayingImmediate {
+        what,
+        source_zone: Zone::Exile,
+        exile_after: false,
+    };
+    CardDefinition {
+        name: "Mizzix's Mastery",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(is_filter.clone().and(SelectionRequirement::InYourGraveyard)),
+                to: ZoneDest::Exile,
+            },
+            free_cast(Selector::LastMoved),
+        ]),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(5), r(), r(), r()]),
+            // `ForEach` binds each graveyard card to `TriggerSource`; reference
+            // it directly (not `LastMoved`, which accumulates across the loop).
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachMatching {
+                    zone: ZoneRef::Graveyard(PlayerRef::You),
+                    filter: is_filter.clone(),
+                },
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    free_cast(Selector::TriggerSource),
+                ])),
+            }),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

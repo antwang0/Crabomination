@@ -3,10 +3,10 @@
 Two catalogs: **Secrets of Strixhaven (SOS)** (`catalog::sets::sos`) and
 **Strixhaven: School of Mages (STX)** (`catalog::sets::stx`). The STX base set
 is 100% implemented; the **Mystical Archive (STA)** companion lives in
-`catalog::sets::stx::sta` (Infuriate, Blue Sun's Zenith, Abundant Harvest,
-Urza's Rage, Natural Order shipped — tests in `tests/stx/part_31.rs`).
-Remaining STA: Tainted Pact (impulse-exile-until-unique-name primitive),
-Mizzix's Mastery (exile-I/S-from-gy + cast-copy-free + overload) — see TODO.md.
+`catalog::sets::stx::sta` and is complete: Infuriate, Blue Sun's Zenith,
+Abundant Harvest, Urza's Rage, Natural Order, Tainted Pact
+(`Effect::ExileUntilDuplicateName`), Mizzix's Mastery (exile-I/S-from-gy +
+free-cast + overload via `effect_override`) — tests in `tests/stx/part_31.rs`.
 
 Learn / Lessons-sideboard is wired end-to-end (engine, every Learn card,
 cube/format/draft sideboards, client modal).

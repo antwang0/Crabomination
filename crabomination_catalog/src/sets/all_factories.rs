@@ -6834,6 +6834,8 @@ static STX: &[Factory] = &[
     super::stx::abundant_harvest,
     super::stx::urzas_rage,
     super::stx::natural_order,
+    super::stx::tainted_pact,
+    super::stx::mizzixs_mastery,
     super::stx::witherbloom_apprentice,
     super::stx::pest_summoning,
     super::stx::bayou_groff,

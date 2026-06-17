@@ -187,6 +187,7 @@ impl Effect {
             Effect::ManifestDread { .. } => false,
             Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands => false,
+            Effect::ExileUntilDuplicateName { .. } => false,
             Effect::ExileFromHandTaxed { .. } => false,
             Effect::Hideaway { .. } => false,
             Effect::NthResolutionThisTurn { branches } => {
