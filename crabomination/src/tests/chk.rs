@@ -2298,3 +2298,60 @@ fn tok_tok_adds_one_to_red_damage_to_players() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life_before - 3, "red 2/2 deals 2+1 with Tok-Tok out");
 }
+
+/// Jaraku (Callow Jushi's flip side) counters a spell unless its controller
+/// pays {2}, spending a ki counter.
+#[test]
+fn jaraku_counters_unless_paid() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let jushi = g.add_card_to_battlefield(0, catalog::callow_jushi());
+    g.battlefield_find_mut(jushi).unwrap().add_counters(CounterType::Ki, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jushi).unwrap().definition.name, "Jaraku the Interloper");
+    // Opponent (no mana) casts a spell; Jaraku counters it.
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts");
+    g.battlefield_find_mut(jushi).unwrap().tapped = false;
+    g.clear_sickness(jushi);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jushi, ability_index: 0,
+        target: Some(Target::Permanent(spell)), x_value: None,
+    }).expect("Jaraku counters");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (opp can't pay)");
+}
+
+/// Jushi Apprentice flips into Tomoya once its draw pushes hand size to nine+.
+#[test]
+fn jushi_apprentice_flips_at_nine_cards() {
+    let mut g = two_player_game();
+    let jushi = g.add_card_to_battlefield(0, catalog::jushi_apprentice());
+    // Stock library (so the draw resolves) and hand to 8 (the draw makes 9).
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    for _ in 0..8 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    g.clear_sickness(jushi);
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jushi, ability_index: 0, target: None, x_value: None,
+    }).expect("draw + maybe flip");
+    drain_stack(&mut g);
+    let tom = g.battlefield_find(jushi).unwrap();
+    assert!(tom.flipped && tom.definition.name == "Tomoya the Revealer", "flipped at 9 cards");
+}

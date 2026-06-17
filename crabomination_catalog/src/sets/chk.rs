@@ -3535,6 +3535,94 @@ pub fn cunning_bandit() -> CardDefinition {
     }
 }
 
+/// Callow Jushi // Jaraku the Interloper — {1}{U}{U} Human Wizard 2/2.
+/// Ki-counter flip card; flips into Jaraku, a 3/4 Legendary Spirit whose
+/// "Remove a ki counter: Counter target spell unless its controller pays {2}."
+pub fn callow_jushi() -> CardDefinition {
+    use crate::card::CounterType;
+    let jaraku = CardDefinition {
+        name: "Jaraku the Interloper",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Ki, 1)),
+            effect: Effect::CounterUnlessPaid {
+                what: crate::effect::shortcut::target(),
+                mana_cost: cost(&[generic(2)]),
+                exile: false,
+                extra_generic: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Callow Jushi",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: ki_flip_triggers(),
+        flip_face: Some(Box::new(jaraku)),
+        ..Default::default()
+    }
+}
+
+/// Jushi Apprentice // Tomoya the Revealer — {1}{U} Human Wizard 1/2.
+/// "{2}{U}, {T}: Draw a card. If you have nine or more cards in hand, flip."
+/// Tomoya: "{3}{U}{U}, {T}: Target player draws X, X = cards in your hand."
+pub fn jushi_apprentice() -> CardDefinition {
+    use crate::effect::Predicate;
+    let tomoya = CardDefinition {
+        name: "Tomoya the Revealer",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3), u(), u()]),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::HandSizeOf(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Jushi Apprentice",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::HandSizeOf(PlayerRef::You),
+                        Value::Const(9),
+                    ),
+                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        flip_face: Some(Box::new(tomoya)),
+        ..Default::default()
+    }
+}
+
 /// Hired Muscle // Scarmaker — {1}{B}{B} Human Warrior 2/2. Ki-counter flip
 /// card; flips into Scarmaker, a 4/4 Legendary Spirit whose "Remove a ki
 /// counter: Target creature gains fear until end of turn."
