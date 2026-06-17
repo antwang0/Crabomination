@@ -1105,7 +1105,7 @@ fn quandrix_pledgemage_grows_via_activated_ability() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pm, ability_index: 0, target: None, x_value: None })
+        card_id: pm, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Quandrix Pledgemage activatable for {1}{G}{U}");
     drain_stack(&mut g);
     let pm_card = g.battlefield.iter().find(|c| c.id == pm).unwrap();
@@ -1337,7 +1337,7 @@ fn galazeth_prismari_grants_tap_for_any_color_to_artifacts() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: skycoach,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Galazeth grant: {T}: Add one mana of any color");
 
     let pool_after = g.players[0].mana_pool.total();
@@ -1363,7 +1363,7 @@ fn galazeth_prismari_grant_requires_galazeth_in_play() {
         .perform_action(GameAction::ActivateAbility {
             card_id: skycoach,
             ability_index: 0,
-            target: None, x_value: None })
+            target: None, additional_targets: Vec::new(), x_value: None })
         .expect_err("no Galazeth → no grant → rejected");
     assert!(
         matches!(err, GameError::AbilityIndexOutOfBounds),
@@ -1411,7 +1411,7 @@ fn lorehold_pledgemage_gy_exile_cost_pumps_self() {
     let p_before = g.battlefield_find(pledge).unwrap().power();
     let t_before = g.battlefield_find(pledge).unwrap().toughness();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None, x_value: None })
+        card_id: pledge, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Pledgemage activation with bolt in gy");
     drain_stack(&mut g);
 
@@ -1437,7 +1437,7 @@ fn lorehold_pledgemage_rejects_activation_with_empty_graveyard() {
     let pool_before = g.players[0].mana_pool.total();
 
     let r = g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None, x_value: None });
+        card_id: pledge, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
     assert!(r.is_err(),
         "Empty graveyard should reject the exile-other cost");
     assert_eq!(g.players[0].mana_pool.total(), pool_before,
@@ -1457,7 +1457,7 @@ fn beledros_witherbloom_pay_ten_life_untaps_all_lands() {
 
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: beledros, ability_index: 0, target: None, x_value: None })
+        card_id: beledros, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Beledros activatable as sorcery");
     drain_stack(&mut g);
 
@@ -1474,7 +1474,7 @@ fn beledros_witherbloom_rejects_activation_with_insufficient_life() {
     g.players[0].life = 5; // not enough for the 10-life cost.
 
     let r = g.perform_action(GameAction::ActivateAbility {
-        card_id: beledros, ability_index: 0, target: None, x_value: None });
+        card_id: beledros, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
     assert!(r.is_err(), "Activation rejected when life < 10");
     assert_eq!(g.players[0].life, 5, "Life unchanged on rejection");
 }
@@ -1588,7 +1588,7 @@ fn life_cost_mana_ability_is_a_mana_ability_per_cr_605() {
     let mana_before = g.players[0].mana_pool.total();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None, x_value: None })
+        card_id: pledge, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
     .expect("mana ability activatable");
 
     assert_eq!(g.stack.len(), stack_before, "mana ability should not push onto the stack");
@@ -1605,7 +1605,7 @@ fn life_cost_mana_ability_rejects_activation_with_zero_life() {
     g.players[0].life = 0;
 
     let r = g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None, x_value: None });
+        card_id: pledge, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
     assert!(r.is_err(), "should reject when life < 1");
 }
 
@@ -1811,6 +1811,7 @@ fn beledros_witherbloom_pay_ten_life_untaps_lands() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: bele, ability_index: 0, target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("Beledros activated for 10 life");
     drain_stack(&mut g);
@@ -2300,7 +2301,7 @@ fn spell_satchel_tap_adds_one_colorless() {
 
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: satchel, ability_index: 0, target: None, x_value: None })
+        card_id: satchel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Spell Satchel mana ability activatable");
     assert_eq!(g.players[0].mana_pool.total(), mana_before + 1,
         "Spell Satchel should add 1 colorless");
@@ -2320,7 +2321,7 @@ fn spell_satchel_sacrifice_returns_low_cmc_spell_from_graveyard() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: Some(Target::Permanent(bolt)), x_value: None })
+        target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -2348,7 +2349,7 @@ fn spell_satchel_returns_multiple_low_mv_instants_within_cap() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -2373,7 +2374,7 @@ fn spell_satchel_picks_bolt_and_cancel_at_exactly_four_total() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -2398,7 +2399,7 @@ fn spell_satchel_skips_cards_that_would_overflow_cap() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -2431,7 +2432,7 @@ fn spell_satchel_greedy_walk_still_fits_smaller_after_skipping_bigger() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -2457,7 +2458,7 @@ fn spell_satchel_filters_to_instants_and_sorceries() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -2859,7 +2860,7 @@ fn specter_of_the_fens_drains_two() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spec, ability_index: 0, target: None, x_value: None,
+        card_id: spec, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{5}{B} drain");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 2, "opponent loses 2");
@@ -2933,7 +2934,7 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
 
     let c_before = g.players[0].mana_pool.colorless_amount();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, x_value: None }).expect("Hall {T}: Add {C}");
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Hall {T}: Add {C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
 
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == land) {
@@ -2941,7 +2942,7 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
     }
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(wiz)), x_value: None }).expect("Hall {2},{T}: +1/+1");
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(wiz)), additional_targets: Vec::new(), x_value: None }).expect("Hall {2},{T}: +1/+1");
     drain_stack(&mut g);
 
     let wiz_c = g.battlefield.iter().find(|c| c.id == wiz).unwrap();
@@ -3033,7 +3034,7 @@ fn letter_of_acceptance_fixes_mana_then_sacs_to_draw() {
 
     // Tap for one mana of any color.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: letter_id, ability_index: 0, target: None, x_value: None }).expect("{T}: Add any color");
+        card_id: letter_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("{T}: Add any color");
     assert_eq!(g.players[0].mana_pool.total(), 1, "added one mana");
 
     // Untap, then sac to draw.
@@ -3042,7 +3043,7 @@ fn letter_of_acceptance_fixes_mana_then_sacs_to_draw() {
     g.add_card_to_library(0, catalog::island());
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: letter_id, ability_index: 1, target: None, x_value: None }).expect("{2},{T},Sac: Draw");
+        card_id: letter_id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("{2},{T},Sac: Draw");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
@@ -3250,7 +3251,7 @@ fn dragonsguard_elite_magecraft_adds_counter_and_pumps_x_equal_to_power() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dge, ability_index: 0, target: None, x_value: None }).expect("{3}{G}: +X/+X");
+        card_id: dge, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("{3}{G}: +X/+X");
     drain_stack(&mut g);
 
     let d2 = g.battlefield.iter().find(|c| c.id == dge).unwrap();
@@ -3428,7 +3429,7 @@ fn reckless_amplimancer_doubles_power_and_toughness() {
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
         .expect("Reckless Amplimancer activates {4}{G}");
     drain_stack(&mut g);
 

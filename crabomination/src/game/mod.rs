@@ -4988,8 +4988,9 @@ impl GameState {
                 card_id,
                 ability_index,
                 target,
+                additional_targets,
                 x_value,
-            } => self.activate_ability(card_id, ability_index, target, x_value),
+            } => self.activate_ability(card_id, ability_index, target, additional_targets, x_value),
             GameAction::ActivateLoyaltyAbility {
                 card_id,
                 ability_index,
@@ -7025,11 +7026,12 @@ impl GameState {
                 mana_spent,
                 trigger_source_ent,
                 event_amount,
+                additional_targets,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 let mut more = self.continue_trigger_resolution_with_source(
                     source, controller, remaining, target, mode, x_value, converged_value,
-                    mana_spent, trigger_source_ent, event_amount,
+                    mana_spent, trigger_source_ent, event_amount, additional_targets,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -7293,6 +7295,7 @@ impl GameState {
                 card_id,
                 ability_index,
                 target,
+                additional_targets,
                 x_value,
                 kind,
             } => {
@@ -7329,7 +7332,7 @@ impl GameState {
                         self.pending_ability_exile_other = Some(ids);
                     }
                 }
-                return self.activate_ability(card_id, ability_index, target, x_value);
+                return self.activate_ability(card_id, ability_index, target, additional_targets, x_value);
             }
         };
         let mut sba = self.check_state_based_actions();
@@ -8462,6 +8465,7 @@ impl GameState {
         mana_spent: u32,
         trigger_source_ent: Option<crate::game::effects::EntityRef>,
         event_amount: u32,
+        additional_targets: Vec<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
         // Event-amount-relative filters re-checked at resolution
         // (ManaValueLessThanEventAmount) read this scratch.
@@ -8483,6 +8487,8 @@ impl GameState {
         };
         let mut ctx =
             EffectContext::for_trigger(source, controller, resolved_target.clone(), mode);
+        // Append slot-1+ targets (two-target activated abilities) after slot 0.
+        ctx.targets.extend(additional_targets.iter().cloned());
         ctx.x_value = x_value;
         ctx.converged_value = converged_value;
         // CR 702.32 — an ETB/other trigger on a permanent reads the
@@ -8513,6 +8519,7 @@ impl GameState {
                     mana_spent,
                     trigger_source_ent,
                     event_amount,
+                    additional_targets,
                 },
             });
         }

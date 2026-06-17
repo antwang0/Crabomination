@@ -635,7 +635,7 @@ fn cr_728_sundial_exiles_the_stack_and_skips_to_cleanup() {
         mode: None, x_value: None,
     }).expect("cast bolt");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sundial, ability_index: 0, target: None, x_value: None,
+        card_id: sundial, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Sundial");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bolt), "bolt exiled off the stack (728.1a)");
@@ -654,7 +654,7 @@ fn cr_728_sundial_rejects_activation_on_opponents_turn() {
     g.players[1].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 1;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: sundial, ability_index: 0, target: None, x_value: None,
+        card_id: sundial, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).is_err(), "only during your turn");
 }
 
@@ -705,7 +705,7 @@ fn cr_615_7_forge_tender_blanks_a_red_spell() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bolt])]));
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tender, ability_index: 0, target: None, x_value: None,
+        card_id: tender, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac the Forge-Tender");
     drain_stack(&mut g);
     let bear = g.battlefield_find(mine).expect("bear survives");
@@ -727,7 +727,7 @@ fn cr_615_7_forge_tender_prevents_a_creatures_combat_damage() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![raider])]));
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tender, ability_index: 0, target: None, x_value: None,
+        card_id: tender, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac the Forge-Tender");
     drain_stack(&mut g);
     g.step = TurnStep::DeclareAttackers;
@@ -1021,6 +1021,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let mut events = Vec::new();
     let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
@@ -1115,7 +1116,7 @@ fn cr_602_2b_blood_token_discard_is_a_cost() {
     g.players[0].hand.clear();
     assert!(
         g.perform_action(GameAction::ActivateAbility {
-            card_id: blood, ability_index: 0, target: None, x_value: None,
+            card_id: blood, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
         })
         .is_err(),
         "empty hand can't pay the Blood discard cost"
@@ -1746,7 +1747,7 @@ fn cr_702_61_split_second_locks_casts_and_nonmana_abilities() {
     // Mana abilities are exempt (702.61b).
     g.battlefield_find_mut(mountain).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mountain, ability_index: 0, target: None, x_value: None,
+        card_id: mountain, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tapping for mana stays legal");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "Sudden Shock resolved for 2");
@@ -1779,7 +1780,7 @@ fn cr_702_61_triggers_fire_but_activations_blocked() {
     g.priority.player_with_priority = 1;
     g.players[1].mana_pool.add_colorless(1);
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 1, target: None, x_value: None,
+        card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).unwrap_err();
     assert_eq!(err, GameError::SplitSecondLock);
     drain_stack(&mut g);
@@ -1914,7 +1915,7 @@ fn nylea_reveal_miss_may_go_to_graveyard() {
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: nylea, ability_index: 0, target: None, x_value: None,
+        card_id: nylea, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate the reveal");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "miss binned by choice");
@@ -2202,7 +2203,7 @@ fn cr_702_177_exhaust_ability_activates_only_once_per_game() {
     g.clear_sickness(cam);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cam, ability_index: 0, target: None, x_value: None,
+        card_id: cam, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("first exhaust activation");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(cam).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
@@ -2213,7 +2214,7 @@ fn cr_702_177_exhaust_ability_activates_only_once_per_game() {
     // Same turn → rejected.
     g.players[0].mana_pool.add_colorless(3);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: cam, ability_index: 0, target: None, x_value: None,
+        card_id: cam, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).is_err(), "exhaust ability can't be activated twice");
 
     // Turn cleanup clears once-per-turn state, but exhaust persists (per game).
@@ -2222,7 +2223,7 @@ fn cr_702_177_exhaust_ability_activates_only_once_per_game() {
     }
     g.players[0].mana_pool.add_colorless(3);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: cam, ability_index: 0, target: None, x_value: None,
+        card_id: cam, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).is_err(), "exhaust stays spent across turns");
 }
 
@@ -2235,7 +2236,7 @@ fn cr_702_177_hazard_of_the_dunes_exhaust_counters_once() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: h, ability_index: 0, target: None, x_value: None,
+        card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust");
     drain_stack(&mut g);
     let c = g.battlefield_find(h).unwrap();
@@ -2243,7 +2244,7 @@ fn cr_702_177_hazard_of_the_dunes_exhaust_counters_once() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(6);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: h, ability_index: 0, target: None, x_value: None,
+        card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).is_err(), "exhaust can't repeat");
 }
 
@@ -2258,7 +2259,7 @@ fn cr_702_177_pacesetter_paragon_exhaust_grants_double_strike() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: p, ability_index: 0, target: None, x_value: None,
+        card_id: p, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust");
     drain_stack(&mut g);
     let c = g.computed_permanent(p).unwrap();
@@ -2279,7 +2280,7 @@ fn cr_702_177_greenbelt_guardian_repeatable_and_exhaust_abilities() {
     for _ in 0..2 {
         g.players[0].mana_pool.add(Color::Green, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: gg, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+            card_id: gg, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
         }).expect("repeatable trample grant");
         drain_stack(&mut g);
     }
@@ -2288,7 +2289,7 @@ fn cr_702_177_greenbelt_guardian_repeatable_and_exhaust_abilities() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gg, ability_index: 1, target: None, x_value: None,
+        card_id: gg, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust counters");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(gg).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
@@ -2303,7 +2304,7 @@ fn cr_702_177_prowcatcher_specialist_exhaust() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: p, ability_index: 0, target: None, x_value: None,
+        card_id: p, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust");
     drain_stack(&mut g);
     let c = g.battlefield_find(p).unwrap();
@@ -2323,7 +2324,7 @@ fn cr_702_177_keen_buccaneer_exhaust_loots_and_grows() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: k, ability_index: 0, target: None, x_value: None,
+        card_id: k, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "draw 1 then discard 1 nets even");
@@ -2358,7 +2359,7 @@ fn cr_702_177_skystreak_engineer_exhaust() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: s, ability_index: 0, target: None, x_value: None,
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust");
     drain_stack(&mut g);
     let c = g.battlefield_find(s).unwrap();
@@ -2374,7 +2375,7 @@ fn cr_702_177_mai_jaded_edge_double_strike_counter() {
     g.clear_sickness(m);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: m, ability_index: 0, target: None, x_value: None,
+        card_id: m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust");
     drain_stack(&mut g);
     assert!(g.computed_permanent(m).unwrap().keywords.contains(&Keyword::DoubleStrike),
@@ -2391,7 +2392,7 @@ fn cr_702_177_stampeding_scurryfoot_exhaust() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: s, ability_index: 0, target: None, x_value: None,
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exhaust");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(s).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -2412,7 +2413,7 @@ fn cr_702_177_mindspring_merfolk_x_draw_and_counters() {
     g.players[0].mana_pool.add_colorless(2); // X = 2
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: m, ability_index: 0, target: None, x_value: Some(2),
+        card_id: m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2),
     }).expect("exhaust X=2");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew X=2");

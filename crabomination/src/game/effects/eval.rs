@@ -1159,6 +1159,9 @@ impl GameState {
                     R::Tapped => card.tapped,
                     R::Untapped => !card.tapped,
                     R::DealtDamageThisTurn => card.dealt_damage_this_turn,
+                    R::DamagedBySourceThisTurn => {
+                        source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
+                    }
                     // CR 105.2/202.2 — hybrid/Phyrexian pips count via
                     // `ManaCost::colors()` (bare `Colored` scan missed them).
                     R::HasColor(c) => card.definition.cost.colors().contains(c),
@@ -1321,6 +1324,11 @@ impl GameState {
                         .players
                         .get(controller)
                         .is_some_and(|p| p.graveyard.iter().any(|c| c.id == *cid)),
+                    R::InOpponentGraveyard => self
+                        .players
+                        .iter()
+                        .enumerate()
+                        .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == *cid)),
                     R::InExile => self.exile.iter().any(|c| c.id == *cid),
                     // CR-spec: "the greatest mana value among [filter] they
                     // control" — the candidate must (a) match `inner` and
@@ -1524,6 +1532,11 @@ impl GameState {
                 .players
                 .get(controller)
                 .is_some_and(|p| p.graveyard.iter().any(|c| c.id == card.id)),
+            R::InOpponentGraveyard => self
+                .players
+                .iter()
+                .enumerate()
+                .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == card.id)),
             R::InExile => self.exile.iter().any(|c| c.id == card.id),
             // Battlefield-only ("greatest MV among controlled" walks the
             // battlefield in the static variant; library searches don't
@@ -1576,7 +1589,8 @@ impl GameState {
             | R::AttackedThisTurn | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::DealtDamageToControllerThisTurn | R::IsEnchanted
-            | R::IsEquipped | R::IsModified | R::DealtDamageThisTurn => false,
+            | R::IsEquipped | R::IsModified | R::DealtDamageThisTurn
+            | R::DamagedBySourceThisTurn => false,
         }
     }
 }

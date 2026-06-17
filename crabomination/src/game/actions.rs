@@ -6467,7 +6467,7 @@ impl GameState {
                 // the right answer.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                let result = self.activate_ability(id, idx, None, None);
+                let result = self.activate_ability(id, idx, None, Vec::new(), None);
                 self.decider = prev_decider;
                 self.players[player].wants_ui = prev_wants_ui;
                 if let Ok(mut evs) = result {
@@ -6487,7 +6487,7 @@ impl GameState {
                     .map(|(idx, _)| (c.id, idx))
             }).next();
             let Some((id, idx)) = source else { break };
-            if let Ok(mut evs) = self.activate_ability(id, idx, None, None) {
+            if let Ok(mut evs) = self.activate_ability(id, idx, None, Vec::new(), None) {
                 events.append(&mut evs);
             } else {
                 break;
@@ -6787,6 +6787,7 @@ impl GameState {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        additional_targets: Vec<Target>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
@@ -7137,6 +7138,20 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // Two-target activated abilities (Autumn-Tail): validate slots 1+ the
+        // same way — legality (hexproof/shroud/…) plus the per-slot filter.
+        for (i, tgt) in additional_targets.iter().enumerate() {
+            self.check_target_legality(tgt, p)?;
+            if let Some(filter) = ability
+                .effect
+                .target_filter_for_slot((i + 1) as u8)
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
+            {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Pre-flight life-cost gate: reject activation cleanly when the
         // controller doesn't have enough life. Mirror the mana-cost
         // pre-pay check (we want a clean error, not a "you can't pay
@@ -7210,6 +7225,7 @@ impl GameState {
                         card_id,
                         ability_index,
                         target,
+                        additional_targets: additional_targets.clone(),
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::ExileOther,
                     },
@@ -7278,6 +7294,7 @@ impl GameState {
                         card_id,
                         ability_index,
                         target,
+                        additional_targets: additional_targets.clone(),
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::SacOther,
                     },
@@ -7333,6 +7350,7 @@ impl GameState {
                         card_id,
                         ability_index,
                         target,
+                        additional_targets: additional_targets.clone(),
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::TapOther,
                     },
@@ -7546,6 +7564,7 @@ impl GameState {
                         card_id,
                         ability_index,
                         target: target.clone(),
+                        additional_targets: Vec::new(),
                         x_value,
                     }),
                 },
@@ -7942,6 +7961,7 @@ impl GameState {
             self.stack.push(
                 TriggerPush::new(card_id, p, queued_effect)
                     .target(target)
+                    .additional_targets(additional_targets.clone())
                     .mode(mode)
                     .x_value(activated_x)
                     .build(),

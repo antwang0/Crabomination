@@ -3616,7 +3616,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None });
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3665,7 +3665,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None });
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3729,6 +3729,7 @@ pub fn handle_game_input(
                             card_id: src,
                             ability_index: idx,
                             target: Some(target),
+                            additional_targets: Vec::new(),
                             x_value: None,
                         });
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -4075,6 +4076,7 @@ pub fn handle_game_input(
                         card_id: perm.id,
                         ability_index: mana_abilities[0].index,
                         target: None,
+                        additional_targets: Vec::new(),
                         x_value: None,
                     });
                 }

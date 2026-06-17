@@ -2768,7 +2768,7 @@ fn lorehold_memorial_taps_for_red_or_white() {
     drain_stack(&mut g);
     // Activate the Red mana ability (index 0).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Memorial Red mana ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Memorial Red mana ability");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     let body = g.battlefield_find(id).unwrap();
     assert!(body.tapped);

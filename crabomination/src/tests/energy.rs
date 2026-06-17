@@ -52,7 +52,7 @@ fn longtusk_cub_pays_energy_for_counter() {
     g.clear_sickness(cub);
     g.players[0].energy = 3;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cub, ability_index: 0, target: None, x_value: None,
+        card_id: cub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable with 3 energy");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0, "spent {{E}}{{E}}{{E}}");
@@ -89,7 +89,7 @@ fn bristling_hydra_etb_energy_then_pays_for_counter_and_hexproof() {
     cast_creature(&mut g, id);
     assert_eq!(g.players[0].energy, 3, "ETB grants {{E}}{{E}}{{E}}");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0);
@@ -106,7 +106,7 @@ fn pay_energy_without_enough_is_a_noop() {
     g.clear_sickness(cub);
     g.players[0].energy = 2;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cub, ability_index: 0, target: None, x_value: None,
+        card_id: cub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activation itself is free");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 2, "insufficient energy → not spent");
@@ -138,7 +138,7 @@ fn servant_of_the_conduit_etb_energy_and_taps_for_mana() {
     assert_eq!(g.players[0].energy, 2, "ETB grants {{E}}{{E}}");
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("mana ability");
     let pool = g.players[0].mana_pool.total();
     assert!(pool >= 1, "tapped for a mana");
@@ -154,6 +154,7 @@ fn dynavolt_tower_pays_mana_and_energy_to_burn() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: tower, ability_index: 0,
         target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activatable with {5} + 5 energy");
     drain_stack(&mut g);
@@ -262,7 +263,7 @@ fn woodweavers_puzzleknot_etb_and_sac_payoff() {
     assert_eq!(g.players[0].life, life + 3, "ETB gain 3");
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 6, "sac adds {{E}}{{E}}{{E}}");
@@ -318,7 +319,7 @@ fn aetherstream_leopard_pays_four_energy_for_unblockable() {
     assert_eq!(g.players[0].energy, 2);
     g.players[0].energy = 4;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0);
@@ -332,7 +333,7 @@ fn riparian_tiger_pays_two_energy_for_hexproof() {
     let id = g.add_card_to_battlefield(0, catalog::riparian_tiger());
     g.players[0].energy = 2;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0);
@@ -366,7 +367,7 @@ fn cr_107_14_paying_energy_removes_counters() {
     g.clear_sickness(cub);
     g.players[0].energy = 5;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cub, ability_index: 0, target: None, x_value: None,
+        card_id: cub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 2, "paid {{E}}{{E}}{{E}} of 5 → 2 remain");
@@ -532,7 +533,7 @@ fn aether_hub_colorless_ability_needs_no_energy() {
     g.clear_sickness(hub);
     g.players[0].energy = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hub, ability_index: 0, target: None, x_value: None,
+        card_id: hub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("colorless tap needs no energy");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
@@ -548,14 +549,14 @@ fn aether_hub_any_color_ability_is_energy_gated() {
     g.clear_sickness(hub);
     g.players[0].energy = 0;
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: hub, ability_index: 1, target: None, x_value: None,
+        card_id: hub, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(matches!(err, Err(GameError::InsufficientEnergy)), "no energy → rejected");
     assert!(!g.battlefield_find(hub).unwrap().tapped, "rejected activation didn't tap");
 
     g.players[0].energy = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hub, ability_index: 1, target: None, x_value: None,
+        card_id: hub, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable with 1 energy");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0, "spent the {{E}}");
@@ -569,7 +570,7 @@ fn servant_of_the_conduit_mana_ability_spends_energy() {
     g.clear_sickness(servant);
     g.players[0].energy = 2;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: servant, ability_index: 0, target: None, x_value: None,
+        card_id: servant, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activatable with energy");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 1, "spent one {{E}} of two");

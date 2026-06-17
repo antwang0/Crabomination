@@ -22,7 +22,7 @@ fn dueling_coach_activation_counters_each_creature_you_control() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: coach,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("Dueling Coach activation works for {4}{W},{T}");
     drain_stack(&mut g);
 
@@ -51,7 +51,7 @@ fn shaile_counters_only_creatures_that_entered_this_turn() {
     g.battlefield.iter_mut().find(|c| c.id == opp).unwrap().entered_turn = Some(turn);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shaile, ability_index: 0, target: None, x_value: None,
+        card_id: shaile, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Shaile {T} activates");
     drain_stack(&mut g);
 
@@ -202,13 +202,13 @@ fn brackish_trudge_recurs_from_graveyard_only_after_lifegain() {
     g.players[0].mana_pool.add_colorless(1);
     // No life gained this turn → activation rejected.
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(err.is_err(), "can't recur without having gained life this turn");
     // Gain life, then it returns to hand.
     g.players[0].life_gained_this_turn = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{1}{B}: return after lifegain");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "returned to hand");
@@ -2366,7 +2366,7 @@ fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("first ability is a mana ability");
 
     // Untap to allow the second activation.
@@ -2378,7 +2378,7 @@ fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 1,
-        target: None, x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None })
     .expect("second ability sacs and draws");
     drain_stack(&mut g);
 
@@ -2656,7 +2656,7 @@ fn strixhaven_stadium_mana_ability_adds_point_counter() {
     let mut g = two_player_game();
     let stadium = g.add_card_to_battlefield(0, catalog::strixhaven_stadium());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stadium, ability_index: 0, target: None, x_value: None,
+        card_id: stadium, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap for {C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added one colorless");
@@ -3563,7 +3563,7 @@ fn witchs_cauldron_sac_gains_two_life_and_draws() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: cauldron,
         ability_index: 0,
-        target: None, x_value: None }).expect("Cauldron activation");
+        target: None, additional_targets: Vec::new(), x_value: None }).expect("Cauldron activation");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
@@ -3606,7 +3606,7 @@ fn tome_of_the_guildpact_activation_draws_a_card() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: tome,
         ability_index: 0,
-        target: None, x_value: None }).expect("Tome activation");
+        target: None, additional_targets: Vec::new(), x_value: None }).expect("Tome activation");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
@@ -4055,7 +4055,7 @@ fn sungrass_egg_sac_adds_two_mana_of_one_color() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: egg,
         ability_index: 0,
-        target: None, x_value: None }).expect("Egg activation");
+        target: None, additional_targets: Vec::new(), x_value: None }).expect("Egg activation");
     drain_stack(&mut g);
 
     // Egg sacrificed off the battlefield.

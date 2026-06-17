@@ -224,6 +224,7 @@ impl GameState {
                     card_id: *id,
                     ability_index: idx,
                     target,
+                    additional_targets: Vec::new(),
                     x_value: None,
                 })
             });

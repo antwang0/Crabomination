@@ -4056,6 +4056,147 @@ pub fn faithful_squire() -> CardDefinition {
     }
 }
 
+/// Kitsune Mystic // Autumn-Tail, Kitsune Sage — {3}{W} Fox Wizard 2/3.
+/// "At the beginning of the end step, if this creature is enchanted by two or
+/// more Auras, flip it." Flips into Autumn-Tail, a 4/5 Legendary Fox Wizard
+/// with "{1}: Attach target Aura attached to a creature to another creature."
+pub fn kitsune_mystic() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::Predicate;
+    use crate::game::TurnStep;
+    let autumn_tail = CardDefinition {
+        name: "Autumn-Tail, Kitsune Sage",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Fox, CreatureType::Wizard]),
+        power: 4,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Attach {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+                },
+                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kitsune Mystic",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Fox, CreatureType::Wizard]),
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountOf(Box::new(Selector::AttachedToMe(Box::new(Selector::This)))),
+                    Value::Const(2),
+                ),
+                then: Box::new(Effect::Flip { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        flip_face: Some(Box::new(autumn_tail)),
+        ..Default::default()
+    }
+}
+
+/// Bushi Tenderfoot // Kenzo the Hardhearted — {W} Human Soldier 1/1.
+/// "When a creature dealt damage by this creature this turn dies, flip this
+/// creature." Flips into Kenzo, a 3/4 Legendary Human Samurai with double
+/// strike and bushido 2.
+pub fn bushi_tenderfoot() -> CardDefinition {
+    use crate::effect::Predicate;
+    let kenzo = CardDefinition {
+        name: "Kenzo the Hardhearted",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::DoubleStrike, Keyword::Bushido(2)],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Bushi Tenderfoot",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::DamagedBySourceThisTurn,
+                },
+            ),
+            effect: Effect::Flip { what: Selector::This },
+        }],
+        flip_face: Some(Box::new(kenzo)),
+        ..Default::default()
+    }
+}
+
+/// Nezumi Graverobber // Nighteyes the Desecrator — {1}{B} Rat Rogue 2/1.
+/// "{1}{B}: Exile target card from an opponent's graveyard. If no cards are in
+/// that graveyard, flip this creature." Flips into Nighteyes, a 4/2 Legendary
+/// Rat Wizard whose "{4}{B}: Put target creature card from a graveyard onto the
+/// battlefield under your control."
+pub fn nezumi_graverobber() -> CardDefinition {
+    use crate::effect::{Predicate, ZoneDest};
+    let nighteyes = CardDefinition {
+        name: "Nighteyes the Desecrator",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Wizard]),
+        power: 4,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b()]),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Nezumi Graverobber",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Rogue]),
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Seq(vec![
+                Effect::Exile { what: target_filtered(SelectionRequirement::InOpponentGraveyard) },
+                Effect::If {
+                    cond: Predicate::ValueEquals(
+                        Value::GraveyardSizeOf(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                        Value::Const(0),
+                    ),
+                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        flip_face: Some(Box::new(nighteyes)),
+        ..Default::default()
+    }
+}
+
 /// Budoka Gardener // Dokai, Weaver of Life — {1}{G} Human Monk 2/1.
 /// "{T}: You may put a land card from your hand onto the battlefield. If you
 /// control ten or more lands, flip this creature." Flips into Dokai, a 3/3

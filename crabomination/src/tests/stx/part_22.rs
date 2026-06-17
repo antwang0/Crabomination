@@ -1524,6 +1524,7 @@ fn lorehold_sparkscholar_b178_taps_for_two_damage() {
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("activated");
     drain_stack(&mut g);

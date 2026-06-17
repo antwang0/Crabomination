@@ -924,7 +924,7 @@ fn witherbloom_sapling_b155_activation_grows_self() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: s, ability_index: 0, target: None, x_value: None,
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Activation succeeds");
     drain_stack(&mut g);
     let counters = g.battlefield_find(s).map(|c| {
@@ -1605,6 +1605,7 @@ fn cr_118_8_exile_from_graveyard_cost_pre_flight_no_mana_burned() {
         card_id: pm,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     });
     assert!(result.is_err(), "must reject without legal gy-exile target");
@@ -2040,6 +2041,7 @@ fn cr_603_4_intervening_if_re_checked_at_resolve_time() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: Some(pred),
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2078,6 +2080,7 @@ fn cr_603_4_intervening_if_runs_when_true_at_resolve_time() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: Some(pred),
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2134,6 +2137,7 @@ fn cr_705_3_coin_flip_advantage_lets_tails_be_recovered() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -2177,6 +2181,7 @@ fn cr_705_3_no_advantage_means_one_flip_one_result() {
         mana_spent: 0,
         event_amount: 0,
         intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);
@@ -3191,6 +3196,7 @@ fn cr_705_3_static_grants_coin_flip_advantage() {
         source: src, controller: 0, effect: Box::new(body), target: None, mode: None,
         x_value: 0, converged_value: 0, trigger_source: None, mana_spent: 0,
         event_amount: 0, intervening_if: None,
+        additional_targets: Vec::new(),
     });
     let life_before = g.players[0].life;
     drain_stack(&mut g);

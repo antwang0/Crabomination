@@ -970,6 +970,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             card_id: id,
             ability_index: 0,
             target: None,
+            additional_targets: Vec::new(),
             x_value: None,
         };
         if state.would_accept(action.clone()) {
@@ -987,6 +988,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             card_id: id,
             ability_index: idx,
             target: None,
+            additional_targets: Vec::new(),
             x_value: None,
         };
         if state.would_accept(action.clone()) {
@@ -1630,6 +1632,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     card_id: card.id,
                     ability_index: idx,
                     target: Some(crate::game::Target::Permanent(*foe)),
+                    additional_targets: Vec::new(),
                     x_value: None,
                 };
                 if state.would_accept(action.clone()) {
@@ -1679,6 +1682,7 @@ fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> 
                     card_id: card.id,
                     ability_index: idx,
                     target: Some(crate::game::Target::Permanent(*foe)),
+                    additional_targets: Vec::new(),
                     x_value: None,
                 };
                 if state.would_accept(action.clone()) {
@@ -1722,6 +1726,7 @@ fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction
                     card_id: card.id,
                     ability_index: idx,
                     target,
+                    additional_targets: Vec::new(),
                     x_value: None,
                 };
                 if state.would_accept(action.clone()) {
@@ -1765,6 +1770,7 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
                 card_id: card.id,
                 ability_index: idx,
                 target: None,
+                additional_targets: Vec::new(),
                 x_value: None,
             };
             if state.would_accept(action.clone()) {

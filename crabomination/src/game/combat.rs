@@ -1544,6 +1544,7 @@ impl GameState {
 
                     if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
                         b.dealt_damage_this_turn = true;
+                        b.damaged_by_this_turn.push(atk.id);
                     }
                     if atk.has_infect || atk.has_wither {
                         if dealt > 0
@@ -1655,6 +1656,7 @@ impl GameState {
                             || bc.keywords.contains(&Keyword::Wither);
                         if let Some(attacker) = self.battlefield_find_mut(atk.id) {
                             attacker.dealt_damage_this_turn = true;
+                            attacker.damaged_by_this_turn.push(bid);
                             if infect {
                                 attacker
                                     .add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
@@ -1791,6 +1793,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(redirect) {
                         c.damage += amount;
                         c.dealt_damage_this_turn = true;
+                        c.damaged_by_this_turn.push(atk.id);
                     }
                     events.push(GameEvent::DamageDealt {
                         amount,

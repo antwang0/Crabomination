@@ -1069,6 +1069,7 @@ impl GameState {
                 mana_spent,
                 event_amount,
                 intervening_if,
+                additional_targets,
             } => {
                 // CR 603.4 — re-check the intervening 'if' clause as the
                 // ability resolves. "If the condition isn't true at that
@@ -1112,6 +1113,7 @@ impl GameState {
                     mana_spent,
                     trigger_source,
                     event_amount,
+                    additional_targets,
                 )?;
                 if had_lki {
                     self.resolving_lki_source = None;

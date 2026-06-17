@@ -1220,6 +1220,7 @@ fn witherbloom_cauldronist_b143_sac_a_creature_drains_two() {
         card_id: cauldronist,
         ability_index: 0,
         target: None,
+        additional_targets: Vec::new(),
         x_value: None,
     }).expect("Cauldronist activation");
     drain_stack(&mut g);

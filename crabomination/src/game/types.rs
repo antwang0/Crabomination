@@ -379,6 +379,10 @@ pub enum GameAction {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        /// Extra chosen targets (slots 1+) for two-target activated abilities
+        /// (Autumn-Tail, Kitsune Sage). Empty for the single-target majority.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         /// X value paid to an `{X}` symbol in the activation's mana cost.
         /// Threaded through to `EffectContext.x_value` so the body can
         /// read `Value::XFromCost`. Used by Pernicious Deed's
@@ -781,6 +785,10 @@ pub(crate) enum ResumeContext {
         /// The firing event's amount (`Value::TriggerEventAmount`).
         #[serde(default)]
         event_amount: u32,
+        /// Extra targets (slots 1+) for two-target activated abilities,
+        /// preserved across a mid-resolution suspend.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
     },
     Ability {
         source: CardId,
@@ -859,6 +867,8 @@ pub(crate) enum ResumeContext {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
         x_value: Option<u32>,
         kind: AbilityCostChoice,
     },
@@ -1438,6 +1448,13 @@ pub enum StackItem {
         /// majority).
         #[serde(default)]
         intervening_if: Option<crate::card::Predicate>,
+        /// Extra chosen targets beyond slot 0 (`target`), for two-target
+        /// activated abilities (Autumn-Tail's "Attach target Aura … to
+        /// another creature"). Indexed as slots 1, 2, … in the effect tree.
+        /// Empty for the vast single-target majority. `#[serde(default)]`
+        /// for snapshot back-compat.
+        #[serde(default)]
+        additional_targets: Vec<Target>,
     },
 }
 
@@ -1451,6 +1468,7 @@ pub struct TriggerPush {
     controller: usize,
     effect: Effect,
     target: Option<Target>,
+    additional_targets: Vec<Target>,
     mode: Option<usize>,
     x_value: u32,
     converged_value: u32,
@@ -1467,6 +1485,7 @@ impl TriggerPush {
             controller,
             effect,
             target: None,
+            additional_targets: Vec::new(),
             mode: None,
             x_value: 0,
             converged_value: 0,
@@ -1478,6 +1497,10 @@ impl TriggerPush {
     }
     pub fn target(mut self, t: Option<Target>) -> Self {
         self.target = t;
+        self
+    }
+    pub fn additional_targets(mut self, t: Vec<Target>) -> Self {
+        self.additional_targets = t;
         self
     }
     pub fn mode(mut self, m: Option<usize>) -> Self {
@@ -1521,6 +1544,7 @@ impl TriggerPush {
             mana_spent: self.mana_spent,
             event_amount: self.event_amount,
             intervening_if: self.intervening_if,
+            additional_targets: self.additional_targets,
         }
     }
 }

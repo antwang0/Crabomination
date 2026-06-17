@@ -125,7 +125,7 @@ fn nyxbloom_ancient_triples_tapped_mana() {
     let dork = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     g.clear_sickness(dork);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dork, ability_index: 0, target: None, x_value: None,
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     })
     .expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3, "G → GGG");
@@ -134,7 +134,7 @@ fn nyxbloom_ancient_triples_tapped_mana() {
     let dork2 = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     g.clear_sickness(dork2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dork2, ability_index: 0, target: None, x_value: None,
+        card_id: dork2, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     })
     .expect("tap for mana");
     assert_eq!(
@@ -225,6 +225,7 @@ fn polukranos_fight_activation() {
         card_id: p,
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(),
         x_value: None,
     })
     .expect("fight the bear");
@@ -342,7 +343,7 @@ fn dream_trawler_discard_grants_hexproof() {
     g.priority.player_with_priority = 0;
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dt, ability_index: 0, target: None, x_value: None,
+        card_id: dt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     })
     .expect("discard a card: hexproof");
     drain_stack(&mut g);
@@ -498,6 +499,7 @@ fn alseid_grants_protection_from_chosen_color() {
         card_id: alseid,
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(),
         x_value: None,
     })
     .expect("sac Alseid");
@@ -629,7 +631,7 @@ fn phoenix_of_ash_pump() {
     g.players[0].mana_pool.add_colorless(2);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ph, ability_index: 0, target: None, x_value: None,
+        card_id: ph, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     })
     .expect("pump");
     drain_stack(&mut g);
@@ -990,7 +992,7 @@ fn eidolon_of_philosophy_draws_three() {
     g.players[0].mana_pool.add_colorless(6);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: eid, ability_index: 0, target: None, x_value: None,
+        card_id: eid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Eidolon");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
@@ -1010,7 +1012,7 @@ fn lampad_drains_on_sacrifice() {
         crate::decision::DecisionAnswer::Target(Target::Permanent(fodder)),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lampad, ability_index: 0, target: None, x_value: None,
+        card_id: lampad, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Lampad");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
@@ -1093,7 +1095,7 @@ fn oread_rummages() {
     let lib = g.players[0].library.len();
     let gy = g.players[0].graveyard.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: oread, ability_index: 0, target: None, x_value: None,
+        card_id: oread, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Oread");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), lib - 1, "drew one");
@@ -1391,7 +1393,7 @@ fn soulreaper_sacrifices_to_draw() {
     g.players[0].mana_pool.add_colorless(2);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: reaper, ability_index: 0, target: None, x_value: None,
+        card_id: reaper, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Soulreaper");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -1589,7 +1591,7 @@ fn skophos_warleader_sac_pumps_and_grants_menace() {
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: leader, ability_index: 0, target: None, x_value: None,
+        card_id: leader, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Skophos");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
@@ -1834,7 +1836,7 @@ fn dreadful_apathy_exiles_enchanted() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: aura_id, ability_index: 0, target: None, x_value: None,
+        card_id: aura_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Dreadful Apathy");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "enchanted creature exiled");

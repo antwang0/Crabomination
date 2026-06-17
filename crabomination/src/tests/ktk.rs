@@ -93,7 +93,7 @@ fn lightning_berserker_pumps_for_red() {
     g.clear_sickness(id);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("firebreathing");
     drain_stack(&mut g);
     let s = g.battlefield_find(id).unwrap();
@@ -173,7 +173,7 @@ fn bloodsoaked_champion_returns_from_graveyard_after_an_attack() {
     g.players[0].mana_pool.add_colorless(1);
     // No attack yet → activation rejected.
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: champ, ability_index: 0, target: None, x_value: None,
+        card_id: champ, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).is_err(), "raid not satisfied → can't return");
     // Attack with another creature to satisfy raid.
     let atk = g.add_card_to_battlefield(0, catalog::screamreach_brawler());
@@ -187,7 +187,7 @@ fn bloodsoaked_champion_returns_from_graveyard_after_an_attack() {
     g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: champ, ability_index: 0, target: None, x_value: None,
+        card_id: champ, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("raid satisfied → return from graveyard");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == champ), "Champion is back on the battlefield");

@@ -44,7 +44,7 @@ fn witherbloom_mireguide_taps_for_black_or_green() {
     g.clear_sickness(id);
     drain_stack(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Mireguide Black ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Mireguide Black ability");
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
 }
 
@@ -569,7 +569,7 @@ fn lorehold_pyromaster_taps_for_three_damage() {
     g.players[0].mana_pool.add_colorless(2);
     let opp_before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(crate::game::types::Target::Player(1)), x_value: None }).expect("Pyromaster activated");
+        card_id: id, ability_index: 0, target: Some(crate::game::types::Target::Player(1)), additional_targets: Vec::new(), x_value: None }).expect("Pyromaster activated");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 3);
 }
@@ -1715,7 +1715,7 @@ fn strixhaven_banner_taps_for_any_color() {
     drain_stack(&mut g);
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Banner mana ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Banner mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), mana_before + 1);
 }
@@ -1729,7 +1729,7 @@ fn strixhaven_banner_sac_to_draw_a_card() {
     drain_stack(&mut g);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, x_value: None }).expect("Banner sac-draw ability");
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("Banner sac-draw ability");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == id), "banner sacrificed");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw 1");
@@ -1779,7 +1779,7 @@ fn strixhaven_pupil_activated_scry_and_draw() {
     drain_stack(&mut g);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Pupil activated");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Pupil activated");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw 1");
 }

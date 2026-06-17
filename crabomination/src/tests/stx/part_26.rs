@@ -22,12 +22,12 @@ fn campus_land_enters_tapped_and_taps_for_both_colors() {
     // Untap it and verify both mana abilities produce their colors.
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap for R");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap for W");
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
 }
@@ -40,7 +40,7 @@ fn campus_land_scry_ability_taps_and_is_payable() {
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 2, target: None, x_value: None,
+        card_id: id, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{4},{T}: Scry 1 activatable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).unwrap().tapped, "scry taps the Campus");
@@ -55,7 +55,7 @@ fn access_tunnel_grants_unblockable_to_small_creature() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: tunnel, ability_index: 1,
-        target: Some(Target::Permanent(bear)), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("evasion activatable on a power-3-or-less creature");
     drain_stack(&mut g);
     assert!(
@@ -152,7 +152,7 @@ fn wormhole_serpent_grants_target_unblockable() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: serpent, ability_index: 0,
-        target: Some(Target::Permanent(bear)), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("{3}{U}: unblockable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().granted_keywords_eot.contains(&Keyword::Unblockable));
@@ -281,7 +281,7 @@ fn overgrown_arch_gains_life_and_learns() {
     g.battlefield_find_mut(arch).unwrap().tapped = false;
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: arch, ability_index: 0, target: None, x_value: None,
+        card_id: arch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{T}: gain 1");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 1, "gains 1 life");
@@ -424,7 +424,7 @@ fn cr_509_wormhole_grant_makes_attacker_unblockable() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: serpent, ability_index: 0,
-        target: Some(Target::Permanent(attacker)), x_value: None,
+        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
     }).expect("grant unblockable");
     drain_stack(&mut g);
     while g.step != crate::game::types::TurnStep::DeclareAttackers {
@@ -526,7 +526,7 @@ fn stonerise_spirit_grants_flying_by_exiling_graveyard_card() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: spirit, ability_index: 0,
-        target: Some(Target::Permanent(bear)), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("{4}, exile a gy card: grant flying");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == fodder), "graveyard card exiled as cost");
@@ -543,7 +543,7 @@ fn novice_dissector_sacrifices_to_add_counter() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dissector, ability_index: 0,
-        target: Some(Target::Permanent(target)), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     }).expect("{1}, sac a creature: +1/+1 counter");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed as cost");
@@ -568,7 +568,7 @@ fn blood_age_general_pumps_attacking_spirits() {
     drain_stack(&mut g);
     let pwr = g.battlefield_find(spirit).unwrap().power();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: general, ability_index: 0, target: None, x_value: None,
+        card_id: general, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{T}: attacking Spirits +1/+0");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(spirit).unwrap().power(), pwr + 1, "attacking Spirit pumped");
@@ -634,7 +634,7 @@ fn kelpie_guide_untaps_and_taps() {
     g.battlefield_find_mut(mine).unwrap().tapped = true;
     g.perform_action(GameAction::ActivateAbility {
         card_id: kelpie, ability_index: 0,
-        target: Some(Target::Permanent(mine)), x_value: None,
+        target: Some(Target::Permanent(mine)), additional_targets: Vec::new(), x_value: None,
     }).expect("{T}: untap another permanent");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(mine).unwrap().tapped, "untapped");
@@ -642,7 +642,7 @@ fn kelpie_guide_untaps_and_taps() {
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: kelpie, ability_index: 1,
-        target: Some(Target::Permanent(foe)), x_value: None,
+        target: Some(Target::Permanent(foe)), additional_targets: Vec::new(), x_value: None,
     });
     assert!(res.is_err(), "tap ability gated on eight or more lands");
 }

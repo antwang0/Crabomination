@@ -20,7 +20,7 @@ fn kami_of_ancient_law_sacrifices_to_destroy_enchantment() {
     let ench = g.add_card_to_battlefield(1, catalog::concordant_crossroads());
     g.clear_sickness(kami);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(ench)), x_value: None,
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(ench)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate sac ability");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == kami), "Kami sacrificed as a cost");
@@ -35,7 +35,7 @@ fn kabuto_moth_taps_to_pump() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
     g.clear_sickness(moth);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: moth, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: moth, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("tap to pump");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
@@ -160,7 +160,7 @@ fn kami_of_twisted_reflection_bounces_your_creature() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(kami);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac to bounce");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == kami), "Kami sacrificed");
@@ -180,7 +180,7 @@ fn patron_of_the_moon_ramps_lands_from_hand() {
     g.players[0].mana_pool.add_colorless(1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![l1, l2])]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: patron, ability_index: 0, target: None, x_value: None,
+        card_id: patron, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate land ramp");
     drain_stack(&mut g);
     assert!(g.battlefield_find(l1).is_some_and(|c| c.tapped), "land 1 entered tapped");
@@ -198,7 +198,7 @@ fn patron_of_the_orochi_untaps_forests_and_green() {
     g.battlefield_find_mut(forest).unwrap().tapped = true;
     g.battlefield_find_mut(bear).unwrap().tapped = true;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: patron, ability_index: 0, target: None, x_value: None,
+        card_id: patron, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate untap");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(forest).unwrap().tapped, "Forest untapped");
@@ -277,7 +277,7 @@ fn kitsune_diviner_taps_a_spirit() {
     let spirit = g.add_card_to_battlefield(1, catalog::lantern_kami());
     g.clear_sickness(diviner);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: diviner, ability_index: 0, target: Some(Target::Permanent(spirit)), x_value: None,
+        card_id: diviner, ability_index: 0, target: Some(Target::Permanent(spirit)), additional_targets: Vec::new(), x_value: None,
     }).expect("tap the Spirit");
     drain_stack(&mut g);
     assert!(g.battlefield_find(spirit).unwrap().tapped, "Spirit tapped");
@@ -354,7 +354,7 @@ fn pain_kami_x_sacrifice_burn() {
     g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2); // X = 2
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: Some(2),
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: Some(2),
     }).expect("X=2 sac burn");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == kami), "Pain Kami sacrificed");
@@ -446,7 +446,7 @@ fn meloku_bounces_land_for_illusion() {
     g.clear_sickness(meloku);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: meloku, ability_index: 0, target: None, x_value: None,
+        card_id: meloku, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Meloku");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "land returned to hand");
@@ -465,7 +465,7 @@ fn hana_kami_returns_arcane() {
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hana, ability_index: 0, target: Some(Target::Permanent(ray)), x_value: None,
+        card_id: hana, ability_index: 0, target: Some(Target::Permanent(ray)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate Hana Kami");
     drain_stack(&mut g);
     assert!(g.battlefield_find(hana).is_none(), "Hana Kami sacrificed");
@@ -533,7 +533,7 @@ fn frostling_sacrifices_to_ping() {
     let target = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
     g.clear_sickness(frost);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: frost, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+        card_id: frost, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate Frostling");
     drain_stack(&mut g);
     assert!(g.battlefield_find(frost).is_none(), "Frostling sacrificed");
@@ -549,7 +549,7 @@ fn hearth_kami_destroys_artifact_of_mv_x() {
     g.clear_sickness(kami);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(ring)), x_value: Some(1),
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(ring)), additional_targets: Vec::new(), x_value: Some(1),
     }).expect("activate Hearth Kami");
     drain_stack(&mut g);
     assert!(g.battlefield_find(ring).is_none(), "Sol Ring (MV 1) destroyed for X=1");
@@ -577,7 +577,7 @@ fn soratami_mirror_guard_grants_unblockable() {
     g.clear_sickness(guard);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: guard, ability_index: 0, target: Some(Target::Permanent(small)), x_value: None,
+        card_id: guard, ability_index: 0, target: Some(Target::Permanent(small)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate Mirror-Guard");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "land bounced as a cost");
@@ -599,7 +599,7 @@ fn akki_coalflinger_grants_first_strike() {
     }])).expect("declare attacker");
     g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: akki, ability_index: 0, target: None, x_value: None,
+        card_id: akki, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Akki");
     drain_stack(&mut g);
     let cp = g.computed_permanent(attacker).unwrap();
@@ -656,7 +656,7 @@ fn mothrider_patrol_taps_target() {
     g.players[0].mana_pool.add(crate::mana::Color::White, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: patrol, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: patrol, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate Mothrider Patrol");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped, "target creature tapped");
@@ -690,7 +690,7 @@ fn sokenzan_spellblade_scales_with_hand() {
     g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: blade, ability_index: 0, target: None, x_value: None,
+        card_id: blade, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Spellblade");
     drain_stack(&mut g);
     let cp = g.computed_permanent(blade).unwrap();
@@ -718,7 +718,7 @@ fn burr_grafter_sacrifices_to_pump() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(grafter);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: grafter, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: grafter, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac to pump");
     drain_stack(&mut g);
     assert!(g.battlefield_find(grafter).is_none(), "Burr Grafter sacrificed");
@@ -792,7 +792,7 @@ fn akki_avalanchers_sacs_land_to_pump() {
     let land = g.add_card_to_battlefield(0, catalog::mountain());
     g.clear_sickness(akki);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: akki, ability_index: 0, target: None, x_value: None,
+        card_id: akki, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Avalanchers");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "land sacrificed");
@@ -841,7 +841,7 @@ fn scuttling_death_sacs_to_shrink() {
     let victim = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
     g.clear_sickness(death);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: death, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+        card_id: death, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac to shrink");
     drain_stack(&mut g);
     assert!(g.battlefield_find(death).is_none(), "Scuttling Death sacrificed");
@@ -856,7 +856,7 @@ fn bile_urchin_sacs_to_drain() {
     g.clear_sickness(urchin);
     let before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: urchin, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+        card_id: urchin, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac to drain");
     drain_stack(&mut g);
     assert!(g.battlefield_find(urchin).is_none(), "Bile Urchin sacrificed");
@@ -871,7 +871,7 @@ fn cursed_ronin_firebreathes() {
     g.clear_sickness(ronin);
     g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ronin, ability_index: 0, target: None, x_value: None,
+        card_id: ronin, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ronin).unwrap().power, 2, "+1/+1 → 2 power");
@@ -887,7 +887,7 @@ fn nezumi_bone_reader_sacs_for_discard() {
     g.clear_sickness(reader);
     g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: reader, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+        card_id: reader, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac for discard");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 0, "target player discarded their card");
@@ -915,7 +915,7 @@ fn patron_of_the_nezumi_drains_on_opponent_permanent_death() {
     g.players[0].mana_pool.add_colorless(2);
     let before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: Some(2),
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: Some(2),
     }).expect("X=2 sac burn");
     drain_stack(&mut g);
     g.check_state_based_actions();
@@ -944,7 +944,7 @@ fn cage_of_hands_pacifies_then_returns_to_hand() {
     g.players[0].mana_pool.add(crate::mana::Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cage, ability_index: 0, target: None, x_value: None,
+        card_id: cage, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("bounce ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(cage).is_none(), "Cage left the battlefield");
@@ -962,7 +962,7 @@ fn heartless_hidetsugu_halves_each_players_life() {
     g.players[0].life = 20;
     g.players[1].life = 17;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: h, ability_index: 0, target: None, x_value: None,
+        card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 10, "20 → took 10 damage");
@@ -1018,7 +1018,7 @@ fn yukora_sacrifices_non_ogres_on_ltb() {
     g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(yukora)), x_value: Some(5),
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(yukora)), additional_targets: Vec::new(), x_value: Some(5),
     }).expect("burn Yukora");
     drain_stack(&mut g);
     g.check_state_based_actions();
@@ -1038,7 +1038,7 @@ fn he_who_hungers_sacs_spirit_to_discard() {
     g.clear_sickness(hwh);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hwh, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+        card_id: hwh, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac Spirit to strip hand");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 0, "opponent discarded the chosen card");
@@ -1126,7 +1126,7 @@ fn soratami_rainshaper_grants_shroud() {
     g.clear_sickness(shaper);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shaper, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: shaper, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate shroud grant");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == land), "land bounced as a cost");
@@ -1196,7 +1196,7 @@ fn orochi_leafcaller_filters_mana() {
         crate::decision::DecisionAnswer::Color(crate::mana::Color::Blue),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: snake, ability_index: 0, target: None, x_value: None,
+        card_id: snake, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("filter mana");
     assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Blue), 1, "produced blue");
 }
@@ -1227,7 +1227,7 @@ fn kiku_self_damage_kills_creature() {
     g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kiku, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: kiku, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("self-damage");
     drain_stack(&mut g);
     g.check_state_based_actions();
@@ -1277,7 +1277,7 @@ fn frostwielder_pings() {
     let frostling = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
     g.clear_sickness(fw);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fw, ability_index: 0, target: Some(Target::Permanent(frostling)), x_value: None,
+        card_id: fw, ability_index: 0, target: Some(Target::Permanent(frostling)), additional_targets: Vec::new(), x_value: None,
     }).expect("ping");
     drain_stack(&mut g);
     g.check_state_based_actions();
@@ -1332,7 +1332,7 @@ fn kumano_pings_for_one() {
     g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kumano, ability_index: 0, target: Some(Target::Permanent(frostling)), x_value: None,
+        card_id: kumano, ability_index: 0, target: Some(Target::Permanent(frostling)), additional_targets: Vec::new(), x_value: None,
     }).expect("ping");
     drain_stack(&mut g);
     g.check_state_based_actions();
@@ -1350,7 +1350,7 @@ fn teardrop_kami_sacs_to_tap() {
         crate::decision::DecisionAnswer::Mode(0), // tap
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac to tap");
     drain_stack(&mut g);
     assert!(g.battlefield_find(kami).is_none(), "Teardrop Kami sacrificed");
@@ -1377,7 +1377,7 @@ fn soratami_savant_counters_unless_paid() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: savant, ability_index: 0, target: Some(Target::Permanent(spell)), x_value: None,
+        card_id: savant, ability_index: 0, target: Some(Target::Permanent(spell)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate counter ability");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (unpaid)");
@@ -1570,7 +1570,7 @@ fn kumano_exiles_creatures_it_kills() {
     g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kumano, ability_index: 0, target: Some(Target::Permanent(elf)), x_value: None,
+        card_id: kumano, ability_index: 0, target: Some(Target::Permanent(elf)), additional_targets: Vec::new(), x_value: None,
     }).expect("ping the 1/1");
     drain_stack(&mut g);
     assert!(g.battlefield_find(elf).is_none(), "elf left the battlefield");
@@ -1587,13 +1587,13 @@ fn villainous_ogre_regen_gated_on_demon() {
     g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
     // No Demon: activation is rejected before paying.
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: ogre, ability_index: 0, target: None, x_value: None,
+        card_id: ogre, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     });
     assert!(res.is_err(), "no Demon → can't activate");
     // Add a Demon and try again.
     g.add_card_to_battlefield(0, catalog::bloodgift_demon());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ogre, ability_index: 0, target: None, x_value: None,
+        card_id: ogre, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("{B}: Regenerate with a Demon out");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ogre).unwrap().regeneration_shields, 1,
@@ -1625,7 +1625,7 @@ fn kitsune_healer_prevents_next_1_damage() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(healer);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: healer, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: healer, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate prevention");
     drain_stack(&mut g);
     let mut events = Vec::new();
@@ -1674,7 +1674,7 @@ fn rag_dealer_exiles_from_graveyard() {
     g.players[0].mana_pool.add_colorless(2);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![c1, c2])]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dealer, ability_index: 0, target: None, x_value: None,
+        card_id: dealer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("exile from graveyard");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == c1) && g.exile.iter().any(|c| c.id == c2),
@@ -1802,7 +1802,7 @@ fn phantom_wings_grants_flying_then_bounces() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "grants flying");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wings, ability_index: 0, target: None, x_value: None,
+        card_id: wings, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac to bounce");
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == bear), "enchanted creature returned to hand");
@@ -1818,7 +1818,7 @@ fn squelch_counters_activated_ability_and_draws() {
     g.add_card_to_library(1, catalog::island());
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 1, target: None, x_value: None,
+        card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate draw ability");
     g.priority.player_with_priority = 0;
     let sq = g.add_card_to_hand(0, catalog::squelch());
@@ -1860,7 +1860,7 @@ fn orochi_sustainer_taps_for_green() {
     let dork = g.add_card_to_battlefield(0, catalog::orochi_sustainer());
     g.clear_sickness(dork);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dork, ability_index: 0, target: None, x_value: None,
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap for green");
     assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 1);
 }
@@ -1872,7 +1872,7 @@ fn child_of_thorns_sacs_to_pump() {
     let child = g.add_card_to_battlefield(0, catalog::child_of_thorns());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: child, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: child, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac to pump");
     drain_stack(&mut g);
     assert!(g.battlefield_find(child).is_none(), "Child sacrificed");
@@ -1888,7 +1888,7 @@ fn foratog_sacs_forest_for_pump() {
     g.clear_sickness(atog);
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: atog, ability_index: 0, target: None, x_value: None,
+        card_id: atog, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac Forest to pump");
     drain_stack(&mut g);
     assert!(g.battlefield_find(forest).is_none(), "Forest sacrificed");
@@ -1911,7 +1911,7 @@ fn serpent_skin_pumps_and_regenerates() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 granted");
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skin, ability_index: 0, target: None, x_value: None,
+        card_id: skin, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("regenerate host");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().regeneration_shields, 1, "host has a regen shield");
@@ -2002,7 +2002,7 @@ fn pus_kami_sacs_to_destroy_nonblack() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green, nonblack
     g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac to destroy");
     drain_stack(&mut g);
     assert!(g.battlefield_find(kami).is_none(), "Pus Kami sacrificed");
@@ -2094,7 +2094,7 @@ fn moonlit_strider_sacs_for_protection() {
     let strider = g.add_card_to_battlefield(0, catalog::moonlit_strider());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: strider, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: strider, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("sac for protection");
     drain_stack(&mut g);
     assert!(g.battlefield_find(strider).is_none(), "Strider sacrificed");
@@ -2169,7 +2169,7 @@ fn azamuki_removes_ki_to_steal_a_creature() {
     assert!(g.battlefield_find(bandit).unwrap().flipped, "flipped into Azamuki");
     g.clear_sickness(bandit);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bandit, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: bandit, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate Azamuki steal");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "gained control of the bear");
@@ -2192,7 +2192,7 @@ fn budoka_gardener_flips_to_dokai_at_ten_lands() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![land])]));
     g.clear_sickness(budoka);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: budoka, ability_index: 0, target: None, x_value: None,
+        card_id: budoka, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap Budoka");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_some(), "land put onto the battlefield");
@@ -2205,7 +2205,7 @@ fn budoka_gardener_flips_to_dokai_at_ten_lands() {
     g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: budoka, ability_index: 0, target: None, x_value: None,
+        card_id: budoka, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("activate Dokai");
     drain_stack(&mut g);
     let token = g.battlefield.iter().find(|c| c.definition.name == "Elemental")
@@ -2248,7 +2248,7 @@ fn scarmaker_removes_ki_to_grant_fear() {
     assert_eq!(g.battlefield_find(muscle).unwrap().definition.name, "Scarmaker");
     g.clear_sickness(muscle);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: muscle, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: muscle, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("activate Scarmaker fear");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Fear),
@@ -2327,7 +2327,7 @@ fn jaraku_counters_unless_paid() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: jushi, ability_index: 0,
-        target: Some(Target::Permanent(spell)), x_value: None,
+        target: Some(Target::Permanent(spell)), additional_targets: Vec::new(), x_value: None,
     }).expect("Jaraku counters");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (opp can't pay)");
@@ -2349,7 +2349,7 @@ fn jushi_apprentice_flips_at_nine_cards() {
     g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: jushi, ability_index: 0, target: None, x_value: None,
+        card_id: jushi, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("draw + maybe flip");
     drain_stack(&mut g);
     let tom = g.battlefield_find(jushi).unwrap();
@@ -2370,7 +2370,7 @@ fn orochi_eggwatcher_flips_to_shidako_at_ten_creatures() {
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: orochi, ability_index: 0, target: None, x_value: None,
+        card_id: orochi, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("mint snake");
     drain_stack(&mut g);
     let shidako = g.battlefield_find(orochi).unwrap();
@@ -2382,7 +2382,7 @@ fn orochi_eggwatcher_flips_to_shidako_at_ten_creatures() {
     g.clear_sickness(orochi);
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: orochi, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        card_id: orochi, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
     }).expect("Shidako pump");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
@@ -2403,7 +2403,7 @@ fn initiate_of_blood_flips_when_its_ping_kills_a_damaged_creature() {
     });
     g.battlefield_find_mut(victim).unwrap().dealt_damage_this_turn = true;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: initiate, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+        card_id: initiate, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
     }).expect("ping the damaged creature");
     drain_stack(&mut g);
     g.check_state_based_actions();
@@ -2411,6 +2411,119 @@ fn initiate_of_blood_flips_when_its_ping_kills_a_damaged_creature() {
     assert!(g.battlefield_find(victim).is_none(), "victim died to the ping");
     let goka = g.battlefield_find(initiate).unwrap();
     assert!(goka.flipped && goka.definition.name == "Goka the Unjust", "Initiate flipped into Goka");
+}
+
+/// One Aura isn't enough to flip Kitsune Mystic at the end step.
+#[test]
+fn kitsune_mystic_stays_with_one_aura() {
+    let mut g = two_player_game();
+    let mystic = g.add_card_to_battlefield(0, catalog::kitsune_mystic());
+    let a1 = g.add_card_to_battlefield(0, catalog::vigilance_aura());
+    g.battlefield_find_mut(a1).unwrap().attached_to = Some(mystic);
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(mystic).unwrap().flipped, "one aura doesn't flip");
+}
+
+/// Kitsune Mystic flips into Autumn-Tail at the end step when enchanted by two
+/// or more Auras; Autumn-Tail moves an Aura between creatures.
+#[test]
+fn kitsune_mystic_flips_at_two_auras_then_moves_an_aura() {
+    let mut g = two_player_game();
+    let mystic = g.add_card_to_battlefield(0, catalog::kitsune_mystic());
+    let a1 = g.add_card_to_battlefield(0, catalog::vigilance_aura());
+    let a2 = g.add_card_to_battlefield(0, catalog::vigilance_aura());
+    g.battlefield_find_mut(a1).unwrap().attached_to = Some(mystic);
+    g.battlefield_find_mut(a2).unwrap().attached_to = Some(mystic);
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    let at = g.battlefield_find(mystic).unwrap();
+    assert!(at.flipped && at.definition.name == "Autumn-Tail, Kitsune Sage", "flipped on two auras");
+    // Autumn-Tail: {1}: move target Aura (slot 0) to another target creature (slot 1).
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mystic).unwrap().tapped = false;
+    g.clear_sickness(mystic);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mystic,
+        ability_index: 0,
+        target: Some(Target::Permanent(a1)),
+        additional_targets: vec![Target::Permanent(other)],
+        x_value: None,
+    }).expect("move aura");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a1).unwrap().attached_to, Some(other), "aura moved to the other creature");
+}
+
+/// Bushi Tenderfoot flips into Kenzo when a creature it dealt combat damage to
+/// this turn dies — even when both happen in the same combat-damage step.
+#[test]
+fn bushi_tenderfoot_flips_when_a_creature_it_damaged_dies() {
+    let mut g = two_player_game();
+    let bushi = g.add_card_to_battlefield(0, catalog::bushi_tenderfoot());
+    g.clear_sickness(bushi);
+    // A 0/1 blocker dies to Bushi's 1 damage and deals none back.
+    let chump = g.add_card_to_battlefield(1, {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Chump"; d.power = 0; d.toughness = 1; d
+    });
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bushi, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(chump, bushi)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(chump).is_none(), "blocker died to Bushi");
+    let kenzo = g.battlefield_find(bushi).expect("Bushi survived (0-power blocker)");
+    assert!(kenzo.flipped && kenzo.definition.name == "Kenzo the Hardhearted",
+        "flipped into Kenzo when the creature it damaged died");
+}
+
+/// Bushi Tenderfoot does NOT flip when a creature it never damaged dies.
+#[test]
+fn bushi_tenderfoot_ignores_unrelated_deaths() {
+    let mut g = two_player_game();
+    let bushi = g.add_card_to_battlefield(0, catalog::bushi_tenderfoot());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let events = g.remove_to_graveyard_with_triggers(victim);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bushi).unwrap().flipped, "no flip — Bushi never damaged it");
+}
+
+/// Nezumi Graverobber exiles a card from an opponent's graveyard and flips
+/// into Nighteyes when that empties the graveyard; Nighteyes reanimates a
+/// creature card from any graveyard.
+#[test]
+fn nezumi_graverobber_flips_when_opponent_graveyard_emptied() {
+    let mut g = two_player_game();
+    let nezumi = g.add_card_to_battlefield(0, catalog::nezumi_graverobber());
+    g.clear_sickness(nezumi);
+    let card = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nezumi, ability_index: 0, target: Some(Target::Permanent(card)), additional_targets: Vec::new(), x_value: None,
+    }).expect("exile from opponent graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == card), "card exiled");
+    let nighteyes = g.battlefield_find(nezumi).unwrap();
+    assert!(nighteyes.flipped && nighteyes.definition.name == "Nighteyes the Desecrator",
+        "flipped once the opponent's graveyard emptied");
+    // Nighteyes: {4}{B}: reanimate a creature card from a graveyard.
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nezumi, ability_index: 0, target: Some(Target::Permanent(corpse)), additional_targets: Vec::new(), x_value: None,
+    }).expect("reanimate");
+    drain_stack(&mut g);
+    let rean = g.battlefield_find(corpse).expect("reanimated onto battlefield");
+    assert_eq!(rean.controller, 0, "under Nighteyes' controller");
 }
 
 /// "Target creature that was dealt damage this turn" rejects an undamaged
@@ -2422,7 +2535,7 @@ fn initiate_of_blood_cannot_target_undamaged_creature() {
     g.clear_sickness(initiate);
     let fresh = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no damage
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: initiate, ability_index: 0, target: Some(Target::Permanent(fresh)), x_value: None,
+        card_id: initiate, ability_index: 0, target: Some(Target::Permanent(fresh)), additional_targets: Vec::new(), x_value: None,
     });
     assert!(err.is_err(), "can't target a creature that wasn't dealt damage this turn");
 }
@@ -2436,7 +2549,7 @@ fn kuros_taken_regenerates() {
     g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rat, ability_index: 0, target: None, x_value: None,
+        card_id: rat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("regenerate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(rat).unwrap().regeneration_shields >= 1, "regen shield set up");

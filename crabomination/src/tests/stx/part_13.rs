@@ -2368,7 +2368,7 @@ fn quandrix_mistwarden_taps_to_scry_one() {
     assert!(view.has_keyword(&Keyword::Defender));
     // Activate the scry ability
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Scry activatable");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Scry activatable");
     drain_stack(&mut g);
     // Tapped after activation
     let view = g.battlefield_find(id).expect("Mistwarden still on bf");

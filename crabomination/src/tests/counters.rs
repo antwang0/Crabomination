@@ -62,7 +62,7 @@ fn arcbound_ravager_sacs_artifact_for_a_counter() {
     let fodder = g.add_card_to_battlefield(0, catalog::ornithopter());
     g.clear_sickness(ravager);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ravager, ability_index: 0, target: None, x_value: None,
+        card_id: ravager, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Ravager ability activatable");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ravager).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
@@ -182,7 +182,7 @@ fn outlast_adds_a_counter_at_sorcery_speed() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("Outlast activatable at sorcery speed");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
@@ -323,7 +323,7 @@ fn vigean_graftmage_untaps_a_countered_creature() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mage, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     }).expect("Vigean ability activatable");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(target).unwrap().tapped, "untaps the countered creature");
@@ -338,7 +338,7 @@ fn helium_squirter_grants_flying_to_a_countered_creature() {
     g.battlefield_find_mut(target).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: squirter, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+        card_id: squirter, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
     }).expect("Helium Squirter ability activatable");
     drain_stack(&mut g);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == target).unwrap();

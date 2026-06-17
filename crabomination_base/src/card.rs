@@ -860,6 +860,10 @@ pub enum SelectionRequirement {
     /// CR 120.x — the permanent has been dealt damage this turn (Initiate of
     /// Blood // Goka's "target creature that was dealt damage this turn").
     DealtDamageThisTurn,
+    /// The permanent was dealt damage *by the evaluating source* this turn
+    /// (Bushi Tenderfoot's "a creature dealt damage by this creature this
+    /// turn"). Reads the dying object's LKI snapshot.
+    DamagedBySourceThisTurn,
     HasColor(Color),
     HasKeyword(Keyword),
     /// The card has any cycling ability (Cycling / CyclingLife /
@@ -1068,6 +1072,10 @@ pub enum SelectionRequirement {
     /// graveyard (CR 702.47a "your graveyard" — Soulshift). Stricter than
     /// `InGraveyard`, which matches any player's graveyard.
     InYourGraveyard,
+    /// True when the candidate card is in an opponent's graveyard ("target
+    /// card from an opponent's graveyard" — Nezumi Graverobber). Complement
+    /// of `InYourGraveyard`.
+    InOpponentGraveyard,
     /// True when the candidate card is in the exile zone. Mirrors
     /// `InGraveyard`; used by impulse "if you don't cast it" fallbacks
     /// (Chandra, Torch of Defiance) to detect an uncast exiled card.
@@ -2557,6 +2565,11 @@ pub struct CardInstance {
     /// cleanup. Powers "target creature that was dealt damage this turn"
     /// (Initiate of Blood // Goka). In-memory only.
     pub dealt_damage_this_turn: bool,
+    /// Sources that have dealt damage to this creature this turn. Powers
+    /// "When a creature dealt damage by this creature this turn dies"
+    /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
+    /// Reset at cleanup; in-memory only.
+    pub damaged_by_this_turn: Vec<CardId>,
     /// CR 701.15 — Regeneration shields. Each is a one-shot replacement:
     /// "the next time this permanent would be destroyed this turn, instead
     /// remove a regeneration shield, tap it, remove it from combat, and
@@ -2745,6 +2758,7 @@ impl CardInstance {
             may_play_until: None,
             dealt_deathtouch_damage: false,
             dealt_damage_this_turn: false,
+            damaged_by_this_turn: Vec::new(),
             regeneration_shields: 0,
             skip_next_untap: false,
             attacked_this_turn: false,
@@ -3012,6 +3026,7 @@ impl CardInstance {
         self.granted_alt_cast_cost_eot = None;
         self.dealt_deathtouch_damage = false;
         self.dealt_damage_this_turn = false;
+        self.damaged_by_this_turn.clear();
         // CR 701.15g — unused regeneration shields expire at end of turn.
         self.regeneration_shields = 0;
         // CR 702.171 — "saddled until end of turn" ends here.

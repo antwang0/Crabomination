@@ -404,6 +404,9 @@ impl GameState {
                 } else if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;
+                        if let Some(src) = source {
+                            c.damaged_by_this_turn.push(src);
+                        }
                     }
                     if source_has_wither && c.definition.is_creature() {
                         c.add_counters(CounterType::MinusOneMinusOne, amount);
