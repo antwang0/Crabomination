@@ -115,6 +115,14 @@ static CHK: &[Factory] = &[
     super::chk::honden_of_infinite_rage,
     super::chk::honden_of_seeing_winds,
     super::chk::battle_mad_ronin,
+    super::chk::seshiro_the_anointed,
+    super::chk::sosuke_son_of_seshiro,
+    super::chk::kashi_tribe_warriors,
+    super::chk::frostling,
+    super::chk::hearth_kami,
+    super::chk::quiet_purity,
+    super::chk::soratami_mirror_guard,
+    super::chk::akki_coalflinger,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

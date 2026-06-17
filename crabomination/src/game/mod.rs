@@ -8453,9 +8453,9 @@ impl GameState {
         // ability doesn't resolve: none of its effects happen. It must NOT
         // re-aim at a fresh target.
         let resolved_target = match target.as_ref() {
-            Some(t) => match effect.target_filter_for_slot(0) {
+            Some(t) => match effect.target_filter_for_slot(0).map(|f| f.resolve_x(x_value)) {
                 Some(filter)
-                    if !self.evaluate_requirement_static(filter, t, controller, Some(source)) =>
+                    if !self.evaluate_requirement_static(&filter, t, controller, Some(source)) =>
                 {
                     return Ok(vec![]);
                 }

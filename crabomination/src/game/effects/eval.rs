@@ -1256,7 +1256,7 @@ impl GameState {
                         card.definition.cost.cmc() <= n
                     }
                     // Unresolved X-relative filter (no X in scope here).
-                    R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
+                    R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
                     R::ManaValueEqualsSacrificedPlus(off) => {
@@ -1461,7 +1461,7 @@ impl GameState {
                 card.definition.cost.cmc() <= n
             }
             // Unresolved X-relative filter (callers concretize via `resolve_x`).
-            R::ManaValueAtMostXFromCost | R::ManaValueAtMostConverged => false,
+            R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::ManaValueAtMostConverged => false,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
             // Unresolved source-counter MV gate (concretized at resolution

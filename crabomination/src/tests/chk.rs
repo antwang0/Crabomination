@@ -6,6 +6,12 @@ use crate::card::Keyword;
 use crate::catalog;
 use crate::game::two_player_game;
 
+fn advance_to(g: &mut GameState, step: crate::game::TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
 /// Kami of Ancient Law's "Sacrifice this creature: Destroy target enchantment."
 #[test]
 fn kami_of_ancient_law_sacrifices_to_destroy_enchantment() {
@@ -491,4 +497,111 @@ fn crescent_moon_extra_draw() {
     let ctx = crate::game::effects::EffectContext::for_trigger(kami, 0, None, 0);
     g.resolve_effect(&trig, &ctx).unwrap();
     assert_eq!(g.players[0].hand.len(), before + 1, "active player drew an extra card");
+}
+
+// ── Snake tribal + red pingers (modern_decks batch 2) ────────────────────────
+
+/// Seshiro pumps other Snakes you control +2/+2 (lord static).
+#[test]
+fn seshiro_snake_lord() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::seshiro_the_anointed());
+    let snake = g.add_card_to_battlefield(0, catalog::orochi_ranger()); // 2/1 Snake
+    let cp = g.computed_permanent(snake).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+2 from Seshiro");
+}
+
+/// Sosuke's Warrior combat-damage trigger destroys the damaged creature.
+#[test]
+fn sosuke_warrior_destroys_blocker() {
+    let mut g = two_player_game();
+    let sosuke = g.add_card_to_battlefield(0, catalog::sosuke_son_of_seshiro()); // Snake Warrior
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let trig = catalog::sosuke_son_of_seshiro().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        sosuke, 0, Some(Target::Permanent(victim)), 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "damaged creature destroyed");
+}
+
+/// Frostling sacrifices itself to ping a creature for 1.
+#[test]
+fn frostling_sacrifices_to_ping() {
+    let mut g = two_player_game();
+    let frost = g.add_card_to_battlefield(0, catalog::frostling());
+    let target = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    g.clear_sickness(frost);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: frost, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("activate Frostling");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(frost).is_none(), "Frostling sacrificed");
+    assert!(g.battlefield_find(target).is_none(), "1/1 target took 1 and died");
+}
+
+/// Hearth Kami's {X}, Sac destroys an artifact with mana value X.
+#[test]
+fn hearth_kami_destroys_artifact_of_mv_x() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::hearth_kami());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring()); // MV 1
+    g.clear_sickness(kami);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(ring)), x_value: Some(1),
+    }).expect("activate Hearth Kami");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none(), "Sol Ring (MV 1) destroyed for X=1");
+}
+
+/// Quiet Purity destroys a target enchantment.
+#[test]
+fn quiet_purity_destroys_enchantment() {
+    let mut g = two_player_game();
+    let qp = g.add_card_to_hand(0, catalog::quiet_purity());
+    let ench = g.add_card_to_battlefield(1, catalog::concordant_crossroads());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    cast_at(&mut g, qp, Target::Permanent(ench));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
+/// Soratami Mirror-Guard bounces a land to make a small creature unblockable.
+#[test]
+fn soratami_mirror_guard_grants_unblockable() {
+    let mut g = two_player_game();
+    let guard = g.add_card_to_battlefield(0, catalog::soratami_mirror_guard());
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let small = g.add_card_to_battlefield(0, catalog::frostling()); // 1/1, power ≤ 2
+    g.clear_sickness(guard);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: guard, ability_index: 0, target: Some(Target::Permanent(small)), x_value: None,
+    }).expect("activate Mirror-Guard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land bounced as a cost");
+    let cp = g.computed_permanent(small).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Unblockable), "small creature is unblockable");
+}
+
+/// Akki Coalflinger taps to give attacking creatures first strike.
+#[test]
+fn akki_coalflinger_grants_first_strike() {
+    let mut g = two_player_game();
+    let akki = g.add_card_to_battlefield(0, catalog::akki_coalflinger());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(akki);
+    g.clear_sickness(attacker);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("declare attacker");
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: akki, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Akki");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(attacker).unwrap();
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "attacker gained first strike");
 }

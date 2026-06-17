@@ -969,6 +969,11 @@ pub enum SelectionRequirement {
     /// a concrete `ManaValueAtMost(x)` by `resolve_x` at search-resolution
     /// time (Chord of Calling); unresolved instances evaluate false.
     ManaValueAtMostXFromCost,
+    /// Mana value == the X paid into the resolving spell/ability's cost.
+    /// Resolved to a concrete `ManaValueExactly(x)` by `resolve_x` (Hearth
+    /// Kami's "destroy target artifact with mana value X"); unresolved
+    /// instances evaluate false.
+    ManaValueExactlyXFromCost,
     /// Mana value ≤ the resolving spell's converge count (distinct colors of
     /// mana spent — CR 702.86). Resolved to a concrete `ManaValueAtMost(n)`
     /// by `resolve_converge` at search-resolution time (Bring to Light);
@@ -1127,6 +1132,7 @@ impl SelectionRequirement {
     pub fn resolve_x(&self, x: u32) -> Self {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
+            Self::ManaValueExactlyXFromCost => Self::ManaValueExactly(x),
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),

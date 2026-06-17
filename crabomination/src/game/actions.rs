@@ -7128,8 +7128,11 @@ impl GameState {
         // activated abilities went unchecked, which let bots/UIs aim a
         // Wasteland at a Plains. Mirror the cast-side gate for parity.
         if let Some(tgt) = &target
-            && let Some(filter) = ability.effect.target_filter_for_slot(0)
-            && !self.evaluate_requirement_static(filter, tgt, p, Some(card_id))
+            && let Some(filter) = ability
+                .effect
+                .target_filter_for_slot(0)
+                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+            && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
         {
             return Err(GameError::SelectionRequirementViolated);
         }

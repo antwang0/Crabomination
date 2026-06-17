@@ -1251,3 +1251,213 @@ pub fn battle_mad_ronin() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Snake tribal (Seshiro / Sosuke) + red sac-pingers ────────────────────────
+
+/// Seshiro the Anointed — {4}{G}{G} Legendary Snake Monk 3/4. Other Snakes you
+/// control get +2/+2; whenever a Snake you control deals combat damage to a
+/// player, you may draw a card.
+pub fn seshiro_the_anointed() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Seshiro the Anointed",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Monk]),
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Other Snakes you control get +2/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Snake)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 2,
+                toughness: 2,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Snake),
+                }),
+            effect: Effect::MayDo {
+                description: "Draw a card".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sosuke, Son of Seshiro — {2}{G}{G} Legendary Snake Warrior 3/4. Other Snakes
+/// you control get +1/+0; whenever a Warrior you control deals combat damage to
+/// a creature, destroy that creature. (Printed "at end of combat"; modeled as an
+/// immediate destroy of the just-damaged creature.)
+pub fn sosuke_son_of_seshiro() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Sosuke, Son of Seshiro",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior]),
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Other Snakes you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Snake)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Warrior),
+                }),
+            effect: Effect::Destroy { what: Selector::Target(0) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kashi-Tribe Warriors — {3}{G}{G} Snake Warrior 2/4. Combat damage to a
+/// creature taps it and stops its next untap.
+pub fn kashi_tribe_warriors() -> CardDefinition {
+    CardDefinition {
+        name: "Kashi-Tribe Warriors",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior]),
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![snake_tap_lock()],
+        ..Default::default()
+    }
+}
+
+/// Frostling — {R} Spirit 1/1. Sacrifice this creature: It deals 1 damage to
+/// target creature.
+pub fn frostling() -> CardDefinition {
+    CardDefinition {
+        name: "Frostling",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hearth Kami — {1}{R} Spirit 2/1. {X}, Sacrifice this creature: Destroy
+/// target artifact with mana value X.
+pub fn hearth_kami() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Hearth Kami",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ManaValueExactlyXFromCost),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quiet Purity — {W} Instant — Arcane. Destroy target enchantment.
+pub fn quiet_purity() -> CardDefinition {
+    CardDefinition {
+        name: "Quiet Purity",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::HasCardType(CardType::Enchantment)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Soratami Mirror-Guard — {3}{U} Moonfolk Wizard 3/1. Flying; {2}, Return a
+/// land you control to its owner's hand: Target creature with power 2 or less
+/// can't be blocked this turn.
+pub fn soratami_mirror_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Soratami Mirror-Guard",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Moonfolk, CreatureType::Wizard]),
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+                ),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Akki Coalflinger — {1}{R}{R} Goblin Shaman 2/2. First strike; {R}, {T}:
+/// Attacking creatures gain first strike until end of turn.
+pub fn akki_coalflinger() -> CardDefinition {
+    CardDefinition {
+        name: "Akki Coalflinger",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Shaman]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[r()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(SelectionRequirement::IsAttacking),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
