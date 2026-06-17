@@ -212,6 +212,11 @@ static CHK: &[Factory] = &[
     super::chk::waking_nightmare,
     super::chk::pus_kami,
     super::chk::kami_of_tattered_shoji,
+    super::chk::no_dachi,
+    super::chk::lifted_by_clouds,
+    super::chk::kami_of_the_palace_fields,
+    super::chk::hail_of_arrows,
+    super::chk::moonlit_strider,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

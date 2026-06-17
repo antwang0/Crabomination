@@ -2016,3 +2016,89 @@ fn ronin_cavekeeper_bushido_2() {
     assert_eq!((d.power, d.toughness), (4, 3));
     assert!(d.keywords.contains(&Keyword::Bushido(2)));
 }
+
+/// No-Dachi grants +2/+0 and first strike when equipped.
+#[test]
+fn no_dachi_equips_for_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::no_dachi());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = crate::game::TurnStep::PreCombatMain;
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "granted first strike");
+}
+
+/// Lifted by Clouds grants flying until end of turn.
+#[test]
+fn lifted_by_clouds_grants_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::lifted_by_clouds());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lifted by Clouds");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Kami of the Palace Fields carries Flying + First strike.
+#[test]
+fn kami_of_the_palace_fields_flies_with_first_strike() {
+    let d = catalog::kami_of_the_palace_fields();
+    assert!(d.keywords.contains(&Keyword::Flying) && d.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Hail of Arrows deals X damage divided among attacking creatures.
+#[test]
+fn hail_of_arrows_hits_attackers() {
+    let mut g = two_player_game();
+    // Opponent (seat 1) is the active player attacking; seat 0 casts at instant speed.
+    let a1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let a2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(a1);
+    g.clear_sickness(a2);
+    g.active_player_idx = 1;
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![
+        Attack { attacker: a1, target: AttackTarget::Player(0) },
+        Attack { attacker: a2, target: AttackTarget::Player(0) },
+    ]).expect("attack");
+    drain_stack(&mut g);
+    let spell = g.add_card_to_hand(0, catalog::hail_of_arrows());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(a1)),
+        additional_targets: vec![Target::Permanent(a2)], mode: None, x_value: Some(2),
+    }).expect("cast Hail of Arrows for X=2");
+    drain_stack(&mut g);
+    let total_damage: u32 = [a1, a2].iter()
+        .filter_map(|id| g.battlefield_find(*id).map(|c| c.damage))
+        .sum();
+    assert_eq!(total_damage, 2, "2 damage divided among the attackers");
+}
+
+/// Moonlit Strider sacrifices to grant protection from a chosen color.
+#[test]
+fn moonlit_strider_sacs_for_protection() {
+    let mut g = two_player_game();
+    let strider = g.add_card_to_battlefield(0, catalog::moonlit_strider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: strider, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("sac for protection");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(strider).is_none(), "Strider sacrificed");
+    let has_pro = g.computed_permanent(bear).unwrap().keywords.iter()
+        .any(|k| matches!(k, Keyword::Protection(_)));
+    assert!(has_pro, "bear gained protection from a color");
+}

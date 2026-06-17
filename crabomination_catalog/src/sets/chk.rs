@@ -3311,3 +3311,99 @@ pub fn kami_of_tattered_shoji() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// No-Dachi — {2} Equipment. Equipped creature gets +2/+0 and has first strike.
+/// Equip {3}.
+pub fn no_dachi() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "No-Dachi",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 0,
+            keywords: vec![Keyword::FirstStrike],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Lifted by Clouds — {2}{U} Instant — Arcane. Target creature gains flying
+/// until end of turn. Splice onto Arcane {1}{U}.
+pub fn lifted_by_clouds() -> CardDefinition {
+    CardDefinition {
+        name: "Lifted by Clouds",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(1), u()]), SpellSubtype::Arcane)],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Kami of the Palace Fields — {5}{W} Spirit 3/2. Flying, first strike;
+/// Soulshift 5.
+pub fn kami_of_the_palace_fields() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of the Palace Fields",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(5)],
+        ..Default::default()
+    }
+}
+
+/// Hail of Arrows — {X}{W} Instant. Deals X damage divided as you choose among
+/// any number of target attacking creatures.
+pub fn hail_of_arrows() -> CardDefinition {
+    CardDefinition {
+        name: "Hail of Arrows",
+        cost: cost(&[crate::mana::x(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamageDivided {
+            total: Value::XFromCost,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            max_targets: 8,
+        },
+        ..Default::default()
+    }
+}
+
+/// Moonlit Strider — {3}{W} Spirit 1/4. Sacrifice this creature: Target creature
+/// you control gains protection from the color of your choice until EOT.
+/// Soulshift 3.
+pub fn moonlit_strider() -> CardDefinition {
+    CardDefinition {
+        name: "Moonlit Strider",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GrantProtectionFromChosenColor {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(3)],
+        ..Default::default()
+    }
+}
