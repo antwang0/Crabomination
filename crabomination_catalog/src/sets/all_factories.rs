@@ -7602,6 +7602,11 @@ static THB: &[Factory] = &[
     super::thb::threnody_singer,
     super::thb::blight_breath_catoblepas,
     super::thb::nyleas_forerunner,
+    super::thb::setessan_petitioner,
+    super::thb::voracious_typhon,
+    super::thb::omen_of_the_dead,
+    super::thb::nessian_hornbeetle,
+    super::thb::phalanx_tactics,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

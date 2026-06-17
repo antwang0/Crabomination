@@ -2225,3 +2225,141 @@ pub fn nyleas_forerunner() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB batch 7 — devotion lifegain, escape, omen recursion, combat payoffs ───
+
+/// Setessan Petitioner — {1}{G}{G} 2/2 Human Druid. ETB: gain life equal to
+/// your devotion to green.
+pub fn setessan_petitioner() -> CardDefinition {
+    CardDefinition {
+        name: "Setessan Petitioner",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::DevotionTo(vec![Color::Green]),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Voracious Typhon — {2}{G}{G} 4/4 Snake Beast. Escape—{5}{G}{G}, exile four;
+/// escapes with three +1/+1 counters.
+pub fn voracious_typhon() -> CardDefinition {
+    CardDefinition {
+        name: "Voracious Typhon",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Escape(cost(&[generic(5), g(), g()]), 4)],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastFromEscape),
+                then: Box::new(Value::Const(3)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
+        ..Default::default()
+    }
+}
+
+/// Omen of the Dead — {B} Flash Enchantment. ETB: return target creature card
+/// from your graveyard to your hand. {2}{B}, Sacrifice: Scry 2.
+pub fn omen_of_the_dead() -> CardDefinition {
+    CardDefinition {
+        name: "Omen of the Dead",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        activated_abilities: vec![omen_sac_scry(cost(&[generic(2), b()]))],
+        ..Default::default()
+    }
+}
+
+/// Nessian Hornbeetle — {1}{G} 2/2 Insect. At the beginning of combat on your
+/// turn, if you control another creature with power 4+, put a +1/+1 counter on
+/// it.
+pub fn nessian_hornbeetle() -> CardDefinition {
+    CardDefinition {
+        name: "Nessian Hornbeetle",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(4))
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phalanx Tactics — {1}{W} Instant. Target creature you control gets +2/+1;
+/// each other creature you control gets +1/+1 until end of turn.
+///
+/// Modeled as "each creature you control gets +1/+1, then the target gets an
+/// additional +1/+0" — nets +2/+1 on the target and +1/+1 on the rest.
+pub fn phalanx_tactics() -> CardDefinition {
+    CardDefinition {
+        name: "Phalanx Tactics",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}

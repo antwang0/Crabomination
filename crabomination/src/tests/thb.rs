@@ -1626,3 +1626,98 @@ fn nyleas_forerunner_grants_trample() {
     let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
     assert!(c.keywords.contains(&Keyword::Trample), "other creature has trample");
 }
+
+// ── THB batch 7 ──────────────────────────────────────────────────────────────
+
+/// Setessan Petitioner gains life equal to devotion to green (its own {G}{G}
+/// = 2).
+#[test]
+fn setessan_petitioner_gains_devotion_life() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::setessan_petitioner());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Setessan Petitioner");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained life = devotion 2");
+}
+
+/// Voracious Typhon escapes with three +1/+1 counters (none on a normal cast).
+#[test]
+fn voracious_typhon_escapes_with_counters() {
+    let mut g = two_player_game();
+    let typhon = g.add_card_to_graveyard(0, catalog::voracious_typhon());
+    let fodder: Vec<_> =
+        (0..4).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastEscape {
+        card_id: typhon, exile_cards: fodder,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape the Typhon");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(typhon).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3, "escaped with three counters");
+}
+
+/// Omen of the Dead returns a creature card from the graveyard to hand.
+#[test]
+fn omen_of_the_dead_returns_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::omen_of_the_dead());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Omen of the Dead");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature back in hand");
+}
+
+/// Phalanx Tactics gives the target +2/+1 and other creatures +1/+1.
+#[test]
+fn phalanx_tactics_pumps_team() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 target
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 other
+    let spell = g.add_card_to_hand(0, catalog::phalanx_tactics());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(hero)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Phalanx Tactics");
+    drain_stack(&mut g);
+    let bf = g.compute_battlefield();
+    let h = bf.iter().find(|c| c.id == hero).unwrap();
+    let a = bf.iter().find(|c| c.id == ally).unwrap();
+    assert_eq!((h.power, h.toughness), (4, 3), "target +2/+1");
+    assert_eq!((a.power, a.toughness), (3, 3), "other +1/+1");
+}
+
+/// Nessian Hornbeetle grows at begin-combat only if you control another
+/// power-4+ creature.
+#[test]
+fn nessian_hornbeetle_grows_with_a_big_ally() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let beetle = g.add_card_to_battlefield(0, catalog::nessian_hornbeetle());
+    // No big ally yet → no counter.
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(beetle).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    // Add a 4-power creature, fire again → counter.
+    g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(beetle).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "grows with a power-4+ ally");
+}
