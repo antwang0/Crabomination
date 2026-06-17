@@ -1184,3 +1184,103 @@ fn throat_slitter_destroys_on_connect() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(victim).is_none(), "nonblack creature destroyed");
 }
+
+/// Orochi Leafcaller filters {G} into a mana of any color.
+#[test]
+fn orochi_leafcaller_filters_mana() {
+    let mut g = two_player_game();
+    let snake = g.add_card_to_battlefield(0, catalog::orochi_leafcaller());
+    g.clear_sickness(snake);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(crate::mana::Color::Blue),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: snake, ability_index: 0, target: None, x_value: None,
+    }).expect("filter mana");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Blue), 1, "produced blue");
+}
+
+/// Joyous Respite gains 1 life per land you control.
+#[test]
+fn joyous_respite_gains_per_land() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let jr = g.add_card_to_hand(0, catalog::joyous_respite());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: jr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Joyous Respite");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 3, "gained 1 per land");
+}
+
+/// Kiku makes a creature deal its own power to itself, killing a fragile body.
+#[test]
+fn kiku_self_damage_kills_creature() {
+    let mut g = two_player_game();
+    let kiku = g.add_card_to_battlefield(0, catalog::kiku_nights_flower());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(kiku);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kiku, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("self-damage");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dealt itself 2 and died");
+}
+
+/// Gut Shot pings any target for 1 (paid here with {R}).
+#[test]
+fn gut_shot_pings_for_one() {
+    let mut g = two_player_game();
+    let frostling = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    let gs = g.add_card_to_hand(0, catalog::gut_shot());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gs, target: Some(Target::Permanent(frostling)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gut Shot castable for {R}");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(frostling).is_none(), "1/1 pinged for 1 and died");
+}
+
+/// Hanabi Blast deals 2 and returns itself to hand (then discards at random).
+#[test]
+fn hanabi_blast_returns_to_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let hb = g.add_card_to_hand(0, catalog::hanabi_blast());
+    g.add_card_to_hand(0, catalog::island()); // random-discard fodder
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hb, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hanabi Blast castable");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "2/2 took 2 and died");
+    assert!(g.players[0].hand.iter().any(|c| c.id == hb), "Hanabi Blast returned to hand");
+}
+
+/// Frostwielder taps to ping for 1.
+#[test]
+fn frostwielder_pings() {
+    let mut g = two_player_game();
+    let fw = g.add_card_to_battlefield(0, catalog::frostwielder());
+    let frostling = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    g.clear_sickness(fw);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fw, ability_index: 0, target: Some(Target::Permanent(frostling)), x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(frostling).is_none(), "1/1 pinged dead");
+}
+

@@ -160,6 +160,11 @@ static CHK: &[Factory] = &[
     super::chk::hokori_dust_drinker,
     super::chk::throat_slitter,
     super::chk::goblin_cohort,
+    super::chk::orochi_leafcaller,
+    super::chk::joyous_respite,
+    super::chk::kiku_nights_flower,
+    super::chk::hanabi_blast,
+    super::chk::frostwielder,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

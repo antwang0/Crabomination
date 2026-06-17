@@ -2128,6 +2128,106 @@ pub fn kami_of_the_painted_road() -> CardDefinition {
     }
 }
 
+/// Orochi Leafcaller — {G} Snake Shaman 1/1. {G}: Add one mana of any color.
+pub fn orochi_leafcaller() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Orochi Leafcaller",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Shaman]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::ONE),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Joyous Respite — {3}{G} Sorcery — Arcane. You gain 1 life for each land
+/// you control.
+pub fn joyous_respite() -> CardDefinition {
+    CardDefinition {
+        name: "Joyous Respite",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::count(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kiku, Night's Flower — {B}{B} Legendary Human Assassin 1/1. {2}{B}{B}, {T}:
+/// Target creature deals damage to itself equal to its power.
+pub fn kiku_nights_flower() -> CardDefinition {
+    CardDefinition {
+        name: "Kiku, Night's Flower",
+        cost: cost(&[b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Assassin]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b(), b()]),
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hanabi Blast — {1}{R}{R} Instant. Deals 2 damage to any target. Return
+/// Hanabi Blast to its owner's hand, then discard a card at random.
+pub fn hanabi_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Hanabi Blast",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            crate::effect::shortcut::deal(2, crate::effect::shortcut::target()),
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: true },
+            Effect::ReturnResolvingSpellToHand,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Frostwielder — {2}{R}{R} Human Shaman 1/2. {T}: Deals 1 damage to any
+/// target. (The "exile instead of dying" damage rider is omitted.)
+pub fn frostwielder() -> CardDefinition {
+    CardDefinition {
+        name: "Frostwielder",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Shaman]),
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target()),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Goblin Cohort — {R} Goblin Warrior 2/2. Can't attack unless you've cast a
 /// creature spell this turn.
 pub fn goblin_cohort() -> CardDefinition {
