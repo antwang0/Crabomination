@@ -911,3 +911,343 @@ pub fn eiganjo_castle() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Legendary Dragon Spirits (the CHK rare cycle) ────────────────────────────
+
+/// Konda, Lord of Eiganjo — {5}{W}{W} Legendary Human Samurai 3/3. Vigilance,
+/// indestructible, Bushido 5.
+pub fn konda_lord_of_eiganjo() -> CardDefinition {
+    CardDefinition {
+        name: "Konda, Lord of Eiganjo",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Indestructible, Keyword::Bushido(5)],
+        ..Default::default()
+    }
+}
+
+/// Keiga, the Tide Star — {5}{U} Legendary Dragon Spirit 5/5. Flying; when it
+/// dies, gain control of target creature.
+pub fn keiga_the_tide_star() -> CardDefinition {
+    CardDefinition {
+        name: "Keiga, the Tide Star",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Dragon, CreatureType::Spirit]),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::GainControl {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: Some(PlayerRef::You),
+            duration: Duration::Permanent,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jugan, the Rising Star — {3}{G}{G}{G} Legendary Dragon Spirit 5/5. Flying;
+/// when it dies, distribute five +1/+1 counters among any number of target
+/// creatures.
+pub fn jugan_the_rising_star() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Jugan, the Rising Star",
+        cost: cost(&[generic(3), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Dragon, CreatureType::Spirit]),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::DistributeCounters {
+            total: Value::Const(5),
+            counter: CounterType::PlusOnePlusOne,
+            filter: SelectionRequirement::Creature,
+            max_targets: 5,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ryusei, the Falling Star — {5}{R} Legendary Dragon Spirit 5/5. Flying; when
+/// it dies, it deals 5 damage to each creature without flying.
+pub fn ryusei_the_falling_star() -> CardDefinition {
+    CardDefinition {
+        name: "Ryusei, the Falling Star",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Dragon, CreatureType::Spirit]),
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::DealDamage {
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+            ),
+            amount: Value::Const(5),
+        })],
+        ..Default::default()
+    }
+}
+
+// ── Moonfolk land-bounce utility ─────────────────────────────────────────────
+
+/// Meloku the Clouded Mirror — {4}{U} Legendary Moonfolk Wizard 2/4. Flying;
+/// {1}, Return a land you control to its owner's hand: Create a 1/1 blue
+/// Illusion creature token with flying.
+pub fn meloku_the_clouded_mirror() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Meloku the Clouded Mirror",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Moonfolk, CreatureType::Wizard]),
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Illusion".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue],
+                    subtypes: spirit(vec![CreatureType::Illusion]),
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soratami Cloudskater — {1}{U} Moonfolk Rogue 1/1. Flying; {2}, Return a land
+/// you control to its owner's hand: Draw a card, then discard a card.
+pub fn soratami_cloudskater() -> CardDefinition {
+    CardDefinition {
+        name: "Soratami Cloudskater",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Moonfolk, CreatureType::Rogue]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hana Kami — {G} Spirit 1/1. {1}{G}, Sacrifice this creature: Return target
+/// Arcane card from your graveyard to your hand.
+pub fn hana_kami() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Hana Kami",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            sac_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane)
+                        .and(SelectionRequirement::InYourGraveyard),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kami of the Crescent Moon — {U}{U} Legendary Spirit 1/3. At the beginning of
+/// each player's draw step, that player draws an additional card.
+pub fn kami_of_the_crescent_moon() -> CardDefinition {
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "Kami of the Crescent Moon",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::AnyPlayer),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── The Honden shrine cycle (upkeep triggers scaling with Shrines) ───────────
+
+/// Number of Shrines you control — the "for each Shrine you control" rider that
+/// scales the Honden cycle (CR — enchantment subtype Shrine).
+fn shrines_you_control() -> Value {
+    use crate::card::EnchantmentSubtype;
+    Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine),
+    }
+}
+
+fn shrine() -> Subtypes {
+    use crate::card::EnchantmentSubtype;
+    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Shrine], ..Default::default() }
+}
+
+fn honden_upkeep(effect: Effect) -> TriggeredAbility {
+    use crate::game::TurnStep;
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        effect,
+    }
+}
+
+/// Honden of Cleansing Fire — {2}{W} Legendary Enchantment — Shrine. At the
+/// beginning of your upkeep, you gain 2 life for each Shrine you control.
+pub fn honden_of_cleansing_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Honden of Cleansing Fire",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: shrine(),
+        triggered_abilities: vec![honden_upkeep(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(Box::new(Value::Const(2)), Box::new(shrines_you_control())),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Honden of Life's Web — {2}{G} Legendary Enchantment — Shrine. At the
+/// beginning of your upkeep, create a 1/1 colorless Spirit creature token for
+/// each Shrine you control.
+pub fn honden_of_lifes_web() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Honden of Life's Web",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: shrine(),
+        triggered_abilities: vec![honden_upkeep(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: shrines_you_control(),
+            definition: TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                subtypes: spirit(vec![CreatureType::Spirit]),
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Honden of Night's Reach — {2}{B} Legendary Enchantment — Shrine. At the
+/// beginning of your upkeep, each opponent discards a card for each Shrine you
+/// control.
+pub fn honden_of_nights_reach() -> CardDefinition {
+    CardDefinition {
+        name: "Honden of Night's Reach",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: shrine(),
+        triggered_abilities: vec![honden_upkeep(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: shrines_you_control(),
+            random: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Honden of Infinite Rage — {2}{R} Legendary Enchantment — Shrine. At the
+/// beginning of your upkeep, Honden of Infinite Rage deals 2 damage to any
+/// target for each Shrine you control.
+pub fn honden_of_infinite_rage() -> CardDefinition {
+    CardDefinition {
+        name: "Honden of Infinite Rage",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: shrine(),
+        triggered_abilities: vec![honden_upkeep(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Times(Box::new(Value::Const(2)), Box::new(shrines_you_control())),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Honden of Seeing Winds — {4}{U} Legendary Enchantment — Shrine. At the
+/// beginning of your upkeep, draw a card for each Shrine you control.
+pub fn honden_of_seeing_winds() -> CardDefinition {
+    CardDefinition {
+        name: "Honden of Seeing Winds",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: shrine(),
+        triggered_abilities: vec![honden_upkeep(Effect::Draw {
+            who: Selector::You,
+            amount: shrines_you_control(),
+        })],
+        ..Default::default()
+    }
+}
+
+// ── Aggro odds & ends ────────────────────────────────────────────────────────
+
+/// Battle-Mad Ronin — {1}{R} Human Samurai 3/1. Bushido 1; attacks each combat
+/// if able.
+pub fn battle_mad_ronin() -> CardDefinition {
+    CardDefinition {
+        name: "Battle-Mad Ronin",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Bushido(1), Keyword::MustAttack],
+        ..Default::default()
+    }
+}

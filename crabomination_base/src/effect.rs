@@ -2379,6 +2379,12 @@ pub enum Effect {
     /// target (filtered by `filter`); every supplied target gains one +1/+1
     /// counter at resolution.
     SupportCounters { max_targets: u8, filter: SelectionRequirement },
+    /// "Distribute N `counter` counters among any number of target creatures"
+    /// (CR 601.2d divided choice — Jugan, the Rising Star; Hatchery Spider).
+    /// Each of slots `0..max_targets` is an optional target (filtered by
+    /// `filter`); the per-target split is decided at resolution via
+    /// `Decision::DivideDamage` (AutoDecider spreads as evenly as possible).
+    DistributeCounters { total: Value, counter: CounterType, filter: SelectionRequirement, max_targets: u8 },
     /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /

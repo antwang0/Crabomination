@@ -245,6 +245,7 @@ impl Effect {
             // Divided damage always targets (one or more chosen targets).
             Effect::DealDamageDivided { .. } => true,
             Effect::SupportCounters { .. } => true,
+            Effect::DistributeCounters { .. } => true,
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
@@ -564,6 +565,7 @@ impl Effect {
                 _ => None,
             }),
             Effect::DealDamageDivided { filter, .. }
+            | Effect::DistributeCounters { filter, .. }
             | Effect::DestroyTargetsPolymorph { filter }
             | Effect::DestroyTargets { filter } => Some(filter),
             // Fight surfaces the *defender's* filter (the opp creature
@@ -904,6 +906,10 @@ impl Effect {
                 Value::Const(n) => format!("deal {n} damage divided among targets"),
                 _ => "deal damage divided among targets".into(),
             },
+            Effect::DistributeCounters { total, counter, .. } => match total {
+                Value::Const(n) => format!("distribute {n} {counter:?} counters among targets"),
+                _ => "distribute counters among targets".into(),
+            },
             Effect::AddCounter { kind, amount, .. } => {
                 let t = self.target_phrase();
                 match amount {
@@ -1090,8 +1096,9 @@ impl Effect {
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.
             Effect::DealDamageDivided { filter, .. } => filter.can_match_player(),
-            // Support puts +1/+1 counters on creatures only — never players.
+            // Support / distribute put counters on creatures only — never players.
             Effect::SupportCounters { .. } => false,
+            Effect::DistributeCounters { .. } => false,
             // Stack-targeted counter spells take a permanent slot but the
             // target is a stack item, not a player. Reject player target.
             Effect::CounterSpell { .. }
@@ -1334,7 +1341,8 @@ impl Effect {
                 }
                 // Each of slots 0..max_targets carries the divide filter, so
                 // the cast/auto-target machinery collects "up to N targets".
-                Effect::DealDamageDivided { filter, max_targets, .. } => {
+                Effect::DealDamageDivided { filter, max_targets, .. }
+                | Effect::DistributeCounters { filter, max_targets, .. } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
                 // X targets — every slot carries the filter.
@@ -1525,7 +1533,8 @@ impl Effect {
     pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::DealDamageDivided { max_targets, .. }
-            | Effect::SupportCounters { max_targets, .. } => Some(*max_targets),
+            | Effect::SupportCounters { max_targets, .. }
+            | Effect::DistributeCounters { max_targets, .. } => Some(*max_targets),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),

@@ -375,3 +375,120 @@ fn kamigawa_vanilla_keywords() {
     assert!(numai.keywords.contains(&Keyword::Bushido(2)));
     assert_eq!(numai.activated_abilities.len(), 1, "regenerate ability present");
 }
+
+// ── Legendary Dragon Spirits + Honden cycle (modern_decks batch) ─────────────
+
+/// Konda is indestructible with Bushido 5.
+#[test]
+fn konda_keywords() {
+    let k = catalog::konda_lord_of_eiganjo();
+    assert!(k.keywords.contains(&Keyword::Indestructible));
+    assert!(k.keywords.contains(&Keyword::Vigilance));
+    assert!(k.keywords.contains(&Keyword::Bushido(5)));
+}
+
+/// Keiga's death trigger gains control of a target creature.
+#[test]
+fn keiga_dies_steals_creature() {
+    let mut g = two_player_game();
+    let keiga = g.add_card_to_battlefield(0, catalog::keiga_the_tide_star());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let events = g.remove_to_graveyard_with_triggers(keiga);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "Keiga stole the bear");
+}
+
+/// Jugan distributes five +1/+1 counters among target creatures
+/// (`Effect::DistributeCounters`).
+#[test]
+fn jugan_dies_distributes_five_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let jugan = g.add_card_to_battlefield(0, catalog::jugan_the_rising_star());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let events = g.remove_to_graveyard_with_triggers(jugan);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let total = g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne)
+        + g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(total, 5, "all five +1/+1 counters distributed");
+}
+
+/// Ryusei's death trigger deals 5 damage to each creature without flying,
+/// sparing flyers.
+#[test]
+fn ryusei_dies_burns_nonflyers() {
+    let mut g = two_player_game();
+    let ryusei = g.add_card_to_battlefield(0, catalog::ryusei_the_falling_star());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 no fly
+    let flyer = g.add_card_to_battlefield(1, catalog::mothrider_samurai()); // 2/2 flying
+    let events = g.remove_to_graveyard_with_triggers(ryusei);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ground).is_none(), "ground creature took 5 and died");
+    assert!(g.battlefield_find(flyer).is_some(), "flyer was spared");
+}
+
+/// Meloku bounces a land you control to mint a 1/1 flying Illusion.
+#[test]
+fn meloku_bounces_land_for_illusion() {
+    let mut g = two_player_game();
+    let meloku = g.add_card_to_battlefield(0, catalog::meloku_the_clouded_mirror());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(meloku);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: meloku, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Meloku");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land returned to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "land in hand");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Illusion"),
+        "1/1 flying Illusion minted");
+}
+
+/// Hana Kami sacrifices itself to return an Arcane card from your graveyard.
+#[test]
+fn hana_kami_returns_arcane() {
+    let mut g = two_player_game();
+    let hana = g.add_card_to_battlefield(0, catalog::hana_kami());
+    let ray = g.add_card_to_graveyard(0, catalog::glacial_ray()); // Arcane instant
+    g.clear_sickness(hana);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hana, ability_index: 0, target: Some(Target::Permanent(ray)), x_value: None,
+    }).expect("activate Hana Kami");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hana).is_none(), "Hana Kami sacrificed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ray), "Arcane card returned to hand");
+}
+
+/// Honden of Cleansing Fire's upkeep trigger gains 2 life per Shrine.
+#[test]
+fn honden_cleansing_fire_scales_with_shrines() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::honden_of_cleansing_fire());
+    g.add_card_to_battlefield(0, catalog::honden_of_seeing_winds()); // second Shrine
+    let honden = g.battlefield.iter().find(|c| c.definition.name == "Honden of Cleansing Fire").unwrap().id;
+    let start = g.players[0].life;
+    let trig = catalog::honden_of_cleansing_fire().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(honden, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.players[0].life - start, 4, "2 life × 2 Shrines");
+}
+
+/// Kami of the Crescent Moon draws each player an extra card at their draw step.
+#[test]
+fn crescent_moon_extra_draw() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::kami_of_the_crescent_moon());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    let trig = catalog::kami_of_the_crescent_moon().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(kami, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), before + 1, "active player drew an extra card");
+}

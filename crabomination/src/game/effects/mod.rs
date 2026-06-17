@@ -1413,6 +1413,75 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 601.2d — distribute `total` counters among the chosen
+            // targets. Mirrors `DealDamageDivided`: targets occupy slots
+            // `0..max_targets`; the split is decided here (reusing the
+            // DivideDamage decision) so a wants-UI seat / test can choose
+            // it (AutoDecider spreads evenly).
+            Effect::DistributeCounters { total, counter, .. } => {
+                let counter = *counter;
+                let amt = self.evaluate_value(total, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                let targets: Vec<Target> = ctx
+                    .targets
+                    .iter()
+                    .filter(|t| matches!(t, Target::Permanent(id) if self.battlefield_find(*id).is_some()))
+                    .cloned()
+                    .collect();
+                if targets.is_empty() { return Ok(()); }
+                let decision = Decision::DivideDamage {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    total: amt,
+                    targets: targets.clone(),
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::DivisionAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let mut division = match answer {
+                    crate::decision::DecisionAnswer::DamageDivision(v) => v,
+                    _ => vec![],
+                };
+                if division.len() != targets.len() || division.iter().sum::<u32>() != amt {
+                    division = crate::decision::even_damage_split(amt, targets.len());
+                }
+                for (t, mut n) in targets.iter().zip(division) {
+                    if n == 0 { continue; }
+                    let Target::Permanent(id) = t else { continue };
+                    let id = *id;
+                    // +1/+1 counters respect counter-doubling statics (Doubling
+                    // Season); other counter kinds are placed as-is.
+                    let doublers = if counter == CounterType::PlusOnePlusOne {
+                        self.battlefield_find(id)
+                            .map(|c| c.controller)
+                            .map_or(0, |ctrl| self.counter_doublers_for(ctrl))
+                    } else {
+                        0
+                    };
+                    for _ in 0..doublers {
+                        n = n.saturating_mul(2);
+                    }
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.add_counters(counter, n);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: id, counter_type: counter, count: n,
+                        });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(id);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::Fight { attacker, defender } => {
                 // Two creatures simultaneously deal damage equal to
                 // their power to each other. Snapshot powers up-front

@@ -1363,7 +1363,11 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.named_card.as_deref())
                         .is_some_and(|n| n == card.definition.name),
-                    _ => unreachable!("handled above"),
+                    // Zone-agnostic atoms (spell/enchantment subtype, token
+                    // flags, …) the battlefield walker doesn't special-case
+                    // are evaluated against the located card. Keeps the two
+                    // requirement walkers from drifting apart (TODO P3).
+                    _ => self.evaluate_requirement_on_card(req, card, controller),
                 }
             }
         }
