@@ -7684,6 +7684,10 @@ static THS: &[Factory] = &[
 static SHM: &[Factory] = &[
     super::shm::burn_trail,
     super::shm::barkshell_blessing,
+    super::shm::memory_sluice,
+    super::shm::gleeful_sabotage,
+    super::shm::ghastly_discovery,
+    super::shm::disturbing_plot,
 ];
 static TMP: &[Factory] = &[
     super::tmp::reanimate,

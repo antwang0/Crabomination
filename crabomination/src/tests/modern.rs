@@ -56696,3 +56696,80 @@ fn sunburst_no_colored_mana_means_no_counters() {
     // 0/0 with no counters → dies to SBA.
     assert!(g.battlefield_find(myr).is_none(), "0/0 with no counters dies");
 }
+
+/// Memory Sluice conspired mills the target for 8 (4 original + 4 copy).
+#[test]
+fn conspire_memory_sluice_mills_eight() {
+    let mut g = two_player_game();
+    for _ in 0..12 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::memory_sluice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    // Memory Sluice is {U/B}; the two conspirers must share a color with it.
+    let b0 = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let b1 = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [b0, b1],
+        target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Memory Sluice");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 8, "milled 4 + 4");
+}
+
+/// Ghastly Discovery conspired nets +2 cards (draw 2 / discard 1, twice).
+#[test]
+fn conspire_ghastly_discovery_nets_two() {
+    let mut g = two_player_game();
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::ghastly_discovery());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let b0 = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let b1 = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [b0, b1],
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Ghastly Discovery");
+    drain_stack(&mut g);
+    // -1 cast + (draw 2 - discard 1) * 2 = -1 + 2 = net +1 from before-cast hand.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 4 - 2, "draw 4, discard 2");
+}
+
+/// Gleeful Sabotage destroys a target artifact (conspired; copy is redundant).
+#[test]
+fn conspire_gleeful_sabotage_destroys_artifact() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gleeful_sabotage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let b0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [b0, b1],
+        target: Some(Target::Permanent(art)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Gleeful Sabotage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Disturbing Plot returns a creature card from a graveyard to its owner's
+/// hand (conspired; the copy is a redundant re-target).
+#[test]
+fn conspire_disturbing_plot_returns_creature() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::disturbing_plot());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Disturbing Plot is {1}{B}; the conspirers must be black (Gravedigger).
+    let bk0 = g.add_card_to_battlefield(0, catalog::gravedigger());
+    let bk1 = g.add_card_to_battlefield(0, catalog::gravedigger());
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [bk0, bk1],
+        target: Some(Target::Permanent(dead)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Disturbing Plot");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
+}
