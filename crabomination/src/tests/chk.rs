@@ -1455,3 +1455,106 @@ fn innocence_kami_untaps_on_spiritcraft() {
 fn villainous_ogre_cant_block() {
     assert!(catalog::villainous_ogre().keywords.contains(&Keyword::CantBlock));
 }
+
+/// Counsel of the Soratami draws two.
+#[test]
+fn counsel_draws_two() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_hand(0, catalog::counsel_of_the_soratami());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: c, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Counsel");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "drew two (net +1 after the cast)");
+}
+
+/// Ghostly Visit destroys a nonblack creature.
+#[test]
+fn ghostly_visit_destroys_nonblack() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let gv = g.add_card_to_hand(0, catalog::ghostly_visit());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gv, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ghostly Visit");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "nonblack creature destroyed");
+}
+
+/// Lifegift offers 1 life whenever a land enters.
+#[test]
+fn lifegift_gains_on_land_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lifegift());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let before = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(forest)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 1, "gained 1 life off the land ETB");
+}
+
+/// Dampen Thought mills a target player four; it carries Splice onto Arcane.
+#[test]
+fn dampen_thought_mills_four() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
+    let dt = g.add_card_to_hand(0, catalog::dampen_thought());
+    assert!(catalog::dampen_thought().keywords.iter().any(|k| matches!(k, Keyword::Splice(..))));
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[1].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: dt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dampen Thought");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), before - 4, "milled four");
+}
+
+/// Consuming Vortex bounces a creature.
+#[test]
+fn consuming_vortex_bounces() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cv = g.add_card_to_hand(0, catalog::consuming_vortex());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cv, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Consuming Vortex");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "creature bounced to hand");
+}
+
+/// Psychic Puppetry taps a target permanent (mode 0).
+#[test]
+fn psychic_puppetry_taps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pp = g.add_card_to_hand(0, catalog::psychic_puppetry());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Mode(0),
+    ]));
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pp, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Psychic Puppetry");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target permanent tapped");
+}

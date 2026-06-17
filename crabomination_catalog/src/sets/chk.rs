@@ -2302,6 +2302,108 @@ pub fn frostwielder() -> CardDefinition {
     }
 }
 
+/// Counsel of the Soratami — {2}{U} Sorcery. Draw two cards.
+pub fn counsel_of_the_soratami() -> CardDefinition {
+    CardDefinition {
+        name: "Counsel of the Soratami",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Ghostly Visit — {2}{B} Sorcery. Destroy target nonblack creature.
+pub fn ghostly_visit() -> CardDefinition {
+    CardDefinition {
+        name: "Ghostly Visit",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature.and(
+                crate::card::SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(
+                    crate::mana::Color::Black,
+                ))),
+            )),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lifegift — {2}{G} Enchantment. Whenever a land enters, you may gain 1 life.
+pub fn lifegift() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Lifegift",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::MayDo {
+                description: "Gain 1 life".into(),
+                body: Box::new(gain_life(1)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dampen Thought — {1}{U} Instant — Arcane. Target player mills four cards.
+/// Splice onto Arcane {1}{U}.
+pub fn dampen_thought() -> CardDefinition {
+    CardDefinition {
+        name: "Dampen Thought",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(1), u()]), SpellSubtype::Arcane)],
+        effect: Effect::Mill {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Consuming Vortex — {1}{U} Instant — Arcane. Return target creature to its
+/// owner's hand. Splice onto Arcane {3}{U}.
+pub fn consuming_vortex() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Consuming Vortex",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(3), u()]), SpellSubtype::Arcane)],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Psychic Puppetry — {1}{U} Instant — Arcane. You may tap or untap target
+/// permanent. Splice onto Arcane {U}.
+pub fn psychic_puppetry() -> CardDefinition {
+    CardDefinition {
+        name: "Psychic Puppetry",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[u()]), SpellSubtype::Arcane)],
+        effect: Effect::ChooseMode(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+            Effect::Untap { what: target_filtered(SelectionRequirement::Permanent), up_to: None },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Pull Under — {5}{B} Instant — Arcane. Target creature gets -5/-5 until end
 /// of turn.
 pub fn pull_under() -> CardDefinition {
