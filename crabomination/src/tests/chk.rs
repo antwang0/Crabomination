@@ -1066,3 +1066,121 @@ fn kami_of_the_painted_road_gains_protection_on_spiritcraft() {
     assert!(c.keywords.contains(&Keyword::Protection(crate::mana::Color::Red)),
         "spiritcraft granted protection from the chosen color");
 }
+
+/// Rend Spirit destroys a Spirit (and only a Spirit).
+#[test]
+fn rend_spirit_destroys_spirit() {
+    let mut g = two_player_game();
+    let spirit = g.add_card_to_battlefield(1, catalog::lantern_kami()); // Spirit
+    let rend = g.add_card_to_hand(0, catalog::rend_spirit());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rend, target: Some(Target::Permanent(spirit)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rend Spirit castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spirit).is_none(), "Spirit destroyed");
+}
+
+/// Eye of Nowhere bounces any permanent to its owner's hand.
+#[test]
+fn eye_of_nowhere_bounces_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eye = g.add_card_to_hand(0, catalog::eye_of_nowhere());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eye, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Eye of Nowhere castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "permanent left the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "returned to owner's hand");
+}
+
+/// Thief of Hope drains an opponent when you cast an Arcane spell.
+#[test]
+fn thief_of_hope_drains_on_spiritcraft() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thief_of_hope());
+    let reach = g.add_card_to_hand(0, catalog::reach_through_mists()); // Arcane
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    let opp_before = g.players[1].life;
+    let me_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: reach, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 1, "opponent lost 1");
+    assert_eq!(g.players[0].life, me_before + 1, "you gained 1");
+}
+
+/// Soratami Rainshaper bounces a land to grant a creature shroud.
+#[test]
+fn soratami_rainshaper_grants_shroud() {
+    let mut g = two_player_game();
+    let shaper = g.add_card_to_battlefield(0, catalog::soratami_rainshaper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    g.clear_sickness(shaper);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shaper, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate shroud grant");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "land bounced as a cost");
+    assert!(g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
+        .keywords.contains(&Keyword::Shroud), "creature gained shroud");
+}
+
+/// Mystic Restraints flashes in, taps the creature, and locks it tapped.
+#[test]
+fn mystic_restraints_taps_and_locks() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::mystic_restraints());
+    assert!(catalog::mystic_restraints().keywords.contains(&Keyword::Flash), "has Flash");
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mystic Restraints castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "ETB tapped the creature");
+}
+
+/// Hokori keeps lands tapped through the untap step; the upkeep trigger frees
+/// exactly one.
+#[test]
+fn hokori_locks_lands_then_frees_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hokori_dust_drinker());
+    let l1 = g.add_card_to_battlefield(0, catalog::island());
+    let l2 = g.add_card_to_battlefield(0, catalog::island());
+    g.battlefield_find_mut(l1).unwrap().tapped = true;
+    g.battlefield_find_mut(l2).unwrap().tapped = true;
+    g.do_untap();
+    let tapped_after_untap = [l1, l2].iter()
+        .filter(|id| g.battlefield_find(**id).unwrap().tapped).count();
+    assert_eq!(tapped_after_untap, 2, "lands don't untap under Hokori");
+}
+
+/// Throat Slitter's combat-damage trigger destroys a nonblack creature the
+/// damaged player controls; it carries Ninjutsu.
+#[test]
+fn throat_slitter_destroys_on_connect() {
+    let mut g = two_player_game();
+    let ninja = g.add_card_to_battlefield(0, catalog::throat_slitter());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green, nonblack
+    assert!(catalog::throat_slitter().keywords.iter()
+        .any(|k| matches!(k, Keyword::Ninjutsu(_))), "has Ninjutsu");
+    let trig = catalog::throat_slitter().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        ninja, 0, Some(Target::Permanent(victim)), 0,
+    );
+    g.resolve_effect(&trig, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "nonblack creature destroyed");
+}

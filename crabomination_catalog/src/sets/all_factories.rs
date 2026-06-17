@@ -152,6 +152,13 @@ static CHK: &[Factory] = &[
     super::chk::yukora_the_prisoner,
     super::chk::he_who_hungers,
     super::chk::kami_of_the_painted_road,
+    super::chk::rend_spirit,
+    super::chk::eye_of_nowhere,
+    super::chk::thief_of_hope,
+    super::chk::soratami_rainshaper,
+    super::chk::mystic_restraints,
+    super::chk::hokori_dust_drinker,
+    super::chk::throat_slitter,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

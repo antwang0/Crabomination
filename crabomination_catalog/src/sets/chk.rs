@@ -2127,3 +2127,177 @@ pub fn kami_of_the_painted_road() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rend Spirit — {2}{B} Instant. Destroy target Spirit.
+pub fn rend_spirit() -> CardDefinition {
+    CardDefinition {
+        name: "Rend Spirit",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::HasCreatureType(CreatureType::Spirit)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Eye of Nowhere — {U}{U} Sorcery — Arcane. Return target permanent to its
+/// owner's hand.
+pub fn eye_of_nowhere() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Eye of Nowhere",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Thief of Hope — {2}{B} Spirit 2/2. Whenever you cast a Spirit or Arcane
+/// spell, target opponent loses 1 life and you gain 1 life. Soulshift 2.
+pub fn thief_of_hope() -> CardDefinition {
+    CardDefinition {
+        name: "Thief of Hope",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            crate::effect::shortcut::spiritcraft(Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::ONE,
+            }),
+            crate::effect::shortcut::soulshift(2),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Soratami Rainshaper — {2}{U} Moonfolk Wizard 2/1, Flying. {3}, Return a
+/// land you control to its owner's hand: Target creature you control gains
+/// shroud until end of turn.
+pub fn soratami_rainshaper() -> CardDefinition {
+    CardDefinition {
+        name: "Soratami Rainshaper",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Moonfolk, CreatureType::Wizard]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Shroud,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mystic Restraints — {2}{U}{U} Aura with Flash. ETB taps the enchanted
+/// creature; it doesn't untap during its controller's untap step.
+pub fn mystic_restraints() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility};
+    CardDefinition {
+        name: "Mystic Restraints",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Tap {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hokori, Dust Drinker — {2}{W}{W} Legendary Spirit 2/2. Lands don't untap
+/// during their controllers' untap steps; at each player's upkeep, that player
+/// untaps a land they control.
+pub fn hokori_dust_drinker() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Hokori, Dust Drinker",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Lands don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(SelectionRequirement::Land),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::Untap {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::ActivePlayer,
+                    filter: SelectionRequirement::Land,
+                },
+                up_to: Some(Value::ONE),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Throat Slitter — {4}{B} Rat Ninja 2/2 with Ninjutsu {2}{B}. Whenever this
+/// deals combat damage to a player, destroy target nonblack creature that
+/// player controls. (Modeled as a nonblack creature an opponent controls.)
+pub fn throat_slitter() -> CardDefinition {
+    CardDefinition {
+        name: "Throat Slitter",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Ninja]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Ninjutsu(cost(&[generic(2), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent)
+                        .and(crate::card::SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::HasColor(crate::mana::Color::Black),
+                        ))),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
