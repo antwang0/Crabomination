@@ -83,6 +83,8 @@ pub enum CreatureType {
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).
     Siren, Citizen, Leech,
+    // THB expansion (Venomous Hierophant, Pharika's Spawn).
+    Gorgon,
     // Bloomburrow / MKM (Voracious Varmint).
     Varmint,
     // Enchantment creature subtype (Enduring Innocence).

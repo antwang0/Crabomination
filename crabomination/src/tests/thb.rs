@@ -1306,3 +1306,221 @@ fn loathsome_chimera_escapes() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(chimera).is_some(), "escaped onto the battlefield");
 }
+
+// ── THB batch 5 — Omens, devotion, escape, blue tempo ────────────────────────
+
+/// Omen of the Sun ETB makes two tokens and gains 2 life.
+#[test]
+fn omen_of_the_sun_etb() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::omen_of_the_sun());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    let creatures = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Omen of the Sun");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 2");
+    let now = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count();
+    assert_eq!(now, creatures + 2, "two Soldier tokens");
+}
+
+/// Omen of the Forge ETB deals 2 damage to the opponent.
+#[test]
+fn omen_of_the_forge_etb_burns() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::omen_of_the_forge());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Omen of the Forge");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage");
+}
+
+/// Mire's Grasp shrinks a 2/2 to -1/-1 and it dies.
+#[test]
+fn mires_grasp_kills_small_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::mires_grasp());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mire's Grasp");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear shrunk to -1/-1 and died");
+}
+
+/// Funeral Rites draws two, loses 2 life, and mills two.
+#[test]
+fn funeral_rites_draws_loses_mills() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::funeral_rites());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let (hand, life, gy) = (g.players[0].hand.len(), g.players[0].life, g.players[0].graveyard.len());
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Funeral Rites");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "lost 2");
+    // -1 (cast) +2 (draw) = +1 hand; graveyard gains the spell + 2 milled.
+    assert_eq!(g.players[0].hand.len(), hand + 1, "net +1 in hand");
+    assert_eq!(g.players[0].graveyard.len(), gy + 3, "spell + 2 milled");
+}
+
+/// Soulreaper of Mogis sacrifices a creature to draw.
+#[test]
+fn soulreaper_sacrifices_to_draw() {
+    let mut g = two_player_game();
+    let reaper = g.add_card_to_battlefield(0, catalog::soulreaper_of_mogis());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: reaper, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Soulreaper");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Drag to the Underworld's devotion discount lets it be cast for {B}{B} with
+/// two black devotion on board; destroys the target.
+#[test]
+fn drag_to_the_underworld_devotion_discount() {
+    let mut g = two_player_game();
+    // Two Gray-Merchant-ish black pips of devotion (use Mire Triton: {1}{B}).
+    g.add_card_to_battlefield(0, catalog::mire_triton());
+    g.add_card_to_battlefield(0, catalog::mire_triton());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::drag_to_the_underworld());
+    // Only {B}{B}: the {2} generic is fully discounted by devotion 2.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Drag discounted to {B}{B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature destroyed");
+}
+
+/// Deny the Divine counters a creature spell and exiles it.
+#[test]
+fn deny_the_divine_counters_and_exiles() {
+    let mut g = two_player_game();
+    // Active player 0 casts a creature; player 1 counters it in response.
+    let creature = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: creature, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature");
+    let deny = g.add_card_to_hand(1, catalog::deny_the_divine());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: deny, target: Some(Target::Permanent(creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Deny the Divine");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == creature), "countered spell exiled");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != creature), "not in graveyard");
+}
+
+/// Venomous Hierophant ETB mills three.
+#[test]
+fn venomous_hierophant_mills_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::venomous_hierophant());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Venomous Hierophant");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy + 3, "milled three");
+}
+
+/// Chain to Memory shrinks a creature's power by 4.
+#[test]
+fn chain_to_memory_shrinks_power() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::chain_to_memory());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chain to Memory");
+    drain_stack(&mut g);
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
+    assert!(c.power <= -2, "power dropped by 4 (got {})", c.power);
+}
+
+/// Whirlwind of Thought draws when you cast a noncreature spell.
+#[test]
+fn whirlwind_of_thought_draws_on_noncreature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::whirlwind_of_thought());
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a noncreature spell");
+    drain_stack(&mut g);
+    // -1 bolt + 1 drawn = net 0.
+    assert_eq!(g.players[0].hand.len(), hand, "drew off the noncreature cast");
+}
+
+/// Underworld Charger escapes with two +1/+1 counters.
+#[test]
+fn underworld_charger_escapes_with_counters() {
+    let mut g = two_player_game();
+    let charger = g.add_card_to_graveyard(0, catalog::underworld_charger());
+    let fodder: Vec<_> =
+        (0..3).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastEscape {
+        card_id: charger, exile_cards: fodder,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape the charger");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(charger).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2, "escaped with two counters");
+}
+
+/// Tymaret's toughness equals devotion to black.
+#[test]
+fn tymaret_toughness_tracks_devotion() {
+    let mut g = two_player_game();
+    let tym = g.add_card_to_battlefield(0, catalog::tymaret_chosen_from_death());
+    // Tymaret itself is {B}{B} = 2 devotion.
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == tym).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2), "2/* with devotion 2");
+}

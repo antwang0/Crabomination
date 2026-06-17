@@ -6,7 +6,7 @@ use crate::card::{
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, Selector,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
@@ -1682,6 +1682,415 @@ pub fn loathsome_chimera() -> CardDefinition {
         power: 4,
         toughness: 1,
         keywords: vec![Keyword::Escape(cost(&[generic(4), g()]), 3)],
+        ..Default::default()
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// THB batch 5 — Omen enchantments, escape bodies, devotion payoffs, blue tempo.
+// ════════════════════════════════════════════════════════════════════════════
+
+fn human_soldier_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn wolf_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// `{cost}, Sacrifice this enchantment: Scry 2.` — the shared Omen-cycle ability.
+fn omen_sac_scry(mana: crate::mana::ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: mana,
+        sac_cost: true,
+        effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Omen of the Sun — {2}{W} Flash Enchantment. ETB: two 1/1 Human Soldiers +
+/// gain 2. {2}{W}, Sacrifice: Scry 2.
+pub fn omen_of_the_sun() -> CardDefinition {
+    CardDefinition {
+        name: "Omen of the Sun",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: human_soldier_token(),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        activated_abilities: vec![omen_sac_scry(cost(&[generic(2), w()]))],
+        ..Default::default()
+    }
+}
+
+/// Omen of the Forge — {1}{R} Flash Enchantment. ETB: 2 damage to any target.
+/// {2}{R}, Sacrifice: Scry 2.
+pub fn omen_of_the_forge() -> CardDefinition {
+    CardDefinition {
+        name: "Omen of the Forge",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::DealDamage { to: target_any(), amount: Value::Const(2) })],
+        activated_abilities: vec![omen_sac_scry(cost(&[generic(2), r()]))],
+        ..Default::default()
+    }
+}
+
+/// Omen of the Hunt — {2}{G} Flash Enchantment. ETB: may fetch a basic land
+/// tapped. {2}{G}, Sacrifice: Scry 2.
+pub fn omen_of_the_hunt() -> CardDefinition {
+    CardDefinition {
+        name: "Omen of the Hunt",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        })],
+        activated_abilities: vec![omen_sac_scry(cost(&[generic(2), g()]))],
+        ..Default::default()
+    }
+}
+
+/// Mire's Grasp — {1}{B} Aura. Enchanted creature gets -3/-3.
+pub fn mires_grasp() -> CardDefinition {
+    CardDefinition {
+        name: "Mire's Grasp",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus { power: -3, toughness: -3, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Mogis's Favor — {B} Aura with Escape—{2}{B}, exile two. Enchanted creature
+/// gets +2/-1.
+pub fn mogiss_favor() -> CardDefinition {
+    CardDefinition {
+        name: "Mogis's Favor",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        keywords: vec![Keyword::Escape(cost(&[generic(2), b()]), 2)],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 2, toughness: -1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Funeral Rites — {2}{B} Sorcery. Draw two, lose 2 life, then mill two.
+pub fn funeral_rites() -> CardDefinition {
+    CardDefinition {
+        name: "Funeral Rites",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Soulreaper of Mogis — {2}{B} 2/3 Enchantment Creature. {2}{B}, Sacrifice a
+/// creature: Draw a card.
+pub fn soulreaper_of_mogis() -> CardDefinition {
+    CardDefinition {
+        name: "Soulreaper of Mogis",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Drag to the Underworld — {2}{B}{B} Instant. Costs {X} less, X = devotion to
+/// black. Destroy target creature.
+pub fn drag_to_the_underworld() -> CardDefinition {
+    CardDefinition {
+        name: "Drag to the Underworld",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "This spell costs {X} less to cast, where X is your devotion to black",
+            effect: crate::effect::StaticEffect::SelfCostReducedByDevotion { colors: vec![Color::Black] },
+        }],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Deny the Divine — {2}{U} Instant. Counter target creature or enchantment
+/// spell; exile it instead of binning it.
+pub fn deny_the_divine() -> CardDefinition {
+    CardDefinition {
+        name: "Deny the Divine",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpellToZone {
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Creature)
+                    .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+            ),
+            zone: crate::effect::CounteredSpellZone::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Venomous Hierophant — {3}{B} 3/3 Deathtouch. ETB: mill three.
+pub fn venomous_hierophant() -> CardDefinition {
+    CardDefinition {
+        name: "Venomous Hierophant",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gorgon, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
+        ..Default::default()
+    }
+}
+
+/// Vexing Gull — {2}{U} 2/2 Flash Flying Bird.
+pub fn vexing_gull() -> CardDefinition {
+    CardDefinition {
+        name: "Vexing Gull",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Riptide Turtle — {1}{U} 0/5 Flash Defender Turtle.
+pub fn riptide_turtle() -> CardDefinition {
+    CardDefinition {
+        name: "Riptide Turtle",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        power: 0,
+        toughness: 5,
+        keywords: vec![Keyword::Flash, Keyword::Defender],
+        ..Default::default()
+    }
+}
+
+/// Glimpse of Freedom — {1}{U} Instant with Escape—{2}{U}, exile five. Draw a
+/// card.
+pub fn glimpse_of_freedom() -> CardDefinition {
+    CardDefinition {
+        name: "Glimpse of Freedom",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Escape(cost(&[generic(2), u()]), 5)],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Chain to Memory — {U} Instant. Target creature gets -4/-0 until end of turn.
+/// Scry 2.
+pub fn chain_to_memory() -> CardDefinition {
+    CardDefinition {
+        name: "Chain to Memory",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-4),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Whirlwind of Thought — {1}{U}{R}{W} Enchantment. Whenever you cast a
+/// noncreature spell, draw a card.
+pub fn whirlwind_of_thought() -> CardDefinition {
+    CardDefinition {
+        name: "Whirlwind of Thought",
+        cost: cost(&[generic(1), u(), r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }))),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Triton Waverider — {3}{U} 3/3 Merfolk Wizard. Constellation: gains flying
+/// until end of turn.
+pub fn triton_waverider() -> CardDefinition {
+    CardDefinition {
+        name: "Triton Waverider",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![constellation(Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Aspect of Lamprey — {3}{B} Aura on a creature you control. ETB: target
+/// opponent discards two. Enchanted creature has lifelink.
+pub fn aspect_of_lamprey() -> CardDefinition {
+    CardDefinition {
+        name: "Aspect of Lamprey",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus { keywords: vec![Keyword::Lifelink], ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+            random: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Underworld Charger — {2}{B} 3/3 Nightmare Horse that can't block. Escape—
+/// {4}{B}, exile three; escapes with two +1/+1 counters.
+pub fn underworld_charger() -> CardDefinition {
+    CardDefinition {
+        name: "Underworld Charger",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Horse],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::CantBlock, Keyword::Escape(cost(&[generic(4), b()]), 3)],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastFromEscape),
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
+        ..Default::default()
+    }
+}
+
+/// Pharika's Spawn — {3}{B} 3/4 Gorgon. Escape—{5}{B}, exile three; escapes
+/// with two +1/+1 counters.
+pub fn pharikas_spawn() -> CardDefinition {
+    CardDefinition {
+        name: "Pharika's Spawn",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gorgon], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Escape(cost(&[generic(5), b()]), 3)],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastFromEscape),
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
+        ..Default::default()
+    }
+}
+
+/// Tymaret, Chosen from Death — {B}{B} 2/* Legendary Demigod whose toughness
+/// equals your devotion to black. {1}{B}: Exile target card from a graveyard
+/// (the printed "up to two… gain 1 if a creature" is modeled as a single
+/// target).
+pub fn tymaret_chosen_from_death() -> CardDefinition {
+    CardDefinition {
+        name: "Tymaret, Chosen from Death",
+        cost: cost(&[b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demigod], ..Default::default() },
+        dynamic_pt: Some(DynamicPt::DevotionToToughness { color: Color::Black, base_p: 2 }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::InGraveyard),
+                to: ZoneDest::Exile,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
