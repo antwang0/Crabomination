@@ -382,6 +382,12 @@ pub enum StaticEffect {
     /// `GameState::scale_damage_to` (additive bonus applied before the
     /// doublers/halvers).
     AddDamageToOpponents { source_color: Option<crate::mana::Color>, amount: u32 },
+    /// CR 614.x — "If a [color] source would deal damage to a player, it deals
+    /// that much damage plus `amount` to that player instead." Unlike
+    /// `AddDamageToOpponents`, this matches *any* controller's source of the
+    /// color and *every* player (Tok-Tok, Volcano Born). Applied in
+    /// `scale_damage_to` before the doublers/halvers.
+    AddDamageFromColorToPlayers { color: crate::mana::Color, amount: u32 },
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

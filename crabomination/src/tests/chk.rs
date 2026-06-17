@@ -2254,3 +2254,47 @@ fn scarmaker_removes_ki_to_grant_fear() {
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Fear),
         "target gained fear");
 }
+
+/// Akki Lavarunner flips into Tok-Tok when it deals combat damage to a player.
+#[test]
+fn akki_lavarunner_flips_on_combat_damage_to_player() {
+    let mut g = two_player_game();
+    let akki = g.add_card_to_battlefield(0, catalog::akki_lavarunner());
+    g.clear_sickness(akki);
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: akki, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    let tok = g.battlefield_find(akki).unwrap();
+    assert!(tok.flipped && tok.definition.name == "Tok-Tok, Volcano Born", "flipped to Tok-Tok");
+    assert!(tok.definition.keywords.contains(&Keyword::Protection(crate::mana::Color::Red)));
+}
+
+/// Tok-Tok's static adds 1 to red-source combat damage dealt to a player.
+#[test]
+fn tok_tok_adds_one_to_red_damage_to_players() {
+    let mut g = two_player_game();
+    // Flip an Akki into Tok-Tok on the spot.
+    let akki = g.add_card_to_battlefield(0, catalog::akki_lavarunner());
+    let mut ev = Vec::new();
+    g.flip_permanent(akki, &mut ev);
+    assert_eq!(g.battlefield_find(akki).unwrap().definition.name, "Tok-Tok, Volcano Born");
+    // A red 2/2 deals combat damage to the opponent: 2 + 1 = 3.
+    let mut red = catalog::grizzly_bears();
+    red.name = "Red Ogre";
+    red.cost = crate::mana::cost(&[crate::mana::generic(1), crate::mana::r()]); // red source
+    let attacker = g.add_card_to_battlefield(0, red);
+    g.clear_sickness(attacker);
+    let life_before = g.players[1].life;
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3, "red 2/2 deals 2+1 with Tok-Tok out");
+}

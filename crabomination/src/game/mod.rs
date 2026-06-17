@@ -2427,6 +2427,14 @@ impl GameState {
                                 amount = amount.saturating_add(*bonus);
                             }
                         }
+                        StaticEffect::AddDamageFromColorToPlayers { color, amount: bonus } => {
+                            // Any source of the color, any player (CR 614.x).
+                            if let Some((_, src_colors)) = &source_info
+                                && src_colors.contains(color)
+                            {
+                                amount = amount.saturating_add(*bonus);
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -9019,6 +9027,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::DoubleDamageToOpponents
             | StaticEffect::HalveDamageToYou
             | StaticEffect::AddDamageToOpponents { .. }
+            | StaticEffect::AddDamageFromColorToPlayers { .. }
             | StaticEffect::OpponentMillDoubled
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.

@@ -3462,6 +3462,43 @@ fn ki_flip_triggers() -> Vec<TriggeredAbility> {
     ]
 }
 
+/// Akki Lavarunner // Tok-Tok, Volcano Born — {3}{R} Goblin Warrior 1/1 with
+/// haste; flips when it deals damage to a player. Tok-Tok is a 2/2 with
+/// protection from red whose static adds 1 to all red-source damage to players.
+pub fn akki_lavarunner() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::mana::Color;
+    let tok_tok = CardDefinition {
+        name: "Tok-Tok, Volcano Born",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Shaman]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::Red)],
+        static_abilities: vec![StaticAbility {
+            description: "If a red source would deal damage to a player, it deals that much plus 1.",
+            effect: StaticEffect::AddDamageFromColorToPlayers { color: Color::Red, amount: 1 },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Akki Lavarunner",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Warrior]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Flip { what: Selector::This },
+        }],
+        flip_face: Some(Box::new(tok_tok)),
+        ..Default::default()
+    }
+}
+
 /// Cunning Bandit // Azamuki, Treachery Incarnate — {1}{R}{R} Human Warrior
 /// 2/2. Ki-counter flip card; flips into Azamuki, a 5/2 Legendary Spirit whose
 /// "Remove a ki counter: Gain control of target creature until end of turn."
