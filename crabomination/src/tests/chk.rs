@@ -161,6 +161,44 @@ fn kami_of_twisted_reflection_bounces_your_creature() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "your creature returned to hand");
 }
 
+/// Patron of the Moon's {1} ability puts up to two lands from hand onto the
+/// battlefield tapped.
+#[test]
+fn patron_of_the_moon_ramps_lands_from_hand() {
+    let mut g = two_player_game();
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let patron = g.add_card_to_battlefield(0, catalog::patron_of_the_moon());
+    g.clear_sickness(patron);
+    let l1 = g.add_card_to_hand(0, catalog::island());
+    let l2 = g.add_card_to_hand(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![l1, l2])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: patron, ability_index: 0, target: None, x_value: None,
+    }).expect("activate land ramp");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(l1).is_some_and(|c| c.tapped), "land 1 entered tapped");
+    assert!(g.battlefield_find(l2).is_some_and(|c| c.tapped), "land 2 entered tapped");
+}
+
+/// Patron of the Orochi's {T} ability untaps Forests and green creatures.
+#[test]
+fn patron_of_the_orochi_untaps_forests_and_green() {
+    let mut g = two_player_game();
+    let patron = g.add_card_to_battlefield(0, catalog::patron_of_the_orochi());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    g.clear_sickness(patron);
+    g.battlefield_find_mut(forest).unwrap().tapped = true;
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: patron, ability_index: 0, target: None, x_value: None,
+    }).expect("activate untap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(forest).unwrap().tapped, "Forest untapped");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "green creature untapped");
+}
+
 /// Hideous Laughter shrinks every creature -2/-2, killing the small ones.
 #[test]
 fn hideous_laughter_wraths_small_creatures() {
