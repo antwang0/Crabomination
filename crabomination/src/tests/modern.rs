@@ -56597,3 +56597,40 @@ fn enraged_revolutionary_dethrone_on_card() {
     assert_eq!(g.battlefield_find(rev).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "Dethrone counter from the printed keyword");
 }
+
+/// Sunburst (CR 702.44): Suntouched Myr enters with a +1/+1 counter for each
+/// color of mana spent to cast it. Paid with three different colors → 3/3.
+#[test]
+fn sunburst_counters_track_colors_spent() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_hand(0, catalog::suntouched_myr());
+    // {3} paid with one mana each of three distinct colors → converge 3.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: myr, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Suntouched Myr with RGW");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(myr).expect("Myr resolved");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3, "3 colors → 3 counters");
+    let view = g.compute_battlefield().into_iter().find(|c| c.id == myr).unwrap();
+    assert_eq!((view.power, view.toughness), (3, 3), "0/0 base + three +1/+1");
+}
+
+/// Paid with only generic/colorless mana, Sunburst adds no counters (a 0/0
+/// that dies to the state-based-action sweep).
+#[test]
+fn sunburst_no_colored_mana_means_no_counters() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_hand(0, catalog::suntouched_myr());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: myr, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Suntouched Myr with colorless");
+    drain_stack(&mut g);
+    // 0/0 with no counters → dies to SBA.
+    assert!(g.battlefield_find(myr).is_none(), "0/0 with no counters dies");
+}

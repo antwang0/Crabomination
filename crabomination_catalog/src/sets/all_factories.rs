@@ -2092,6 +2092,7 @@ static DECKS: &[Factory] = &[
     super::decks::mystical_dispute,
     super::decks::pest_control,
     super::decks::wrath_of_the_skies,
+    super::decks::suntouched_myr,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

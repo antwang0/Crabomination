@@ -1524,3 +1524,24 @@ fn tymaret_toughness_tracks_devotion() {
     let c = g.compute_battlefield().into_iter().find(|c| c.id == tym).unwrap();
     assert_eq!((c.power, c.toughness), (2, 2), "2/* with devotion 2");
 }
+
+/// Battle cry (CR 702.92): an attacking Goblin Wardriver pumps each *other*
+/// attacking creature +1/+0, but not itself.
+#[test]
+fn battle_cry_pumps_other_attackers() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let driver = g.add_card_to_battlefield(0, catalog::goblin_wardriver()); // 2/2 battle cry
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());       // 2/2
+    g.clear_sickness(driver);
+    g.clear_sickness(bear);
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: driver, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("both attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "other attacker +1/+0");
+    assert_eq!(g.battlefield_find(driver).unwrap().power(), 2, "battle cry doesn't pump itself");
+}

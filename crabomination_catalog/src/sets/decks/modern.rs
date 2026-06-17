@@ -52048,3 +52048,19 @@ pub fn grenzos_cutthroat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+
+/// Suntouched Myr — {3} Artifact Creature 0/0 with Sunburst (CR 702.44): it
+/// enters with a +1/+1 counter for each color of mana spent to cast it.
+pub fn suntouched_myr() -> CardDefinition {
+    CardDefinition {
+        name: "Suntouched Myr",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        ..Default::default()
+    }
+}
