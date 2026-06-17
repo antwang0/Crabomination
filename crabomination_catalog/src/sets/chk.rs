@@ -1489,3 +1489,169 @@ pub fn yosei_the_morning_star() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── More CHK commons/uncommons (modern_decks batch 3) ────────────────────────
+
+/// Mothrider Patrol — {W} Fox Warrior 1/1. Flying; {3}{W}, {T}: Tap target
+/// creature.
+pub fn mothrider_patrol() -> CardDefinition {
+    CardDefinition {
+        name: "Mothrider Patrol",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Fox, CreatureType::Warrior]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3), w()]),
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Strength of Cedars — {4}{G} Instant — Arcane. Target creature gets +X/+X
+/// until end of turn, where X is the number of lands you control.
+pub fn strength_of_cedars() -> CardDefinition {
+    let lands = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        filter: SelectionRequirement::Land,
+    };
+    CardDefinition {
+        name: "Strength of Cedars",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: lands.clone(),
+            toughness: lands,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Vine Kami — {6}{G} Spirit 4/4. Menace, Soulshift 6.
+pub fn vine_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Vine Kami",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(6)],
+        ..Default::default()
+    }
+}
+
+/// Sokenzan Spellblade — {4}{R} Ogre Samurai Shaman 2/3. Bushido 1; {1}{R}:
+/// This creature gets +X/+0 until end of turn, where X is the number of cards
+/// in your hand.
+pub fn sokenzan_spellblade() -> CardDefinition {
+    CardDefinition {
+        name: "Sokenzan Spellblade",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Samurai, CreatureType::Shaman]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Bushido(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::HandSizeOf(PlayerRef::You),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wear Away — {G}{G} Instant — Arcane. Destroy target artifact or enchantment.
+/// Splice onto Arcane {3}{G}.
+pub fn wear_away() -> CardDefinition {
+    CardDefinition {
+        name: "Wear Away",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(3), g()]), SpellSubtype::Arcane)],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Soulless Revival — {1}{B} Instant — Arcane. Return target creature card from
+/// your graveyard to your hand. Splice onto Arcane {1}{B}.
+pub fn soulless_revival() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Soulless Revival",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(1), b()]), SpellSubtype::Arcane)],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Burr Grafter — {3}{G} Spirit 2/2. Sacrifice this creature: Target creature
+/// gets +2/+2 until end of turn. Soulshift 3.
+pub fn burr_grafter() -> CardDefinition {
+    CardDefinition {
+        name: "Burr Grafter",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(3)],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crack the Earth — {R} Sorcery — Arcane. Each player sacrifices a permanent
+/// of their choice.
+pub fn crack_the_earth() -> CardDefinition {
+    CardDefinition {
+        name: "Crack the Earth",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            count: Value::ONE,
+            filter: SelectionRequirement::Permanent,
+        },
+        ..Default::default()
+    }
+}

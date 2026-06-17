@@ -643,3 +643,109 @@ fn yosei_dies_locks_target_player() {
     g.do_untap();
     assert!(g.battlefield_find(land).unwrap().tapped, "still tapped after skipped untap");
 }
+
+// ── CHK batch 3 ──────────────────────────────────────────────────────────────
+
+/// Mothrider Patrol taps a target creature.
+#[test]
+fn mothrider_patrol_taps_target() {
+    let mut g = two_player_game();
+    let patrol = g.add_card_to_battlefield(0, catalog::mothrider_patrol());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(patrol);
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: patrol, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate Mothrider Patrol");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target creature tapped");
+}
+
+/// Strength of Cedars pumps by the number of lands you control.
+#[test]
+fn strength_of_cedars_scales_with_lands() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::island()); // 3 lands
+    let id = g.add_card_to_hand(0, catalog::strength_of_cedars());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3 from three lands");
+}
+
+/// Sokenzan Spellblade pumps +X/+0 by cards in hand.
+#[test]
+fn sokenzan_spellblade_scales_with_hand() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::sokenzan_spellblade());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::forest()); // 2 cards in hand
+    g.clear_sickness(blade);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: blade, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Spellblade");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(blade).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+0 from two cards in hand");
+}
+
+/// Wear Away destroys an artifact and carries Splice onto Arcane.
+#[test]
+fn wear_away_destroys_and_splices() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::wear_away());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    cast_at(&mut g, id, Target::Permanent(art));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+    assert!(matches!(catalog::wear_away().keywords[0], Keyword::Splice(_, _)), "has Splice");
+}
+
+/// Burr Grafter sacrifices to pump and carries Soulshift 3.
+#[test]
+fn burr_grafter_sacrifices_to_pump() {
+    let mut g = two_player_game();
+    let grafter = g.add_card_to_battlefield(0, catalog::burr_grafter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(grafter);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: grafter, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("sac to pump");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(grafter).is_none(), "Burr Grafter sacrificed");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 applied");
+}
+
+/// Crack the Earth makes each player sacrifice a permanent.
+#[test]
+fn crack_the_earth_each_player_sacrifices() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::crack_the_earth());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Crack the Earth");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 0, "P0 sacrificed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 0, "P1 sacrificed");
+}
+
+/// Vine Kami has Menace and Soulshift 6.
+#[test]
+fn vine_kami_menace_soulshift() {
+    let d = catalog::vine_kami();
+    assert!(d.keywords.contains(&Keyword::Menace));
+    assert!(!d.triggered_abilities.is_empty(), "carries Soulshift");
+}

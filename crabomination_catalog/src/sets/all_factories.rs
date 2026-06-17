@@ -124,6 +124,14 @@ static CHK: &[Factory] = &[
     super::chk::soratami_mirror_guard,
     super::chk::akki_coalflinger,
     super::chk::yosei_the_morning_star,
+    super::chk::mothrider_patrol,
+    super::chk::strength_of_cedars,
+    super::chk::vine_kami,
+    super::chk::sokenzan_spellblade,
+    super::chk::wear_away,
+    super::chk::soulless_revival,
+    super::chk::burr_grafter,
+    super::chk::crack_the_earth,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
