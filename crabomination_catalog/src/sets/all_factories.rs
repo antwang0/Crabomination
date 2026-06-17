@@ -184,6 +184,14 @@ static CHK: &[Factory] = &[
     super::chk::kiku_nights_flower,
     super::chk::hanabi_blast,
     super::chk::frostwielder,
+    super::chk::gnarled_mass,
+    super::chk::humble_budoka,
+    super::chk::kitsune_healer,
+    super::chk::akki_rockspeaker,
+    super::chk::crawling_filth,
+    super::chk::rag_dealer,
+    super::chk::mistblade_shinobi,
+    super::chk::skullsnatcher,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

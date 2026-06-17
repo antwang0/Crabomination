@@ -2768,3 +2768,162 @@ pub fn throat_slitter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gnarled Mass — {1}{G}{G} Spirit 3/3.
+pub fn gnarled_mass() -> CardDefinition {
+    CardDefinition {
+        name: "Gnarled Mass",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Humble Budoka — {1}{G} Human Monk 2/2. Shroud.
+pub fn humble_budoka() -> CardDefinition {
+    CardDefinition {
+        name: "Humble Budoka",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Monk]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Shroud],
+        ..Default::default()
+    }
+}
+
+/// Kitsune Healer — {3}{W} Fox Cleric 2/2. {T}: Prevent the next 1 damage to
+/// any target this turn. {T}: Prevent all damage to target legendary creature
+/// this turn.
+pub fn kitsune_healer() -> CardDefinition {
+    CardDefinition {
+        name: "Kitsune Healer",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Fox, CreatureType::Cleric]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::PreventNextDamage {
+                    target: target_filtered(SelectionRequirement::Any),
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::PreventAllDamageThisTurn {
+                    target: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Akki Rockspeaker — {1}{R} Goblin Shaman 1/1. When it enters, add {R}.
+pub fn akki_rockspeaker() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Akki Rockspeaker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Shaman]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![crate::mana::Color::Red]),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Crawling Filth — {5}{B} Spirit 2/2. Fear; Soulshift 5.
+pub fn crawling_filth() -> CardDefinition {
+    CardDefinition {
+        name: "Crawling Filth",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Fear],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(5)],
+        ..Default::default()
+    }
+}
+
+/// Rag Dealer — {B} Human Rogue 1/1. {2}{B}, {T}: Exile up to three target
+/// cards from a single graveyard. (Modeled as up to three from any graveyards.)
+pub fn rag_dealer() -> CardDefinition {
+    CardDefinition {
+        name: "Rag Dealer",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Rogue]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mistblade Shinobi — {2}{U} Human Ninja 1/1. Ninjutsu {U}. Whenever it deals
+/// combat damage to a player, return target creature that player controls to hand.
+pub fn mistblade_shinobi() -> CardDefinition {
+    CardDefinition {
+        name: "Mistblade Shinobi",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Ninja]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Ninjutsu(cost(&[u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skullsnatcher — {1}{B} Rat Ninja 2/1. Ninjutsu {B}. Whenever it deals combat
+/// damage to a player, exile up to two target cards from that player's graveyard.
+/// (Modeled as up to two from any graveyards.)
+pub fn skullsnatcher() -> CardDefinition {
+    CardDefinition {
+        name: "Skullsnatcher",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Ninja]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Ninjutsu(cost(&[b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}

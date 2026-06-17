@@ -1599,3 +1599,120 @@ fn villainous_ogre_regen_gated_on_demon() {
     assert_eq!(g.battlefield_find(ogre).unwrap().regeneration_shields, 1,
         "regenerate stamps a shield");
 }
+
+/// Gnarled Mass is a 3/3 vanilla Spirit.
+#[test]
+fn gnarled_mass_is_a_3_3() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::gnarled_mass());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3));
+}
+
+/// Humble Budoka has Shroud (can't be targeted).
+#[test]
+fn humble_budoka_has_shroud() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::humble_budoka());
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Shroud));
+}
+
+/// Kitsune Healer's first ability stamps a prevent-next-1 shield on a creature.
+#[test]
+fn kitsune_healer_prevents_next_1_damage() {
+    let mut g = two_player_game();
+    let healer = g.add_card_to_battlefield(0, catalog::kitsune_healer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(healer);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: healer, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate prevention");
+    drain_stack(&mut g);
+    let mut events = Vec::new();
+    g.deal_damage_to_from(crate::game::effects::EntityRef::Permanent(bear), 1, None, &mut events);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "the next 1 damage is prevented");
+}
+
+/// Akki Rockspeaker adds {R} when it enters.
+#[test]
+fn akki_rockspeaker_adds_red_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::akki_rockspeaker());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Akki Rockspeaker");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Red), 1, "ETB added one red mana");
+}
+
+/// Crawling Filth's Soulshift 5 returns a low-MV Spirit from the graveyard on death.
+#[test]
+fn crawling_filth_soulshift_returns_spirit() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let filth = g.add_card_to_battlefield(0, catalog::crawling_filth());
+    let dead_spirit = g.add_card_to_graveyard(0, catalog::gnarled_mass()); // MV 3 Spirit
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let events = g.remove_to_graveyard_with_triggers(filth);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead_spirit), "Soulshift returned the Spirit");
+}
+
+/// Rag Dealer exiles cards from a graveyard.
+#[test]
+fn rag_dealer_exiles_from_graveyard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dealer = g.add_card_to_battlefield(0, catalog::rag_dealer());
+    g.clear_sickness(dealer);
+    let c1 = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let c2 = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![c1, c2])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dealer, ability_index: 0, target: None, x_value: None,
+    }).expect("exile from graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == c1) && g.exile.iter().any(|c| c.id == c2),
+        "both cards exiled from the graveyard");
+}
+
+/// Mistblade Shinobi bounces a creature when it deals combat damage to a player.
+#[test]
+fn mistblade_shinobi_bounces_on_combat_damage() {
+    let mut g = two_player_game();
+    let ninja = g.add_card_to_battlefield(0, catalog::mistblade_shinobi());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(ninja);
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ninja, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "creature bounced on combat damage");
+}
+
+/// Skullsnatcher exiles graveyard cards when it deals combat damage to a player.
+#[test]
+fn skullsnatcher_exiles_gy_on_combat_damage() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ninja = g.add_card_to_battlefield(0, catalog::skullsnatcher());
+    let gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.clear_sickness(ninja);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![gy])]));
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ninja, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gy), "graveyard card exiled on combat damage");
+}

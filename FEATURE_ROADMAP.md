@@ -106,8 +106,9 @@ Each unblocks a large swath of cards.
 - 🟡 **Targeting refinements:** resolution-time legality re-check (608.2b) ships
   for single/multi-target spells and Auras, and now resolves `{X}`-from-cost
   target filters (Hearth Kami's "artifact with mana value X" via
-  `ManaValueExactlyXFromCost`). Remaining: "up to N targets", "target each",
-  protection-from-color re-check.
+  `ManaValueExactlyXFromCost`). "Up to N targets" ships via
+  `Effect::ApplyToTargets` (Sea God's Scorn bounce-3, Wrap in Flames
+  1-to-each-of-3). Remaining: "target each", protection-from-color re-check.
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
   land-type statics ✅ (Blood Moon, Urborg). Remaining: CDA corners, full
   text-box swaps, "becomes a copy of" layer interaction.
