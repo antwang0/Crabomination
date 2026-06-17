@@ -2482,8 +2482,8 @@ pub fn innocence_kami() -> CardDefinition {
     }
 }
 
-/// Villainous Ogre — {2}{B} Ogre Warrior 3/2. Can't block. (The Demon-gated
-/// regeneration grant is omitted.)
+/// Villainous Ogre — {2}{B} Ogre Warrior 3/2. Can't block. As long as you
+/// control a Demon, it has "{B}: Regenerate Villainous Ogre."
 pub fn villainous_ogre() -> CardDefinition {
     CardDefinition {
         name: "Villainous Ogre",
@@ -2493,6 +2493,18 @@ pub fn villainous_ogre() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::CantBlock],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            condition: Some(crate::effect::Predicate::SelectorCountAtLeast {
+                sel: Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Demon),
+                },
+                n: Value::Const(1),
+            }),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

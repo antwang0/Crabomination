@@ -109,9 +109,6 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
     devotion-counter conditional, flip cards (CR 710) for the CHK flip
     creatures.
-  - **Conditional granted activated ability** (Villainous Ogre's Demon-gated
-    `{B}: Regenerate`) — host-state-conditional ability grant; CantBlock body
-    ships, regen omitted.
   - Cranial Extraction (name a card → exile all copies from gy/hand/library);
     Soratami Seer (discard hand, draw that many); Cut the Tethers (per-Spirit
     "return unless pay {3}"); Petals of Insight (look-3, bottom-or-draw with

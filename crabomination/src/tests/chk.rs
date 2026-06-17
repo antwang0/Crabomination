@@ -1577,3 +1577,25 @@ fn kumano_exiles_creatures_it_kills() {
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == elf), "not in graveyard");
     assert!(g.exile.iter().any(|c| c.id == elf), "elf exiled instead of dying");
 }
+
+/// Villainous Ogre's "{B}: Regenerate" is gated on controlling a Demon —
+/// rejected without one, stamps a shield with one on the battlefield.
+#[test]
+fn villainous_ogre_regen_gated_on_demon() {
+    let mut g = two_player_game();
+    let ogre = g.add_card_to_battlefield(0, catalog::villainous_ogre());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    // No Demon: activation is rejected before paying.
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: ogre, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(res.is_err(), "no Demon → can't activate");
+    // Add a Demon and try again.
+    g.add_card_to_battlefield(0, catalog::bloodgift_demon());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ogre, ability_index: 0, target: None, x_value: None,
+    }).expect("{B}: Regenerate with a Demon out");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ogre).unwrap().regeneration_shields, 1,
+        "regenerate stamps a shield");
+}
