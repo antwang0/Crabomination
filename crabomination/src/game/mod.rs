@@ -3920,6 +3920,10 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::ControllerHandSize => {
+                    let n = self.players[card.controller].hand.len() as i32;
+                    (n, n)
+                }
                 crate::card::DynamicPt::ArtifactsControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_artifact()

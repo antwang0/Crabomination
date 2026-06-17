@@ -2214,76 +2214,224 @@ fn budoka_gardener_flips_to_dokai_at_ten_lands() {
     assert_eq!((cp.power, cp.toughness), (10, 10), "X/X where X = lands you control");
 }
 
-/// Sakura-Tribe Elder sacrifices itself to ramp a basic land tapped.
+/// Heartbeat of Spring doubles the mana a tapped land makes.
 #[test]
-fn sakura_tribe_elder_sacs_to_fetch_a_basic() {
-    use crate::decision::{DecisionAnswer, ScriptedDecider};
+fn heartbeat_of_spring_doubles_land_mana() {
     let mut g = two_player_game();
-    let elder = g.add_card_to_battlefield(0, catalog::sakura_tribe_elder());
-    let forest = g.add_card_to_library(0, catalog::forest());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
-    g.clear_sickness(elder);
+    g.add_card_to_battlefield(0, catalog::heartbeat_of_spring());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
-    }).expect("sac for land");
-    drain_stack(&mut g);
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == elder), "Elder sacrificed");
-    let f = g.battlefield_find(forest).expect("forest fetched to battlefield");
-    assert!(f.tapped, "fetched land enters tapped");
+        card_id: forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap forest");
+    assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 2, "{{G}} becomes {{G}}{{G}}");
 }
 
-/// Kodama's Reach ramps one basic tapped and one to hand.
+/// Kagemaro is sized to your hand and wraths for -X/-X on sacrifice.
 #[test]
-fn kodamas_reach_ramps_one_tapped_one_to_hand() {
+fn kagemaro_sizes_to_hand_and_wraths() {
+    let mut g = two_player_game();
+    let kagemaro = g.add_card_to_battlefield(0, catalog::kagemaro_first_to_suffer());
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::forest()); } // 3 cards in hand
+    let cp = g.computed_permanent(kagemaro).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "*/* = cards in hand");
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(kagemaro);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kagemaro, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("sac for -X/-X");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "-3/-3 kills the 2/2");
+}
+
+/// Terashi's Grasp destroys an artifact/enchantment and gains life = its MV.
+#[test]
+fn terashis_grasp_destroys_and_gains_life() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::ghostly_prison()); // MV 3
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let grasp = g.add_card_to_hand(0, catalog::terashis_grasp());
+    let life = g.players[0].life;
+    cast_at(&mut g, grasp, Target::Permanent(ench));
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+    assert_eq!(g.players[0].life, life + 3, "gained life equal to MV 3");
+}
+
+/// Call to Glory untaps your creatures and pumps your Samurai.
+#[test]
+fn call_to_glory_untaps_and_pumps_samurai() {
+    let mut g = two_player_game();
+    let samurai = g.add_card_to_battlefield(0, catalog::hand_of_honor()); // Samurai 2/2
+    g.battlefield_find_mut(samurai).unwrap().tapped = true;
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let ctg = g.add_card_to_hand(0, catalog::call_to_glory());
+    cast(&mut g, ctg);
+    assert!(!g.battlefield_find(samurai).unwrap().tapped, "creature untapped");
+    let cp = g.computed_permanent(samurai).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "Samurai got +1/+1");
+}
+
+/// Mass of Ghouls is a vanilla 5/3.
+#[test]
+fn mass_of_ghouls_is_a_5_3() {
+    let d = catalog::mass_of_ghouls();
+    assert_eq!((d.power, d.toughness), (5, 3));
+}
+
+/// Promised Kannushi's Soulshift 7 returns a Spirit on death.
+#[test]
+fn promised_kannushi_soulshift_seven() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let a = g.add_card_to_library(0, catalog::forest());
-    let b = g.add_card_to_library(0, catalog::forest());
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Search(Some(a)), DecisionAnswer::Search(Some(b)),
-    ]));
-    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let kr = g.add_card_to_hand(0, catalog::kodamas_reach());
-    cast(&mut g, kr);
-    let on_bf = [a, b].iter().filter(|id| g.battlefield_find(**id).is_some()).count();
-    let in_hand = [a, b].iter().filter(|id| g.players[0].hand.iter().any(|c| c.id == **id)).count();
-    assert_eq!((on_bf, in_hand), (1, 1), "one basic to battlefield, one to hand");
-}
-
-/// Kokusho drains 5 from each opponent on death (gain equal in 1v1).
-#[test]
-fn kokusho_drains_five_on_death() {
-    let mut g = two_player_game();
-    let kokusho = g.add_card_to_battlefield(0, catalog::kokusho_the_evening_star());
-    let (my_life, opp_life) = (g.players[0].life, g.players[1].life);
-    let events = g.remove_to_graveyard_with_triggers(kokusho);
+    let kannushi = g.add_card_to_battlefield(0, catalog::promised_kannushi());
+    let spirit = g.add_card_to_graveyard(0, catalog::gibbering_kami()); // Spirit MV 4 ≤ 7
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let events = g.remove_to_graveyard_with_triggers(kannushi);
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_life - 5, "opponent loses 5");
-    assert_eq!(g.players[0].life, my_life + 5, "you gain the life lost");
+    assert!(g.players[0].hand.iter().any(|c| c.id == spirit), "soulshift 7 returned the Spirit");
 }
 
-/// Azusa grants two additional land plays per turn (3 total).
+/// Akki Drillmaster grants haste to a target creature.
 #[test]
-fn azusa_grants_two_extra_land_plays() {
+fn akki_drillmaster_grants_haste() {
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::azusa_lost_but_seeking());
-    assert_eq!(g.max_lands_per_turn(0), 3, "1 base + 2 from Azusa");
+    let akki = g.add_card_to_battlefield(0, catalog::akki_drillmaster());
+    let fresh = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(akki);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: akki, ability_index: 0, target: Some(Target::Permanent(fresh)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("grant haste");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(fresh).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
 }
 
-/// Commune with Nature digs five and takes a creature to hand.
+/// Soramaro is sized to your hand and bounces a land to draw.
 #[test]
-fn commune_with_nature_takes_a_creature() {
+fn soramaro_sizes_to_hand_and_draws() {
+    let mut g = two_player_game();
+    let soramaro = g.add_card_to_battlefield(0, catalog::soramaro_first_to_dream());
+    for _ in 0..2 { g.add_card_to_hand(0, catalog::forest()); }
+    assert_eq!(g.computed_permanent(soramaro).unwrap().power, 2, "*/* = cards in hand");
+    g.add_card_to_library(0, catalog::forest()); // a card to draw
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: soramaro, ability_index: 0, target: Some(Target::Permanent(land)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("bounce land, draw");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "land returned to hand");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew a card and got the land back");
+}
+
+/// Kemuri-Onna's ETB makes the targeted opponent discard.
+#[test]
+fn kemuri_onna_etb_discards() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::kemuri_onna());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "opponent discarded a card to Kemuri's ETB");
+}
+
+/// Inner Calm, Outer Strength pumps by your hand size.
+#[test]
+fn inner_calm_outer_strength_pumps_by_hand_size() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::inner_calm_outer_strength());
+    for _ in 0..2 { g.add_card_to_hand(0, catalog::forest()); } // hand = spell + 2 = 3 at cast
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    // After casting, the spell leaves hand → 2 cards remain → +2/+2.
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+X/+X for X = cards in hand at resolution");
+}
+
+/// Gale Force deals 5 to fliers only.
+#[test]
+fn gale_force_hits_only_fliers() {
+    let mut g = two_player_game();
+    let flier = g.add_card_to_battlefield(1, {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Flier"; d.toughness = 4; d.keywords = vec![Keyword::Flying]; d
+    });
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let gf = g.add_card_to_hand(0, catalog::gale_force());
+    cast(&mut g, gf);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(flier).is_none(), "5 damage kills the 4-toughness flier");
+    assert!(g.battlefield_find(ground).is_some(), "ground creature untouched");
+}
+
+/// Hand of Cruelty / Hand of Honor carry protection + bushido.
+#[test]
+fn hands_carry_protection_and_bushido() {
+    let cruelty = catalog::hand_of_cruelty();
+    assert!(cruelty.keywords.contains(&Keyword::Protection(crate::mana::Color::White)));
+    assert!(cruelty.keywords.contains(&Keyword::Bushido(1)));
+    let honor = catalog::hand_of_honor();
+    assert!(honor.keywords.contains(&Keyword::Protection(crate::mana::Color::Black)));
+}
+
+/// Nightsoil Kami's Soulshift 5 returns a small Spirit on death.
+#[test]
+fn nightsoil_kami_soulshift_returns_spirit() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
-    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
-    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
-    let cc = g.add_card_to_hand(0, catalog::commune_with_nature());
-    cast(&mut g, cc);
-    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature pulled to hand");
+    let kami = g.add_card_to_battlefield(0, catalog::nightsoil_kami());
+    let spirit = g.add_card_to_graveyard(0, catalog::kami_of_ancient_law()); // Spirit MV 2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let events = g.remove_to_graveyard_with_triggers(kami);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spirit), "soulshift 5 returned the Spirit");
+}
+
+/// Nezumi Shadow-Watcher sacrifices to destroy a Ninja.
+#[test]
+fn nezumi_shadow_watcher_destroys_a_ninja() {
+    let mut g = two_player_game();
+    let watcher = g.add_card_to_battlefield(0, catalog::nezumi_shadow_watcher());
+    let ninja = g.add_card_to_battlefield(1, {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Ninja"; d.subtypes.creature_types = vec![crate::card::CreatureType::Ninja]; d
+    });
+    g.clear_sickness(watcher);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: watcher, ability_index: 0, target: Some(Target::Permanent(ninja)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("sac to destroy ninja");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ninja).is_none(), "Ninja destroyed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == watcher), "Watcher sacrificed");
+}
+
+/// Journeyer's Kite fetches a basic to hand for {3}, {T}.
+#[test]
+fn journeyers_kite_fetches_a_basic_to_hand() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let kite = g.add_card_to_battlefield(0, catalog::journeyers_kite());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kite, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("fetch land");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic land to hand");
 }
 
 /// CR 711.6 — a flip card reverts to its unflipped face as it leaves the

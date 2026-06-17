@@ -4305,25 +4305,29 @@ pub fn budoka_gardener() -> CardDefinition {
         ..Default::default()
     }
 }
-
-/// Sakura-Tribe Elder — {1}{G} Snake Shaman 1/1. "Sacrifice this creature:
-/// Search your library for a basic land card, put it onto the battlefield
-/// tapped, then shuffle."
-pub fn sakura_tribe_elder() -> CardDefinition {
-    use crate::effect::ZoneDest;
+/// Kagemaro, First to Suffer — {3}{B}{B} Legendary Demon Spirit */*. P/T equal
+/// to the cards in your hand; "{B}, Sacrifice this: All creatures get -X/-X
+/// until end of turn, where X is the number of cards in your hand."
+pub fn kagemaro_first_to_suffer() -> CardDefinition {
+    let neg_hand = || Value::Diff(Box::new(Value::Const(0)), Box::new(Value::HandSizeOf(PlayerRef::You)));
     CardDefinition {
-        name: "Sakura-Tribe Elder",
-        cost: cost(&[generic(1), g()]),
+        name: "Kagemaro, First to Suffer",
+        cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Shaman]),
-        power: 1,
-        toughness: 1,
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Demon, CreatureType::Spirit]),
+        dynamic_pt: Some(crate::card::DynamicPt::ControllerHandSize),
         activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
             sac_cost: true,
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: neg_hand(),
+                    toughness: neg_hand(),
+                    duration: Duration::EndOfTurn,
+                }),
             },
             ..Default::default()
         }],
@@ -4331,92 +4335,300 @@ pub fn sakura_tribe_elder() -> CardDefinition {
     }
 }
 
-/// Kodama's Reach — {2}{G} Sorcery — Arcane. Search for up to two basic lands;
-/// put one onto the battlefield tapped, the other into your hand.
-pub fn kodamas_reach() -> CardDefinition {
-    use crate::effect::ZoneDest;
+/// Terashi's Grasp — {2}{W} Sorcery — Arcane. Destroy target artifact or
+/// enchantment; you gain life equal to its mana value.
+pub fn terashis_grasp() -> CardDefinition {
     CardDefinition {
-        name: "Kodama's Reach",
-        cost: cost(&[generic(2), g()]),
+        name: "Terashi's Grasp",
+        cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
         subtypes: arcane(),
         effect: Effect::Seq(vec![
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            // Gain first so the mana value is read while the permanent is
+            // still on the battlefield.
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
             },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Hand(PlayerRef::You),
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Artifact)
+                        .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                ),
             },
         ]),
         ..Default::default()
     }
 }
 
-/// Kokusho, the Evening Star — {4}{B}{B} Legendary Dragon Spirit 5/5. Flying;
-/// when it dies, each opponent loses 5 life and you gain life equal to the
-/// life lost this way.
-pub fn kokusho_the_evening_star() -> CardDefinition {
+/// Call to Glory — {1}{W} Instant. Untap all creatures you control; Samurai you
+/// control get +1/+1 until end of turn.
+pub fn call_to_glory() -> CardDefinition {
+    let yours = |req: SelectionRequirement| {
+        Selector::EachPermanent(req.and(SelectionRequirement::ControlledByYou))
+    };
     CardDefinition {
-        name: "Kokusho, the Evening Star",
-        cost: cost(&[generic(4), b(), b()]),
+        name: "Call to Glory",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Untap { what: yours(SelectionRequirement::Creature), up_to: None },
+            Effect::ForEach {
+                selector: yours(SelectionRequirement::HasCreatureType(CreatureType::Samurai)),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hand of Cruelty — {B}{B} Human Samurai 2/2. Protection from white; Bushido 1.
+pub fn hand_of_cruelty() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Hand of Cruelty",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::White), Keyword::Bushido(1)],
+        ..Default::default()
+    }
+}
+
+/// Hand of Honor — {W}{W} Human Samurai 2/2. Protection from black; Bushido 1.
+pub fn hand_of_honor() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Hand of Honor",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::Black), Keyword::Bushido(1)],
+        ..Default::default()
+    }
+}
+
+/// Nightsoil Kami — {4}{G}{G} Spirit 6/4. Soulshift 5.
+pub fn nightsoil_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Nightsoil Kami",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 6,
+        toughness: 4,
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(5)],
+        ..Default::default()
+    }
+}
+
+/// Nezumi Shadow-Watcher — {B} Rat Warrior 1/1. "Sacrifice this creature:
+/// Destroy target Ninja."
+pub fn nezumi_shadow_watcher() -> CardDefinition {
+    CardDefinition {
+        name: "Nezumi Shadow-Watcher",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Warrior]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::HasCreatureType(CreatureType::Ninja)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mass of Ghouls — {3}{B}{B} Zombie Warrior 5/3.
+pub fn mass_of_ghouls() -> CardDefinition {
+    CardDefinition {
+        name: "Mass of Ghouls",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Zombie, CreatureType::Warrior]),
+        power: 5,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Promised Kannushi — {G} Human Druid 1/1. Soulshift 7.
+pub fn promised_kannushi() -> CardDefinition {
+    CardDefinition {
+        name: "Promised Kannushi",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Druid]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(7)],
+        ..Default::default()
+    }
+}
+
+/// Akki Drillmaster — {2}{R} Goblin Shaman 2/2. "{T}: Target creature gains
+/// haste until end of turn."
+pub fn akki_drillmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Akki Drillmaster",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Shaman]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soramaro, First to Dream — {4}{U}{U} Legendary Spirit */*. Flying; P/T equal
+/// to the cards in your hand; "{4}, Return a land you control to its owner's
+/// hand: Draw a card."
+pub fn soramaro_first_to_dream() -> CardDefinition {
+    CardDefinition {
+        name: "Soramaro, First to Dream",
+        cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: spirit(vec![CreatureType::Dragon, CreatureType::Spirit]),
-        power: 5,
-        toughness: 5,
+        subtypes: spirit(vec![CreatureType::Spirit]),
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(5),
+        dynamic_pt: Some(crate::card::DynamicPt::ControllerHandSize),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kemuri-Onna — {4}{B} Spirit 3/3. ETB: target player discards a card.
+/// Whenever you cast a Spirit or Arcane spell, you may return it to your hand.
+pub fn kemuri_onna() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Kemuri-Onna",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            // "Target player discards a card" — modeled as each opponent (the
+            // only sensible target) so the ETB needs no resolution-time pick.
+            crate::effect::shortcut::etb(Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+                random: false,
+            }),
+            crate::effect::shortcut::spiritcraft(Effect::MayDo {
+                description: "Return Kemuri-Onna to its owner's hand".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Inner Calm, Outer Strength — {2}{G} Instant — Arcane. Target creature gets
+/// +X/+X until end of turn, where X is the number of cards in your hand.
+pub fn inner_calm_outer_strength() -> CardDefinition {
+    let hand = || Value::HandSizeOf(PlayerRef::You);
+    CardDefinition {
+        name: "Inner Calm, Outer Strength",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: hand(),
+            toughness: hand(),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Gale Force — {4}{G} Sorcery. Deals 5 damage to each creature with flying.
+pub fn gale_force() -> CardDefinition {
+    CardDefinition {
+        name: "Gale Force",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(5) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Heartbeat of Spring — {2}{G} Enchantment. Whenever a player taps a land for
+/// mana, that player adds one mana of any type that land produced.
+pub fn heartbeat_of_spring() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::ExtraManaKind;
+    CardDefinition {
+        name: "Heartbeat of Spring",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "A land tapped for mana produces one extra of that type.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: SelectionRequirement::Any,
+                extra: ExtraManaKind::Mirror,
             },
         }],
         ..Default::default()
     }
 }
 
-/// Azusa, Lost but Seeking — {2}{G} Legendary Human Monk 1/2. "You may play two
-/// additional lands on each of your turns."
-pub fn azusa_lost_but_seeking() -> CardDefinition {
-    use crate::card::{StaticAbility, StaticEffect};
+/// Journeyer's Kite — {2} Artifact. "{3}, {T}: Search your library for a basic
+/// land card, reveal it, put it into your hand, then shuffle."
+pub fn journeyers_kite() -> CardDefinition {
+    use crate::effect::ZoneDest;
     CardDefinition {
-        name: "Azusa, Lost but Seeking",
-        cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Creature],
-        supertypes: vec![Supertype::Legendary],
-        subtypes: spirit(vec![CreatureType::Human, CreatureType::Monk]),
-        power: 1,
-        toughness: 2,
-        static_abilities: vec![
-            StaticAbility { description: "Play an additional land.", effect: StaticEffect::ExtraLandPerTurn },
-            StaticAbility { description: "Play an additional land.", effect: StaticEffect::ExtraLandPerTurn },
-        ],
-        ..Default::default()
-    }
-}
-
-/// Commune with Nature — {G} Sorcery. Look at the top five cards of your
-/// library; you may put a creature card from among them into your hand, the
-/// rest on the bottom.
-pub fn commune_with_nature() -> CardDefinition {
-    CardDefinition {
-        name: "Commune with Nature",
-        cost: cost(&[g()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::LookPickToHand {
-            who: PlayerRef::You,
-            count: Value::Const(5),
-            rest_to_graveyard: false,
-            pick_filter: Some(SelectionRequirement::Creature),
-            take: None,
-            to_battlefield: false,
-        },
+        name: "Journeyer's Kite",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
