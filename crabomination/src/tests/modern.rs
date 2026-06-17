@@ -56834,3 +56834,32 @@ fn aethertow_bounces_attacker_to_library_top() {
     assert_eq!(g.players[1].library.first().map(|c| c.id), Some(attacker),
         "put on top of its owner's library");
 }
+
+/// Giantbaiting conspired makes two 4/4 hasty Giant Warriors; both are exiled
+/// at the next end step.
+#[test]
+fn conspire_giantbaiting_makes_two_then_exiles() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::giantbaiting());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // {2}{R/G} — red conspirers share its color.
+    let b0 = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    let b1 = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [b0, b1],
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Giantbaiting");
+    drain_stack(&mut g);
+    let giants: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Giant Warrior").collect();
+    assert_eq!(giants.len(), 2, "original + conspire copy = two tokens");
+    assert!(giants.iter().all(|c| c.has_keyword(&Keyword::Haste) && (c.power(), c.toughness()) == (4, 4)));
+    // Next end step exiles them.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Giant Warrior"),
+        "both Giant Warriors exiled at end step");
+}

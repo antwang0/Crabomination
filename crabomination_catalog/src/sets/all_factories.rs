@@ -7695,6 +7695,7 @@ static SHM: &[Factory] = &[
     super::shm::mine_excavation,
     super::shm::rally_the_galadhrim,
     super::shm::aethertow,
+    super::shm::giantbaiting,
 ];
 static TMP: &[Factory] = &[
     super::tmp::reanimate,

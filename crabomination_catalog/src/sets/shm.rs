@@ -157,3 +157,38 @@ pub fn aethertow() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Giantbaiting — {2}{R/G} Sorcery. "Create a 4/4 red and green Giant Warrior
+/// creature token with haste. Exile it at the beginning of the next end step.
+/// Conspire."
+pub fn giantbaiting() -> CardDefinition {
+    use crate::card::{CreatureType, Subtypes, TokenDefinition};
+    use crate::effect::DelayedTriggerKind;
+    let giant = TokenDefinition {
+        name: "Giant Warrior".into(),
+        power: 4,
+        toughness: 4,
+        colors: vec![Color::Red, Color::Green],
+        keywords: vec![Keyword::Haste],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Giantbaiting",
+        cost: cost(&[generic(2), hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Conspire],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: giant },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
