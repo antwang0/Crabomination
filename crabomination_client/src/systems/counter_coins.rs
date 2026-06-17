@@ -329,6 +329,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Level => "Level",
         CounterType::Experience => "XP",
         CounterType::Shield => "Shield",
+        CounterType::Ki => "Ki",
         _ => "Counter",
     }
 }
@@ -347,6 +348,7 @@ fn counter_label_color(kind: CounterType) -> Color {
         CounterType::Time => Color::srgb(0.96, 0.74, 0.42),
         CounterType::Poison => Color::srgb(0.56, 0.86, 0.42),
         CounterType::Energy => Color::srgb(0.46, 0.66, 0.98),
+        CounterType::Ki => Color::srgb(0.96, 0.62, 0.36),
         _ => Color::srgb(0.86, 0.86, 0.92),
     }
 }

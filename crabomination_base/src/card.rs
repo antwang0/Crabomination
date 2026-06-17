@@ -2936,6 +2936,16 @@ impl CardInstance {
         }
     }
 
+    /// CR 712.4 — a transforming double-faced permanent that leaves the
+    /// battlefield has only its front-face characteristics in the new zone.
+    /// Restore the front face (no-op for a permanent showing its front).
+    pub fn revert_transform(&mut self) {
+        if let Some(front) = self.front_face.take() {
+            self.definition = front;
+            self.transformed = false;
+        }
+    }
+
     pub fn can_attack(&self) -> bool {
         self.definition.is_creature()
             && !self.tapped

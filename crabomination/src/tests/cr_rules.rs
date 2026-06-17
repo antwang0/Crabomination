@@ -2587,6 +2587,23 @@ fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
     assert_block(catalog::nezumi_cutthroat(), true, "black creature can block Fear");
 }
 
+// ── CR 712.4 — a transformed DFC reverts to its front face off-battlefield ────
+
+/// A transformed double-faced permanent that dies is its front face in the
+/// graveyard (CR 712.4).
+#[test]
+fn cr_712_4_transformed_dfc_reverts_to_front_in_graveyard() {
+    let mut g = two_player_game();
+    let delver = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let mut events = Vec::new();
+    g.transform_permanent(delver, &mut events);
+    assert!(g.battlefield_find(delver).unwrap().transformed, "transformed on battlefield");
+    g.remove_from_battlefield_to_graveyard_raw(delver);
+    let in_gy = g.players[0].graveyard.iter().find(|c| c.id == delver).expect("in graveyard");
+    assert!(!in_gy.transformed, "reverts off the battlefield");
+    assert_eq!(in_gy.definition.name, "Delver of Secrets", "front face restored");
+}
+
 // ── CR 711 + 704.5j — a flipped legendary obeys the legend rule ───────────────
 
 /// When a flip card flips into its Legendary face (Azamuki) and the controller

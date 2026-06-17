@@ -2658,8 +2658,15 @@ impl GameState {
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).
         card.turn_face_up();
-        // CR 711.6 — flip cards revert to their unflipped face off the battlefield.
+        // The graveyard→exile redirect (Rest in Peace / Leyline / Disturb back
+        // face, CR 614.6 / 702.146e) and its void-counter rider read the back
+        // face, so capture them *before* the CR 712.4 front-face revert.
+        let exile_on_graveyard = self.graveyard_exiled_for(&card) || card.disturb_back_exiles();
+        let void_counter_on_exile = self.graveyard_exile_redirects(&card).1;
+        // CR 711.6 / 712.4 — flip cards and transformed DFCs revert to their
+        // unflipped / front face off the battlefield.
         card.revert_flip();
+        card.revert_transform();
         // CR 709.5c — Room unlocked designations are battlefield-only.
         card.reset_room_doors();
         // CR 707 — a temporary copy reverts as it leaves.
@@ -2676,9 +2683,9 @@ impl GameState {
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
             // graveyard arrival to exile; CR 702.146e — so does a Disturb
             // back face.
-            Zone::Graveyard if self.graveyard_exiled_for(&card) || card.disturb_back_exiles() => {
+            Zone::Graveyard if exile_on_graveyard => {
                 let mut card = card;
-                if self.graveyard_exile_redirects(&card).1 {
+                if void_counter_on_exile {
                     card.add_counters(crate::card::CounterType::Void, 1);
                 }
                 self.exile.push(card)

@@ -2151,14 +2151,22 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         if !must_block || assignments.iter().any(|(_, aid)| aid == a_id) {
             continue;
         }
-        if let Some(idle) = state.battlefield.iter().find(|c| {
-            c.controller == seat
-                && c.can_block()
-                && !assignments.iter().any(|(bid, _)| *bid == c.id)
-                && (!a_flying
-                    || c.has_keyword(&Keyword::Flying)
-                    || c.has_keyword(&Keyword::Reach))
-        }) {
+        // Pick the cheapest (lowest-power) legal idle blocker so a forced block
+        // doesn't throw away the bot's best body.
+        if let Some(idle) = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.can_block()
+                    && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                    && (!a_flying
+                        || c.has_keyword(&Keyword::Flying)
+                        || c.has_keyword(&Keyword::Reach))
+                    && state.blocker_can_block_attacker(c.id, *a_id)
+            })
+            .min_by_key(|c| c.power())
+        {
             assignments.push((idle.id, *a_id));
         }
     }
@@ -2186,15 +2194,21 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             continue;
         }
         while count < min_blockers {
-            let extra = state.battlefield.iter().find(|c| {
-                c.controller == seat
-                    && c.can_block()
-                    && !assignments.iter().any(|(bid, _)| *bid == c.id)
-                    && (!a_flying
-                        || c.has_keyword(&Keyword::Flying)
-                        || c.has_keyword(&Keyword::Reach))
-                    && state.blocker_can_block_attacker(c.id, *a_id)
-            });
+            // Cheapest legal idle blocker first — minimise value lost to the
+            // forced multi-block.
+            let extra = state
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == seat
+                        && c.can_block()
+                        && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                        && (!a_flying
+                            || c.has_keyword(&Keyword::Flying)
+                            || c.has_keyword(&Keyword::Reach))
+                        && state.blocker_can_block_attacker(c.id, *a_id)
+                })
+                .min_by_key(|c| c.power());
             match extra {
                 Some(c) => {
                     assignments.push((c.id, *a_id));
@@ -3045,6 +3059,38 @@ mod tests {
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }
+    }
+
+    /// A forced block (MustBeBlocked) with no profitable trade uses the
+    /// cheapest legal body, not the bot's best creature.
+    #[test]
+    fn bot_forced_block_uses_cheapest_body() {
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        // Seat 0 attacks with a 5/5 that must be blocked.
+        let mut atk_def = catalog::grizzly_bears();
+        atk_def.name = "Provoker";
+        atk_def.power = 5;
+        atk_def.toughness = 5;
+        atk_def.keywords.push(crate::card::Keyword::MustBeBlocked);
+        let atk = g.add_card_to_battlefield(0, atk_def);
+        g.clear_sickness(atk);
+        // Seat 1 (bot) has a 1/1 chump and a 3/3 — neither can kill the 5/5.
+        let mut chump = catalog::grizzly_bears();
+        chump.name = "Chump"; chump.power = 1; chump.toughness = 1;
+        let chump = g.add_card_to_battlefield(1, chump);
+        let mut big = catalog::grizzly_bears();
+        big.name = "Big"; big.power = 3; big.toughness = 3;
+        let big = g.add_card_to_battlefield(1, big);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: atk, target: AttackTarget::Player(1),
+        }])).expect("declare attacker");
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(chump, atk)], "forced block uses the 1/1, sparing the 3/3");
+        assert!(!blocks.iter().any(|(b, _)| *b == big), "the 3/3 is not thrown away");
     }
 
     /// The bot won't declare a CanAttackOnlyIfDefenderControls attacker
