@@ -145,15 +145,13 @@ Each unblocks a large swath of cards.
   Remaining: DFC sagas.
 - ✅ **Meld** (701.37) — `Effect::Meld` + `meld_parts`, unmelds on leave (Urza +
   Mightstone/Weakstone → Urza, Planeswalker).
-- 🟡 **Flip cards** (Kamigawa, CR 711) — `flip_face` + `Effect::Flip` +
+- ✅ **Flip cards** (Kamigawa, CR 711) — `flip_face` + `Effect::Flip` +
   `GameEvent::Flipped`; ki counters; flip in place, revert off-battlefield
-  (711.6); `dealt_damage_this_turn` tracking. Shipping: Cunning Bandit, Faithful
-  Squire, Hired Muscle, Callow Jushi, Jushi Apprentice, Budoka Gardener, Orochi
-  Eggwatcher, Akki Lavarunner, Initiate of Blood (damaged-dies flip via
-  `WhenTargetDiesThisTurn`). Remaining: Bushi Tenderfoot (damaged-*by-source*
-  dies), Kitsune Mystic (aura-count flip + aura-move), Student of Elements
-  (gains-flying flip), Nezumi Graverobber (exile-from-gy + conditional flip).
-  **Prototype**, **Omen** still ⏳.
+  (711.6); `damaged_by_this_turn` source tracking; `flip_when_has_keyword`
+  CR 603.8 state-triggered flip (Student of Elements). Whole CHK flip cycle
+  ships (Cunning Bandit … Bushi Tenderfoot, Kitsune Mystic + Autumn-Tail's
+  two-target aura-move, Nezumi Graverobber, Student of Elements). **Prototype**,
+  **Omen** (other in-place-modify mechanics) still ⏳.
 - 🟡 **Face-down permanents** (708) — `face_up_def` stashes the real card; Manifest
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
   Disguise/Cloak edge cases (both core paths ship — see Tier 4).

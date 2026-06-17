@@ -115,8 +115,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     combat"); wants a delayed end-of-combat destroy trigger.
   - Genju aura cycle (animate-a-land aura that returns to hand when the
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
-    devotion-counter conditional, flip cards (CR 710) for the CHK flip
-    creatures.
+    devotion-counter conditional.
   - Cranial Extraction (name a card → exile all copies from gy/hand/library);
     Soratami Seer (discard hand, draw that many); Cut the Tethers (per-Spirit
     "return unless pay {3}"); Petals of Insight (look-3, bottom-or-draw with
@@ -1540,6 +1539,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.80a / 702.90e / 702.2c — wither / infect / deathtouch on damage
 - ✅ CR 702.78 — Conspire (tap-two-creatures additional cost → copy spell)
 - ✅ CR 702.177 — Exhaust (activated ability usable only once per game)
+- ✅ CR 711 — Flip cards (whole CHK cycle; `flip_when_has_keyword` CR 603.8
+  state-flip, `DamagedBySourceThisTurn` death-watch, two-target aura-move)
+- ✅ CR 601.2c — two-target activated abilities (`ActivateAbility.additional_targets`
+  threaded to `StackItem::Trigger`; Autumn-Tail, Kitsune Sage)
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 509.2 / 510.1c — Banding** — a banding blocker routes the blocked

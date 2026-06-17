@@ -4056,6 +4056,43 @@ pub fn faithful_squire() -> CardDefinition {
     }
 }
 
+/// Student of Elements // Tobita, Master of Winds — {1}{U} Human Wizard 1/1.
+/// "When this creature has flying, flip it." (CR 603.8 state trigger.) Flips
+/// into Tobita, a 3/3 Legendary Human Wizard whose static grants all your
+/// creatures flying.
+pub fn student_of_elements() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let tobita = CardDefinition {
+        name: "Tobita, Master of Winds",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Student of Elements",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 1,
+        flip_when_has_keyword: Some(Keyword::Flying),
+        flip_face: Some(Box::new(tobita)),
+        ..Default::default()
+    }
+}
+
 /// Kitsune Mystic // Autumn-Tail, Kitsune Sage — {3}{W} Fox Wizard 2/3.
 /// "At the beginning of the end step, if this creature is enchanted by two or
 /// more Auras, flip it." Flips into Autumn-Tail, a 4/5 Legendary Fox Wizard

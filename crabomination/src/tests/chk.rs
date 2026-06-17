@@ -2413,6 +2413,27 @@ fn initiate_of_blood_flips_when_its_ping_kills_a_damaged_creature() {
     assert!(goka.flipped && goka.definition.name == "Goka the Unjust", "Initiate flipped into Goka");
 }
 
+/// Student of Elements flips into Tobita when it gains flying (CR 603.8
+/// state-triggered ability); Tobita's static then grants your creatures flying.
+#[test]
+fn student_of_elements_flips_when_it_gains_flying() {
+    let mut g = two_player_game();
+    let student = g.add_card_to_battlefield(0, catalog::student_of_elements());
+    // No flying yet → no flip.
+    g.check_state_based_actions();
+    assert!(!g.battlefield_find(student).unwrap().flipped, "no flying, no flip");
+    // Grant it flying from an external source.
+    g.battlefield_find_mut(student).unwrap().granted_keywords_eot.push(Keyword::Flying);
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    let tobita = g.battlefield_find(student).unwrap();
+    assert!(tobita.flipped && tobita.definition.name == "Tobita, Master of Winds", "flipped on flying");
+    // Tobita's static grants flying to your other creatures.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "Tobita grants flying to your creatures");
+}
+
 /// One Aura isn't enough to flip Kitsune Mystic at the end step.
 #[test]
 fn kitsune_mystic_stays_with_one_aura() {

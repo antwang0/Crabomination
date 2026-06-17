@@ -226,6 +226,7 @@ static CHK: &[Factory] = &[
     super::chk::callow_jushi,
     super::chk::jushi_apprentice,
     super::chk::orochi_eggwatcher,
+    super::chk::student_of_elements,
     super::chk::kitsune_mystic,
     super::chk::bushi_tenderfoot,
     super::chk::nezumi_graverobber,

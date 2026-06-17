@@ -1871,6 +1871,31 @@ impl GameState {
     pub(crate) fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
+        // CR 603.8 — state-triggered flip (Student of Elements: "When this
+        // creature has flying, flip it"). Cheap guard so the common board pays
+        // nothing; only compute the layer view when an unflipped state-flip
+        // card is present, then flip any whose *computed* keywords now satisfy
+        // the condition. Flipping clears the condition, so it fires once.
+        if self
+            .battlefield
+            .iter()
+            .any(|c| c.definition.flip_when_has_keyword.is_some() && !c.flipped)
+        {
+            let computed = self.compute_battlefield();
+            let to_flip: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter_map(|c| {
+                    let kw = c.definition.flip_when_has_keyword.as_ref()?;
+                    let has = computed.iter().find(|p| p.id == c.id)?.keywords.contains(kw);
+                    (has && !c.flipped).then_some(c.id)
+                })
+                .collect();
+            for id in to_flip {
+                self.flip_permanent(id, &mut events);
+            }
+        }
+
         // +1/+1 and -1/-1 counters cancel each other out (CR 122.3 — the
         // SBA removes `N` of each kind, where `N` is the smaller count).
         for card in &mut self.battlefield {

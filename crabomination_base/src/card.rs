@@ -1385,6 +1385,12 @@ pub struct CardDefinition {
     /// only flips in place via `Effect::Flip`. Only the top stores this.
     #[serde(default)]
     pub flip_face: Option<Box<CardDefinition>>,
+    /// CR 603.8 — state-triggered flip. When `Some(kw)`, this flip card flips
+    /// (`Effect::Flip`) the moment its *computed* keywords include `kw`
+    /// (externally granted Flying counts). Checked once per SBA pass; flipping
+    /// removes the condition so it fires once. Student of Elements (Flying).
+    #[serde(default)]
+    pub flip_when_has_keyword: Option<Keyword>,
     /// Opening-hand effect ("If this card is in your opening hand…"): start
     /// in play (Leyline of Sanctity, Gemstone Caverns), reveal for a delayed
     /// effect (Chancellor of the Tangle, Chancellor of the Annex), or mark
