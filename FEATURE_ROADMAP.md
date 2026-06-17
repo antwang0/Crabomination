@@ -169,7 +169,8 @@ Each a small targeted feature; sweep batch by batch.
   Frenzy, Melee, Dash, Boast, Afflict, Enlist, Mobilize, Myriad, Amass.
 - **Value/ETB:** ✅ Investigate, Fabricate, Riot, Raid, Afterlife, Explore, Squad,
   Forage, Endure, Exploit, Extort, Support, Suspect, Discover, Collect Evidence,
-  Expend, Valiant. ⏳ Cohort.
+  Expend, Valiant, Cohort (Munda's Vanguard, Drana's Chosen — tap-another-Ally
+  activation cost).
 - **Leaves-battlefield LKI:** ✅ 603.10 — `Value::PowerOf`/`ToughnessOf` read a
   dying object's last-known P/T (Goldvein Hydra, Cacophony Scamp).
 - **Spell-matters:** ✅ Escalate, Splice, Replicate, Cipher, Surge, Spectacle,
@@ -200,7 +201,9 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **Damage assignment order** (Tier-1 #3) and **trample math** with
   multiple/deathtouch blockers.
-- ⏳ **Banding** (keyword exists; rules not wired).
+- 🟡 **Banding** (CR 509.2 / 510.1c) — a banding blocker routes the attacker's
+  combat-damage order + assignment to the *defending* player (Benalish Hero).
+  Remaining: attacking-band formation + "bands with other".
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
   post-main insertion (Relentless Assault).
 - 🟡 **"Must/can't attack/block" restrictions** — `Keyword::{CantAttack,CantBlock,

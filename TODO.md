@@ -1524,6 +1524,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.80a / 702.90e / 702.2c — wither / infect / deathtouch on damage
 
 ### Partial (🟡) — remaining gap noted
+- 🟡 **CR 509.2 / 510.1c — Banding** — a banding blocker routes the blocked
+  attacker's damage order + assignment to the defending player (Benalish Hero;
+  test `cr_509_2_banding_blocker_lets_defender_assign_damage`). Remaining:
+  attacking-band formation, "bands with other", and the band-blocks-multiple
+  damage-distribution corner.
 - 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
 - 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.)
 - 🟡 **CR 704 — State-Based Actions** — Saga SBA ✅ (`saga_chapters` reach

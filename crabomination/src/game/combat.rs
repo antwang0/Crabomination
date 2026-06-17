@@ -1169,7 +1169,6 @@ impl GameState {
             self.combat_damage_plan_step = Some(self.step);
         }
         let active = self.active_player_idx;
-        let wants_ui = self.players[active].wants_ui;
         for atk in attacker_infos.iter().filter(|a| a.should_deal) {
             let mut blocker_ids: Vec<CardId> = self
                 .block_map
@@ -1182,14 +1181,27 @@ impl GameState {
                 continue;
             }
 
+            // CR 509.2 / 510.1c — Banding: if any blocking creature has
+            // banding, the *defending* player (the blockers' controller), not
+            // the attacking player, announces this attacker's damage order and
+            // assignment. Otherwise the active (attacking) player decides.
+            let banding_assigner = blocker_ids.iter().find_map(|bid| {
+                computed
+                    .iter()
+                    .find(|c| c.id == *bid && c.keywords.contains(&Keyword::Banding))
+                    .map(|c| c.controller)
+            });
+            let assigner = banding_assigner.unwrap_or(active);
+            let assigner_ui = self.players[assigner].wants_ui;
+
             // 1) Blocker order (CR 510.1c).
             if !self.combat_damage_order.contains_key(&atk.id) {
                 let decision = self.combat_damage_order_decision(atk.id, &blocker_ids);
-                if wants_ui {
+                if assigner_ui {
                     self.pending_decision = Some(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
-                            player: active,
+                            player: assigner,
                             attacker: atk.id,
                             kind: CombatDecisionKind::Order,
                         },
@@ -1218,11 +1230,11 @@ impl GameState {
                 }
                 let decision =
                     self.assign_combat_damage_decision(atk.id, total_power, &lethals);
-                if wants_ui {
+                if assigner_ui {
                     self.pending_decision = Some(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
-                            player: active,
+                            player: assigner,
                             attacker: atk.id,
                             kind: CombatDecisionKind::Assign,
                         },

@@ -766,6 +766,63 @@ fn cr_510_1c_ui_player_orders_and_assigns_combat_damage() {
     assert!(g.battlefield_find(b1).is_some(), "b1 only took 1 and survived");
 }
 
+/// CR 509.2 / 510.1c — Banding: when an attacker is blocked by a band that
+/// includes a creature with banding, the *defending* player (not the
+/// attacker) announces the attacker's damage order and assignment. Here the
+/// bot attacks and the human defender, holding a banding blocker, is the one
+/// prompted — and assigns all 3 to one bear, sparing the other.
+#[test]
+fn cr_509_2_banding_blocker_lets_defender_assign_damage() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::decision::{Decision, DecisionAnswer};
+    use crate::game::types::{ResumeContext, TurnStep};
+    let mut g = two_player_game();
+    // Defender (P1) drives the UI; the attacking bot (P0) does not.
+    g.players[1].wants_ui = true;
+    let beater = CardDefinition {
+        name: "Three Three",
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    };
+    let atk = g.add_card_to_battlefield(0, beater);
+    let hero = g.add_card_to_battlefield(1, catalog::benalish_hero()); // 1/1 banding
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(hero, atk), (bear, atk)]))
+        .expect("band-block with the banding hero");
+    drain_stack(&mut g);
+
+    while g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        assert!(!g.is_game_over());
+    }
+    // The order decision is routed to the *defending* player (P1).
+    let pd = g.pending_decision.as_ref().expect("combat suspends on ordering");
+    assert!(matches!(pd.resume, ResumeContext::CombatDamage { player: 1, .. }),
+        "banding routes the assignment to the defending player, got {:?}", pd.resume);
+    assert!(matches!(pd.decision, Decision::CombatDamageOrder { .. }));
+    g.submit_decision(DecisionAnswer::DamageOrder(vec![bear, hero])).expect("defender orders");
+    // Assignment also goes to the defender: dump all 3 into the bear, none on
+    // the hero, so the 1/1 banding hero survives.
+    g.submit_decision(DecisionAnswer::CombatDamageAssignment(vec![(bear, 3), (hero, 0)]))
+        .expect("defender assigns");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear took all 3 and died");
+    assert!(g.battlefield_find(hero).is_some(), "banding hero spared by the defender");
+}
+
 /// CR 702.85b (Cascade): the exile walk stops at the first nonland card
 /// with mana value *strictly less* than the cascading spell's. A card whose
 /// MV equals the cascade MV is not a valid hit — it's exiled past and
