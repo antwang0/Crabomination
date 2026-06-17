@@ -2460,3 +2460,48 @@ fn painwracker_oni_upkeep_sacrifice_unless_ogre() {
     assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_creature()).count(), 1,
         "exactly one creature sacrificed at upkeep");
 }
+
+/// Crushing Pain deals 6 to a creature dealt damage this turn (and can't be
+/// cast at a fresh one).
+#[test]
+fn crushing_pain_hits_only_damaged_creatures() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, {
+        let mut d = catalog::grizzly_bears(); d.name = "Hulk"; d.power = 5; d.toughness = 6; d
+    });
+    let spell = g.add_card_to_hand(0, catalog::crushing_pain());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Undamaged → illegal target.
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "can't target an undamaged creature");
+    // Mark it damaged, then it's legal and dies to 6.
+    g.battlefield_find_mut(big).unwrap().dealt_damage_this_turn = true;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast at damaged creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "6 damage kills the 5/8");
+}
+
+/// Unearthly Blizzard stops up to three creatures from blocking this turn.
+#[test]
+fn unearthly_blizzard_grants_cant_block() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::unearthly_blizzard());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast Unearthly Blizzard");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
+}

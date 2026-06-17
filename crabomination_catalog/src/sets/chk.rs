@@ -3535,6 +3535,45 @@ pub fn cunning_bandit() -> CardDefinition {
     }
 }
 
+/// Crushing Pain — {1}{R} Instant — Arcane. Deals 6 damage to target creature
+/// that was dealt damage this turn.
+pub fn crushing_pain() -> CardDefinition {
+    CardDefinition {
+        name: "Crushing Pain",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::DealtDamageThisTurn),
+            ),
+            amount: Value::Const(6),
+        },
+        ..Default::default()
+    }
+}
+
+/// Unearthly Blizzard — {2}{R} Sorcery — Arcane. Up to three target creatures
+/// can't block this turn.
+pub fn unearthly_blizzard() -> CardDefinition {
+    CardDefinition {
+        name: "Unearthly Blizzard",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::ApplyToTargets {
+            max_targets: 3,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Kuro's Taken — {1}{B} Rat Samurai 1/1. Bushido 1; "{1}{B}: Regenerate this."
 pub fn kuros_taken() -> CardDefinition {
     CardDefinition {

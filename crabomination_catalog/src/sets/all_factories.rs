@@ -229,6 +229,8 @@ static CHK: &[Factory] = &[
     super::chk::initiate_of_blood,
     super::chk::kuros_taken,
     super::chk::painwracker_oni,
+    super::chk::crushing_pain,
+    super::chk::unearthly_blizzard,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
