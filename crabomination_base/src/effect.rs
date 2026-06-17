@@ -2227,6 +2227,9 @@ pub enum Effect {
     /// controller's next untap step (Vorinclex's land lock, Exert-style
     /// `skip_next_untap` flag).
     SkipNextUntap { what: Selector },
+    /// CR 502.3 — the target player skips their next untap step (Yosei, the
+    /// Morning Star). Adds one charge to `Player.skip_next_untap_step`.
+    SkipPlayerUntapStep { player: PlayerRef },
     /// Each permanent picked by `what` becomes a single color of the
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").

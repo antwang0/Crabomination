@@ -3770,6 +3770,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SkipPlayerUntapStep { player } => {
+                for ent in self.resolve_selector(&Selector::Player(player.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].skip_next_untap_step =
+                            self.players[p].skip_next_untap_step.saturating_add(1);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnSelfAsEnchantment => {
                 use crate::card::CardType;
                 let Some(src) = ctx.source else { return Ok(()); };

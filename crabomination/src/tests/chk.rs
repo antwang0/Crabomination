@@ -605,3 +605,41 @@ fn akki_coalflinger_grants_first_strike() {
     let cp = g.computed_permanent(attacker).unwrap();
     assert!(cp.keywords.contains(&Keyword::FirstStrike), "attacker gained first strike");
 }
+
+/// CR 502.3 — a player flagged to skip their untap step doesn't untap, and the
+/// charge is consumed.
+#[test]
+fn cr_502_3_skipped_untap_step_keeps_permanents_tapped() {
+    let mut g = two_player_game();
+    let perm = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(perm).unwrap().tapped = true;
+    g.players[1].skip_next_untap_step = 1;
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(perm).unwrap().tapped, "permanent stays tapped through the skipped untap");
+    assert_eq!(g.players[1].skip_next_untap_step, 0, "one skip charge consumed");
+    // Next untap (no charge) untaps normally.
+    g.do_untap();
+    assert!(!g.battlefield_find(perm).unwrap().tapped, "untaps on the following untap step");
+}
+
+/// Yosei's death trigger taps the target player's board and skips their next
+/// untap step (`Effect::SkipPlayerUntapStep`).
+#[test]
+fn yosei_dies_locks_target_player() {
+    let mut g = two_player_game();
+    let yosei = g.add_card_to_battlefield(0, catalog::yosei_the_morning_star());
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let trig = catalog::yosei_the_morning_star().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        yosei, 0, Some(Target::Player(1)), 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert!(g.battlefield_find(land).unwrap().tapped, "land tapped");
+    assert!(g.battlefield_find(creature).unwrap().tapped, "creature tapped");
+    assert_eq!(g.players[1].skip_next_untap_step, 1, "player 1 will skip their next untap");
+    // Their untap step leaves the board locked.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped, "still tapped after skipped untap");
+}

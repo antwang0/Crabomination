@@ -318,6 +318,11 @@ pub struct Player {
     /// to 0 for snapshot back-compat.
     #[serde(default)]
     pub skip_turns: u32,
+    /// CR 502.3 — number of this player's upcoming untap steps to skip
+    /// (Yosei, the Morning Star; Frost Titan-style locks). Decremented when
+    /// their untap step would run; while > 0 their permanents don't untap.
+    #[serde(default)]
+    pub skip_next_untap_step: u32,
     /// CR 500.7 — extra turns this player will take. When `advance_turn`
     /// would pass the turn, an active player with `extra_turns > 0`
     /// decrements it and keeps the turn instead (Time Walk, Ral Zarek's
@@ -460,6 +465,7 @@ impl Player {
             max_hand_size: default_max_hand_size(),
             eliminated: false,
             skip_turns: 0,
+            skip_next_untap_step: 0,
             extra_turns: 0,
             epic_spells: Vec::new(),
             emblems: Vec::new(),

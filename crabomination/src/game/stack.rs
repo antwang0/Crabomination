@@ -1347,8 +1347,17 @@ impl GameState {
         // CR 502.3 — Seedborn Muse: any player *other* than the active player
         // who controls an `UntapAllYoursEachUntapStep` permanent also untaps
         // their permanents during this untap step.
+        // CR 502.3 — a player who's been made to skip their next untap step
+        // (Yosei) doesn't untap; consume one charge. Seedborn-style other
+        // untappers still untap their own permanents.
+        let active_skips_untap = if self.players[p].skip_next_untap_step > 0 {
+            self.players[p].skip_next_untap_step -= 1;
+            true
+        } else {
+            false
+        };
         let untappers: Vec<usize> = {
-            let mut u = vec![p];
+            let mut u = if active_skips_untap { vec![] } else { vec![p] };
             for c in &self.battlefield {
                 if c.controller != p
                     && !u.contains(&c.controller)

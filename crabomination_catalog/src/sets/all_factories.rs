@@ -123,6 +123,7 @@ static CHK: &[Factory] = &[
     super::chk::quiet_purity,
     super::chk::soratami_mirror_guard,
     super::chk::akki_coalflinger,
+    super::chk::yosei_the_morning_star,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
