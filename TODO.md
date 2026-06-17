@@ -118,11 +118,12 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   - Generalize `Player.zuberas_died_this_turn` into a type-filtered
     died-this-turn count if another tribe ever needs it.
 - 🟡 **Bot: general value-activated-ability generator.** `pick_removal_ping`
-  now fires single-target "{cost}: deal damage to any target" abilities that
-  kill an opposing creature outright (constant amount, or Kiku's
-  damage-equal-to-its-power shape). Remaining: "sac: destroy" abilities
-  (Goblin Bombardment), X-value selection for scalable pings, and pointing a
-  ping at the opponent's face for reach.
+  fires single-target "{cost}: deal damage to any target" abilities that kill
+  an opposing creature outright (constant amount, or Kiku's
+  damage-equal-to-its-power shape); `pick_removal_sacrifice` activates
+  "Sacrifice this: destroy target creature" on favorable/even trades (Pus
+  Kami). Remaining: X-value selection for scalable pings, and pointing a ping
+  at the opponent's face for reach.
 - ⏳ **THB cards deferred this run (need new primitives):**
   - Devotion-mana rock (Nyx Lotus): `{T}: choose a color, add devotion-to-it`
     — needs a choose-color + `Value::DevotionOfChosenColor` mana ability.

@@ -78,6 +78,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantAttackUnlessCastCreatureThisTurn => "Atk?",
         Decayed => "Dcy",
         Flanking => "Flk",
+        // Combat-pump statics from the Kamigawa/legacy sets read at a glance.
+        Bushido(_) => "Bsd",
+        Rampage(_) => "Rmp",
+        Banding => "Bnd",
         // Generalized menace — "can't be blocked except by N or more."
         CantBeBlockedExceptByN(_) => "Men+",
         MustBeBlocked => "Lure",
@@ -243,5 +247,12 @@ mod tests {
             keyword_strip(&[Keyword::CantAttackUnlessCastCreatureThisTurn]),
             "Atk?"
         );
+    }
+
+    #[test]
+    fn strip_surfaces_combat_pump_statics() {
+        assert_eq!(keyword_strip(&[Keyword::Bushido(2)]), "Bsd");
+        assert_eq!(keyword_strip(&[Keyword::Rampage(1)]), "Rmp");
+        assert_eq!(keyword_strip(&[Keyword::Banding]), "Bnd");
     }
 }

@@ -1557,6 +1557,13 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Fire a "Sacrifice this: destroy target creature" ability (Pus Kami,
+    // Nezumi Bone-Reader-style sac-removal) on a favorable trade — only when
+    // the destroyed foe is at least as big as the creature being sacrificed.
+    if let Some(action) = pick_removal_sacrifice(state, seat) {
+        return action;
+    }
+
     // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
     // manifested creature card) when the turn-up cost is affordable. Dry-run-
     // gated, so the cost / timing / "manifested noncreature can't turn up"
@@ -1617,6 +1624,55 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     _ => false,
                 };
                 if !lethal {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(*foe)),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Activate a "Sacrifice this creature: Destroy target creature" ability
+/// (Pus Kami, Scuttling Death-style sac removal) on a *favorable* trade: the
+/// destroyed opposing creature must be at least as powerful as the creature
+/// being sacrificed, so the bot won't pitch a 3/3 to kill a 1/1. Targets the
+/// biggest qualifying foe. Dry-run-gated through `would_accept`.
+fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::Selector;
+    let mut foes: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
+        .collect();
+    foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        let src_power = state.computed_permanent(card.id).map(|cp| cp.power).unwrap_or(0);
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if !ab.sac_cost {
+                continue;
+            }
+            let target_is_creature = match &ab.effect {
+                Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
+                    matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
+                }
+                _ => false,
+            };
+            if !target_is_creature {
+                continue;
+            }
+            for (foe, foe_pow) in &foes {
+                // Only a favorable/even trade.
+                if *foe_pow < src_power {
                     continue;
                 }
                 let action = GameAction::ActivateAbility {
@@ -2771,6 +2827,30 @@ mod tests {
         g.battlefield.retain(|c| c.id != frostling);
         g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
         assert!(pick_removal_ping(&g, 0).is_none(), "won't waste a ping on a survivor");
+    }
+
+    /// The bot sacrifices Pus Kami to destroy a bigger opposing creature, but
+    /// not to kill something smaller than the creature it would pitch.
+    #[test]
+    fn bot_sacs_to_destroy_a_favorable_trade() {
+        let mut g = two_player_game();
+        let kami = g.add_card_to_battlefield(0, catalog::pus_kami()); // 3/3
+        g.clear_sickness(kami);
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        // A 5/5-equivalent opposing threat (nonblack) → favorable sac.
+        let dreadmaw = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // 6/6 green
+        let action = pick_removal_sacrifice(&g, 0).expect("bot sacs to kill the big threat");
+        match action {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, kami);
+                assert_eq!(target, Some(Target::Permanent(dreadmaw)));
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // Replace with a 1/1 — sacrificing a 3/3 for it is a bad trade.
+        g.battlefield.retain(|c| c.id != dreadmaw);
+        g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+        assert!(pick_removal_sacrifice(&g, 0).is_none(), "won't sac a 3/3 to kill a 1/1");
     }
 
     /// The bot recurs a creature from the graveyard via Embalm when it can
