@@ -1158,6 +1158,7 @@ impl GameState {
                     R::Noncreature => !has_type(CT::Creature),
                     R::Tapped => card.tapped,
                     R::Untapped => !card.tapped,
+                    R::DealtDamageThisTurn => card.dealt_damage_this_turn,
                     // CR 105.2/202.2 — hybrid/Phyrexian pips count via
                     // `ManaCost::colors()` (bare `Colored` scan missed them).
                     R::HasColor(c) => card.definition.cost.colors().contains(c),
@@ -1575,7 +1576,7 @@ impl GameState {
             | R::AttackedThisTurn | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::DealtDamageToControllerThisTurn | R::IsEnchanted
-            | R::IsEquipped | R::IsModified => false,
+            | R::IsEquipped | R::IsModified | R::DealtDamageThisTurn => false,
         }
     }
 }

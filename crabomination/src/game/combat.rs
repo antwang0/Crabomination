@@ -1542,6 +1542,9 @@ impl GameState {
                     ) as i32;
                     lifelink_dealt += dealt;
 
+                    if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
+                        b.dealt_damage_this_turn = true;
+                    }
                     if atk.has_infect || atk.has_wither {
                         if dealt > 0
                             && let Some(blocker) = self.battlefield_find_mut(blocker_id)
@@ -1651,6 +1654,7 @@ impl GameState {
                         let infect = bc.keywords.contains(&Keyword::Infect)
                             || bc.keywords.contains(&Keyword::Wither);
                         if let Some(attacker) = self.battlefield_find_mut(atk.id) {
+                            attacker.dealt_damage_this_turn = true;
                             if infect {
                                 attacker
                                     .add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
@@ -1786,6 +1790,7 @@ impl GameState {
                 {
                     if let Some(c) = self.battlefield_find_mut(redirect) {
                         c.damage += amount;
+                        c.dealt_damage_this_turn = true;
                     }
                     events.push(GameEvent::DamageDealt {
                         amount,

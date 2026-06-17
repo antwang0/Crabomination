@@ -857,6 +857,9 @@ pub enum SelectionRequirement {
     Noncreature,
     Tapped,
     Untapped,
+    /// CR 120.x — the permanent has been dealt damage this turn (Initiate of
+    /// Blood // Goka's "target creature that was dealt damage this turn").
+    DealtDamageThisTurn,
     HasColor(Color),
     HasKeyword(Keyword),
     /// The card has any cycling ability (Cycling / CyclingLife /
@@ -2549,6 +2552,11 @@ pub struct CardInstance {
     /// with deathtouch since the last time SBAs were checked. Causes
     /// destruction regardless of damage amount vs toughness.
     pub dealt_deathtouch_damage: bool,
+    /// CR 120.x — true if this permanent has been dealt damage this turn
+    /// (any source, combat or not, including wither/-1/-1 damage). Reset at
+    /// cleanup. Powers "target creature that was dealt damage this turn"
+    /// (Initiate of Blood // Goka). In-memory only.
+    pub dealt_damage_this_turn: bool,
     /// CR 701.15 — Regeneration shields. Each is a one-shot replacement:
     /// "the next time this permanent would be destroyed this turn, instead
     /// remove a regeneration shield, tap it, remove it from combat, and
@@ -2736,6 +2744,7 @@ impl CardInstance {
             keyword_counters: std::collections::HashMap::new(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
+            dealt_damage_this_turn: false,
             regeneration_shields: 0,
             skip_next_untap: false,
             attacked_this_turn: false,
@@ -3002,6 +3011,7 @@ impl CardInstance {
         self.granted_flashback_eot = None;
         self.granted_alt_cast_cost_eot = None;
         self.dealt_deathtouch_damage = false;
+        self.dealt_damage_this_turn = false;
         // CR 701.15g — unused regeneration shields expire at end of turn.
         self.regeneration_shields = 0;
         // CR 702.171 — "saddled until end of turn" ends here.

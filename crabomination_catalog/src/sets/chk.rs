@@ -3535,6 +3535,51 @@ pub fn cunning_bandit() -> CardDefinition {
     }
 }
 
+/// Initiate of Blood // Goka the Unjust — {3}{R} Ogre Shaman 2/2.
+/// "{T}: This deals 1 damage to target creature that was dealt damage this
+/// turn. When that creature dies this turn, flip this creature." Goka:
+/// "{T}: Goka deals 4 damage to target creature that was dealt damage this turn."
+pub fn initiate_of_blood() -> CardDefinition {
+    let damaged_creature =
+        || target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::DealtDamageThisTurn));
+    let goka = CardDefinition {
+        name: "Goka the Unjust",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Shaman]),
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: damaged_creature(), amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Initiate of Blood",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Shaman]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            // Register the death-watch first so it's live if the 1 damage kills.
+            effect: Effect::Seq(vec![
+                Effect::WhenTargetDiesThisTurn {
+                    body: Box::new(Effect::Flip { what: Selector::This }),
+                    slot: 0,
+                },
+                Effect::DealDamage { to: damaged_creature(), amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        flip_face: Some(Box::new(goka)),
+        ..Default::default()
+    }
+}
+
 /// Orochi Eggwatcher // Shidako, Broodmistress — {2}{G} Snake Shaman 1/1.
 /// "{2}{G}, {T}: Create a 1/1 green Snake. If you control ten or more
 /// creatures, flip this creature." Shidako: "{G}, Sacrifice a creature: Target

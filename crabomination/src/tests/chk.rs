@@ -2388,3 +2388,41 @@ fn orochi_eggwatcher_flips_to_shidako_at_ten_creatures() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3 applied");
 }
+
+/// Initiate of Blood pings a damaged creature; if that kills it, Initiate flips
+/// into Goka the Unjust.
+#[test]
+fn initiate_of_blood_flips_when_its_ping_kills_a_damaged_creature() {
+    let mut g = two_player_game();
+    let initiate = g.add_card_to_battlefield(0, catalog::initiate_of_blood());
+    g.clear_sickness(initiate);
+    // A 1/1 already dealt damage this turn (so it's a legal target, and 1 more kills it).
+    let victim = g.add_card_to_battlefield(1, {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Wounded"; d.power = 1; d.toughness = 1; d
+    });
+    g.battlefield_find_mut(victim).unwrap().dealt_damage_this_turn = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: initiate, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("ping the damaged creature");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim died to the ping");
+    let goka = g.battlefield_find(initiate).unwrap();
+    assert!(goka.flipped && goka.definition.name == "Goka the Unjust", "Initiate flipped into Goka");
+}
+
+/// "Target creature that was dealt damage this turn" rejects an undamaged
+/// creature (CR 120.x targeting filter).
+#[test]
+fn initiate_of_blood_cannot_target_undamaged_creature() {
+    let mut g = two_player_game();
+    let initiate = g.add_card_to_battlefield(0, catalog::initiate_of_blood());
+    g.clear_sickness(initiate);
+    let fresh = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no damage
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: initiate, ability_index: 0, target: Some(Target::Permanent(fresh)), x_value: None,
+    });
+    assert!(err.is_err(), "can't target a creature that wasn't dealt damage this turn");
+}
