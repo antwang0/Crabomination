@@ -3709,6 +3709,28 @@ in the topical sections above, are:
   Tarmogoyf-specific CDA formula (Wight of the Reliquary, Nighthowler, Master
   of Etherium).
 
+### Kamigawa flip cards — remaining (push modern_decks)
+- The flip mechanic (CR 711) ships (`flip_face`, `Effect::Flip`, ki counters,
+  `dealt_damage_this_turn`). Remaining cycle members need new primitives:
+  - **Bushi Tenderfoot // Kenzo** — "a creature dealt damage *by this* this turn
+    dies → flip": needs per-source damaged-by tracking + a death-watch keyed to
+    it (the `dealt_damage_this_turn` bool isn't source-scoped).
+  - **Kitsune Mystic // Autumn-Tail** — end-step flip if enchanted by 2+ Auras
+    (need an aura-count Value), and Autumn-Tail's move-an-Aura ability.
+  - **Student of Elements // Tobita** — "when this has flying, flip it" (a
+    state trigger on gaining a keyword) + Tobita's team-flying anthem.
+  - **Nezumi Graverobber // Nighteyes** — exile *one* target card from an
+    opponent's graveyard + conditional flip if that graveyard is now empty;
+    Nighteyes reanimates (Move gy-creature → battlefield under your control).
+- **Heartbeat of Spring** — symmetric mana-doubling-on-tap for *all* players;
+  `ManaProductionDoubled` is controller-scoped. Add an all-players variant.
+- **Threads of Disloyalty** — control Aura (MV≤2). No aura-grants-control path
+  yet; `GainControlWhileSourceRemains` is only wired as a creature ETB.
+- **Kitsune Riftwalker** — protection from a *creature type / spell subtype*
+  (Spirits, Arcane); `Keyword::Protection` is color-only today.
+- Devouring Greed / Devouring Rage model their "sacrifice any number of Spirits"
+  additional cost at resolution (`SacrificeAnyNumber`), not at cast.
+
 ### Content / pools
 - **Deck-construction archetype weighting** — tribal subpools (Silverquill
   Inkling, Witherbloom Pest, Lorehold Spirit) and a per-school sealed-pool

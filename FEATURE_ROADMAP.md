@@ -147,8 +147,12 @@ Each unblocks a large swath of cards.
   Mightstone/Weakstone → Urza, Planeswalker).
 - 🟡 **Flip cards** (Kamigawa, CR 711) — `flip_face` + `Effect::Flip` +
   `GameEvent::Flipped`; ki counters; flip in place, revert off-battlefield
-  (711.6). Cunning Bandit, Faithful Squire, Budoka Gardener ship. Remaining:
-  damaged-creature-dies flip trigger (Bushi Tenderfoot), more of the cycle.
+  (711.6); `dealt_damage_this_turn` tracking. Shipping: Cunning Bandit, Faithful
+  Squire, Hired Muscle, Callow Jushi, Jushi Apprentice, Budoka Gardener, Orochi
+  Eggwatcher, Akki Lavarunner, Initiate of Blood (damaged-dies flip via
+  `WhenTargetDiesThisTurn`). Remaining: Bushi Tenderfoot (damaged-*by-source*
+  dies), Kitsune Mystic (aura-count flip + aura-move), Student of Elements
+  (gains-flying flip), Nezumi Graverobber (exile-from-gy + conditional flip).
   **Prototype**, **Omen** still ⏳.
 - 🟡 **Face-down permanents** (708) — `face_up_def` stashes the real card; Manifest
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
