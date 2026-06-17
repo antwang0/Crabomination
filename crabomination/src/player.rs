@@ -129,6 +129,11 @@ pub struct Player {
     /// for snapshot back-compat.
     #[serde(default)]
     pub creatures_died_this_turn: u32,
+    /// Zubera that died under this player's control this turn. Reset in
+    /// `do_untap`. Powers the Champions-of-Kamigawa Zubera cycle's "for each
+    /// Zubera that died this turn" death triggers. `#[serde(default)]`.
+    #[serde(default)]
+    pub zuberas_died_this_turn: u32,
     /// Creatures that entered the battlefield under this player's control
     /// this turn (stamped at the shared ETB funnels). Rotated into
     /// `creatures_entered_last_turn` at end of turn — Ephara, God of the
@@ -428,6 +433,7 @@ impl Player {
             cards_drawn_this_step: 0,
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
+            zuberas_died_this_turn: 0,
             creatures_entered_this_turn: Vec::new(),
             creatures_entered_last_turn: Vec::new(),
             escalating_resolutions_this_turn: 0,

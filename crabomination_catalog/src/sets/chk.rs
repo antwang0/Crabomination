@@ -2128,6 +2128,80 @@ pub fn kami_of_the_painted_road() -> CardDefinition {
     }
 }
 
+// ── Zubera cycle: 1/2 Zubera Spirits whose death triggers scale with the ──────
+// number of Zubera that died this turn (`Value::ZuberasDiedThisTurnTotal`).
+
+fn zubera(name: &'static str, color_pip: crate::mana::ManaSymbol, dies: Effect) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(1), color_pip]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Zubera, CreatureType::Spirit]),
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(dies)],
+        ..Default::default()
+    }
+}
+
+/// Ember-Fist Zubera — {1}{R} Zubera Spirit 1/2. When it dies, it deals damage
+/// to any target equal to the number of Zubera that died this turn.
+pub fn ember_fist_zubera() -> CardDefinition {
+    zubera("Ember-Fist Zubera", r(), Effect::DealDamage {
+        to: crate::effect::shortcut::target(),
+        amount: Value::ZuberasDiedThisTurnTotal,
+    })
+}
+
+/// Floating-Dream Zubera — {1}{U} Zubera Spirit 1/2. When it dies, draw a card
+/// for each Zubera that died this turn.
+pub fn floating_dream_zubera() -> CardDefinition {
+    zubera("Floating-Dream Zubera", u(), Effect::Draw {
+        who: Selector::You,
+        amount: Value::ZuberasDiedThisTurnTotal,
+    })
+}
+
+/// Ashen-Skin Zubera — {1}{B} Zubera Spirit 1/2. When it dies, target opponent
+/// discards a card for each Zubera that died this turn.
+pub fn ashen_skin_zubera() -> CardDefinition {
+    zubera("Ashen-Skin Zubera", b(), Effect::Discard {
+        who: Selector::Player(PlayerRef::Target(0)),
+        amount: Value::ZuberasDiedThisTurnTotal,
+        random: false,
+    })
+}
+
+/// Dripping-Tongue Zubera — {1}{G} Zubera Spirit 1/2. When it dies, create a
+/// 1/1 colorless Spirit token for each Zubera that died this turn.
+pub fn dripping_tongue_zubera() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    zubera("Dripping-Tongue Zubera", g(), Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ZuberasDiedThisTurnTotal,
+        definition: TokenDefinition {
+            name: "Spirit".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![CardType::Creature],
+            subtypes: spirit(vec![CreatureType::Spirit]),
+            ..Default::default()
+        },
+    })
+}
+
+/// Silent-Chant Zubera — {1}{W} Zubera Spirit 1/2. When it dies, you gain 2
+/// life for each Zubera that died this turn.
+pub fn silent_chant_zubera() -> CardDefinition {
+    zubera("Silent-Chant Zubera", w(), Effect::GainLife {
+        who: Selector::You,
+        amount: Value::Times(
+            Box::new(Value::ZuberasDiedThisTurnTotal),
+            Box::new(Value::Const(2)),
+        ),
+    })
+}
+
 /// Orochi Leafcaller — {G} Snake Shaman 1/1. {G}: Add one mana of any color.
 pub fn orochi_leafcaller() -> CardDefinition {
     use crate::effect::ManaPayload;

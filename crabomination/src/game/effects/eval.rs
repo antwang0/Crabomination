@@ -390,6 +390,11 @@ impl GameState {
                 .iter()
                 .map(|p| p.creatures_died_this_turn as i32)
                 .sum(),
+            Value::ZuberasDiedThisTurnTotal => self
+                .players
+                .iter()
+                .map(|p| p.zuberas_died_this_turn as i32)
+                .sum(),
             Value::LowestLifeTotal => self
                 .players
                 .iter()

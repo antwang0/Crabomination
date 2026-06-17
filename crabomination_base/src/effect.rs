@@ -527,6 +527,10 @@ pub enum Value {
     /// table-wide aristocrat scaling, mirroring
     /// `Predicate::CreaturesDiedThisTurnTotalAtLeast`.
     CreaturesDiedThisTurnTotal,
+    /// Number of Zubera that died this turn across **every** player. Sums
+    /// `Player.zuberas_died_this_turn`. Powers the Champions-of-Kamigawa
+    /// Zubera death-trigger cycle ("for each Zubera that died this turn").
+    ZuberasDiedThisTurnTotal,
     /// Number of permanents destroyed by `Effect::Destroy` earlier in this
     /// same resolution. Backed by `GameState.permanents_destroyed_this_resolution`.
     /// Powers Culling Ritual's "Add {B} or {G} for each permanent destroyed

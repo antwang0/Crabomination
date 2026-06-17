@@ -145,6 +145,8 @@ pub enum CreatureType {
     Tiefling,
     // Theros Chimera (Daybreak Chimera, Loathsome Chimera).
     Chimera,
+    // Kamigawa Zubera (the five Zubera with scaling death triggers).
+    Zubera,
 }
 
 /// Land subtypes (basic land types + others).

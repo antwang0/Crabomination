@@ -1284,3 +1284,40 @@ fn frostwielder_pings() {
     assert!(g.battlefield_find(frostling).is_none(), "1/1 pinged dead");
 }
 
+
+/// Ember-Fist Zubera dying alone pings for 1 (one Zubera died).
+#[test]
+fn ember_fist_zubera_pings_for_count() {
+    let mut g = two_player_game();
+    let zub = g.add_card_to_battlefield(0, catalog::ember_fist_zubera());
+    let frostling = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    // Sacrifice the Zubera (death trigger targets the 1/1).
+    let trig = catalog::ember_fist_zubera().triggered_abilities[0].effect.clone();
+    g.players[0].zuberas_died_this_turn = 1; // as if it just died
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        zub, 0, Some(Target::Permanent(frostling)), 0,
+    );
+    g.resolve_effect(&trig, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(frostling).is_none(), "1 damage killed the 1/1");
+}
+
+/// Two Zubera dying simultaneously make each death trigger see a count of two.
+#[test]
+fn zubera_deaths_accumulate_this_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silent_chant_zubera());
+    g.add_card_to_battlefield(0, catalog::silent_chant_zubera());
+    let wipe = g.add_card_to_hand(0, catalog::hideous_laughter()); // -2/-2 to all
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wipe, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hideous Laughter");
+    drain_stack(&mut g);
+    // Both 1/2 Zubera became 0/0 and died; each triggers "gain 2 per Zubera
+    // that died this turn" = 2 × 2 = 4, twice → +8 life.
+    assert_eq!(g.players[0].zuberas_died_this_turn, 2, "two Zubera counted");
+    assert_eq!(g.players[0].life, before + 8, "each Zubera gained 2 per the 2 deaths");
+}

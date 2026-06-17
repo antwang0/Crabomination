@@ -1535,6 +1535,7 @@ impl GameState {
         // powers Witherbloom "if a creature died under your control this
         // turn" end-step payoffs (Essenceknit Scholar).
         self.players[p].creatures_died_this_turn = 0;
+        self.players[p].zuberas_died_this_turn = 0;
         self.players[p].escalating_resolutions_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
         // your control this turn" flag for the active player.
@@ -2221,6 +2222,14 @@ impl GameState {
             if controller_idx < self.players.len() {
                 self.players[controller_idx].creatures_died_this_turn =
                     self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+                // Zubera cycle: count Zubera deaths separately (read off the
+                // still-present dying creature's subtypes).
+                if self.battlefield.iter().any(|c| c.id == id
+                    && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
+                {
+                    self.players[controller_idx].zuberas_died_this_turn =
+                        self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
+                }
             }
             // CR 603.10 — stash an LKI snapshot before the creature leaves
             // so a "deals damage / makes tokens equal to its power" dies
@@ -2786,6 +2795,12 @@ impl GameState {
         {
             self.players[controller_idx].creatures_died_this_turn =
                 self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+            if self.battlefield.iter().any(|c| c.id == id
+                && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
+            {
+                self.players[controller_idx].zuberas_died_this_turn =
+                    self.players[controller_idx].zuberas_died_this_turn.saturating_add(1);
+            }
         }
         // Snapshot the card if it carries a SelfSource `PermanentSacrificed`
         // trigger so the dispatcher can fire it from last-known info after the
