@@ -161,6 +161,156 @@ fn kami_of_twisted_reflection_bounces_your_creature() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear), "your creature returned to hand");
 }
 
+/// Hideous Laughter shrinks every creature -2/-2, killing the small ones.
+#[test]
+fn hideous_laughter_wraths_small_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → 0/0 dies
+    let wall = g.add_card_to_battlefield(1, catalog::kami_of_old_stone()); // 1/7 survives
+    let id = g.add_card_to_hand(0, catalog::hideous_laughter());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hideous Laughter");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 died to -2/-2");
+    assert!(g.battlefield.iter().any(|c| c.id == wall), "1/7 survived");
+}
+
+/// Yamabushi's Storm pings every creature for 1 and exiles what it kills.
+#[test]
+fn yamabushis_storm_pings_and_exiles() {
+    let mut g = two_player_game();
+    let token = g.add_card_to_battlefield(1, catalog::lantern_kami()); // 1/1
+    let id = g.add_card_to_hand(0, catalog::yamabushis_storm());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Yamabushi's Storm");
+    drain_stack(&mut g);
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == token), "exiled, not graveyard");
+    assert!(g.exile.iter().any(|c| c.id == token), "1/1 exiled by the storm");
+}
+
+/// Vigilance aura grants vigilance to the enchanted creature.
+#[test]
+fn vigilance_aura_grants_vigilance() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vigilance_aura());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant the bear");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance));
+}
+
+/// Kitsune Diviner taps a target Spirit.
+#[test]
+fn kitsune_diviner_taps_a_spirit() {
+    let mut g = two_player_game();
+    let diviner = g.add_card_to_battlefield(0, catalog::kitsune_diviner());
+    let spirit = g.add_card_to_battlefield(1, catalog::lantern_kami());
+    g.clear_sickness(diviner);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: diviner, ability_index: 0, target: Some(Target::Permanent(spirit)), x_value: None,
+    }).expect("tap the Spirit");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spirit).unwrap().tapped, "Spirit tapped");
+}
+
+/// Sire of the Storm draws when you cast a Spirit or Arcane spell.
+#[test]
+fn sire_of_the_storm_spiritcraft_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sire_of_the_storm());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane");
+    drain_stack(&mut g);
+    // -1 spell out of hand, +1 Reach Through Mists draw, +1 spiritcraft draw.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1 + 1, "spiritcraft drew a card");
+}
+
+/// Soulshift / evasion keywords on the late-batch spirits.
+#[test]
+fn kamigawa_spirit_keywords() {
+    let lunacy = catalog::kami_of_lunacy();
+    assert!(lunacy.keywords.contains(&Keyword::Flying));
+    assert_eq!((lunacy.power, lunacy.toughness), (4, 1));
+    assert!(catalog::venerable_kumo().keywords.contains(&Keyword::Reach));
+    let nagao = catalog::nagao_bound_by_honor();
+    assert!(nagao.keywords.contains(&Keyword::Bushido(1)));
+    assert_eq!(catalog::kami_of_old_stone().toughness, 7);
+}
+
+/// Kami of the Hunt pumps itself when you cast an Arcane spell (spiritcraft).
+#[test]
+fn kami_of_the_hunt_spiritcraft_self_pump() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::kami_of_the_hunt()); // 2/2
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(kami).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "spiritcraft +1/+1");
+}
+
+/// Soilshaper animates a land into a 3/3 when you cast an Arcane spell.
+#[test]
+fn soilshaper_spiritcraft_animates_a_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::soilshaper());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(land).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "land is now a creature");
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+/// Pain Kami sacrifices itself to deal X damage to a creature.
+#[test]
+fn pain_kami_x_sacrifice_burn() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::pain_kami());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(kami);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: Some(2),
+    }).expect("X=2 sac burn");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == kami), "Pain Kami sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2 damage killed the 2/2");
+}
+
+/// The Samurai cycle carries Bushido (plus their evasion).
+#[test]
+fn kamigawa_samurai_keywords() {
+    assert!(catalog::devoted_retainer().keywords.contains(&Keyword::Bushido(1)));
+    let ronin = catalog::ronin_houndmaster();
+    assert!(ronin.keywords.contains(&Keyword::Haste) && ronin.keywords.contains(&Keyword::Bushido(1)));
+    let moth = catalog::mothrider_samurai();
+    assert!(moth.keywords.contains(&Keyword::Flying) && moth.keywords.contains(&Keyword::Bushido(1)));
+}
+
 /// Sokenzan Bruiser / Moss Kami carry their evasion / combat keywords.
 #[test]
 fn kamigawa_vanilla_keywords() {

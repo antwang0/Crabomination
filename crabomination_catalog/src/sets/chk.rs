@@ -510,6 +510,333 @@ pub fn kami_of_twisted_reflection() -> CardDefinition {
     }
 }
 
+/// Kami of the Hunt — {2}{G} Spirit 2/2. Spiritcraft: gets +1/+1 until end of
+/// turn.
+pub fn kami_of_the_hunt() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of the Hunt",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Soilshaper — {1}{G} Spirit 1/1. Spiritcraft: target land becomes a 3/3
+/// creature until end of turn (it's still a land).
+pub fn soilshaper() -> CardDefinition {
+    CardDefinition {
+        name: "Soilshaper",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::BecomeCreature {
+            what: target_filtered(SelectionRequirement::Land),
+            power: Value::Const(3),
+            toughness: Value::Const(3),
+            creature_types: vec![],
+            keywords: vec![],
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Devoted Retainer — {W} Human Samurai 1/1. Bushido 1.
+pub fn devoted_retainer() -> CardDefinition {
+    CardDefinition {
+        name: "Devoted Retainer",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Bushido(1)],
+        ..Default::default()
+    }
+}
+
+/// Ronin Houndmaster — {2}{R} Human Samurai 2/2. Haste, Bushido 1.
+pub fn ronin_houndmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Ronin Houndmaster",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Bushido(1)],
+        ..Default::default()
+    }
+}
+
+/// Mothrider Samurai — {3}{W} Human Samurai 2/2. Flying, Bushido 1.
+pub fn mothrider_samurai() -> CardDefinition {
+    CardDefinition {
+        name: "Mothrider Samurai",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Bushido(1)],
+        ..Default::default()
+    }
+}
+
+/// Pain Kami — {2}{R} Spirit 2/2. {X}{R}, Sacrifice this creature: It deals X
+/// damage to target creature.
+pub fn pain_kami() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Pain Kami",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), r()]),
+            sac_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::XFromCost,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kami of Old Stone — {3}{W} Spirit 1/7 (vanilla wall-body).
+pub fn kami_of_old_stone() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of Old Stone",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 7,
+        ..Default::default()
+    }
+}
+
+/// Lantern Kami — {W} Spirit 1/1, Flying.
+pub fn lantern_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Lantern Kami",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Wandering Ones — {U} Spirit 1/1 (vanilla).
+pub fn wandering_ones() -> CardDefinition {
+    CardDefinition {
+        name: "Wandering Ones",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Kami of Lunacy — {4}{B}{B} Spirit 4/1, Flying. Soulshift 5.
+pub fn kami_of_lunacy() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of Lunacy",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(5)],
+        ..Default::default()
+    }
+}
+
+/// Venerable Kumo — {4}{G} Spirit 2/3. Reach, Soulshift 4.
+pub fn venerable_kumo() -> CardDefinition {
+    CardDefinition {
+        name: "Venerable Kumo",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
+        ..Default::default()
+    }
+}
+
+/// Kitsune Diviner — {W} Fox Cleric 0/1. {T}: Tap target Spirit.
+pub fn kitsune_diviner() -> CardDefinition {
+    CardDefinition {
+        name: "Kitsune Diviner",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Fox, CreatureType::Cleric]),
+        power: 0,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::HasCreatureType(CreatureType::Spirit)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sire of the Storm — {4}{U}{U} Spirit 3/3, Flying. Spiritcraft: you may
+/// draw a card.
+pub fn sire_of_the_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Sire of the Storm",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nagao, Bound by Honor — {3}{W} Legendary Human Samurai 3/3. Bushido 1;
+/// whenever Nagao attacks, Samurai creatures you control get +1/+1 until EOT.
+pub fn nagao_bound_by_honor() -> CardDefinition {
+    CardDefinition {
+        name: "Nagao, Bound by Honor",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Bushido(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Samurai)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kami of the Waning Moon — {2}{B} Spirit 1/1, Flying. Spiritcraft: target
+/// creature gains fear until end of turn.
+pub fn kami_of_the_waning_moon() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of the Waning Moon",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Fear,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Hideous Laughter — {2}{B}{B} Instant — Arcane. All creatures get -2/-2 until
+/// end of turn. Splice onto Arcane {3}{B}{B}.
+pub fn hideous_laughter() -> CardDefinition {
+    CardDefinition {
+        name: "Hideous Laughter",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(3), b(), b()]), SpellSubtype::Arcane)],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Yamabushi's Storm — {1}{R} Sorcery. 1 damage to each creature; creatures it
+/// would kill are exiled instead.
+pub fn yamabushis_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Yamabushi's Storm",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+            },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(SelectionRequirement::Creature),
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Vigilance — {W} Aura. Enchanted creature has vigilance.
+pub fn vigilance_aura() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Vigilance",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Vigilance],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Eiganjo Castle — {T}: Add {W}. {2}{W}: Prevent the next 2 damage to a
 /// legendary creature this turn. (Mana half only — the prevention targets a
 /// legendary creature.)
