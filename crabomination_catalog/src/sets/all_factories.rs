@@ -231,6 +231,12 @@ static CHK: &[Factory] = &[
     super::chk::painwracker_oni,
     super::chk::crushing_pain,
     super::chk::unearthly_blizzard,
+    super::chk::akki_underling,
+    super::chk::samurai_of_the_pale_curtain,
+    super::chk::promise_of_bunrei,
+    super::chk::kondas_hatamoto,
+    super::chk::spiritual_visit,
+    super::chk::devouring_greed,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

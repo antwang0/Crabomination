@@ -3535,6 +3535,168 @@ pub fn cunning_bandit() -> CardDefinition {
     }
 }
 
+/// Devouring Greed — {2}{B}{B} Sorcery — Arcane. (Additional cost — sacrifice
+/// any number of Spirits — is taken at resolution here.) Target player loses 2
+/// life plus 2 for each Spirit sacrificed; you gain that much.
+pub fn devouring_greed() -> CardDefinition {
+    let drain2 = || {
+        Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ])
+    };
+    CardDefinition {
+        name: "Devouring Greed",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::Seq(vec![
+            drain2(),
+            Effect::SacrificeAnyNumber {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                    .and(SelectionRequirement::ControlledByYou),
+                per_each: Box::new(drain2()),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Spiritual Visit — {W} Instant — Arcane. Create a 1/1 colorless Spirit
+/// token. Splice onto Arcane {W}.
+pub fn spiritual_visit() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Spiritual Visit",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[w()]), SpellSubtype::Arcane)],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                subtypes: spirit(vec![CreatureType::Spirit]),
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Promise of Bunrei — {2}{W} Enchantment. When a creature you control dies,
+/// sacrifice this; if you do, create four 1/1 colorless Spirit tokens.
+pub fn promise_of_bunrei() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Promise of Bunrei",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::SacrificeSource,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    definition: TokenDefinition {
+                        name: "Spirit".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        subtypes: spirit(vec![CreatureType::Spirit]),
+                        ..Default::default()
+                    },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Konda's Hatamoto — {1}{W} Human Samurai 1/2. Bushido 1; while you control a
+/// legendary Samurai, it gets +1/+2 and has vigilance.
+pub fn kondas_hatamoto() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Konda's Hatamoto",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Bushido(1)],
+        static_abilities: vec![StaticAbility {
+            description: "While you control a legendary Samurai, +1/+2 and vigilance.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasSupertype(Supertype::Legendary)
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Samurai)),
+                }),
+                power: 1,
+                toughness: 2,
+                keywords: vec![Keyword::Vigilance],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Akki Underling — {1}{R} Goblin Warrior 2/1. While you have seven or more
+/// cards in hand, it gets +2/+1 and has first strike.
+pub fn akki_underling() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Akki Underling",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Warrior]),
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "While you have 7+ cards in hand, +2/+1 and first strike.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(Value::HandSizeOf(PlayerRef::You), Value::Const(7)),
+                power: 2,
+                toughness: 1,
+                keywords: vec![Keyword::FirstStrike],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Samurai of the Pale Curtain — {W}{W} Fox Samurai 2/2. Bushido 1; cards bound
+/// for a graveyard are exiled instead (graveyard hate; the printed clause is
+/// permanent-only, here modeled as the broader Rest-in-Peace replacement).
+pub fn samurai_of_the_pale_curtain() -> CardDefinition {
+    CardDefinition {
+        name: "Samurai of the Pale Curtain",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Fox, CreatureType::Samurai]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Bushido(1)],
+        static_abilities: vec![StaticAbility {
+            description: "If a permanent would be put into a graveyard, exile it instead.",
+            effect: StaticEffect::ExileCardsBoundForGraveyard {
+                opponents_only: false,
+                own_only: false,
+                colors: None,
+                void_counter: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Crushing Pain — {1}{R} Instant — Arcane. Deals 6 damage to target creature
 /// that was dealt damage this turn.
 pub fn crushing_pain() -> CardDefinition {

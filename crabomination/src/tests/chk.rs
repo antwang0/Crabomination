@@ -2505,3 +2505,103 @@ fn unearthly_blizzard_grants_cant_block() {
     assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::CantBlock));
     assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
 }
+
+/// Akki Underling gets +2/+1 and first strike while its controller has 7+ cards.
+#[test]
+fn akki_underling_pumps_with_full_hand() {
+    let mut g = two_player_game();
+    let akki = g.add_card_to_battlefield(0, catalog::akki_underling());
+    // Fewer than 7 cards: base 2/1, no first strike.
+    let cp = g.computed_permanent(akki).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 1));
+    assert!(!cp.keywords.contains(&Keyword::FirstStrike));
+    for _ in 0..7 { g.add_card_to_hand(0, catalog::grizzly_bears()); }
+    let cp = g.computed_permanent(akki).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2), "+2/+1 with a full hand");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Samurai of the Pale Curtain exiles a dying creature instead of letting it
+/// reach the graveyard.
+#[test]
+fn samurai_of_the_pale_curtain_exiles_dying_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::samurai_of_the_pale_curtain());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard_raw(victim);
+    assert!(g.exile.iter().any(|c| c.id == victim), "dying creature exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == victim), "never reaches the graveyard");
+}
+
+/// Promise of Bunrei sacrifices itself and mints four Spirits when a creature
+/// you control dies.
+#[test]
+fn promise_of_bunrei_makes_four_spirits() {
+    let mut g = two_player_game();
+    let promise = g.add_card_to_battlefield(0, catalog::promise_of_bunrei());
+    let creature = g.add_card_to_battlefield(0, {
+        let mut d = catalog::grizzly_bears(); d.name = "Fragile"; d.power = 2; d.toughness = 1; d
+    });
+    // Lethal damage so the SBA dispatches CreatureDied to Promise's watcher.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt our creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(promise).is_none(), "Promise sacrificed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count(), 4,
+        "four Spirit tokens minted");
+}
+
+/// Konda's Hatamoto grows and gains vigilance while a legendary Samurai is out.
+#[test]
+fn kondas_hatamoto_buffs_with_legendary_samurai() {
+    let mut g = two_player_game();
+    let hatamoto = g.add_card_to_battlefield(0, catalog::kondas_hatamoto());
+    let cp = g.computed_permanent(hatamoto).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 2));
+    assert!(!cp.keywords.contains(&Keyword::Vigilance));
+    // A legendary Samurai (Brothers Yamazaki) switches on the bonus.
+    g.add_card_to_battlefield(0, catalog::brothers_yamazaki());
+    let cp = g.computed_permanent(hatamoto).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 4), "+1/+2 with a legendary Samurai");
+    assert!(cp.keywords.contains(&Keyword::Vigilance));
+}
+
+/// Spiritual Visit makes a 1/1 Spirit token.
+#[test]
+fn spiritual_visit_makes_a_spirit() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::spiritual_visit());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Spiritual Visit");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count(), 1);
+}
+
+/// Devouring Greed drains 2 plus 2 per Spirit sacrificed.
+#[test]
+fn devouring_greed_drains_per_spirit() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Two Spirits to sacrifice.
+    g.add_card_to_battlefield(0, catalog::lantern_kami());
+    g.add_card_to_battlefield(0, catalog::lantern_kami());
+    let spell = g.add_card_to_hand(0, catalog::devouring_greed());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Devouring Greed");
+    drain_stack(&mut g);
+    // 2 base + 2 per Spirit (×2) = 6 drained.
+    assert_eq!(g.players[1].life, l1 - 6, "opponent loses 2 + 2 per Spirit");
+    assert_eq!(g.players[0].life, l0 + 6, "you gain that much");
+}
