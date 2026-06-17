@@ -257,6 +257,7 @@ pub mod ap;
 pub mod arn;
 pub mod chk;
 pub mod dis;
+pub mod eoe;
 pub mod fem;
 pub mod gpt;
 pub mod ice;

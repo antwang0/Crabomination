@@ -41430,7 +41430,7 @@ fn replicate_pyromatics_twice_deals_three_total() {
     assert_eq!(g.players[1].life, life - 3, "original + two copies = 3 damage");
 }
 
-/// CR 702.79 — Burn Trail conspired by tapping two red creatures copies it
+/// CR 702.78 — Burn Trail conspired by tapping two red creatures copies it
 /// once: 3 (original) + 3 (copy) = 6 damage to the same target.
 #[test]
 fn conspire_burn_trail_copies_for_six() {

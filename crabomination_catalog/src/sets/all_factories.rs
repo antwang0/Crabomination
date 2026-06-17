@@ -2103,6 +2103,9 @@ static DIS: &[Factory] = &[
     super::dis::vigean_graftmage,
     super::dis::helium_squirter,
 ];
+static EOE: &[Factory] = &[
+    super::eoe::camera_launcher,
+];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
 ];
@@ -7711,6 +7714,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("chk", CHK),
     ("decks", DECKS),
     ("dis", DIS),
+    ("eoe", EOE),
     ("fem", FEM),
     ("gpt", GPT),
     ("ice", ICE),

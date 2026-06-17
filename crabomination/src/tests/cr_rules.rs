@@ -2191,3 +2191,37 @@ fn cr_702_85_phalanx_leader_counters_team() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "teammate got a +1/+1 counter");
 }
+
+/// CR 702.177 — Exhaust: Camera Launcher's exhaust ability resolves once
+/// (a +1/+1 counter + a Thopter), then can never be activated again — not
+/// even after turn cleanup clears the once-per-turn budget.
+#[test]
+fn cr_702_177_exhaust_ability_activates_only_once_per_game() {
+    let mut g = two_player_game();
+    let cam = g.add_card_to_battlefield(0, catalog::camera_launcher());
+    g.clear_sickness(cam);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cam, ability_index: 0, target: None, x_value: None,
+    }).expect("first exhaust activation");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cam).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "got a +1/+1 counter");
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Thopter"),
+        "created a Thopter token");
+
+    // Same turn → rejected.
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: cam, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "exhaust ability can't be activated twice");
+
+    // Turn cleanup clears once-per-turn state, but exhaust persists (per game).
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cam) {
+        c.clear_end_of_turn_effects();
+    }
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: cam, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "exhaust stays spent across turns");
+}

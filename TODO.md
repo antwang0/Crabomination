@@ -1522,6 +1522,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.85 — Heroic (`shortcut::heroic` + `Predicate::CastSpellTargetsSource`)
 - ✅ CR 700.5 — devotion cost reduction (`StaticEffect`-gated generic reduction)
 - ✅ CR 702.80a / 702.90e / 702.2c — wither / infect / deathtouch on damage
+- ✅ CR 702.78 — Conspire (tap-two-creatures additional cost → copy spell)
+- ✅ CR 702.177 — Exhaust (activated ability usable only once per game)
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 509.2 / 510.1c — Banding** — a banding blocker routes the blocked

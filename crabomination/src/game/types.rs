@@ -278,7 +278,7 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// CR 702.79 — cast a spell paying its optional Conspire cost: tap two
+    /// CR 702.78 — cast a spell paying its optional Conspire cost: tap two
     /// untapped, unsummoning-sick-irrelevant creatures you control that each
     /// share a color with the spell. Doing so copies the spell once (the copy
     /// may choose new targets).

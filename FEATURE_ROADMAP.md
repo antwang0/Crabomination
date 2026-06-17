@@ -158,7 +158,8 @@ Each a small targeted feature; sweep batch by batch.
   ✅ Foretell, ✅ Disturb, ✅ Daybound/Nightbound (keywords + day/night +
   502.2 transition + DFC auto-flip), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,
   ✅ Backup, ✅ Bargain, ⏳ Craft, ✅ Disguise/Cloak, ✅ Plot, ✅ Saddle,
-  ⏳ Gift, ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize.
+  ⏳ Gift, ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize,
+  ✅ Exhaust (activate-only-once activated abilities — Camera Launcher).
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
   Mentor, Modular, Graft, Outlast, Renown, Bloodthirst, Monstrosity, Devour,
   Amass — all via `shortcut::*` builders.

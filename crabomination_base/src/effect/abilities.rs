@@ -1087,6 +1087,12 @@ pub struct ActivatedAbility {
     /// Treasure`. Defaults to false.
     #[serde(default)]
     pub discard_self_cost: bool,
+    /// CR 702.177 — Exhaust: this activated ability can be activated only
+    /// once (per game, not per turn). Tracked per-permanent-instance in
+    /// `CardInstance.exhausted_abilities`, which — unlike `once_per_turn_used`
+    /// — is never cleared at turn start. Defaults to false.
+    #[serde(default)]
+    pub exhaust: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

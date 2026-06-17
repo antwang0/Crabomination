@@ -702,7 +702,7 @@ pub enum Keyword {
     /// copied once per payment (copies may choose new targets). Cast via
     /// `GameAction::CastSpellReplicate`.
     Replicate(crate::mana::ManaCost),
-    /// CR 702.79 — Conspire. An optional additional cast cost on an
+    /// CR 702.78 — Conspire. An optional additional cast cost on an
     /// instant/sorcery: as you cast it, you may tap two untapped creatures you
     /// control that each share a color with the spell. Doing so copies the
     /// spell once (the copy may choose new targets). Cast via
@@ -2450,6 +2450,9 @@ pub struct CardInstance {
     /// `clean_per_turn_state`. Empty for the common case (most abilities
     /// don't have the flag set).
     pub once_per_turn_used: Vec<usize>,
+    /// CR 702.177 — indices of `exhaust` activated abilities already used.
+    /// Unlike `once_per_turn_used`, this is **never** cleared (once per game).
+    pub exhausted_abilities: Vec<usize>,
     /// Keywords granted with `Duration::EndOfTurn` via `Effect::GrantKeyword`.
     /// Cleared at the Cleanup step alongside `power_bonus`/`toughness_bonus`.
     /// Stored separately from `definition.keywords` so the printed-Oracle
@@ -2667,6 +2670,7 @@ impl CardInstance {
             cast_from_exile: false,
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
+            exhausted_abilities: Vec::new(),
             granted_keywords_eot: Vec::new(),
             granted_keywords_eot_ts: Vec::new(),
             removed_keywords_eot: Vec::new(),
@@ -3035,6 +3039,8 @@ struct CardInstanceWire {
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
     #[serde(default)]
+    exhausted_abilities: Vec<usize>,
+    #[serde(default)]
     may_play_until: Option<MayPlayPermission>,
     /// CR 122.1b keyword counters — permanent state (never cleared at
     /// cleanup), so it must survive a snapshot round-trip just like
@@ -3182,6 +3188,7 @@ impl serde::Serialize for CardInstance {
             cast_from_exile: self.cast_from_exile,
             chosen_creature_type: self.chosen_creature_type,
             once_per_turn_used: self.once_per_turn_used.clone(),
+            exhausted_abilities: self.exhausted_abilities.clone(),
             may_play_until: self.may_play_until,
             keyword_counters: self
                 .keyword_counters
@@ -3278,6 +3285,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;
+        c.exhausted_abilities = wire.exhausted_abilities;
         c.may_play_until = wire.may_play_until;
         c.keyword_counters = wire.keyword_counters.into_iter().collect();
         c.granted_keywords_eot = wire.granted_keywords_eot;

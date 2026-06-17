@@ -1,4 +1,4 @@
-//! Shadowmoor / Eventide — Conspire (CR 702.79). As you cast a Conspire
+//! Shadowmoor / Eventide — Conspire (CR 702.78). As you cast a Conspire
 //! spell you may tap two untapped creatures you control sharing a color with
 //! it to copy it once (the copy may choose new targets). Cast via
 //! `GameAction::CastSpellConspire`.

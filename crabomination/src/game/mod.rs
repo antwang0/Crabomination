@@ -234,7 +234,7 @@ pub struct HandAffordances {
     /// CR 702.107 — hand cards with Replicate castable paying the replicate
     /// cost at least once, so the client can offer a "replicate N times?" stepper.
     pub replicatable: Vec<CardId>,
-    /// CR 702.79 — hand cards with Conspire castable right now while the seat
+    /// CR 702.78 — hand cards with Conspire castable right now while the seat
     /// controls two untapped creatures sharing a color with the spell, so the
     /// client can offer the "tap two to copy" toggle.
     pub conspirable: Vec<CardId>,

@@ -48,6 +48,7 @@ pub use sets::ap::*;
 pub use sets::arn::*;
 pub use sets::chk::*;
 pub use sets::dis::*;
+pub use sets::eoe::*;
 pub use sets::fem::*;
 pub use sets::gpt::*;
 pub use sets::ice::*;

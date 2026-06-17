@@ -525,7 +525,7 @@ impl GameState {
         out
     }
 
-    /// CR 702.79 — hand cards with Conspire the caster could cast right now,
+    /// CR 702.78 — hand cards with Conspire the caster could cast right now,
     /// tapping the first two eligible untapped creatures that share a color
     /// with the spell. The chosen pair is a probe only; the client re-picks.
     fn conspirable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {

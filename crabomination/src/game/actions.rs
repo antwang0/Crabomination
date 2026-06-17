@@ -1798,7 +1798,7 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 702.79 — cast a spell paying its optional Conspire cost: tap two
+    /// CR 702.78 — cast a spell paying its optional Conspire cost: tap two
     /// untapped creatures you control that each share a color with the spell;
     /// the spell is then copied once (the copy may choose new targets).
     pub(crate) fn cast_spell_conspire(
@@ -7021,6 +7021,16 @@ impl GameState {
             }
         }
 
+        // CR 702.177 — Exhaust: an exhaust ability can be activated only once
+        // per game. `exhausted_abilities` (never cleared at turn start) records
+        // spent indices on the source permanent.
+        if !source_in_gy && !source_in_hand && ability.exhaust {
+            let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
+            if self.battlefield[pos].exhausted_abilities.contains(&ability_index) {
+                return Err(GameError::AbilityAlreadyUsedThisTurn);
+            }
+        }
+
         // Sorcery-speed gate: reject the activation if the ability is
         // flagged sorcery-speed and the controller can't currently
         // cast sorceries (not their main phase, or stack non-empty).
@@ -7579,6 +7589,13 @@ impl GameState {
             && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
             card.once_per_turn_used.push(ability_index);
+        }
+        // CR 702.177 — record the exhaust activation (never cleared this game).
+        if ability.exhaust
+            && !source_in_gy
+            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            card.exhausted_abilities.push(ability_index);
         }
 
         // P/T of a creature sacrificed as part of this activation's cost,
