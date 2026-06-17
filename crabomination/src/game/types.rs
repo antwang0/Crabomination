@@ -1249,6 +1249,8 @@ pub enum GameEvent {
     BecameMonstrous { card_id: CardId },
     /// CR 712 — a permanent transformed to its other face.
     Transformed { card_id: CardId },
+    /// CR 711 — a flip card flipped to its flipped (bottom) face.
+    Flipped { card_id: CardId },
     /// CR 708.8 — a face-down permanent was turned face up.
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },

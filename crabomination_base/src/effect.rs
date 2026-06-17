@@ -2099,6 +2099,11 @@ pub enum Effect {
     /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event
     /// fires per permanent so "when this transforms" triggers can react.
     Transform { what: Selector },
+    /// CR 711.2 — Flip the matching flip-card permanent(s) to their flipped
+    /// (bottom) face in place (same object, keeping counters / tapped state /
+    /// attachments). One-way; no-op on a permanent already flipped or without a
+    /// flip face. Emits `Flipped` so "when this flips" triggers can react.
+    Flip { what: Selector },
     /// CR 701.37 — Meld. If the source's controller both owns and controls
     /// the source and a permanent named `partner`, exile both, then put the
     /// melded card (resolved from the registry by `into`) onto the

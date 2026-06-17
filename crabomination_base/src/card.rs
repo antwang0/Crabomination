@@ -299,6 +299,10 @@ pub enum CounterType {
     /// Void counter — Dauthi Voidwalker's stamp on opponents' cards its
     /// replacement exiles; its sacrifice ability frees one for a free play.
     Void,
+    /// Ki counter — Kamigawa flip cards (Cunning Bandit, Faithful Squire,
+    /// Hired Muscle, …) accrue these on Spirit/Arcane casts and flip at two or
+    /// more; the bottom faces spend them for their activated abilities.
+    Ki,
 }
 
 /// Every zone a card can occupy.
@@ -1364,6 +1368,12 @@ pub struct CardDefinition {
     /// Some((CounterType::Prepared, Value::Const(1)))`.
     #[serde(default)]
     pub prepare_spell: Option<Box<CardDefinition>>,
+    /// CR 711 — flip card. When `Some`, this is the *unflipped* (top) face and
+    /// the value is the flipped (bottom) characteristics. Unlike a DFC, a flip
+    /// card is single-faced — it is never cast or rendered as its flip side; it
+    /// only flips in place via `Effect::Flip`. Only the top stores this.
+    #[serde(default)]
+    pub flip_face: Option<Box<CardDefinition>>,
     /// Opening-hand effect ("If this card is in your opening hand…"): start
     /// in play (Leyline of Sanctity, Gemstone Caverns), reveal for a delayed
     /// effect (Chancellor of the Tangle, Chancellor of the Annex), or mark
@@ -2408,6 +2418,14 @@ pub struct CardInstance {
     /// permanent can flip back. In-memory only (not serialized): the serde
     /// wire stores the front name and rebuilds this on load.
     pub front_face: Option<Arc<CardDefinition>>,
+    /// CR 711 — true while this flip card is showing its flipped (bottom) face.
+    /// `definition` is swapped to the flip face; `unflipped_def` stashes the
+    /// top so it can be restored on zone change. Reconstructed on snapshot load
+    /// from the top name + this flag.
+    pub flipped: bool,
+    /// CR 711 — the unflipped (top) definition, kept while `flipped`. In-memory
+    /// only: the serde wire stores the top name + the `flipped` flag.
+    pub unflipped_def: Option<Arc<CardDefinition>>,
     /// CR 708 — while this permanent is on the battlefield face down (morph /
     /// manifest), `definition` is swapped to the vanilla 2/2 face-down
     /// definition and the real card is stashed here so it can be turned face
@@ -2686,6 +2704,8 @@ impl CardInstance {
             face_down: false,
             transformed: false,
             front_face: None,
+            flipped: false,
+            unflipped_def: None,
             unlocked_doors: 0,
             face_up_def: None,
             cloaked: false,
@@ -2886,6 +2906,30 @@ impl CardInstance {
         Some(name)
     }
 
+    /// CR 711.2 — flip this permanent to its flipped (bottom) face in place.
+    /// No-op if already flipped or it has no flip face. Returns the flip
+    /// face's name when a flip happened.
+    pub fn flip(&mut self) -> Option<&'static str> {
+        if self.flipped {
+            return None;
+        }
+        let flip = self.definition.flip_face.as_ref().map(|f| (**f).clone())?;
+        let name = flip.name;
+        self.unflipped_def = Some(self.definition.clone());
+        self.definition = Arc::new(flip);
+        self.flipped = true;
+        Some(name)
+    }
+
+    /// CR 711.6 — outside the battlefield only the unflipped characteristics
+    /// exist; restore the top face as the card changes zones.
+    pub fn revert_flip(&mut self) {
+        if let Some(top) = self.unflipped_def.take() {
+            self.definition = top;
+            self.flipped = false;
+        }
+    }
+
     pub fn can_attack(&self) -> bool {
         self.definition.is_creature()
             && !self.tapped
@@ -3047,6 +3091,10 @@ struct CardInstanceWire {
     /// `front.back_face` on load. `#[serde(default)]` for back-compat.
     #[serde(default)]
     transformed: bool,
+    /// CR 711 — showing the flipped face. `name` stores the unflipped (top)
+    /// name; the flip face is recovered as `top.flip_face` on load.
+    #[serde(default)]
+    flipped: bool,
     is_token: bool,
     #[serde(default)]
     loyalty_uses_this_turn: u8,
@@ -3178,6 +3226,7 @@ impl serde::Serialize for CardInstance {
                 .face_up_def
                 .as_ref()
                 .or(self.front_face.as_ref())
+                .or(self.unflipped_def.as_ref())
                 .map(|f| f.name.to_string())
                 .unwrap_or_else(|| self.definition.name.to_string()),
             owner: self.owner,
@@ -3208,6 +3257,7 @@ impl serde::Serialize for CardInstance {
             face_down_permanent: self.face_up_def.is_some(),
             cloaked: self.cloaked,
             transformed: self.transformed,
+            flipped: self.flipped,
             is_token: self.is_token,
             loyalty_uses_this_turn: self.loyalty_uses_this_turn,
             evoked: self.evoked,
@@ -3298,6 +3348,15 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.front_face = Some(c.definition.clone());
             c.definition = Arc::new(back);
             c.transformed = true;
+        }
+        // CR 711 — restore a flipped permanent: stash the top, swap the active
+        // definition to the flip face.
+        if wire.flipped
+            && let Some(flip) = c.definition.flip_face.as_ref().map(|f| (**f).clone())
+        {
+            c.unflipped_def = Some(c.definition.clone());
+            c.definition = Arc::new(flip);
+            c.flipped = true;
         }
         // CR 709.5 — restore a Room permanent's unlocked doors (the live
         // definition is the union of unlocked doors' abilities).

@@ -2102,3 +2102,133 @@ fn moonlit_strider_sacs_for_protection() {
         .any(|k| matches!(k, Keyword::Protection(_)));
     assert!(has_pro, "bear gained protection from a color");
 }
+
+// ── Flip cards (CR 711) ──────────────────────────────────────────────────────
+
+/// Faithful Squire accrues ki on Arcane casts (spiritcraft) and flips into
+/// Kaiso at the end step once it has two or more ki counters.
+#[test]
+fn faithful_squire_spiritcrafts_ki_then_flips_to_kaiso() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let squire = g.add_card_to_battlefield(0, catalog::faithful_squire());
+    let a1 = g.add_card_to_hand(0, catalog::kodamas_might()); // {G} Arcane (no draw)
+    let a2 = g.add_card_to_hand(0, catalog::kodamas_might());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    // Two "may put a ki counter" + one "may flip" — all accepted.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(true), DecisionAnswer::Bool(true),
+    ]));
+    for spell in [a1, a2] {
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: Some(Target::Permanent(squire)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Arcane");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(squire).unwrap().counter_count(CounterType::Ki), 2,
+        "two ki counters accrued");
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    let kaiso = g.battlefield_find(squire).unwrap();
+    assert!(kaiso.flipped, "flipped at end step");
+    assert_eq!(kaiso.definition.name, "Kaiso, Memory of Loyalty");
+    assert_eq!((kaiso.definition.power, kaiso.definition.toughness), (3, 4));
+    assert!(kaiso.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// A ki-counter flip card stays unflipped at the end step with only one ki.
+#[test]
+fn cunning_bandit_does_not_flip_below_two_ki() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bandit = g.add_card_to_battlefield(0, catalog::cunning_bandit());
+    g.battlefield_find_mut(bandit).unwrap().add_counters(CounterType::Ki, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bandit).unwrap().flipped, "one ki is not enough to flip");
+    assert_eq!(g.battlefield_find(bandit).unwrap().definition.name, "Cunning Bandit");
+}
+
+/// Azamuki (Cunning Bandit's flip side) spends a ki counter to steal a creature
+/// until end of turn.
+#[test]
+fn azamuki_removes_ki_to_steal_a_creature() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bandit = g.add_card_to_battlefield(0, catalog::cunning_bandit());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bandit).unwrap().add_counters(CounterType::Ki, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bandit).unwrap().flipped, "flipped into Azamuki");
+    g.clear_sickness(bandit);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bandit, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate Azamuki steal");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "gained control of the bear");
+    assert_eq!(g.battlefield_find(bandit).unwrap().counter_count(CounterType::Ki), 1,
+        "a ki counter was paid");
+}
+
+/// Budoka Gardener's {T} ability puts a land from hand and flips into Dokai
+/// once the controller reaches ten lands; Dokai mints an Elemental sized to
+/// the land count.
+#[test]
+fn budoka_gardener_flips_to_dokai_at_ten_lands() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let budoka = g.add_card_to_battlefield(0, catalog::budoka_gardener());
+    for _ in 0..9 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![land])]));
+    g.clear_sickness(budoka);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: budoka, ability_index: 0, target: None, x_value: None,
+    }).expect("tap Budoka");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "land put onto the battlefield");
+    let dokai = g.battlefield_find(budoka).unwrap();
+    assert!(dokai.flipped, "flipped to Dokai at ten lands");
+    assert_eq!(dokai.definition.name, "Dokai, Weaver of Life");
+    // Dokai's {4}{G}{G}, {T}: mint an X/X Elemental (X = lands you control = 10).
+    g.battlefield_find_mut(budoka).unwrap().tapped = false;
+    g.clear_sickness(budoka);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: budoka, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Dokai");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Elemental")
+        .expect("Elemental token minted");
+    let cp = g.computed_permanent(token.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (10, 10), "X/X where X = lands you control");
+}
+
+/// CR 711.6 — a flip card reverts to its unflipped face as it leaves the
+/// battlefield.
+#[test]
+fn flip_card_reverts_to_top_face_on_leaving_battlefield() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bandit = g.add_card_to_battlefield(0, catalog::cunning_bandit());
+    g.battlefield_find_mut(bandit).unwrap().add_counters(CounterType::Ki, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bandit).unwrap().flipped, "flipped into Azamuki");
+    g.remove_from_battlefield_to_graveyard_raw(bandit);
+    let in_gy = g.players[0].graveyard.iter().find(|c| c.id == bandit).expect("in graveyard");
+    assert!(!in_gy.flipped, "reverts off the battlefield");
+    assert_eq!(in_gy.definition.name, "Cunning Bandit", "top face restored");
+}

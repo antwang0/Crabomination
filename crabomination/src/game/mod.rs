@@ -1231,6 +1231,16 @@ impl GameState {
         events.push(GameEvent::Transformed { card_id: id });
     }
 
+    /// CR 711.2 — flip one flip-card permanent to its flipped face in place.
+    /// The object is unchanged (counters/tapped/attachments persist); fires
+    /// `Flipped`. No-op if already flipped or it has no flip face.
+    pub(crate) fn flip_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+        let Some(c) = self.battlefield_find_mut(id) else { return };
+        if c.flip().is_some() {
+            events.push(GameEvent::Flipped { card_id: id });
+        }
+    }
+
     pub(crate) fn set_day_night(&mut self, dn: crate::game::types::DayNight, events: &mut Vec<GameEvent>) {
         use crate::game::types::DayNight;
         if self.day_night == Some(dn) {

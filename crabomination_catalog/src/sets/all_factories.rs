@@ -217,6 +217,9 @@ static CHK: &[Factory] = &[
     super::chk::kami_of_the_palace_fields,
     super::chk::hail_of_arrows,
     super::chk::moonlit_strider,
+    super::chk::cunning_bandit,
+    super::chk::faithful_squire,
+    super::chk::budoka_gardener,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

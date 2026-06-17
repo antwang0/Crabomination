@@ -2648,6 +2648,8 @@ impl GameState {
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).
         card.turn_face_up();
+        // CR 711.6 — flip cards revert to their unflipped face off the battlefield.
+        card.revert_flip();
         // CR 709.5c — Room unlocked designations are battlefield-only.
         card.reset_room_doors();
         // CR 707 — a temporary copy reverts as it leaves.

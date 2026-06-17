@@ -199,6 +199,7 @@ impl Effect {
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::Transform { what } => sel_has_target(what),
+            Effect::Flip { what } => sel_has_target(what),
             Effect::Meld { .. } => false,
             Effect::SpellsCostLessThisTurn { .. } => false,
             Effect::CastFromHandWithoutPaying { .. } => false,
@@ -715,6 +716,7 @@ impl Effect {
             Effect::Endure { target, .. } => sel_filter(target),
             Effect::Goad { what }
             | Effect::Transform { what }
+            | Effect::Flip { what }
             | Effect::LoseAllAbilities { what, .. }
             | Effect::LoseKeywordThisTurn { what, .. }
             | Effect::SkipNextUntap { what }
@@ -1459,6 +1461,7 @@ impl Effect {
                 | Effect::Detain { what }
                 | Effect::Provoke { what }
                 | Effect::Transform { what }
+                | Effect::Flip { what }
                 | Effect::LoseAllAbilities { what, .. }
                 | Effect::LoseKeywordThisTurn { what, .. }
                 | Effect::SkipNextUntap { what }

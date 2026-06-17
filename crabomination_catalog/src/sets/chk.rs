@@ -3407,3 +3407,182 @@ pub fn moonlit_strider() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Flip cards (CR 711) ──────────────────────────────────────────────────────
+
+/// Shared triggers for the ki-counter flip cards (Cunning Bandit, Faithful
+/// Squire): "Whenever you cast a Spirit or Arcane spell, you may put a ki
+/// counter on this" + "At the beginning of the end step, if there are two or
+/// more ki counters on this, you may flip it."
+fn ki_flip_triggers() -> Vec<TriggeredAbility> {
+    use crate::card::CounterType;
+    use crate::effect::Predicate;
+    use crate::game::TurnStep;
+    vec![
+        crate::effect::shortcut::spiritcraft(Effect::MayDo {
+            description: "Put a ki counter on this creature".into(),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Ki,
+                amount: Value::ONE,
+            }),
+        }),
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Ki },
+                    Value::Const(2),
+                ),
+                then: Box::new(Effect::MayDo {
+                    description: "Flip this creature".into(),
+                    body: Box::new(Effect::Flip { what: Selector::This }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        },
+    ]
+}
+
+/// Cunning Bandit // Azamuki, Treachery Incarnate — {1}{R}{R} Human Warrior
+/// 2/2. Ki-counter flip card; flips into Azamuki, a 5/2 Legendary Spirit whose
+/// "Remove a ki counter: Gain control of target creature until end of turn."
+pub fn cunning_bandit() -> CardDefinition {
+    use crate::card::CounterType;
+    let azamuki = CardDefinition {
+        name: "Azamuki, Treachery Incarnate",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 5,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Ki, 1)),
+            effect: Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cunning Bandit",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Warrior]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: ki_flip_triggers(),
+        flip_face: Some(Box::new(azamuki)),
+        ..Default::default()
+    }
+}
+
+/// Faithful Squire // Kaiso, Memory of Loyalty — {1}{W}{W} Human Soldier 2/2.
+/// Ki-counter flip card; flips into Kaiso, a 3/4 Legendary Spirit with flying
+/// and "Remove a ki counter: Prevent all damage to target creature this turn."
+pub fn faithful_squire() -> CardDefinition {
+    use crate::card::CounterType;
+    let kaiso = CardDefinition {
+        name: "Kaiso, Memory of Loyalty",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Ki, 1)),
+            effect: Effect::PreventAllDamageThisTurn {
+                target: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Faithful Squire",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: ki_flip_triggers(),
+        flip_face: Some(Box::new(kaiso)),
+        ..Default::default()
+    }
+}
+
+/// Budoka Gardener // Dokai, Weaver of Life — {1}{G} Human Monk 2/1.
+/// "{T}: You may put a land card from your hand onto the battlefield. If you
+/// control ten or more lands, flip this creature." Flips into Dokai, a 3/3
+/// Legendary Monk that mints X/X Elementals (X = lands you control).
+pub fn budoka_gardener() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::Predicate;
+    use crate::mana::Color;
+    // "the number of lands you control"
+    let lands_you_control = || {
+        Value::CountOf(Box::new(Selector::ControlledBy {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land,
+        }))
+    };
+    let dokai = CardDefinition {
+        name: "Dokai, Weaver of Life",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Monk]),
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Elemental".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: spirit(vec![CreatureType::Elemental]),
+                    dynamic_pt: Some((lands_you_control(), lands_you_control())),
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Budoka Gardener",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Monk]),
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PutFromHandOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land,
+                    count: Value::ONE,
+                    tapped: false,
+                    haste: false,
+                    sacrifice_eot: false,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(lands_you_control(), Value::Const(10)),
+                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        flip_face: Some(Box::new(dokai)),
+        ..Default::default()
+    }
+}

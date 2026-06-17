@@ -3863,6 +3863,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Flip { what } => {
+                // CR 711.2 — flip each matching flip-card permanent to its
+                // flipped face in place (counters / tapped / attachments persist).
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    self.flip_permanent(id, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::Meld { partner, into } => {
                 // CR 701.37 — meld the source with the named partner. Both
                 // must be owned AND controlled by the resolving player
