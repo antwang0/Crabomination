@@ -7151,6 +7151,18 @@ impl GameState {
                 return Err(GameError::SelectionRequirementViolated);
             }
         }
+        // Reject when the effect still references a target slot we weren't
+        // given (a two-target ability invoked with too few targets — the
+        // bot / affordance path passes only slot 0). Without this the extra
+        // slot resolves to nothing and the effect half-fires.
+        if target.is_some()
+            && ability
+                .effect
+                .target_filter_for_slot(1 + additional_targets.len() as u8)
+                .is_some()
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
 
         // Pre-flight life-cost gate: reject activation cleanly when the
         // controller doesn't have enough life. Mirror the mana-cost

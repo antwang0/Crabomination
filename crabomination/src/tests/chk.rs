@@ -2654,6 +2654,28 @@ fn student_of_elements_flips_when_it_gains_flying() {
         "Tobita grants flying to your creatures");
 }
 
+/// Autumn-Tail's two-target ability is rejected when slot 1 is missing.
+#[test]
+fn autumn_tail_rejects_missing_second_target() {
+    let mut g = two_player_game();
+    let mystic = g.add_card_to_battlefield(0, catalog::kitsune_mystic());
+    let a1 = g.add_card_to_battlefield(0, catalog::vigilance_aura());
+    let a2 = g.add_card_to_battlefield(0, catalog::vigilance_aura());
+    g.battlefield_find_mut(a1).unwrap().attached_to = Some(mystic);
+    g.battlefield_find_mut(a2).unwrap().attached_to = Some(mystic);
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    g.battlefield_find_mut(mystic).unwrap().tapped = false;
+    g.clear_sickness(mystic);
+    g.players[0].mana_pool.add_colorless(1);
+    // Only the aura target (slot 0); no destination creature (slot 1).
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: mystic, ability_index: 0, target: Some(Target::Permanent(a1)),
+        additional_targets: Vec::new(), x_value: None,
+    });
+    assert!(err.is_err(), "two-target ability needs both targets");
+}
+
 /// One Aura isn't enough to flip Kitsune Mystic at the end step.
 #[test]
 fn kitsune_mystic_stays_with_one_aura() {
