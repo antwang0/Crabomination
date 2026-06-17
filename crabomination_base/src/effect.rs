@@ -1639,6 +1639,13 @@ pub enum Effect {
     /// to each target's own total. Stingerback Terror ("each opponent loses
     /// half their life, rounded up").
     LoseHalfLife { who: Selector, rounded_up: bool },
+    /// Deal each player the selector resolves to damage equal to half their
+    /// *own* current life total (rounded up when `rounded_up`, else down).
+    /// Per-player evaluation, routed through the damage funnel (so doubling /
+    /// prevention / redirection apply, unlike `LoseHalfLife`). Heartless
+    /// Hidetsugu ("deals damage to each player equal to half that player's
+    /// life total, rounded down").
+    DealHalfLifeDamage { to: Selector, rounded_up: bool },
     /// Set a player's life total to a specific value (CR 119.5).
     /// "If an effect sets a player's life total to a specific number, the
     /// player gains or loses the necessary amount of life to end up with

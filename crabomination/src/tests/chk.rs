@@ -952,3 +952,117 @@ fn cage_of_hands_pacifies_then_returns_to_hand() {
     assert!(!g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
         .keywords.contains(&Keyword::CantAttack), "pacify lifted once Cage left");
 }
+
+/// Heartless Hidetsugu taps to deal each player half their life (rounded down).
+#[test]
+fn heartless_hidetsugu_halves_each_players_life() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::heartless_hidetsugu());
+    g.clear_sickness(h);
+    g.players[0].life = 20;
+    g.players[1].life = 17;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: None, x_value: None,
+    }).expect("tap ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 10, "20 → took 10 damage");
+    assert_eq!(g.players[1].life, 9, "17 → took 8 (rounded down)");
+}
+
+/// Horobi destroys any creature that becomes the target of a spell, even when
+/// the spell itself wouldn't be lethal.
+#[test]
+fn horobi_destroys_targeted_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::horobi_deaths_wail());
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt the angel");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(angel).is_none(), "Horobi destroyed the targeted 4/4");
+}
+
+/// Time of Need tutors a legendary creature into hand.
+#[test]
+fn time_of_need_tutors_legend_to_hand() {
+    let mut g = two_player_game();
+    let konda = g.add_card_to_library(0, catalog::konda_lord_of_eiganjo());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // non-legendary filler
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(konda)),
+    ]));
+    let ton = g.add_card_to_hand(0, catalog::time_of_need());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ton, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Time of Need castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == konda), "legend tutored to hand");
+}
+
+/// Yukora's leave-the-battlefield trigger sacrifices non-Ogre creatures only.
+#[test]
+fn yukora_sacrifices_non_ogres_on_ltb() {
+    let mut g = two_player_game();
+    let yukora = g.add_card_to_battlefield(0, catalog::yukora_the_prisoner());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ogre = g.add_card_to_battlefield(0, catalog::heartless_hidetsugu()); // Ogre
+    let kami = g.add_card_to_battlefield(0, catalog::pain_kami());
+    g.clear_sickness(kami);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kami, ability_index: 0, target: Some(Target::Permanent(yukora)), x_value: Some(5),
+    }).expect("burn Yukora");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(yukora).is_none(), "Yukora died");
+    assert!(g.battlefield_find(bear).is_none(), "non-Ogre bear sacrificed");
+    assert!(g.battlefield_find(ogre).is_some(), "Ogre kept");
+}
+
+/// He Who Hungers sacs a Spirit to strip a card from an opponent's hand.
+#[test]
+fn he_who_hungers_sacs_spirit_to_discard() {
+    let mut g = two_player_game();
+    let hwh = g.add_card_to_battlefield(0, catalog::he_who_hungers());
+    g.add_card_to_battlefield(0, catalog::gibbering_kami()); // Spirit fodder
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.clear_sickness(hwh);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hwh, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac Spirit to strip hand");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "opponent discarded the chosen card");
+}
+
+/// Kami of the Painted Road fires its spiritcraft protection grant on an Arcane
+/// cast.
+#[test]
+fn kami_of_the_painted_road_gains_protection_on_spiritcraft() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::kami_of_the_painted_road());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(crate::mana::Color::Red),
+    ]));
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray()); // Arcane instant
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ray, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let c = view.iter().find(|c| c.id == kami).unwrap();
+    assert!(c.keywords.contains(&Keyword::Protection(crate::mana::Color::Red)),
+        "spiritcraft granted protection from the chosen color");
+}

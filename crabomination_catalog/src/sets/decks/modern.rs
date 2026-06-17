@@ -5579,7 +5579,7 @@ pub fn distress() -> CardDefinition {
         effect: Effect::DiscardChosen {
             from: Selector::Player(PlayerRef::EachOpponent),
             count: Value::Const(1),
-            filter: SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature),
+            filter: SelectionRequirement::Nonland,
         },
         ..Default::default()
     }

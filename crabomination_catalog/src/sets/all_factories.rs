@@ -146,6 +146,12 @@ static CHK: &[Factory] = &[
     super::chk::nezumi_bone_reader,
     super::chk::patron_of_the_nezumi,
     super::chk::cage_of_hands,
+    super::chk::heartless_hidetsugu,
+    super::chk::horobi_deaths_wail,
+    super::chk::time_of_need,
+    super::chk::yukora_the_prisoner,
+    super::chk::he_who_hungers,
+    super::chk::kami_of_the_painted_road,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

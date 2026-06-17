@@ -180,6 +180,7 @@ impl Effect {
             Effect::SacrificeAllButOnePerType { who } => sel_has_target(who),
             Effect::DestroyTargetsPolymorph { .. } => true,
             Effect::DestroyTargets { .. } => true,
+            Effect::DealHalfLifeDamage { .. } => false,
             Effect::Champion { .. } => false,
             Effect::ExileUpToNFromGraveyards { count } => value_has_target(count),
             Effect::SpellTaxUntilYourNextTurn { .. } => false,

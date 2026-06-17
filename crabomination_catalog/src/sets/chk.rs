@@ -1984,3 +1984,146 @@ pub fn cage_of_hands() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Heartless Hidetsugu — {3}{R}{R} Legendary Ogre Shaman 4/3. {T}: Deals
+/// damage to each player equal to half that player's life total, rounded down.
+pub fn heartless_hidetsugu() -> CardDefinition {
+    CardDefinition {
+        name: "Heartless Hidetsugu",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Shaman]),
+        power: 4,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealHalfLifeDamage {
+                to: Selector::Player(PlayerRef::EachPlayer),
+                rounded_up: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Horobi, Death's Wail — {2}{B}{B} Legendary Spirit 4/4, Flying. Whenever a
+/// creature becomes the target of a spell or ability, destroy that creature.
+pub fn horobi_deaths_wail() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Horobi, Death's Wail",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::Destroy { what: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Time of Need — {1}{G} Sorcery. Search your library for a legendary creature
+/// card, reveal it, put it into your hand, then shuffle.
+pub fn time_of_need() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Time of Need",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(
+                Supertype::Legendary,
+            )),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Yukora, the Prisoner — {2}{B}{B} Legendary Demon Spirit 5/5. When Yukora
+/// leaves the battlefield, sacrifice all non-Ogre creatures you control.
+pub fn yukora_the_prisoner() -> CardDefinition {
+    CardDefinition {
+        name: "Yukora, the Prisoner",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Demon, CreatureType::Spirit]),
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::SacrificeAllMatching {
+                who: Selector::You,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(crate::card::SelectionRequirement::Not(Box::new(
+                        SelectionRequirement::HasCreatureType(CreatureType::Ogre),
+                    ))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// He Who Hungers — {4}{B} Legendary Spirit 3/2, Flying. Soulshift 4.
+/// {1}, Sacrifice a Spirit: Target opponent reveals their hand. You choose a
+/// card from it; that player discards it. Activate only as a sorcery.
+pub fn he_who_hungers() -> CardDefinition {
+    CardDefinition {
+        name: "He Who Hungers",
+        cost: cost(&[generic(4), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sorcery_speed: true,
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Spirit), 1)),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: SelectionRequirement::Any,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
+        ..Default::default()
+    }
+}
+
+/// Kami of the Painted Road — {4}{W} Spirit 3/3. Whenever you cast a Spirit or
+/// Arcane spell, this creature gains protection from the color of your choice
+/// until end of turn.
+pub fn kami_of_the_painted_road() -> CardDefinition {
+    CardDefinition {
+        name: "Kami of the Painted Road",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(
+            Effect::GrantProtectionFromChosenColor {
+                what: Selector::This,
+                duration: Duration::EndOfTurn,
+            },
+        )],
+        ..Default::default()
+    }
+}

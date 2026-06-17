@@ -1613,6 +1613,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DealHalfLifeDamage { to, rounded_up } => {
+                // Per-player: each takes damage equal to half their own total.
+                let seats: Vec<usize> = self
+                    .resolve_selector(to, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in seats {
+                    let life = self.players[p].life.max(0);
+                    let amt = if *rounded_up { (life + 1) / 2 } else { life / 2 } as u32;
+                    if amt == 0 { continue; }
+                    self.deal_damage_to_from(EntityRef::Player(p), amt, ctx.source, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::MillHalf { who, rounded_up } => {
                 // Per-player: each mills half of their *own* library.
                 let seats: Vec<usize> = self

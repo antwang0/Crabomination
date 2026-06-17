@@ -11242,10 +11242,10 @@ fn despise_takes_a_creature_from_opp_hand() {
 
 /// Distress: takes a non-creature non-land from opp hand.
 #[test]
-fn distress_takes_a_noncreature_nonland_from_opp_hand() {
+fn distress_takes_a_nonland_card_from_opp_hand() {
     let mut g = two_player_game();
-    g.add_card_to_hand(1, catalog::grizzly_bears()); // creature, should NOT be picked
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // valid
+    g.add_card_to_hand(1, catalog::forest()); // land, can't be picked
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears()); // nonland (creature) — valid
     let id = g.add_card_to_hand(0, catalog::distress());
     g.players[0].mana_pool.add(Color::Black, 2);
 
@@ -11254,8 +11254,9 @@ fn distress_takes_a_noncreature_nonland_from_opp_hand() {
     }).expect("Distress castable for {B}{B}");
     drain_stack(&mut g);
 
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
-        "Bolt (instant) should be the discard pick");
+    // CR — Distress hits any nonland card, creatures included.
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears),
+        "the nonland creature should be a legal discard pick");
 }
 
 /// Vryn Wingmare: 2/1 flying body with the noncreature-spell tax.

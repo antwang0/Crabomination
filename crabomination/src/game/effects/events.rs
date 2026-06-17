@@ -79,8 +79,12 @@ pub(crate) fn event_matches_spec(
         && *target != source.id
         // The "any permanent you control" scope intentionally fires for
         // subjects other than the source, so skip the implicit check there.
+        // `AnyPlayer` is the global "whenever a creature becomes the target
+        // of a spell or ability" rail (Horobi, Death's Wail) — it fires for
+        // any creature targeted, with the `with_filter` predicate refining.
         && spec.scope != EventScope::YourPermanentTargetedByOpponent
         && spec.scope != EventScope::YourCreatureTargeted
+        && spec.scope != EventScope::AnyPlayer
     {
         return false;
     }
