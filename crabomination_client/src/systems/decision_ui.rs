@@ -228,7 +228,7 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         DecisionWire::ChooseAmount { source, max, prompt } => {
             Some(DecisionKey::ChooseAmount(*source, *max, prompt.clone()))
         }
-        DecisionWire::DivideDamage { source, total, targets } => {
+        DecisionWire::DivideDamage { source, total, targets, .. } => {
             Some(DecisionKey::DivideDamage(*source, *total, targets.clone()))
         }
         DecisionWire::ChooseCreatureType { source, .. } => {
@@ -513,7 +513,7 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_choose_amount_modal(&mut commands, &ui_fonts, prompt, *max, state.amount);
         }
-        DecisionWire::DivideDamage { source, total, targets } => {
+        DecisionWire::DivideDamage { source, total, targets, noun } => {
             if state.divide.len() != targets.len() {
                 state.divide = crabomination::decision::even_damage_split(*total, targets.len());
             }
@@ -531,7 +531,7 @@ pub fn spawn_decision_ui(
                         .unwrap_or_else(|| format!("Player {s}")),
                 })
                 .collect();
-            spawn_divide_damage_modal(&mut commands, &ui_fonts, &title, *total, &rows, &state.divide);
+            spawn_divide_damage_modal(&mut commands, &ui_fonts, &title, *total, noun, &rows, &state.divide);
         }
         DecisionWire::ChooseCreatureType { suggestions, .. } => {
             state.spawned_for = Some(key);
@@ -3249,11 +3249,14 @@ fn spawn_divide_damage_modal(
     ui_fonts: &UiFonts,
     title: &str,
     total: u32,
+    noun: &str,
     target_names: &[String],
     amounts: &[u32],
 ) {
     let panel = spawn_modal_panel(commands, 380.0);
-    let title_owned = format!("{title} — divide {total} damage");
+    // Pluralise the divided noun: "5 damage" / "5 +1/+1 counters".
+    let label = if noun == "damage" { format!("{total} damage") } else { format!("{total} {noun}s") };
+    let title_owned = format!("{title} — divide {label}");
     let assigned: u32 = amounts.iter().sum();
     let fonts18 = ui_fonts.tf(18.0);
     let fonts16 = ui_fonts.tf(16.0);

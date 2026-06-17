@@ -1348,6 +1348,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(CardId(0)),
                     total: amt,
                     targets: targets.clone(),
+                    noun: "damage".into(),
                 };
                 let answer = match self.stashed_resolution_answer.take() {
                     Some(a) => a,
@@ -1433,6 +1434,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(CardId(0)),
                     total: amt,
                     targets: targets.clone(),
+                    noun: counter_noun(counter).into(),
                 };
                 let answer = match self.stashed_resolution_answer.take() {
                     Some(a) => a,
@@ -10098,6 +10100,17 @@ fn target_to_entity(t: &Target) -> EntityRef {
     match t {
         Target::Player(p) => EntityRef::Player(*p),
         Target::Permanent(c) => EntityRef::Permanent(*c),
+    }
+}
+
+/// UI noun for an `Effect::DistributeCounters` division (Jugan → "+1/+1
+/// counter"). Falls back to the debug name for exotic counter kinds.
+fn counter_noun(counter: CounterType) -> &'static str {
+    match counter {
+        CounterType::PlusOnePlusOne => "+1/+1 counter",
+        CounterType::MinusOneMinusOne => "-1/-1 counter",
+        CounterType::Loyalty => "loyalty counter",
+        _ => "counter",
     }
 }
 

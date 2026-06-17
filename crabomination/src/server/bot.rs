@@ -2238,7 +2238,40 @@ pub fn max_affordable_x(
     let fixed_cmc = card.definition.cost.with_x_value(0).cmc();
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
     let needed = fixed_cmc + extra;
-    pool_total.saturating_sub(needed)
+    let affordable = pool_total.saturating_sub(needed);
+    // Don't overkill: an `{X}: deal X damage to target creature` spell
+    // (creature-only target — can't go to the face) never needs more X
+    // than the toughest opposing creature's toughness. Capping here frees
+    // the leftover mana for the rest of the turn instead of vanishing it
+    // into a 6-damage Disfigure on a 2/2.
+    if let Some(cap) = creature_only_x_damage_cap(state, seat, &card.definition) {
+        return affordable.min(cap);
+    }
+    affordable
+}
+
+/// For a single-target, creature-only `DealDamage` whose amount scales with
+/// X, the most X the bot ever needs: the greatest toughness among opposing
+/// creatures (so any legal target still dies). `None` for any other shape —
+/// player-targetable burn (Banefire) keeps dumping its whole pool into X.
+fn creature_only_x_damage_cap(state: &GameState, seat: usize, def: &CardDefinition) -> Option<u32> {
+    use crate::effect::Value;
+    use crate::effect::Selector;
+    let Effect::DealDamage { to, amount } = &def.effect else { return None };
+    if !matches!(amount, Value::XFromCost) || !matches!(to, Selector::TargetFiltered { .. }) {
+        return None;
+    }
+    // Must be a creature target that can't be redirected to a player.
+    let filter = def.effect.target_filter_for_slot(0)?;
+    if filter.can_match_player() {
+        return None;
+    }
+    state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .map(|c| c.toughness().max(0) as u32)
+        .max()
 }
 
 /// True if X matters for this spell — either the cost has an `{X}` pip
@@ -3968,5 +4001,46 @@ mod stack_response_tests {
         g.add_card_to_hand(0, catalog::grizzly_bears()); // wants green
         assert_eq!(pick_land_to_play(&g, 0), Some(forest),
             "fixes the missing green over the off-color Mountain");
+    }
+
+    /// A creature-only `{X}: deal X damage to target creature` spell caps X at
+    /// the toughest opposing creature — the bot doesn't overkill a 2/2.
+    #[test]
+    fn max_affordable_x_caps_creature_only_burn_at_lethal() {
+        use crate::card::{CardDefinition, CardType};
+        use crate::effect::shortcut::target_filtered;
+        use crate::effect::{Effect, Value};
+        use crate::card::SelectionRequirement;
+        let mut g = two_player_game();
+        let zap = CardDefinition {
+            name: "Test Creature Zap",
+            cost: crate::mana::cost(&[crate::mana::x(), crate::mana::r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::XFromCost,
+            },
+            ..Default::default()
+        };
+        let id = g.add_card_to_hand(0, zap);
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — toughest opp
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(6);
+        assert_eq!(max_affordable_x(&g, 0, &card), 2,
+            "X capped at the 2/2's toughness, not the full {{6}} pool");
+    }
+
+    /// Player-targetable burn (Banefire) is not capped — the bot still dumps
+    /// its whole pool into X.
+    #[test]
+    fn max_affordable_x_does_not_cap_any_target_burn() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::banefire()); // any target
+        let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(6);
+        assert_eq!(max_affordable_x(&g, 0, &card), 6, "Banefire keeps the full X");
     }
 }

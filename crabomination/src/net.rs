@@ -1225,6 +1225,10 @@ fn default_stack_item_kind() -> StackItemKind {
     StackItemKind::Trigger
 }
 
+fn default_divide_noun() -> String {
+    "damage".into()
+}
+
 /// Serde default for `PlayerView.max_hand_size` — the normal seven-card cap,
 /// matching the engine-side default for pre-`max_hand_size` snapshots.
 fn default_max_hand_size_view() -> Option<usize> {
@@ -1384,6 +1388,10 @@ pub enum DecisionWire {
         source: CardId,
         total: u32,
         targets: Vec<Target>,
+        /// What's being divided, for client labelling ("damage" / "+1/+1
+        /// counter"). Defaults to "damage" for back-compat snapshots.
+        #[serde(default = "default_divide_noun")]
+        noun: String,
     },
     /// CR 510.1c-d — divide an attacker's combat damage among its blockers.
     /// Decider answers `CombatDamageAssignment((id, amount) pairs)`.
@@ -1521,10 +1529,11 @@ impl From<&Decision> for DecisionWire {
                 player: *player,
                 triggers: triggers.clone(),
             },
-            Decision::DivideDamage { source, total, targets } => DecisionWire::DivideDamage {
+            Decision::DivideDamage { source, total, targets, noun } => DecisionWire::DivideDamage {
                 source: *source,
                 total: *total,
                 targets: targets.clone(),
+                noun: noun.clone(),
             },
             Decision::AssignCombatDamage { attacker, attacker_power, blockers } => {
                 DecisionWire::AssignCombatDamage {
