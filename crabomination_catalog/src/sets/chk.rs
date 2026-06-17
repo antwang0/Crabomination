@@ -2284,7 +2284,7 @@ pub fn hanabi_blast() -> CardDefinition {
 }
 
 /// Frostwielder — {2}{R}{R} Human Shaman 1/2. {T}: Deals 1 damage to any
-/// target. (The "exile instead of dying" damage rider is omitted.)
+/// target. A creature it deals damage to is exiled instead of dying.
 pub fn frostwielder() -> CardDefinition {
     CardDefinition {
         name: "Frostwielder",
@@ -2293,6 +2293,7 @@ pub fn frostwielder() -> CardDefinition {
         subtypes: spirit(vec![CreatureType::Human, CreatureType::Shaman]),
         power: 1,
         toughness: 2,
+        damage_exiles_if_dies: true,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target()),
@@ -2497,8 +2498,8 @@ pub fn villainous_ogre() -> CardDefinition {
 }
 
 /// Kumano, Master Yamabushi — {3}{R}{R} Legendary Human Shaman 4/4. {1}{R}:
-/// Deals 1 damage to any target. (The "creatures it damages are exiled instead
-/// of dying" replacement rider is omitted.)
+/// Deals 1 damage to any target. Creatures it damages are exiled instead of
+/// dying.
 pub fn kumano_master_yamabushi() -> CardDefinition {
     CardDefinition {
         name: "Kumano, Master Yamabushi",
@@ -2508,6 +2509,7 @@ pub fn kumano_master_yamabushi() -> CardDefinition {
         subtypes: spirit(vec![CreatureType::Human, CreatureType::Shaman]),
         power: 4,
         toughness: 4,
+        damage_exiles_if_dies: true,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             effect: crate::effect::shortcut::deal(1, crate::effect::shortcut::target()),

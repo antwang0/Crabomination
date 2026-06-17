@@ -301,6 +301,13 @@ impl GameState {
         let source_has_wither =
             source_has_infect || src_kws.contains(&crate::card::Keyword::Wither);
         let source_has_deathtouch = src_kws.contains(&crate::card::Keyword::Deathtouch);
+        // Kumano / Frostwielder: a creature this source damages is exiled
+        // instead of dying for the rest of the turn (source-bound CR 614
+        // replacement). Registered after the damage lands below.
+        let source_exiles_damaged = source
+            .and_then(|s| self.battlefield_find(s))
+            .map(|c| c.definition.damage_exiles_if_dies)
+            .unwrap_or(false);
         match ent {
             EntityRef::Player(p) => {
                 // Bloodthirst (CR 702.54) window: any damage to a player
@@ -413,6 +420,10 @@ impl GameState {
                         to_player: None,
                         to_card: Some(cid),
                     });
+                    let is_creature = c.definition.is_creature();
+                    if source_exiles_damaged && is_creature {
+                        self.dies_to_exile_eot.insert(cid);
+                    }
                 }
             }
             EntityRef::Card(_) => {}

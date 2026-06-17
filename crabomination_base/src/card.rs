@@ -1483,6 +1483,13 @@ pub struct CardDefinition {
     /// this bonus on BOTH itself and its partner. Defaults to `None`.
     #[serde(default)]
     pub soulbond_bonus: Option<SoulbondBonus>,
+    /// "If a creature dealt damage by this would die this turn, exile it
+    /// instead" — a source-bound death replacement (Kumano Master Yamabushi,
+    /// Frostwielder). When true, every creature this permanent damages is
+    /// added to `GameState.dies_to_exile_eot` for the rest of the turn.
+    /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub damage_exiles_if_dies: bool,
     /// CR 601.2b/601.2f — additional cost(s) paid as the spell is cast
     /// ("As an additional cost to cast this spell, …"). Paid during
     /// casting, not folded into resolution: the spell can't be cast unless

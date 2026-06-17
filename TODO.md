@@ -109,10 +109,6 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
     devotion-counter conditional, flip cards (CR 710) for the CHK flip
     creatures.
-  - **Exile-instead-of-dying damage rider** (Kumano, Frostwielder; the existing
-    `ExileIfWouldDieThisTurn` on Yamabushi's Storm is a one-shot effect, not a
-    source-bound replacement) — model as a per-source replacement so creatures
-    damaged by the source this turn are exiled if they'd die.
   - **Conditional granted activated ability** (Villainous Ogre's Demon-gated
     `{B}: Regenerate`) — host-state-conditional ability grant; CantBlock body
     ships, regen omitted.

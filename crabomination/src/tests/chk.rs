@@ -1558,3 +1558,22 @@ fn psychic_puppetry_taps() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped, "target permanent tapped");
 }
+
+/// Kumano, Master Yamabushi: a creature it deals lethal damage to is exiled
+/// instead of dying (source-bound CR 614 replacement).
+#[test]
+fn kumano_exiles_creatures_it_kills() {
+    let mut g = two_player_game();
+    let kumano = g.add_card_to_battlefield(0, catalog::kumano_master_yamabushi());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves()); // 1/1
+    g.clear_sickness(kumano);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kumano, ability_index: 0, target: Some(Target::Permanent(elf)), x_value: None,
+    }).expect("ping the 1/1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none(), "elf left the battlefield");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == elf), "not in graveyard");
+    assert!(g.exile.iter().any(|c| c.id == elf), "elf exiled instead of dying");
+}
