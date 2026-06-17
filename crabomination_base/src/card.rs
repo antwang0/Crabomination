@@ -1432,6 +1432,12 @@ pub struct CardDefinition {
     /// `route_to_graveyard` funnel (Darksteel / Blightsteel Colossus).
     #[serde(default)]
     pub shuffles_into_library_instead: bool,
+    /// CR 704.5j exception — "If there are exactly two permanents with this
+    /// name on the battlefield, the legend rule doesn't apply to them."
+    /// (Brothers Yamazaki.) When the same-name legend group has exactly two
+    /// members and all are flagged, the SBA skips it.
+    #[serde(default)]
+    pub legend_pair_exempt: bool,
     /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
     /// A combined chapter ("I, II — …") is listed once per number with the
     /// same effect. Non-empty marks the card a Saga: it enters with one lore

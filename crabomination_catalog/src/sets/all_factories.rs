@@ -220,6 +220,8 @@ static CHK: &[Factory] = &[
     super::chk::cunning_bandit,
     super::chk::faithful_squire,
     super::chk::budoka_gardener,
+    super::chk::hired_muscle,
+    super::chk::brothers_yamazaki,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

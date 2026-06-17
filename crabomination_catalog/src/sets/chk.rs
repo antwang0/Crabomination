@@ -3408,6 +3408,24 @@ pub fn moonlit_strider() -> CardDefinition {
     }
 }
 
+/// Brothers Yamazaki — {2}{R} Legendary Human Samurai 2/1. Bushido 1. CR
+/// 704.5j exception: if there are exactly two on the battlefield, the legend
+/// rule doesn't apply to them (`legend_pair_exempt`).
+pub fn brothers_yamazaki() -> CardDefinition {
+    CardDefinition {
+        name: "Brothers Yamazaki",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Bushido(1)],
+        legend_pair_exempt: true,
+        ..Default::default()
+    }
+}
+
 // ── Flip cards (CR 711) ──────────────────────────────────────────────────────
 
 /// Shared triggers for the ki-counter flip cards (Cunning Bandit, Faithful
@@ -3476,6 +3494,42 @@ pub fn cunning_bandit() -> CardDefinition {
         toughness: 2,
         triggered_abilities: ki_flip_triggers(),
         flip_face: Some(Box::new(azamuki)),
+        ..Default::default()
+    }
+}
+
+/// Hired Muscle // Scarmaker — {1}{B}{B} Human Warrior 2/2. Ki-counter flip
+/// card; flips into Scarmaker, a 4/4 Legendary Spirit whose "Remove a ki
+/// counter: Target creature gains fear until end of turn."
+pub fn hired_muscle() -> CardDefinition {
+    use crate::card::CounterType;
+    let scarmaker = CardDefinition {
+        name: "Scarmaker",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::Ki, 1)),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Fear,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Hired Muscle",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Warrior]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: ki_flip_triggers(),
+        flip_face: Some(Box::new(scarmaker)),
         ..Default::default()
     }
 }

@@ -2232,3 +2232,25 @@ fn flip_card_reverts_to_top_face_on_leaving_battlefield() {
     assert!(!in_gy.flipped, "reverts off the battlefield");
     assert_eq!(in_gy.definition.name, "Cunning Bandit", "top face restored");
 }
+
+/// Scarmaker (Hired Muscle's flip side) spends a ki counter to grant fear.
+#[test]
+fn scarmaker_removes_ki_to_grant_fear() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let muscle = g.add_card_to_battlefield(0, catalog::hired_muscle());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(muscle).unwrap().add_counters(CounterType::Ki, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(muscle).unwrap().definition.name, "Scarmaker");
+    g.clear_sickness(muscle);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: muscle, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate Scarmaker fear");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Fear),
+        "target gained fear");
+}

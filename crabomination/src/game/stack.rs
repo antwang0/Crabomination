@@ -1934,10 +1934,20 @@ impl GameState {
                     })
                     .push((c.id, c.definition.name.to_string()));
             }
+            // CR 704.5j exception — a same-name group of exactly two whose
+            // members all carry `legend_pair_exempt` (Brothers Yamazaki) is
+            // skipped: the legend rule doesn't apply to them.
+            let pair_exempt = |dups: &[(CardId, String)]| -> bool {
+                dups.len() == 2
+                    && dups.iter().all(|(id, _)| {
+                        self.battlefield_find(*id)
+                            .is_some_and(|c| c.definition.legend_pair_exempt)
+                    })
+            };
             let mut out = Vec::new();
             for k in order {
                 let dups = groups.remove(&k).unwrap_or_default();
-                if dups.len() > 1 {
+                if dups.len() > 1 && !pair_exempt(&dups) {
                     out.push((k.0, k.1.to_string(), dups));
                 }
             }

@@ -2528,3 +2528,90 @@ fn cr_603_2_horobi_fires_for_any_creature_targeted() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(mine).is_none(), "Horobi destroyed the targeted creature");
 }
+
+// ── CR 704.5j — legend rule + Brothers Yamazaki pair exception ────────────────
+
+/// Two same-name legendaries one player controls collapse to one (CR 704.5j).
+#[test]
+fn cr_704_5j_legend_rule_keeps_one_same_name_legend() {
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    let l2 = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    g.check_state_based_actions();
+    let kept: Vec<CardId> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Kasmina, Enigma Sage").map(|c| c.id).collect();
+    assert_eq!(kept.len(), 1, "legend rule keeps exactly one");
+    assert!(kept == vec![l2] || kept == vec![l1], "one of the two survives");
+}
+
+/// Brothers Yamazaki: exactly two coexist (CR 704.5j exception); a third
+/// re-engages the legend rule.
+#[test]
+fn cr_704_5j_brothers_yamazaki_pair_exempt() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::brothers_yamazaki());
+    g.add_card_to_battlefield(0, catalog::brothers_yamazaki());
+    g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Brothers Yamazaki").count(),
+        2, "exactly two Brothers Yamazaki coexist"
+    );
+    // A third triggers the legend rule again (3 != 2, exception lapses).
+    g.add_card_to_battlefield(0, catalog::brothers_yamazaki());
+    g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Brothers Yamazaki").count(),
+        1, "a third re-engages the legend rule"
+    );
+}
+
+// ── CR 702.36 — Fear ──────────────────────────────────────────────────────────
+
+/// A Fear creature can be blocked only by artifact and/or black creatures.
+#[test]
+fn cr_702_36_fear_blockable_only_by_artifact_or_black() {
+    let attacker = catalog::nezumi_cutthroat(); // 2/1 Fear
+    let attacker_kws = &attacker.keywords;
+    let assert_block = |def: crate::card::CardDefinition, expect: bool, why: &str| {
+        let mut g = two_player_game();
+        let blk = g.add_card_to_battlefield(1, def);
+        let inst = g.battlefield_find(blk).unwrap().clone();
+        let cp = g.computed_permanent(blk).unwrap();
+        assert_eq!(
+            crate::game::can_block_attacker_computed(&inst, &cp, attacker_kws, &[], 2),
+            expect, "{why}"
+        );
+    };
+    assert_block(catalog::grizzly_bears(), false, "green creature can't block Fear");
+    assert_block(catalog::ornithopter(), true, "artifact creature can block Fear");
+    assert_block(catalog::nezumi_cutthroat(), true, "black creature can block Fear");
+}
+
+// ── CR 711 + 704.5j — a flipped legendary obeys the legend rule ───────────────
+
+/// When a flip card flips into its Legendary face (Azamuki) and the controller
+/// already controls one, the legend-rule SBA collapses them to one — exercising
+/// the supertype change the flip applies in place.
+#[test]
+fn cr_711_flipped_legendary_obeys_legend_rule() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // One already-flipped Azamuki (flip a Cunning Bandit), plus a second.
+    let b1 = g.add_card_to_battlefield(0, catalog::cunning_bandit());
+    let b2 = g.add_card_to_battlefield(0, catalog::cunning_bandit());
+    for b in [b1, b2] {
+        g.battlefield_find_mut(b).unwrap().add_counters(CounterType::Ki, 2);
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(true),
+    ]));
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    let azamuki = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Azamuki, Treachery Incarnate").count();
+    assert_eq!(azamuki, 1, "two flipped Azamuki collapse to one under the legend rule");
+}

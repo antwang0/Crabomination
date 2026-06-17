@@ -145,7 +145,11 @@ Each unblocks a large swath of cards.
   Remaining: DFC sagas.
 - ✅ **Meld** (701.37) — `Effect::Meld` + `meld_parts`, unmelds on leave (Urza +
   Mightstone/Weakstone → Urza, Planeswalker).
-- ⏳ **Flip cards** (Kamigawa), **Prototype**, **Omen**.
+- 🟡 **Flip cards** (Kamigawa, CR 711) — `flip_face` + `Effect::Flip` +
+  `GameEvent::Flipped`; ki counters; flip in place, revert off-battlefield
+  (711.6). Cunning Bandit, Faithful Squire, Budoka Gardener ship. Remaining:
+  damaged-creature-dies flip trigger (Bushi Tenderfoot), more of the cycle.
+  **Prototype**, **Omen** still ⏳.
 - 🟡 **Face-down permanents** (708) — `face_up_def` stashes the real card; Manifest
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
   Disguise/Cloak edge cases (both core paths ship — see Tier 4).
