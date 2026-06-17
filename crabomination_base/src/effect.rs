@@ -2992,13 +2992,14 @@ pub enum Effect {
     /// its power) and similar spells.
     SacrificeAndRemember { who: PlayerRef, filter: SelectionRequirement },
 
-    /// Internal plumbing: re-stamp the P/T of a creature sacrificed as an
-    /// *activation cost* before running `body`, so
-    /// `Value::SacrificedPower/Toughness` read it at resolution even after
-    /// intervening resolutions reset the scratch (Witch's Oven). Wrapped
-    /// around the queued ability effect by `activate_ability`; not meant
-    /// for card definitions.
-    WithSacrificedPt { power: i32, toughness: i32, body: Box<Effect> },
+    /// Internal plumbing: re-stamp the P/T (and mana value) of a creature
+    /// sacrificed as an *activation cost* before running `body`, so
+    /// `Value::SacrificedPower/Toughness` and the
+    /// `ManaValueEqualsSacrificedPlus` search filter read them at resolution
+    /// even after intervening resolutions reset the scratch (Witch's Oven,
+    /// Transfigure). Wrapped around the queued ability effect by
+    /// `activate_ability`; not meant for card definitions.
+    WithSacrificedPt { power: i32, toughness: i32, #[serde(default)] mana_value: u32, body: Box<Effect> },
 
     /// "Target opponent reveals their hand. You choose a card from it
     /// matching `filter`. They discard it." Inquisition of Kozilek,

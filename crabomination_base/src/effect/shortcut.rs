@@ -2201,6 +2201,47 @@ pub fn outlast(mana_cost: crate::mana::ManaCost) -> ActivatedAbility {
     }
 }
 
+/// Transfigure (CR 702.71): "[Cost], Sacrifice this permanent: Search your
+/// library for a creature card with the same mana value as this permanent and
+/// put it onto the battlefield. Then shuffle. Activate only as a sorcery."
+/// `sac_cost` records the sacrificed MV (threaded via `WithSacrificedPt`), so
+/// the `ManaValueEqualsSacrificedPlus(0)` search filter matches it.
+pub fn transfigure(mana_cost: crate::mana::ManaCost) -> ActivatedAbility {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{PlayerRef, ZoneDest};
+    ActivatedAbility {
+        mana_cost,
+        sac_cost: true,
+        sorcery_speed: true,
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ManaValueEqualsSacrificedPlus(0)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Forecast (CR 702.57): "Forecast — [cost], Reveal this card from your hand:
+/// [effect]. Activate only during your upkeep and only once each turn." A
+/// from-hand activated ability gated to the controller's upkeep; the card
+/// stays in hand (no discard/exile cost).
+pub fn forecast(mana_cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
+    use crate::turn_step::TurnStep;
+    ActivatedAbility {
+        mana_cost,
+        from_hand: true,
+        once_per_turn: true,
+        condition: Some(Predicate::All(vec![
+            Predicate::CurrentStepIs(TurnStep::Upkeep),
+            Predicate::IsTurnOf(PlayerRef::You),
+        ])),
+        effect,
+        ..Default::default()
+    }
+}
+
 /// Connive N (CR 702.158) — "Draw N cards, then discard N cards. For
 /// each nonland card discarded this way, put a +1/+1 counter on this
 /// creature." Built from `Draw` + `Discard` + an `AddCounter` whose

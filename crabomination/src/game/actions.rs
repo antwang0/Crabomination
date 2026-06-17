@@ -7648,6 +7648,10 @@ impl GameState {
         // `Value::SacrificedPower/Toughness` survive intervening
         // resolutions (Witch's Oven's "toughness 4 or greater" branch).
         let mut cost_sac_pt: Option<(i32, i32)> = None;
+        // Mana value of the cost-sacrificed permanent, threaded the same way
+        // so the `ManaValueEqualsSacrificedPlus` search filter resolves
+        // correctly at ability resolution (Transfigure → Fleshwrither).
+        let mut cost_sac_mv: u32 = 0;
 
         // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
         // source. The effect runs/queues after, and any selectors that
@@ -7687,6 +7691,7 @@ impl GameState {
                     self.sacrificed_toughness = Some(t_val);
                     self.sacrificed_mana_value = Some(mv);
                     cost_sac_pt = Some((p_val, t_val));
+                    cost_sac_mv = mv;
                     // Cache the dying card's snapshot so AnotherOfYours
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
@@ -7747,6 +7752,7 @@ impl GameState {
                     self.sacrificed_toughness = Some(t_val);
                     self.sacrificed_mana_value = Some(mv);
                     cost_sac_pt = Some((p_val, t_val));
+                    cost_sac_mv = mv;
                     self.died_card_snapshots.insert(other_cid, snap);
                 }
                 events.push(GameEvent::CreatureSacrificed { card_id: other_cid, who: sac_who });
@@ -7925,6 +7931,7 @@ impl GameState {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
                     toughness,
+                    mana_value: cost_sac_mv,
                     body: Box::new(ability.effect),
                 },
                 None => ability.effect,

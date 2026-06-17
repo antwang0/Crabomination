@@ -7315,9 +7315,10 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WithSacrificedPt { power, toughness, body } => {
+            Effect::WithSacrificedPt { power, toughness, mana_value, body } => {
                 self.sacrificed_power = Some(*power);
                 self.sacrificed_toughness = Some(*toughness);
+                self.sacrificed_mana_value = Some(*mana_value);
                 self.run_effect(body, ctx, events)
             }
 

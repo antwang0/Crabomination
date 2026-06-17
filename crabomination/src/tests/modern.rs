@@ -56886,3 +56886,24 @@ fn conspire_traitors_roar_taps_and_burns_controller() {
     assert!(g.battlefield_find(victim).unwrap().tapped, "victim tapped");
     assert_eq!(g.players[1].life, life - 2, "controller took 2 (the creature's power)");
 }
+
+/// Transfigure (CR 702.71): Fleshwrither sacrifices itself and tutors a
+/// creature with the SAME mana value (4) onto the battlefield.
+#[test]
+fn fleshwrither_transfigure_same_mana_value() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let flesh = g.add_card_to_battlefield(0, catalog::fleshwrither()); // MV 4
+    g.clear_sickness(flesh);
+    let nek = g.add_card_to_library(0, catalog::nekrataal()); // MV 4
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 — must NOT match
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(nek))]));
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: flesh, ability_index: 0, target: None, x_value: None,
+    }).expect("Transfigure {1}{B}{B}, sac Fleshwrither");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == flesh), "Fleshwrither sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == nek), "same-MV creature put onto battlefield");
+}

@@ -9443,3 +9443,17 @@ pub fn mistcutter_hydra() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fleshwrither — {2}{B}{B} Creature — Horror 3/3. Transfigure {1}{B}{B}.
+pub fn fleshwrither() -> CardDefinition {
+    CardDefinition {
+        name: "Fleshwrither",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![crate::effect::shortcut::transfigure(cost(&[generic(1), b(), b()]))],
+        ..Default::default()
+    }
+}

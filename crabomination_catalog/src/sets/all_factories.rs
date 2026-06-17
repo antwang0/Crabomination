@@ -2826,6 +2826,7 @@ static MOD_SET: &[Factory] = &[
     super::mod_set::drana_liberator_of_malakir,
     super::mod_set::cryptbreaker,
     super::mod_set::mistcutter_hydra,
+    super::mod_set::fleshwrither,
     super::mod_set::path_to_exile,
     super::mod_set::reverberate,
     super::mod_set::fork,

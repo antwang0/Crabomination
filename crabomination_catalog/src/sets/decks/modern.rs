@@ -15327,8 +15327,6 @@ pub fn changeling_berserker() -> CardDefinition {
 /// Skyscribing — {X}{U}{U} Sorcery. "Each player draws X cards."
 /// Forecast — {2}{U}, Reveal from hand: each player draws a card. (CR 702.56)
 pub fn skyscribing() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    use crate::game::types::TurnStep;
     CardDefinition {
         name: "Skyscribing",
         cost: cost(&[x(), u(), u()]),
@@ -15337,20 +15335,13 @@ pub fn skyscribing() -> CardDefinition {
             who: Selector::Player(PlayerRef::EachPlayer),
             amount: Value::XFromCost,
         },
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(2), u()]),
-            from_hand: true,
-            once_per_turn: true,
-            condition: Some(Predicate::All(vec![
-                Predicate::IsTurnOf(PlayerRef::You),
-                Predicate::CurrentStepIs(TurnStep::Upkeep),
-            ])),
-            effect: Effect::Draw {
+        activated_abilities: vec![crate::effect::shortcut::forecast(
+            cost(&[generic(2), u()]),
+            Effect::Draw {
                 who: Selector::Player(PlayerRef::EachPlayer),
                 amount: Value::Const(1),
             },
-            ..Default::default()
-        }],
+        )],
         ..Default::default()
     }
 }
@@ -15391,9 +15382,7 @@ pub fn vodalian_illusionist() -> CardDefinition {
 /// controller's upkeep (`condition`), and once per turn (`once_per_turn`);
 /// the card stays in hand ("reveal").
 pub fn steeling_stance() -> CardDefinition {
-    use crate::card::ActivatedAbility;
     use crate::effect::shortcut::{each_your_creature, target_filtered};
-    use crate::game::types::TurnStep;
     CardDefinition {
         name: "Steeling Stance",
         cost: cost(&[generic(1), w(), w()]),
@@ -15404,22 +15393,15 @@ pub fn steeling_stance() -> CardDefinition {
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         },
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[w()]),
-            from_hand: true,
-            once_per_turn: true,
-            condition: Some(Predicate::All(vec![
-                Predicate::IsTurnOf(PlayerRef::You),
-                Predicate::CurrentStepIs(TurnStep::Upkeep),
-            ])),
-            effect: Effect::PumpPT {
+        activated_abilities: vec![crate::effect::shortcut::forecast(
+            cost(&[w()]),
+            Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(1),
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
-            ..Default::default()
-        }],
+        )],
         ..Default::default()
     }
 }
@@ -15506,9 +15488,7 @@ pub fn frenetic_efreet() -> CardDefinition {
 /// Piercing Rays — {1}{W} Sorcery. "Exile target tapped creature."
 /// Forecast — {2}{W}, Reveal from hand: tap target untapped creature. (CR 702.56)
 pub fn piercing_rays() -> CardDefinition {
-    use crate::card::ActivatedAbility;
     use crate::effect::shortcut::target_filtered;
-    use crate::game::types::TurnStep;
     CardDefinition {
         name: "Piercing Rays",
         cost: cost(&[generic(1), w()]),
@@ -15518,21 +15498,14 @@ pub fn piercing_rays() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
             ),
         },
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(2), w()]),
-            from_hand: true,
-            once_per_turn: true,
-            condition: Some(Predicate::All(vec![
-                Predicate::IsTurnOf(PlayerRef::You),
-                Predicate::CurrentStepIs(TurnStep::Upkeep),
-            ])),
-            effect: Effect::Tap {
+        activated_abilities: vec![crate::effect::shortcut::forecast(
+            cost(&[generic(2), w()]),
+            Effect::Tap {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::Untapped),
                 ),
             },
-            ..Default::default()
-        }],
+        )],
         ..Default::default()
     }
 }
