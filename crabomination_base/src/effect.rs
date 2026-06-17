@@ -2399,6 +2399,15 @@ pub enum Effect {
     /// `filter`); the per-target split is decided at resolution via
     /// `Decision::DivideDamage` (AutoDecider spreads as evenly as possible).
     DistributeCounters { total: Value, counter: CounterType, filter: SelectionRequirement, max_targets: u8 },
+    /// "Do X to each of up to N target permanents" (CR 115 — the generic
+    /// multi-target rider). Slots `0..max_targets` are optional targets
+    /// filtered by `filter`; at resolution `effect` runs once per supplied
+    /// target with `Selector::Target(0)` bound to that target. Powers
+    /// "return up to three target creatures" (Sea God's Scorn), "deal 1
+    /// damage to each of up to three target creatures" (Wrap in Flames),
+    /// "tap up to N target permanents", etc. The inner effect must address
+    /// its operand via `Selector::Target(0)`.
+    ApplyToTargets { max_targets: u8, filter: SelectionRequirement, effect: Box<Effect> },
     /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /

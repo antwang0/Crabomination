@@ -2504,3 +2504,46 @@ pub fn dreadful_apathy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sea God's Scorn — {3}{U} Instant. Costs {1} less for each enchantment you
+/// control. Return up to three target creatures to their owners' hands.
+pub fn sea_gods_scorn() -> CardDefinition {
+    CardDefinition {
+        name: "Sea God's Scorn",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        affinity_filter: Some(SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou)),
+        effect: Effect::ApplyToTargets {
+            max_targets: 3,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Wrap in Flames — {2}{R} Sorcery. Deals 1 damage to each of up to three
+/// target creatures. Those creatures can't block this turn.
+pub fn wrap_in_flames() -> CardDefinition {
+    CardDefinition {
+        name: "Wrap in Flames",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ApplyToTargets {
+            max_targets: 3,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::CantBlock,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}

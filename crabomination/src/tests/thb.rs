@@ -1839,3 +1839,78 @@ fn dreadful_apathy_exiles_enchanted() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "enchanted creature exiled");
 }
+
+/// Sea God's Scorn returns up to three target creatures to their owners' hands
+/// (ApplyToTargets multi-bounce), and the enchantment affinity reduces cost.
+#[test]
+fn sea_gods_scorn_bounces_up_to_three() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c3 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::sea_gods_scorn());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(c1)),
+        additional_targets: vec![Target::Permanent(c2), Target::Permanent(c3)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast {3}{U} bouncing three creatures");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(c1).is_none(), "first creature returned");
+    assert!(g.battlefield_find(c2).is_none(), "second creature returned");
+    assert!(g.battlefield_find(c3).is_none(), "third creature returned");
+    assert_eq!(g.players[1].hand.len(), 3, "all three back in owner's hand");
+}
+
+/// Sea God's Scorn affinity: each enchantment you control shaves {1} generic.
+#[test]
+fn sea_gods_scorn_affinity_reduces_cost() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dreadful_apathy());
+    g.add_card_to_battlefield(0, catalog::dreadful_apathy());
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::sea_gods_scorn());
+    // Two enchantments → {3} becomes {1}; pay {1}{U}.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(c1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast at the reduced {1}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(c1).is_none(), "creature returned");
+}
+
+/// Wrap in Flames deals 1 to each of up to three creatures and they can't block.
+#[test]
+fn wrap_in_flames_pings_and_locks_blocking() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::wrap_in_flames());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(c1)),
+        additional_targets: vec![Target::Permanent(c2)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast {2}{R}");
+    drain_stack(&mut g);
+    // 2/2 bears each take 1 damage (survive) and gain CantBlock.
+    let dmg = g.battlefield_find(c1).expect("bear survives").damage;
+    assert_eq!(dmg, 1, "took 1 damage");
+    let cp = g.computed_permanent(c1).expect("computed");
+    assert!(cp.keywords.contains(&crate::card::Keyword::CantBlock), "can't block this turn");
+}

@@ -1414,6 +1414,28 @@ impl GameState {
                 Ok(())
             }
 
+            // "Do X to each of up to N target permanents." Targets were
+            // collected into `ctx.targets` across slots `0..max_targets` at
+            // cast time; run the inner effect once per still-present target
+            // with `Selector::Target(0)` rebound to it.
+            Effect::ApplyToTargets { effect: inner, .. } => {
+                let targets: Vec<Target> = ctx
+                    .targets
+                    .iter()
+                    .filter(|t| match t {
+                        Target::Player(p) => *p < self.players.len(),
+                        Target::Permanent(id) => self.battlefield_find(*id).is_some(),
+                    })
+                    .cloned()
+                    .collect();
+                for t in targets {
+                    let mut sub = ctx.clone();
+                    sub.targets = vec![t];
+                    self.run_effect(inner, &sub, events)?;
+                }
+                Ok(())
+            }
+
             // CR 601.2d — distribute `total` counters among the chosen
             // targets. Mirrors `DealDamageDivided`: targets occupy slots
             // `0..max_targets`; the split is decided here (reusing the

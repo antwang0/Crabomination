@@ -7750,6 +7750,8 @@ static THB: &[Factory] = &[
     super::thb::final_flare,
     super::thb::iroass_blessing,
     super::thb::dreadful_apathy,
+    super::thb::sea_gods_scorn,
+    super::thb::wrap_in_flames,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

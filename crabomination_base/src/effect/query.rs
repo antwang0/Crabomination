@@ -247,6 +247,7 @@ impl Effect {
             Effect::DealDamageDivided { .. } => true,
             Effect::SupportCounters { .. } => true,
             Effect::DistributeCounters { .. } => true,
+            Effect::ApplyToTargets { .. } => true,
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
@@ -569,6 +570,7 @@ impl Effect {
             Effect::DealDamageDivided { filter, .. }
             | Effect::DistributeCounters { filter, .. }
             | Effect::DestroyTargetsPolymorph { filter }
+            | Effect::ApplyToTargets { filter, .. }
             | Effect::DestroyTargets { filter } => Some(filter),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
@@ -912,6 +914,9 @@ impl Effect {
                 Value::Const(n) => format!("distribute {n} {counter:?} counters among targets"),
                 _ => "distribute counters among targets".into(),
             },
+            Effect::ApplyToTargets { effect, .. } => {
+                format!("{} (each of up to N targets)", effect.effect_short_text())
+            }
             Effect::AddCounter { kind, amount, .. } => {
                 let t = self.target_phrase();
                 match amount {
@@ -1098,6 +1103,7 @@ impl Effect {
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.
             Effect::DealDamageDivided { filter, .. } => filter.can_match_player(),
+            Effect::ApplyToTargets { filter, .. } => filter.can_match_player(),
             // Support / distribute put counters on creatures only — never players.
             Effect::SupportCounters { .. } => false,
             Effect::DistributeCounters { .. } => false,
@@ -1352,6 +1358,9 @@ impl Effect {
                 Effect::SupportCounters { filter, max_targets } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
+                Effect::ApplyToTargets { filter, max_targets, .. } => {
+                    if slot < *max_targets { Some(filter) } else { None }
+                }
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
@@ -1536,6 +1545,7 @@ impl Effect {
         match self {
             Effect::DealDamageDivided { max_targets, .. }
             | Effect::SupportCounters { max_targets, .. }
+            | Effect::ApplyToTargets { max_targets, .. }
             | Effect::DistributeCounters { max_targets, .. } => Some(*max_targets),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
