@@ -159,6 +159,7 @@ static CHK: &[Factory] = &[
     super::chk::mystic_restraints,
     super::chk::hokori_dust_drinker,
     super::chk::throat_slitter,
+    super::chk::goblin_cohort,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

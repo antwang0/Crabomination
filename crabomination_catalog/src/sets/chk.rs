@@ -2128,6 +2128,21 @@ pub fn kami_of_the_painted_road() -> CardDefinition {
     }
 }
 
+/// Goblin Cohort — {R} Goblin Warrior 2/2. Can't attack unless you've cast a
+/// creature spell this turn.
+pub fn goblin_cohort() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Cohort",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Warrior]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::CantAttackUnlessCastCreatureThisTurn],
+        ..Default::default()
+    }
+}
+
 /// Rend Spirit — {2}{B} Instant. Destroy target Spirit.
 pub fn rend_spirit() -> CardDefinition {
     CardDefinition {

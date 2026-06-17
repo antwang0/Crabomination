@@ -193,11 +193,17 @@ impl GameState {
                     .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
                     .unwrap_or_else(|| card.definition.is_creature());
                 let kws = computed_kw(id);
+                // CR 508.1a — Goblin Cohort can't attack unless its controller
+                // cast a creature spell this turn.
+                let cohort_locked = kws
+                    .contains(&Keyword::CantAttackUnlessCastCreatureThisTurn)
+                    && self.players[p].creatures_cast_this_turn == 0;
                 let can_attack = is_creature_now
                     && !card.tapped
                     && card.detained_by.is_none()
                     && !kws.contains(&Keyword::Defender)
                     && !kws.contains(&Keyword::CantAttack)
+                    && !cohort_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
@@ -207,6 +213,7 @@ impl GameState {
                     if card.detained_by.is_some()
                         || kws.contains(&Keyword::Defender)
                         || kws.contains(&Keyword::CantAttack)
+                        || cohort_locked
                     {
                         return Err(GameError::CannotAttack(id));
                     }

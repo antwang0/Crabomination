@@ -147,7 +147,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::CanAttackOnlyIfYouControl(_)
         | Keyword::CantAttackOrBlockUnlessEvenCounters
-        | Keyword::AttacksAlone | Keyword::DealsNoCombatDamage
+        | Keyword::AttacksAlone | Keyword::CantAttackUnlessCastCreatureThisTurn
+        | Keyword::DealsNoCombatDamage
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
         | Keyword::CantBeCounteredIfXAtLeast(_)

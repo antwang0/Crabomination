@@ -2456,3 +2456,75 @@ fn cr_702_48_offering_requires_the_offered_creature_type() {
     });
     assert!(r.is_err(), "no Goblin → offering rejected");
 }
+
+// ── CR 508.1a — "can't attack unless you've cast a creature spell this turn" ──
+
+/// Goblin Cohort can't be declared as an attacker until its controller has
+/// cast a creature spell this turn; once one resolves, the lock lifts.
+#[test]
+fn cr_508_1a_goblin_cohort_gated_on_creature_cast() {
+    let mut g = two_player_game();
+    let cohort = g.add_card_to_battlefield(0, catalog::goblin_cohort());
+    g.clear_sickness(cohort);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // No creature cast this turn → declaration rejected.
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cohort, target: AttackTarget::Player(1),
+    }]));
+    assert!(matches!(err, Err(GameError::CannotAttack(_))), "locked before a creature cast");
+
+    // Pretend a creature spell resolved this turn, then it can attack.
+    g.players[0].creatures_cast_this_turn = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cohort, target: AttackTarget::Player(1),
+    }])).expect("attacks once a creature spell has been cast");
+    assert!(g.attacking().iter().any(|a| a.attacker == cohort), "Cohort attacking");
+}
+
+// ── CR 502.3 — Hokori: lands don't untap; one is freed at each upkeep ─────────
+
+/// Under Hokori the untap step leaves all lands tapped; the each-upkeep trigger
+/// untaps exactly one land the active player controls.
+#[test]
+fn cr_502_3_hokori_locks_lands_and_frees_one_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hokori_dust_drinker());
+    let l1 = g.add_card_to_battlefield(0, catalog::island());
+    let l2 = g.add_card_to_battlefield(0, catalog::island());
+    g.battlefield_find_mut(l1).unwrap().tapped = true;
+    g.battlefield_find_mut(l2).unwrap().tapped = true;
+    g.do_untap();
+    assert_eq!([l1, l2].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count(), 2,
+        "untap step frees no land under Hokori");
+    // Fire the each-player-upkeep trigger directly.
+    let trig = catalog::hokori_dust_drinker().triggered_abilities[0].effect.clone();
+    let hok = g.battlefield.iter().find(|c| c.definition.name == "Hokori, Dust Drinker").unwrap().id;
+    let ctx = crate::game::effects::EffectContext::for_trigger(hok, 0, None, 0);
+    g.active_player_idx = 0;
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!([l1, l2].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count(), 1,
+        "the upkeep trigger frees exactly one land");
+}
+
+// ── CR 603.2 — global "whenever a creature becomes the target" trigger ────────
+
+/// Horobi fires its global became-the-target trigger for an opponent's creature
+/// too (not just its own), destroying it (CR 603.2 + AnyPlayer scope).
+#[test]
+fn cr_603_2_horobi_fires_for_any_creature_targeted() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::horobi_deaths_wail()); // opponent's Horobi
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // I target my own creature with a pump; Horobi still destroys it.
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("pump my own bear");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(mine).is_none(), "Horobi destroyed the targeted creature");
+}

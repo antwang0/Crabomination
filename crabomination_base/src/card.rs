@@ -646,6 +646,11 @@ pub enum Keyword {
     /// a batch that declares this creature alongside any other attacker is
     /// rejected.
     AttacksAlone,
+    /// CR 508.1a restriction — "This creature can't attack unless you've cast
+    /// a creature spell this turn" (Goblin Cohort, Goblin War Strike-era
+    /// aggro). Enforced in `declare_attackers` against the controller's
+    /// `creatures_cast_this_turn` tally.
+    CantAttackUnlessCastCreatureThisTurn,
     /// "This creature assigns no combat damage this turn" (Master of
     /// Cruelties' attack rider). A marker keyword — typically granted with
     /// `Duration::EndOfTurn` by a trigger — that `combat.rs` checks off the
