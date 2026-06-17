@@ -2110,6 +2110,8 @@ static EOE: &[Factory] = &[
     super::eoe::greenbelt_guardian,
     super::eoe::pacesetter_paragon,
     super::eoe::keen_buccaneer,
+    super::eoe::skystreak_engineer,
+    super::eoe::mai_jaded_edge,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,
@@ -7688,6 +7690,9 @@ static SHM: &[Factory] = &[
     super::shm::gleeful_sabotage,
     super::shm::ghastly_discovery,
     super::shm::disturbing_plot,
+    super::shm::mine_excavation,
+    super::shm::rally_the_galadhrim,
+    super::shm::aethertow,
 ];
 static TMP: &[Factory] = &[
     super::tmp::reanimate,

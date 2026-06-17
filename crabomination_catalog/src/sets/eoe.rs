@@ -193,3 +193,52 @@ pub fn keen_buccaneer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Skystreak Engineer — {1}{U} 1/3 Human Pilot. Flying. "Exhaust — {4}{U}:
+/// Put two +1/+1 counters on this creature."
+pub fn skystreak_engineer() -> CardDefinition {
+    CardDefinition {
+        name: "Skystreak Engineer",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![exhaust_self_counters(cost(&[generic(4), u()]), 2)],
+        ..Default::default()
+    }
+}
+
+/// Mai, Jaded Edge — {1}{R} 1/3 Legendary Human Noble. Prowess. "Exhaust —
+/// {3}: Put a double strike counter on Mai."
+pub fn mai_jaded_edge() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Mai, Jaded Edge",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Prowess],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            exhaust: true,
+            effect: Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::DoubleStrike,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

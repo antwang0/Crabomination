@@ -2348,3 +2348,35 @@ fn conspire_barkshell_blessing_pumps_twice() {
     let t = g.computed_permanent(target).unwrap();
     assert_eq!((t.power, t.toughness), (6, 6), "pumped by original + copy");
 }
+
+/// Skystreak Engineer's exhaust adds two +1/+1 counters (1/3 → 3/5), once.
+#[test]
+fn cr_702_177_skystreak_engineer_exhaust() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::skystreak_engineer());
+    g.clear_sickness(s);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(s).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 5));
+}
+
+/// Mai, Jaded Edge's exhaust puts a double-strike counter on her.
+#[test]
+fn cr_702_177_mai_jaded_edge_double_strike_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::mai_jaded_edge());
+    g.clear_sickness(m);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 0, target: None, x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(m).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "gained a double strike counter");
+}

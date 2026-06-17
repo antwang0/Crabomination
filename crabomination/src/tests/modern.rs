@@ -56773,3 +56773,64 @@ fn conspire_disturbing_plot_returns_creature() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
 }
+
+/// Mine Excavation returns an artifact card from a graveyard to its owner's
+/// hand (conspired; copy redundant).
+#[test]
+fn conspire_mine_excavation_returns_artifact() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::ornithopter());
+    let id = g.add_card_to_hand(0, catalog::mine_excavation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let b0 = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    let b1 = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [b0, b1],
+        target: Some(Target::Permanent(dead)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Mine Excavation");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "artifact returned to hand");
+}
+
+/// Rally the Galadhrim makes a token copy of a creature you control; conspired,
+/// it makes two copies.
+#[test]
+fn conspire_rally_the_galadhrim_makes_two_copies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::rally_the_galadhrim());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let orig = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Green/blue conspirers sharing a color with the {2}{G}{U} spell.
+    let b0 = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let b1 = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [b0, b1],
+        target: Some(Target::Permanent(orig)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Rally");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Grizzly Bears").count();
+    assert_eq!(copies, 2, "original cast + conspire copy = two token copies");
+}
+
+/// Aethertow puts an attacking creature on top of its owner's library.
+#[test]
+fn aethertow_bounces_attacker_to_library_top() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    let id = g.add_card_to_hand(0, catalog::aethertow());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(attacker)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Aethertow");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "attacker left the battlefield");
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(attacker),
+        "put on top of its owner's library");
+}

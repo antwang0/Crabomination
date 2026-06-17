@@ -5,8 +5,8 @@
 
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
 use crate::effect::shortcut::{deal, pump_target, target, target_filtered};
-use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, g, generic, hybrid, r, u, Color};
+use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
+use crate::mana::{cost, g, generic, hybrid, r, u, w, Color};
 
 /// Burn Trail — {3}{R} Sorcery. "Burn Trail deals 3 damage to any target.
 /// Conspire."
@@ -94,6 +94,65 @@ pub fn disturbing_plot() -> CardDefinition {
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
+        ..Default::default()
+    }
+}
+
+/// Mine Excavation — {1}{W} Sorcery. "Return target artifact or enchantment
+/// card from a graveyard to its owner's hand. Conspire."
+pub fn mine_excavation() -> CardDefinition {
+    CardDefinition {
+        name: "Mine Excavation",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Conspire],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Artifact)
+                    .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
+        ..Default::default()
+    }
+}
+
+/// Rally the Galadhrim — {2}{G}{U} Sorcery. "Create a token that's a copy of
+/// target creature you control. Conspire."
+pub fn rally_the_galadhrim() -> CardDefinition {
+    CardDefinition {
+        name: "Rally the Galadhrim",
+        cost: cost(&[generic(2), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Conspire],
+        effect: Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            extra_creature_types: vec![],
+            override_pt: None,
+            non_legendary: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Aethertow — {3}{W/U} Instant. "Put target attacking or blocking creature on
+/// top of its owner's library. Conspire."
+pub fn aethertow() -> CardDefinition {
+    CardDefinition {
+        name: "Aethertow",
+        cost: cost(&[generic(3), hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Conspire],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+            ),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
         },
         ..Default::default()
     }
