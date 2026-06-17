@@ -1986,38 +1986,74 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         }
     }
 
-    // CR 509.1b — a Menace attacker can't be blocked except by two or more
-    // creatures. The greedy passes above assign one blocker at a time, so a
-    // lone block on a Menace attacker is illegal and the engine would reject
-    // the whole declaration. For each Menace attacker with exactly one
-    // assigned blocker, pull in a second legal idle blocker; if none is
-    // available, drop the lone block (better unblocked than illegal).
+    // CR 509.1b / 702.110b — Menace (≥2 blockers) and "can't be blocked
+    // except by N or more creatures" (CantBeBlockedExceptByN — Pathrazer of
+    // Ulamog) impose a minimum block count: an attacker so keyworded must be
+    // blocked by 0 or ≥N, never 1..N-1. The greedy passes assign one at a
+    // time, so an under-filled multi-block is illegal and the engine rejects
+    // the whole declaration. For each such attacker, top the block up to the
+    // minimum with legal idle blockers; if the minimum can't be reached,
+    // drop every block on it (better unblocked than an illegal batch).
     for (a_id, _a_pow, _a_tough, a_flying, _a_dt) in &attacker_info {
-        let is_menace = state
+        let min_blockers = state
             .battlefield
             .iter()
             .find(|c| c.id == *a_id)
-            .is_some_and(|a| a.has_keyword(&Keyword::Menace));
-        if !is_menace {
+            .map(min_blockers_required)
+            .unwrap_or(1);
+        if min_blockers <= 1 {
             continue;
         }
-        if assignments.iter().filter(|(_, aid)| aid == a_id).count() != 1 {
+        let mut count = assignments.iter().filter(|(_, aid)| aid == a_id).count();
+        if count == 0 || count >= min_blockers {
             continue;
         }
-        let second = state.battlefield.iter().find(|c| {
-            c.controller == seat
-                && c.can_block()
-                && !assignments.iter().any(|(bid, _)| *bid == c.id)
-                && (!a_flying
-                    || c.has_keyword(&Keyword::Flying)
-                    || c.has_keyword(&Keyword::Reach))
-        });
-        match second {
-            Some(c) => assignments.push((c.id, *a_id)),
-            None => assignments.retain(|(_, aid)| aid != a_id),
+        while count < min_blockers {
+            let extra = state.battlefield.iter().find(|c| {
+                c.controller == seat
+                    && c.can_block()
+                    && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                    && (!a_flying
+                        || c.has_keyword(&Keyword::Flying)
+                        || c.has_keyword(&Keyword::Reach))
+                    && state.blocker_can_block_attacker(c.id, *a_id)
+            });
+            match extra {
+                Some(c) => {
+                    assignments.push((c.id, *a_id));
+                    count += 1;
+                }
+                // Can't reach the minimum — drop all blocks on this attacker.
+                None => {
+                    assignments.retain(|(_, aid)| aid != a_id);
+                    break;
+                }
+            }
         }
     }
     assignments
+}
+
+/// Minimum number of creatures legally required to block `attacker` (CR
+/// 509.1b): 2 for Menace, N for `CantBeBlockedExceptByN(N)`, the max of any
+/// such requirement, else 1. Reads printed + EOT-granted keywords (the same
+/// set [`CardInstance::has_keyword`] consults).
+fn min_blockers_required(attacker: &crate::card::CardInstance) -> usize {
+    use crate::card::Keyword;
+    let mut min = 1usize;
+    for kw in attacker
+        .definition
+        .keywords
+        .iter()
+        .chain(attacker.granted_keywords_eot.iter())
+    {
+        match kw {
+            Keyword::Menace => min = min.max(2),
+            Keyword::CantBeBlockedExceptByN(n) => min = min.max(*n as usize),
+            _ => {}
+        }
+    }
+    min
 }
 
 /// Find an untapped, non-land permanent the bot controls whose first
@@ -2932,6 +2968,69 @@ mod tests {
         g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
         let blocks = pick_blocks_for_test(&g, 1);
         assert!(!blocks.iter().any(|(b, _)| *b == zombie), "decayed creature is never declared as a blocker");
+    }
+
+    /// CR 509.1b — facing a "can't be blocked except by three or more" lethal
+    /// attacker, the bot either commits ≥3 blockers or none. With exactly three
+    /// idle bodies and lethal incoming, it gangs all three (never an illegal
+    /// 1–2 block).
+    #[test]
+    fn bot_meets_min_block_count_for_cant_be_blocked_except_by_n() {
+        use crate::card::{CardDefinition, CardType, Keyword};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Ulamog Spawn",
+            card_types: vec![CardType::Creature],
+            power: 6,
+            toughness: 6,
+            keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+            ..Default::default()
+        });
+        let chumps: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(1, CardDefinition {
+            name: "Chump",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        })).collect();
+        g.players[1].life = 1; // lethal incoming
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        let on_atk = blocks.iter().filter(|(_, a)| *a == atk).count();
+        assert_eq!(on_atk, 3, "gangs all three to satisfy the 3-blocker minimum");
+        assert!(chumps.iter().all(|c| blocks.iter().any(|(b, _)| b == c)));
+    }
+
+    /// With only two bodies against the same "≥3 blockers" attacker, the bot
+    /// drops the block entirely rather than submit an illegal 2-creature batch.
+    #[test]
+    fn bot_drops_block_when_min_count_unreachable() {
+        use crate::card::{CardDefinition, CardType, Keyword};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Ulamog Spawn",
+            card_types: vec![CardType::Creature],
+            power: 6,
+            toughness: 6,
+            keywords: vec![Keyword::CantBeBlockedExceptByN(3)],
+            ..Default::default()
+        });
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, CardDefinition {
+                name: "Chump",
+                card_types: vec![CardType::Creature],
+                power: 1,
+                toughness: 1,
+                ..Default::default()
+            });
+        }
+        g.players[1].life = 1;
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks.iter().filter(|(_, a)| *a == atk).count(), 0,
+            "two blockers can't legally block a ≥3 attacker — declares none");
     }
 
     /// CR 702.16e — the bot treats a block by a protection-from-the-attacker's

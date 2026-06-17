@@ -1705,18 +1705,6 @@ fn human_soldier_token() -> TokenDefinition {
     }
 }
 
-fn wolf_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Wolf".into(),
-        power: 2,
-        toughness: 2,
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
-        ..Default::default()
-    }
-}
-
 /// `{cost}, Sacrifice this enchantment: Scry 2.` — the shared Omen-cycle ability.
 fn omen_sac_scry(mana: crate::mana::ManaCost) -> ActivatedAbility {
     ActivatedAbility {

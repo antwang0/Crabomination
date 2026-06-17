@@ -74,6 +74,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantBlock => "NoBlk",
         Decayed => "Dcy",
         Flanking => "Flk",
+        // Generalized menace — "can't be blocked except by N or more."
+        CantBeBlockedExceptByN(_) => "Men+",
+        MustBeBlocked => "Lure",
         _ => return None,
     })
 }
@@ -221,5 +224,11 @@ mod tests {
     fn strip_skips_non_displayable_keywords() {
         // Flash isn't a board-glance combat status → no badge.
         assert_eq!(keyword_strip(&[Keyword::Flash]), "");
+    }
+
+    #[test]
+    fn strip_surfaces_generalized_menace_and_lure() {
+        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedExceptByN(3)]), "Men+");
+        assert_eq!(keyword_strip(&[Keyword::MustBeBlocked]), "Lure");
     }
 }
