@@ -2355,3 +2355,36 @@ fn jushi_apprentice_flips_at_nine_cards() {
     let tom = g.battlefield_find(jushi).unwrap();
     assert!(tom.flipped && tom.definition.name == "Tomoya the Revealer", "flipped at 9 cards");
 }
+
+/// Orochi Eggwatcher mints Snakes and flips into Shidako at ten+ creatures;
+/// Shidako sacrifices a creature to pump another +3/+3.
+#[test]
+fn orochi_eggwatcher_flips_to_shidako_at_ten_creatures() {
+    let mut g = two_player_game();
+    let orochi = g.add_card_to_battlefield(0, catalog::orochi_eggwatcher());
+    // Nine other creatures → activating mints the tenth and flips.
+    for _ in 0..9 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    g.clear_sickness(orochi);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: orochi, ability_index: 0, target: None, x_value: None,
+    }).expect("mint snake");
+    drain_stack(&mut g);
+    let shidako = g.battlefield_find(orochi).unwrap();
+    assert!(shidako.flipped && shidako.definition.name == "Shidako, Broodmistress", "flipped at ten creatures");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Snake"), "Snake token minted");
+    // Shidako: {G}, Sacrifice a creature: target gets +3/+3.
+    let bear = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").unwrap().id;
+    g.battlefield_find_mut(orochi).unwrap().tapped = false;
+    g.clear_sickness(orochi);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: orochi, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Shidako pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3 applied");
+}

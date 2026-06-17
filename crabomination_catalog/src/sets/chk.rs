@@ -3535,6 +3535,71 @@ pub fn cunning_bandit() -> CardDefinition {
     }
 }
 
+/// Orochi Eggwatcher // Shidako, Broodmistress — {2}{G} Snake Shaman 1/1.
+/// "{2}{G}, {T}: Create a 1/1 green Snake. If you control ten or more
+/// creatures, flip this creature." Shidako: "{G}, Sacrifice a creature: Target
+/// creature gets +3/+3 until end of turn."
+pub fn orochi_eggwatcher() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::Predicate;
+    use crate::mana::Color;
+    let shidako = CardDefinition {
+        name: "Shidako, Broodmistress",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Shaman]),
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let snake = TokenDefinition {
+        name: "Snake".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: spirit(vec![CreatureType::Snake]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Orochi Eggwatcher",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Shaman]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: snake },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CreatureCountControlledBy(PlayerRef::You),
+                        Value::Const(10),
+                    ),
+                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        flip_face: Some(Box::new(shidako)),
+        ..Default::default()
+    }
+}
+
 /// Callow Jushi // Jaraku the Interloper — {1}{U}{U} Human Wizard 2/2.
 /// Ki-counter flip card; flips into Jaraku, a 3/4 Legendary Spirit whose
 /// "Remove a ki counter: Counter target spell unless its controller pays {2}."

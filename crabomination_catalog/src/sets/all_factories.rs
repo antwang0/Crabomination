@@ -225,6 +225,7 @@ static CHK: &[Factory] = &[
     super::chk::akki_lavarunner,
     super::chk::callow_jushi,
     super::chk::jushi_apprentice,
+    super::chk::orochi_eggwatcher,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,
