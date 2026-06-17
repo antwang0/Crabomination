@@ -192,6 +192,11 @@ static CHK: &[Factory] = &[
     super::chk::rag_dealer,
     super::chk::mistblade_shinobi,
     super::chk::skullsnatcher,
+    super::chk::terashis_cry,
+    super::chk::samurai_enforcers,
+    super::chk::hold_the_line,
+    super::chk::reciprocate,
+    super::chk::otherworldly_journey,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

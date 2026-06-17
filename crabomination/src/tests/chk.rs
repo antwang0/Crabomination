@@ -1716,3 +1716,73 @@ fn skullsnatcher_exiles_gy_on_combat_damage() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == gy), "graveyard card exiled on combat damage");
 }
+
+/// Terashi's Cry taps up to three target creatures (ApplyToTargets).
+#[test]
+fn terashis_cry_taps_up_to_three() {
+    let mut g = two_player_game();
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c3 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::terashis_cry());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(c1)),
+        additional_targets: vec![Target::Permanent(c2), Target::Permanent(c3)],
+        mode: None, x_value: None,
+    }).expect("cast Terashi's Cry");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(c1).unwrap().tapped
+        && g.battlefield_find(c2).unwrap().tapped
+        && g.battlefield_find(c3).unwrap().tapped, "all three tapped");
+}
+
+/// Samurai Enforcers is a 4/4 with Bushido 2.
+#[test]
+fn samurai_enforcers_bushido_2() {
+    let d = catalog::samurai_enforcers();
+    assert_eq!((d.power, d.toughness), (4, 4));
+    assert!(d.keywords.contains(&Keyword::Bushido(2)));
+}
+
+/// Reciprocate exiles a creature that dealt damage to you this turn.
+#[test]
+fn reciprocate_exiles_attacker_that_hit_you() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Mark the attacker as having dealt damage to seat 0 this turn.
+    g.players[0].creatures_that_damaged_me_this_turn.push(attacker);
+    let spell = g.add_card_to_hand(0, catalog::reciprocate());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(attacker)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reciprocate");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == attacker), "attacker exiled");
+}
+
+/// Otherworldly Journey exiles a creature and returns it at the next end step
+/// with a +1/+1 counter.
+#[test]
+fn otherworldly_journey_blinks_with_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::otherworldly_journey());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Otherworldly Journey");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature exiled");
+    advance_to(&mut g, crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears");
+    assert!(back.is_some_and(|c| c.counter_count(CounterType::PlusOnePlusOne) == 1),
+        "returned with a +1/+1 counter");
+}

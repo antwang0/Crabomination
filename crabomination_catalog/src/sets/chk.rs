@@ -2927,3 +2927,82 @@ pub fn skullsnatcher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Terashi's Cry — {3}{W} Sorcery — Arcane. Tap up to three target creatures.
+pub fn terashis_cry() -> CardDefinition {
+    CardDefinition {
+        name: "Terashi's Cry",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::ApplyToTargets {
+            max_targets: 3,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Samurai Enforcers — {4}{W}{W} Human Samurai 4/4. Bushido 2.
+pub fn samurai_enforcers() -> CardDefinition {
+    CardDefinition {
+        name: "Samurai Enforcers",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Bushido(2)],
+        ..Default::default()
+    }
+}
+
+/// Hold the Line — {1}{W}{W} Instant. Blocking creatures get +7/+7 until EOT.
+pub fn hold_the_line() -> CardDefinition {
+    CardDefinition {
+        name: "Hold the Line",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(SelectionRequirement::IsBlocking),
+            power: Value::Const(7),
+            toughness: Value::Const(7),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Reciprocate — {W} Instant. Exile target creature that dealt damage to you
+/// this turn.
+pub fn reciprocate() -> CardDefinition {
+    CardDefinition {
+        name: "Reciprocate",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::DealtDamageToControllerThisTurn),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Otherworldly Journey — {1}{W} Instant — Arcane. Exile target creature; at the
+/// next end step return it to the battlefield under its owner's control with a
+/// +1/+1 counter.
+pub fn otherworldly_journey() -> CardDefinition {
+    CardDefinition {
+        name: "Otherworldly Journey",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::ExileReturnNextEndStep {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}
