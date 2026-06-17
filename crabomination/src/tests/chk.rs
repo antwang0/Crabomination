@@ -199,6 +199,22 @@ fn patron_of_the_orochi_untaps_forests_and_green() {
     assert!(!g.battlefield_find(bear).unwrap().tapped, "green creature untapped");
 }
 
+/// Orochi Ranger's combat-damage trigger taps the damaged creature and stops
+/// its next untap (`Effect::SkipNextUntap`).
+#[test]
+fn orochi_ranger_tap_lock_trigger() {
+    let mut g = two_player_game();
+    let ranger = g.add_card_to_battlefield(0, catalog::orochi_ranger());
+    let wall = g.add_card_to_battlefield(1, catalog::kami_of_old_stone());
+    let trig = catalog::orochi_ranger().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        ranger, 0, Some(Target::Permanent(wall)), 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let w = g.battlefield_find(wall).unwrap();
+    assert!(w.tapped, "damaged creature tapped");
+    assert!(w.skip_next_untap, "and it won't untap next turn");
+}
+
 /// Hideous Laughter shrinks every creature -2/-2, killing the small ones.
 #[test]
 fn hideous_laughter_wraths_small_creatures() {

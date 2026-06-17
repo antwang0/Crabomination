@@ -99,6 +99,8 @@ static CHK: &[Factory] = &[
     super::chk::hideous_laughter,
     super::chk::yamabushis_storm,
     super::chk::vigilance_aura,
+    super::chk::orochi_ranger,
+    super::chk::kashi_tribe_reaver,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

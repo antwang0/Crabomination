@@ -837,6 +837,53 @@ pub fn vigilance_aura() -> CardDefinition {
     }
 }
 
+/// Shared "deals combat damage to a creature → tap it and it doesn't untap
+/// next turn" trigger (the Orochi/Matsu snake-tribe ability).
+fn snake_tap_lock() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: Selector::Target(0) },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
+        ]),
+    }
+}
+
+/// Orochi Ranger — {1}{G} Snake Warrior Ranger 2/1. Combat damage to a
+/// creature taps it and it doesn't untap during its controller's next untap.
+pub fn orochi_ranger() -> CardDefinition {
+    CardDefinition {
+        name: "Orochi Ranger",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior, CreatureType::Ranger]),
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![snake_tap_lock()],
+        ..Default::default()
+    }
+}
+
+/// Kashi-Tribe Reaver — {3}{G} Snake Warrior 3/2. The snake tap-lock; {1}{G}:
+/// Regenerate this creature.
+pub fn kashi_tribe_reaver() -> CardDefinition {
+    CardDefinition {
+        name: "Kashi-Tribe Reaver",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior]),
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![snake_tap_lock()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Eiganjo Castle — {T}: Add {W}. {2}{W}: Prevent the next 2 damage to a
 /// legendary creature this turn. (Mana half only — the prevention targets a
 /// legendary creature.)

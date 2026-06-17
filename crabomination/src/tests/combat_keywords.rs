@@ -1266,3 +1266,4 @@ fn cr_509_1d_block_tax_auto_taps_lands() {
         .expect("auto-tap covers the block tax");
     assert!(g.battlefield_find(land).unwrap().tapped, "Plains tapped for the {{1}}");
 }
+
