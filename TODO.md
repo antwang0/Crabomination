@@ -100,6 +100,14 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 ## Follow-ups noticed (not yet done)
 
 - ⏳ **CHK cards/primitives deferred:**
+  - `Effect::ApplyToTargets` now does "do X to each of up to N targets" — Yosei's
+    "tap up to five target permanents that player controls" could be remodeled
+    on it (filter `ControlledBy(targetPlayer)`), as could other "up to N" cards
+    across sets (Frost Breath, Aether Tradewinds-style multi-bounce, etc.).
+  - Reveal-top-card-if-land conditional bonus (the CHK Deceiver cycle: Brutal /
+    Cruel / Feral / Harsh Deceiver) needs a "reveal top, if land then [effect]"
+    primitive.
+  - Pious Kitsune / Eight-and-a-Half-Tails devotion-counter conditional payoff.
   - Yosei taps **up to five** target permanents (modeled as tapping all of the
     target player's board); a true "up to N target permanents that player
     controls" clause needs the Tier-2 "up to N targets" work.
