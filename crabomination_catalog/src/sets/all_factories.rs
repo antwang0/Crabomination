@@ -132,6 +132,12 @@ static CHK: &[Factory] = &[
     super::chk::soulless_revival,
     super::chk::burr_grafter,
     super::chk::crack_the_earth,
+    super::chk::akki_underminer,
+    super::chk::ronin_cliffrider,
+    super::chk::akki_avalanchers,
+    super::chk::frost_ogre,
+    super::chk::blind_with_anger,
+    super::chk::veterans_reflexes,
 ];
 static DECKS: &[Factory] = &[
     super::decks::callous_sell_sword,

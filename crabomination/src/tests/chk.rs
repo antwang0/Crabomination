@@ -749,3 +749,84 @@ fn vine_kami_menace_soulshift() {
     assert!(d.keywords.contains(&Keyword::Menace));
     assert!(!d.triggered_abilities.is_empty(), "carries Soulshift");
 }
+
+// ── CHK batch 4 ──────────────────────────────────────────────────────────────
+
+/// Akki Underminer's combat damage makes the defending player sacrifice.
+#[test]
+fn akki_underminer_forces_sacrifice() {
+    let mut g = two_player_game();
+    let akki = g.add_card_to_battlefield(0, catalog::akki_underminer());
+    g.add_card_to_battlefield(1, catalog::island());
+    let trig = catalog::akki_underminer().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(akki, 0, Some(Target::Player(1)), 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 0,
+        "defending player sacrificed their permanent");
+}
+
+/// Ronin Cliffrider's attack trigger pings each defending creature for 1.
+#[test]
+fn ronin_cliffrider_pings_defenders() {
+    let mut g = two_player_game();
+    let ronin = g.add_card_to_battlefield(0, catalog::ronin_cliffrider());
+    let x = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    let y = g.add_card_to_battlefield(1, catalog::frostling()); // 1/1
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let trig = catalog::ronin_cliffrider().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(ronin, 0, Some(Target::Player(1)), 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(x).is_none() && g.battlefield_find(y).is_none(),
+        "both defending 1/1s took 1 and died");
+}
+
+/// Akki Avalanchers sacrifices a land to pump itself +2/+0.
+#[test]
+fn akki_avalanchers_sacs_land_to_pump() {
+    let mut g = two_player_game();
+    let akki = g.add_card_to_battlefield(0, catalog::akki_avalanchers());
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    g.clear_sickness(akki);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: akki, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Avalanchers");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land sacrificed");
+    assert_eq!(g.computed_permanent(akki).unwrap().power, 3, "+2/+0 → 3 power");
+}
+
+/// Blind with Anger steals a nonlegendary creature for the turn (untap + haste).
+#[test]
+fn blind_with_anger_steals_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::blind_with_anger());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.controller, 0, "gained control");
+    assert!(!c.tapped, "untapped");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "has haste");
+}
+
+/// Veteran's Reflexes pumps and untaps a creature.
+#[test]
+fn veterans_reflexes_pumps_and_untaps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::veterans_reflexes());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(!c.tapped, "untapped");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 → 3 power");
+}

@@ -1655,3 +1655,142 @@ pub fn crack_the_earth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── CHK batch 4 (red/goblin + threaten) ──────────────────────────────────────
+
+/// Akki Underminer — {3}{R} Goblin Rogue Shaman 1/1. Whenever it deals combat
+/// damage to a player, that player sacrifices a permanent of their choice.
+pub fn akki_underminer() -> CardDefinition {
+    CardDefinition {
+        name: "Akki Underminer",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Rogue, CreatureType::Shaman]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::DefendingPlayer),
+                count: Value::ONE,
+                filter: SelectionRequirement::Permanent,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ronin Cliffrider — {3}{R}{R} Human Samurai 2/2. Bushido 1; whenever it
+/// attacks, you may have it deal 1 damage to each creature the defending player
+/// controls.
+pub fn ronin_cliffrider() -> CardDefinition {
+    CardDefinition {
+        name: "Ronin Cliffrider",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Bushido(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Deal 1 damage to each creature the defending player controls".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::ControlledBy {
+                        who: PlayerRef::DefendingPlayer,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Akki Avalanchers — {R} Goblin Warrior 1/1. Sacrifice a land: This creature
+/// gets +2/+0 until end of turn. Activate only once each turn.
+pub fn akki_avalanchers() -> CardDefinition {
+    CardDefinition {
+        name: "Akki Avalanchers",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Warrior]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Frost Ogre — {3}{R}{R} Ogre Warrior 5/3 (vanilla).
+pub fn frost_ogre() -> CardDefinition {
+    CardDefinition {
+        name: "Frost Ogre",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Warrior]),
+        power: 5,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Blind with Anger — {3}{R} Instant — Arcane. Untap target nonlegendary
+/// creature and gain control of it until end of turn; it gains haste.
+pub fn blind_with_anger() -> CardDefinition {
+    CardDefinition {
+        name: "Blind with Anger",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasSupertype(Supertype::Legendary).negate()),
+                ),
+                to: Some(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Veteran's Reflexes — {W} Instant. Target creature gets +1/+1 until end of
+/// turn. Untap that creature.
+pub fn veterans_reflexes() -> CardDefinition {
+    CardDefinition {
+        name: "Veteran's Reflexes",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+        ]),
+        ..Default::default()
+    }
+}
