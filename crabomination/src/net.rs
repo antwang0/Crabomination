@@ -324,6 +324,11 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub replicatable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with Conspire they could cast right now
+    /// while controlling two untapped creatures sharing a color (CR 702.79).
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub conspirable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Multikicker they could cast paying
     /// the kicker cost at least once (CR 702.33c). `#[serde(default)]` for
     /// snapshot back-compat.

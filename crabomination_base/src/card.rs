@@ -702,6 +702,12 @@ pub enum Keyword {
     /// copied once per payment (copies may choose new targets). Cast via
     /// `GameAction::CastSpellReplicate`.
     Replicate(crate::mana::ManaCost),
+    /// CR 702.79 — Conspire. An optional additional cast cost on an
+    /// instant/sorcery: as you cast it, you may tap two untapped creatures you
+    /// control that each share a color with the spell. Doing so copies the
+    /// spell once (the copy may choose new targets). Cast via
+    /// `GameAction::CastSpellConspire`.
+    Conspire,
     /// "This creature can't attack or block unless it has an even number of
     /// counters on it." (Zero is even.) Enforced in `declare_attackers` and
     /// `declare_blockers` (and the bot/legal-attacker gates) by reading the

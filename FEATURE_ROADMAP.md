@@ -138,7 +138,7 @@ Each unblocks a large swath of cards.
 - ✅ **Leveler cards** (702.87 — `level_bands`; Student of Warfare).
 - ✅ **Transforming DFCs** (712) — `Effect::Transform` toggles the active face in
   place, round-trips through serde/snapshot (Delver, Concealing Curtains).
-  Remaining: Daybound/Nightbound auto-flip, DFC sagas.
+  Remaining: DFC sagas.
 - ✅ **Meld** (701.37) — `Effect::Meld` + `meld_parts`, unmelds on leave (Urza +
   Mightstone/Weakstone → Urza, Planeswalker).
 - ⏳ **Flip cards** (Kamigawa), **Prototype**, **Omen**.
@@ -155,8 +155,8 @@ Each a small targeted feature; sweep batch by batch.
 
 - **High frequency / modern staples:** ✅ Madness, ✅ Escape, ✅ Adventure,
   ✅ Soulbond, ⏳ Mutate, 🟡 Companion ({3} sideboard→hand; deck validation ⏳),
-  ✅ Foretell, ✅ Disturb, ⏳ Daybound/Nightbound (keywords + day/night ship;
-  auto-flip is the gap), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,
+  ✅ Foretell, ✅ Disturb, ✅ Daybound/Nightbound (keywords + day/night +
+  502.2 transition + DFC auto-flip), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,
   ✅ Backup, ✅ Bargain, ⏳ Craft, ✅ Disguise/Cloak, ✅ Plot, ✅ Saddle,
   ⏳ Gift, ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize.
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
@@ -173,12 +173,12 @@ Each a small targeted feature; sweep batch by batch.
 - **Leaves-battlefield LKI:** ✅ 603.10 — `Value::PowerOf`/`ToughnessOf` read a
   dying object's last-known P/T (Goldvein Hydra, Cacophony Scamp).
 - **Spell-matters:** ✅ Escalate, Splice, Replicate, Cipher, Surge, Spectacle,
-  Addendum, Demonstrate; Overload ships as an alt-cost. ⏳ Conspire.
+  Addendum, Demonstrate, Conspire; Overload ships as an alt-cost.
 - **Resource systems:** ✅ Energy ({E} pool + HUD chip; Kaladesh set; energy-gated
   mana abilities); ⏳ Experience counters → actually **✅** (`CounterType::
   Experience`); ✅ Poison/Toxic, Devotion, Ascend/city's blessing; ✅ Monarch;
-  🟡 Day/Night (502.2 turn-based transition wired; Daybound/Nightbound transform
-  ⏳); ⏳ Ring-bearer.
+  ✅ Day/Night (502.2 turn-based transition + Daybound/Nightbound DFC auto-flip);
+  ⏳ Ring-bearer.
 - **Fading family:** ✅ Fading, Vanishing (`process_fading_vanishing`). Remaining:
   Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,

@@ -278,6 +278,19 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.79 — cast a spell paying its optional Conspire cost: tap two
+    /// untapped, unsummoning-sick-irrelevant creatures you control that each
+    /// share a color with the spell. Doing so copies the spell once (the copy
+    /// may choose new targets).
+    CastSpellConspire {
+        card_id: CardId,
+        conspire_creatures: [CardId; 2],
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.170 — Plot a card from hand: pay its plot cost and exile it
     /// face-up. Special action, main phase + empty stack only.
     Plot { card_id: CardId },
@@ -901,6 +914,7 @@ impl GameAction {
                 | A::CastSpellSacrificeReduce { .. }
                 | A::CastSpellSquad { .. }
                 | A::CastSpellReplicate { .. }
+                | A::CastSpellConspire { .. }
                 | A::CastPlotted { .. }
                 | A::CastSpellBack { .. }
                 | A::CastPrepareSpell { .. }

@@ -64,6 +64,7 @@ pub use sets::pc2::*;
 pub use sets::por::*;
 pub use sets::rav::*;
 pub use sets::rtr::*;
+pub use sets::shm::*;
 pub use sets::tmp::*;
 pub use sets::zen::*;
 pub use sets::thb::*;

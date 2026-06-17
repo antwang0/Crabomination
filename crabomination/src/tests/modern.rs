@@ -41430,6 +41430,50 @@ fn replicate_pyromatics_twice_deals_three_total() {
     assert_eq!(g.players[1].life, life - 3, "original + two copies = 3 damage");
 }
 
+/// CR 702.79 — Burn Trail conspired by tapping two red creatures copies it
+/// once: 3 (original) + 3 (copy) = 6 damage to the same target.
+#[test]
+fn conspire_burn_trail_copies_for_six() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::burn_trail());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let c0 = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    let c1 = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    let life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [c0, c1],
+        target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Burn Trail conspired");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life - 6, "original + conspire copy = 6 damage");
+    assert!(g.battlefield_find(c0).unwrap().tapped, "conspirer tapped");
+    assert!(g.battlefield_find(c1).unwrap().tapped, "conspirer tapped");
+}
+
+/// Conspire rejects creatures that don't share a color with the spell.
+#[test]
+fn conspire_requires_shared_color() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::burn_trail());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    // Grizzly Bears are green — they can't conspire a red spell.
+    let c0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let r = g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [c0, c1],
+        target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "green creatures can't conspire a red spell");
+    // No partial state: spell stayed in hand, creatures untapped.
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "Burn Trail still in hand");
+    assert!(!g.battlefield_find(c0).unwrap().tapped, "creature untapped after rejection");
+}
+
 /// Train of Thought replicated once draws two (original + one copy).
 #[test]
 fn replicate_train_of_thought_once_draws_two() {
@@ -41480,6 +41524,24 @@ fn affordances_surface_squad_and_replicate() {
     let a = g.compute_hand_affordances(0);
     assert!(a.squadable.contains(&squad), "Squad card is squadable");
     assert!(a.replicatable.contains(&repl), "Replicate card is replicatable");
+}
+
+/// Conspire is surfaced as an affordance only when the seat controls two
+/// untapped creatures sharing a color with the spell.
+#[test]
+fn affordances_surface_conspire_with_two_red_creatures() {
+    let mut g = two_player_game();
+    let burn = g.add_card_to_hand(0, catalog::burn_trail());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    // Only one red creature → not yet conspirable.
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    assert!(!g.compute_hand_affordances(0).conspirable.contains(&burn),
+        "one creature is not enough to conspire");
+    // Second red creature → conspirable.
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    assert!(g.compute_hand_affordances(0).conspirable.contains(&burn),
+        "two untapped red creatures make Burn Trail conspirable");
 }
 
 /// Ultramarines Honour Guard buffs other creatures you control by +1/+1.

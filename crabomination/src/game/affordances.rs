@@ -525,6 +525,64 @@ impl GameState {
         out
     }
 
+    /// CR 702.79 — hand cards with Conspire the caster could cast right now,
+    /// tapping the first two eligible untapped creatures that share a color
+    /// with the spell. The chosen pair is a probe only; the client re-picks.
+    fn conspirable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        use crate::card::Keyword;
+        let hand: Vec<(CardId, Vec<crate::mana::Color>, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.keywords.contains(&Keyword::Conspire))
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (
+                    c.id,
+                    c.definition.printed_colors(),
+                    needs_target,
+                    needs_target.then(|| c.definition.effect.clone()),
+                )
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, spell_colors, needs_target, effect) in &hand {
+            // Two untapped creatures the caster controls sharing a color.
+            let pair: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == caster
+                        && !c.tapped
+                        && c.definition.is_creature()
+                        && self
+                            .computed_permanent(c.id)
+                            .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                            .unwrap_or(false)
+                })
+                .map(|c| c.id)
+                .take(2)
+                .collect();
+            if pair.len() < 2 {
+                continue;
+            }
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellConspire {
+                card_id: *id, conspire_creatures: [pair[0], pair[1]],
+                target, additional_targets, mode: None, x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// [`buyback_hand_cards`] against a prebuilt probe template; the caller
     /// owns the priority short-circuit.
     ///
@@ -900,6 +958,7 @@ impl GameState {
             bargainable: self.bargainable_hand_cards_on(&template, seat),
             squadable: self.squadable_hand_cards_on(&template, seat),
             replicatable: self.replicatable_hand_cards_on(&template, seat),
+            conspirable: self.conspirable_hand_cards_on(&template, seat),
             multikickable: self.multikickable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),

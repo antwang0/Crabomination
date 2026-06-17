@@ -128,6 +128,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Offspring(_) => "Offspring",
         Keyword::Squad(_) => "Squad",
         Keyword::Replicate(_) => "Replicate",
+        Keyword::Conspire => "Conspire",
         Keyword::Fortify(_) => "Fortify",
         Keyword::Protection(_)
         | Keyword::ProtectionFromColoredSpells

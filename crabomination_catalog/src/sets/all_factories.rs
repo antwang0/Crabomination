@@ -7673,6 +7673,10 @@ static THS: &[Factory] = &[
     super::ths::klothys_god_of_destiny,
     super::ths::nykthos_shrine_to_nyx,
 ];
+static SHM: &[Factory] = &[
+    super::shm::burn_trail,
+    super::shm::barkshell_blessing,
+];
 static TMP: &[Factory] = &[
     super::tmp::reanimate,
 ];
@@ -7724,6 +7728,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("por", POR),
     ("rav", RAV),
     ("rtr", RTR),
+    ("shm", SHM),
     ("sos", SOS),
     ("stx", STX),
     ("thb", THB),

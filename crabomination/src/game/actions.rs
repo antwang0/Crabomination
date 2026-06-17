@@ -1798,6 +1798,71 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.79 — cast a spell paying its optional Conspire cost: tap two
+    /// untapped creatures you control that each share a color with the spell;
+    /// the spell is then copied once (the copy may choose new targets).
+    pub(crate) fn cast_spell_conspire(
+        &mut self,
+        card_id: CardId,
+        conspire_creatures: [CardId; 2],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_atomically(|g| {
+            g.cast_spell_conspire_inner(card_id, conspire_creatures, target.clone(), additional_targets.clone(), mode, x_value)
+        })
+    }
+
+    fn cast_spell_conspire_inner(
+        &mut self,
+        card_id: CardId,
+        conspire_creatures: [CardId; 2],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let [c0, c1] = conspire_creatures;
+        if c0 == c1 {
+            return Err(GameError::InvalidTarget);
+        }
+        // Spell must have Conspire and at least one color (a colorless spell
+        // can never satisfy "shares a color" — CR 702.79b).
+        let spell_colors = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Conspire))
+            .map(|c| c.definition.printed_colors())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Each conspirer must be an untapped creature you control sharing a
+        // color with the spell (computed colors, so granted/hybrid count).
+        for cid in [c0, c1] {
+            let on_bf = self.battlefield.iter().any(|c| {
+                c.id == cid && c.controller == p && !c.tapped && c.definition.is_creature()
+            });
+            let shares = self
+                .computed_permanent(cid)
+                .map(|cp| cp.colors.iter().any(|col| spell_colors.contains(col)))
+                .unwrap_or(false);
+            if !on_bf || !shares {
+                return Err(GameError::InvalidTarget);
+            }
+        }
+        // Tap both as the additional cost, then cast and copy once.
+        for cid in [c0, c1] {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                c.tapped = true;
+            }
+        }
+        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        self.copy_stack_spell(card_id, 1, true, &mut events);
+        Ok(events)
+    }
+
     /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
     /// creatures, {N} less each" additional cost (Awaken the Blood Avatar).
     /// Each creature in `sacrifices` is sacrificed before the spell is put on
