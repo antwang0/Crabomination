@@ -2225,3 +2225,126 @@ fn cr_702_177_exhaust_ability_activates_only_once_per_game() {
         card_id: cam, ability_index: 0, target: None, x_value: None,
     }).is_err(), "exhaust stays spent across turns");
 }
+
+/// Hazard of the Dunes' exhaust adds three +1/+1 counters once; a 4/4 → 7/7.
+#[test]
+fn cr_702_177_hazard_of_the_dunes_exhaust_counters_once() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::hazard_of_the_dunes());
+    g.clear_sickness(h);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: None, x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(h).unwrap();
+    assert_eq!((c.power(), c.toughness()), (7, 7), "4/4 + three +1/+1 = 7/7");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: h, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "exhaust can't repeat");
+}
+
+/// Pacesetter Paragon's exhaust adds a +1/+1 counter and grants double strike
+/// until end of turn.
+#[test]
+fn cr_702_177_pacesetter_paragon_exhaust_grants_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(0, catalog::pacesetter_paragon());
+    g.clear_sickness(p);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: p, ability_index: 0, target: None, x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(p).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 4), "got a +1/+1 counter");
+    assert!(c.keywords.contains(&Keyword::DoubleStrike), "gained double strike EOT");
+}
+
+/// Greenbelt Guardian's non-exhaust {G} ability grants trample repeatedly;
+/// its exhaust counter ability fires only once.
+#[test]
+fn cr_702_177_greenbelt_guardian_repeatable_and_exhaust_abilities() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let gg = g.add_card_to_battlefield(0, catalog::greenbelt_guardian());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(gg);
+    // Non-exhaust ability (index 0): grant trample to the bear, twice.
+    for _ in 0..2 {
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: gg, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+        }).expect("repeatable trample grant");
+        drain_stack(&mut g);
+    }
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    // Exhaust ability (index 1): +3/+3 once.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gg, ability_index: 1, target: None, x_value: None,
+    }).expect("exhaust counters");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gg).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+/// Prowcatcher Specialist's exhaust adds two +1/+1 counters (2/1 → 4/3).
+#[test]
+fn cr_702_177_prowcatcher_specialist_exhaust() {
+    let mut g = two_player_game();
+    let p = g.add_card_to_battlefield(0, catalog::prowcatcher_specialist());
+    g.clear_sickness(p);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: p, ability_index: 0, target: None, x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(p).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 3));
+}
+
+/// Keen Buccaneer's exhaust loots (draw then discard) and adds a +1/+1
+/// counter; net hand size unchanged, the creature grows once.
+#[test]
+fn cr_702_177_keen_buccaneer_exhaust_loots_and_grows() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    let k = g.add_card_to_battlefield(0, catalog::keen_buccaneer());
+    g.clear_sickness(k);
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: k, ability_index: 0, target: None, x_value: None,
+    }).expect("exhaust");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "draw 1 then discard 1 nets even");
+    assert_eq!(g.battlefield_find(k).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Barkshell Blessing conspired pumps the same target twice (+4/+4 total).
+#[test]
+fn conspire_barkshell_blessing_pumps_twice() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::barkshell_blessing());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let c0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpellConspire {
+        card_id: id, conspire_creatures: [c0, c1],
+        target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("conspire Barkshell");
+    drain_stack(&mut g);
+    // 2/2 + (+2/+2)×2 = 6/6.
+    let t = g.computed_permanent(target).unwrap();
+    assert_eq!((t.power, t.toughness), (6, 6), "pumped by original + copy");
+}

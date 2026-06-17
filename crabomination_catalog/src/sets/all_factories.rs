@@ -2105,6 +2105,11 @@ static DIS: &[Factory] = &[
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,
+    super::eoe::hazard_of_the_dunes,
+    super::eoe::prowcatcher_specialist,
+    super::eoe::greenbelt_guardian,
+    super::eoe::pacesetter_paragon,
+    super::eoe::keen_buccaneer,
 ];
 static FEM: &[Factory] = &[
     super::fem::hymn_to_tourach,

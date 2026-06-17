@@ -6,8 +6,23 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword, Subtypes,
     TokenDefinition,
 };
-use crate::effect::{Effect, PlayerRef, Selector, Value};
-use crate::mana::{cost, generic};
+use crate::effect::shortcut::target;
+use crate::effect::{Duration, Effect, PlayerRef, Selector, Value};
+use crate::mana::{cost, g, generic, r, u};
+
+/// Shared exhaust ability: "Exhaust — [cost]: Put N +1/+1 counters on this."
+fn exhaust_self_counters(mana: crate::mana::ManaCost, n: i32) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: mana,
+        exhaust: true,
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(n),
+        },
+        ..Default::default()
+    }
+}
 
 /// Camera Launcher — {3} Artifact Creature — Construct 2/2. "Exhaust — {3}:
 /// Put a +1/+1 counter on this creature. Create a 1/1 colorless Thopter
@@ -41,6 +56,137 @@ pub fn camera_launcher() -> CardDefinition {
                     amount: Value::Const(1),
                 },
                 Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: thopter },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hazard of the Dunes — {3}{G} 4/4 Wurm. Trample, reach. "Exhaust — {6}{G}:
+/// Put three +1/+1 counters on this creature."
+pub fn hazard_of_the_dunes() -> CardDefinition {
+    CardDefinition {
+        name: "Hazard of the Dunes",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Reach],
+        activated_abilities: vec![exhaust_self_counters(cost(&[generic(6), g()]), 3)],
+        ..Default::default()
+    }
+}
+
+/// Prowcatcher Specialist — {1}{R} 2/1 Goblin Warrior. Haste. "Exhaust —
+/// {3}{R}: Put two +1/+1 counters on this creature."
+pub fn prowcatcher_specialist() -> CardDefinition {
+    CardDefinition {
+        name: "Prowcatcher Specialist",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![exhaust_self_counters(cost(&[generic(3), r()]), 2)],
+        ..Default::default()
+    }
+}
+
+/// Greenbelt Guardian — {1}{G} 2/2 Elf Ranger. "{G}: Target creature gains
+/// trample until end of turn." plus "Exhaust — {3}{G}: Put three +1/+1
+/// counters on this creature."
+pub fn greenbelt_guardian() -> CardDefinition {
+    CardDefinition {
+        name: "Greenbelt Guardian",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                effect: Effect::GrantKeyword {
+                    what: target(),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            exhaust_self_counters(cost(&[generic(3), g()]), 3),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Pacesetter Paragon — {2}{R} 2/3 Human Pilot. "Exhaust — {2}{R}: Put a
+/// +1/+1 counter on this creature. It gains double strike until end of turn."
+pub fn pacesetter_paragon() -> CardDefinition {
+    CardDefinition {
+        name: "Pacesetter Paragon",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Keen Buccaneer — {2}{U} 2/3 Octopus Pirate. Vigilance. "Exhaust — {1}{U}:
+/// Draw a card, then discard a card. Put a +1/+1 counter on this creature."
+pub fn keen_buccaneer() -> CardDefinition {
+    CardDefinition {
+        name: "Keen Buccaneer",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Octopus, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
             ]),
             ..Default::default()
         }],
