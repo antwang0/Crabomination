@@ -7952,6 +7952,7 @@ static THB: &[Factory] = &[
     super::thb::the_binding_of_the_titans,
     super::thb::kiora_bests_the_sea_god,
     super::thb::the_akroan_war,
+    super::thb::thassas_intervention,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

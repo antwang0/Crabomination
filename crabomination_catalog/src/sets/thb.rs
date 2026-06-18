@@ -4921,3 +4921,32 @@ pub fn the_akroan_war() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Thassa's Intervention — {X}{U}{U} Instant. Choose one — look at the top X
+/// cards of your library, put up to two into your hand and the rest on the
+/// bottom in a random order; or counter target spell unless its controller pays
+/// twice X.
+pub fn thassas_intervention() -> CardDefinition {
+    CardDefinition {
+        name: "Thassa's Intervention",
+        cost: cost(&[x(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: Some(Value::Const(2)),
+                to_battlefield: false,
+            },
+            Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: crate::mana::ManaCost::default(),
+                exile: false,
+                extra_generic: Some(Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost))),
+            },
+        ]),
+        ..Default::default()
+    }
+}

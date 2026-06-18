@@ -3012,3 +3012,19 @@ fn akroan_war_tapped_creatures_self_damage() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(bear).is_none(), "tapped 2/2 took 2 and died");
 }
+
+/// Thassa's Intervention mode 0 digs X and draws up to two.
+#[test]
+fn thassas_intervention_digs() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::thassas_intervention());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: Some(3),
+    }).expect("cast {X=3}{U}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "spell left hand, two cards in");
+}
