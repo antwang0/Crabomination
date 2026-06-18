@@ -4277,6 +4277,55 @@ pub fn uncontrollable_anger() -> CardDefinition {
     }
 }
 
+/// Gutwrencher Oni — {3}{B}{B} Demon Spirit 5/4. Trample. At the beginning of
+/// your upkeep, discard a card if you don't control an Ogre.
+pub fn gutwrencher_oni() -> CardDefinition {
+    use crate::effect::Predicate;
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "Gutwrencher Oni",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Demon, CreatureType::Spirit]),
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ogre),
+                }))),
+                then: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crackdown — {2}{W} Enchantment. Nonwhite creatures with power 3 or greater
+/// don't untap during their controllers' untap steps.
+pub fn crackdown() -> CardDefinition {
+    CardDefinition {
+        name: "Crackdown",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Nonwhite creatures with power 3 or greater don't untap.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::White).negate())
+                        .and(SelectionRequirement::PowerAtLeast(3)),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Jade Idol — {4} Artifact. Spiritcraft: whenever you cast a Spirit or Arcane
 /// spell, this becomes a 4/4 Spirit artifact creature until end of turn.
 pub fn jade_idol() -> CardDefinition {

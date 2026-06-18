@@ -250,6 +250,8 @@ static CHK: &[Factory] = &[
     super::chk::adamaro_first_to_desire,
     super::chk::masako_the_humorless,
     super::chk::wicked_akuba,
+    super::chk::gutwrencher_oni,
+    super::chk::crackdown,
     super::chk::jade_idol,
     super::chk::long_forgotten_gohei,
     super::chk::nine_ringed_bo,

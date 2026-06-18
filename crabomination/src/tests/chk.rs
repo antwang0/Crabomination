@@ -2235,6 +2235,44 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Gutwrencher Oni makes you discard at upkeep unless you control an Ogre.
+#[test]
+fn gutwrencher_oni_upkeep_discard_unless_ogre() {
+    let mut g = two_player_game();
+    let oni = g.add_card_to_battlefield(0, catalog::gutwrencher_oni());
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest());
+    let trig = catalog::gutwrencher_oni().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(oni, 0, None, 0);
+    // No Ogre → discard one.
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1, "discards with no Ogre");
+    // With an Ogre, no discard.
+    g.add_card_to_battlefield(0, catalog::deathcurse_ogre()); // an Ogre
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before, "no discard while controlling an Ogre");
+}
+
+/// Crackdown keeps big nonwhite creatures tapped.
+#[test]
+fn crackdown_prevents_untap_of_big_nonwhite_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crackdown());
+    let big = g.add_card_to_battlefield(1, catalog::moss_kami()); // 5/5 green
+    let small = g.add_card_to_battlefield(1, catalog::lantern_kami()); // 1/1 white
+    g.battlefield_find_mut(big).unwrap().tapped = true;
+    g.battlefield_find_mut(small).unwrap().tapped = true;
+    // Run player 1's untap step.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(big).unwrap().tapped, "5/5 nonwhite stays tapped");
+    assert!(!g.battlefield_find(small).unwrap().tapped, "1/1 white untaps normally");
+}
+
 /// Jade Idol animates into a 4/4 on a Spirit/Arcane cast.
 #[test]
 fn jade_idol_spiritcraft_animates() {
