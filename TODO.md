@@ -143,17 +143,30 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   "Sacrifice this: destroy target creature" on favorable/even trades (Pus
   Kami). Remaining: X-value selection for scalable pings, and pointing a ping
   at the opponent's face for reach.
-- ⏳ **THB cards deferred this run (need new primitives):**
-  - Devotion-mana rock (Nyx Lotus): `{T}: choose a color, add devotion-to-it`
-    — needs a choose-color + `Value::DevotionOfChosenColor` mana ability.
-  - Cast-from-graveyard cost-reduction static (Gravebreaker Lamia).
-  - "Up to N targets" (Sea God's Scorn bounce-3, Wrap in Flames 1-to-each-of-3)
-    — the Tier-2 targeting gap; unblocks a swath of cards.
-  - Damage-dealt amount trigger (Towering-Wave Mystic "mill that many").
-  - Aura-reanimation (Storm Herald), aura-death card draw (Hateful Eidolon),
-    linked attack-exile / dies-return (Underworld Sentinel).
-  - THB gods + planeswalkers (Klothys, Athreos, Calix, Elspeth Sun's Nemesis,
-    Ashiok Nightmare Muse) — devotion-gated god states + loyalty bodies.
+- ⏳ **THB cards still missing (need new primitives):**
+  - **Aura-host-death trigger** (an Aura/enchantment-creature that triggers
+    when its enchanted creature dies — there's no `EventScope::EnchantedBy`
+    yet): Minion's Return (dies → return under your control), Dawn Evangel,
+    Bronzehide Lion (dies → returns as an Aura), Hateful Eidolon (draw per
+    Aura that was on it). LKI for the auras attached at death is the hard part.
+  - **Aura-attach event** ("whenever an Aura you control becomes attached to a
+    creature you control, …"): Siona's token half (Siona's ETB look-for-Aura
+    *does* ship).
+  - **Per-permanent ward-tax static** ("spells opponents cast targeting this
+    cost {1} more" — `extra_cost_for_spell` can't see the cast's target yet):
+    Callaphe's static half (its devotion power *does* ship).
+  - **Pile-split decision** (Fact-or-Fiction style): Atris, Oracle of
+    Half-Truths.
+  - **Random choose + protection-from-mana-value**: Haktos the Unscarred.
+  - **Continuous combat-damage-to-self replacement → counter**: Ironscale Hydra.
+  - **Reveal-until-permanent → battlefield** end-step engine: Dreamshaper Shaman.
+  - Aura-reanimation with exile-at-EOT (Storm Herald); reveal-6 opponent-exile
+    (Allure of the Unknown); counter-and-Nevermore (Ashiok's Erasure);
+    untap-lock tapper (Entrancing Lyre); combat-damage-prevention-except-
+    enchanted fog (Inspire Awe); Medomai's Prophecy saga (chapter III delayed
+    "first cast of named spell" trigger).
+  - Heliod's Punishment ships without its task-counter self-removal timer (the
+    lock is modeled as permanent).
 - ⏳ **Tainted Pact UI**: the per-iteration "keep digging?" decision isn't
   wired for `wants_ui` players (AutoDecider takes the first card; a client
   modal + suspend/resume loop is the follow-up).
@@ -1486,7 +1499,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ "When this card is milled" triggers
 - ✅ CR 702.104 — Tribute
 - ✅ CR 728 — Ending the Turn
-- ✅ CR 701.19 — Searching
+- ✅ CR 701.19 — Searching (incl. `Effect::SearchUpToN` count-search — Nylea's Intervention, Deathbellow War Cry; test `cr_701_19_search_up_to_n_picks_matches_only`)
 - ✅ CR 714.4 — DFC sagas
 - ✅ CR 702.103 — Jump-start
 - ✅ CR 707.2 — continuous copies
@@ -1558,7 +1571,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   test `cr_509_2_banding_blocker_lets_defender_assign_damage`). Remaining:
   attacking-band formation, "bands with other", and the band-blocks-multiple
   damage-distribution corner.
-- 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
+- 🟡 **CR 303 — Auras** — characteristic-overriding Auras ✅ (`EquipBonus.{set_base_pt,set_card_types,set_creature_types,set_colors,remove_abilities}` install layer 4/5/6/7b continuous effects on the host — Ichthyomorphosis "0/1 blue Fish, no abilities", One with the Stars "becomes an enchantment", Heliod's Punishment "loses abilities + can't attack/block"; removal is ordered before the aura's own keyword grants so they survive — test `cr_613_aura_set_base_pt_then_counter`). Remaining: replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
 - 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.)
 - 🟡 **CR 704 — State-Based Actions** — Saga SBA ✅ (`saga_chapters` reach
   final chapter → sacrifice, unless a chapter ability is still on the stack);
@@ -1613,7 +1626,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ **CR 605 — Mana Abilities** — triggered mana abilities (605.1b/605.4a)
   resolve stack-free at the mana-ability fast path via
   `StaticEffect::ExtraManaOnLandTap` (Mana Flare, Vernal Bloom, Wild
-  Growth, Utopia Sprawl; tests `cr_605_1b_*`).
+  Growth, Utopia Sprawl; tests `cr_605_1b_*`). Board-state-**conditional**
+  mana abilities (`Effect::If` with mana-ability branches) are now recognized
+  as mana abilities by `is_mana_ability`/`effect_produces_color`, so Ilysian
+  Caryatid taps for mana without using the stack (test
+  `cr_605_conditional_mana_ability_pays_a_spell`).
 - ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina); opponent loyalty-activation tax ✅ (`StaticEffect::OpponentLoyaltyActivationTax`, paid as extra generic mana — Eidolon of Obstruction, test `cr_606_eidolon_*`). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
