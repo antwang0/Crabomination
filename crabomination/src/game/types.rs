@@ -1072,6 +1072,10 @@ pub enum PendingEffectState {
     /// Needle, Phyrexian Revoker). The chooser names a card and the engine
     /// stamps it onto `target_id.named_card`.
     NameCardPending { target_id: CardId },
+    /// Suspended on a `NameCard` decision for `Effect::NameOpponentCastLock`
+    /// (Academic Probation). The chooser names a card and the engine records
+    /// it in `players[caster].opponents_cant_cast_named`.
+    OpponentNameLockPending { caster: usize },
     /// Suspended on a `ChooseModes` for a resolution-time "choose N" /
     /// Escalate effect. The apply step validates the answer shape, drops
     /// out-of-range indices, and stashes it in

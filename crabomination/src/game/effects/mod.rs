@@ -8514,6 +8514,37 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameOpponentCastLock => {
+                // Academic Probation mode 0 — the controller names a nonland
+                // card; their opponents can't cast spells with that name until
+                // their next turn. Suggestions: the names showing in opponents'
+                // hands (best guess at what they'd want to cast).
+                use crate::decision::Decision;
+                let caster = ctx.controller;
+                let suggestions = rank_names_by_frequency(
+                    self.players
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| !self.same_team(*i, caster))
+                        .flat_map(|(_, pl)| pl.hand.iter().map(|c| c.definition.name)),
+                );
+                let source_id = ctx.source.unwrap_or(CardId(0));
+                let decision = Decision::NameCard {
+                    source: source_id,
+                    source_name: "Academic Probation".to_string(),
+                    suggestions,
+                };
+                let pending = PendingEffectState::OpponentNameLockPending { caster };
+                if self.players[caster].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageThisTurn => {
                 // CR 615.1 — set the engine-wide flag the combat damage
                 // resolver consults. Cleared in `do_cleanup` (CR 514.2).

@@ -3208,6 +3208,14 @@ pub enum Effect {
     /// (typically `Selector::This`).
     NameCard { what: Selector },
 
+    /// CR 201.3 — "Choose a nonland card name. Opponents can't cast spells
+    /// with the chosen name until your next turn" (Academic Probation). Asks
+    /// the resolving controller via the `NameCard` decision and records the
+    /// name in their `opponents_cant_cast_named` lock; the cast-legality gate
+    /// rejects opponents' spells with a matching name until the controller's
+    /// next turn clears it.
+    NameOpponentCastLock,
+
     /// "[Player] skips their next `count` turns." Bumps the affected
     /// player's `skip_turns` counter; the turn-advance logic in
     /// `do_cleanup` decrements and bypasses each scheduled-skip turn.

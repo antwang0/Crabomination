@@ -1486,6 +1486,9 @@ impl GameState {
         // "Opponents' spells cost more until your next turn" expires too
         // (Elspeth Conquers Death II).
         self.turn_scoped_spell_taxes.retain(|t| t.controller != p);
+        // "Opponents can't cast spells named X until your next turn"
+        // (Academic Probation mode 0) expires as the lock owner's turn begins.
+        self.players[p].opponents_cant_cast_named.clear();
         // "Until your next turn, whenever a creature attacks you…" floating
         // triggers (Tamiyo +2) expire as their controller's turn begins.
         self.delayed_triggers.retain(|dt| {

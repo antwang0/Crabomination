@@ -2898,6 +2898,16 @@ impl GameState {
         {
             return Err(GameError::SpellNameLocked);
         }
+        // Academic Probation mode 0 — an opponent of the caster named this
+        // spell ("Opponents can't cast spells with the chosen name until your
+        // next turn"); the lock lives on the naming player until their turn.
+        if let Some(name) = spell_name
+            && self.players.iter().enumerate().any(|(i, pl)| {
+                !self.same_team(i, p) && pl.opponents_cant_cast_named.iter().any(|n| n == name)
+            })
+        {
+            return Err(GameError::SpellNameLocked);
+        }
 
         // CR 601.2b — interactive additional-cost choices for a `wants_ui`
         // caster on the plain cast path: which permanent to sacrifice

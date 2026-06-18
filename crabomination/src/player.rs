@@ -388,6 +388,12 @@ pub struct Player {
     /// active player's `do_untap`. Consulted by the cast-legality gate.
     #[serde(default)]
     pub cant_cast_noncreature_this_turn: bool,
+    /// Card names this player's opponents can't cast until this player's next
+    /// turn (Academic Probation mode 0 — "Opponents can't cast spells with the
+    /// chosen name until your next turn"). Reset for every player at the active
+    /// player's `do_untap`; consulted by the cast-legality gate.
+    #[serde(default)]
+    pub opponents_cant_cast_named: Vec<String>,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -462,6 +468,7 @@ impl Player {
             spells_uncounterable_this_turn: false,
             cast_blue_or_black_this_turn: false,
             cant_cast_noncreature_this_turn: false,
+            opponents_cant_cast_named: Vec::new(),
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,

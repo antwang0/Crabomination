@@ -8025,6 +8025,18 @@ impl GameState {
                 }
                 Ok(Vec::new())
             }
+            PendingEffectState::OpponentNameLockPending { caster } => {
+                let DecisionAnswer::NamedCard(name) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                if !name.is_empty()
+                    && let Some(pl) = self.players.get_mut(caster)
+                    && !pl.opponents_cant_cast_named.contains(name)
+                {
+                    pl.opponents_cant_cast_named.push(name.clone());
+                }
+                Ok(Vec::new())
+            }
             // ── Stash-and-rerun answers ──────────────────────────────────
             // These five suspend with the *originating effect* re-queued as
             // the continuation; the apply step only validates/sanitises the

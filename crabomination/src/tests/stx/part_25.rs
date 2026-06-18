@@ -1153,21 +1153,51 @@ fn zimone_quandrix_prodigy_puts_land_and_scales_draw() {
 }
 
 #[test]
-fn academic_probation_taps_and_stuns_target_creature() {
+fn academic_probation_mode0_locks_opponent_from_casting_named_spell() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::academic_probation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Name "Grizzly Bears" — opponent then can't cast their copy.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(
+        "Grizzly Bears".to_string(),
+    )]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("Academic Probation mode 0 castable");
+    drain_stack(&mut g);
+    let opp_bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    // Hand priority to the opponent so they attempt the cast.
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: opp_bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect_err("named spell can't be cast by the opponent");
+    assert!(matches!(err, crate::game::GameError::SpellNameLocked), "got {err:?}");
+}
+
+#[test]
+fn academic_probation_mode1_target_cant_attack_or_block() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::card::Keyword;
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::academic_probation());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![], mode: None, x_value: None,
+        additional_targets: vec![], mode: Some(1), x_value: None,
     })
-    .expect("Academic Probation castable for {1}{W}");
+    .expect("Academic Probation mode 1 castable");
     drain_stack(&mut g);
-    let bear = g.battlefield_find(opp_bear).unwrap();
-    assert!(bear.tapped, "target creature tapped");
-    assert_eq!(bear.counter_count(CounterType::Stun), 1, "one stun counter added");
+    let kws = g.computed_permanent(opp_bear).unwrap().keywords;
+    assert!(kws.contains(&Keyword::CantAttack), "target can't attack");
+    assert!(kws.contains(&Keyword::CantBlock), "target can't block");
 }
 
 #[test]
@@ -1216,40 +1246,43 @@ fn unwilling_ingredient_dies_no_draw_when_declined() {
 }
 
 #[test]
-fn cr_122_1d_academic_probation_stun_persists_through_untap() {
-    // End-to-end CR 122.1d via a real card: Academic Probation taps a
-    // creature and gives it a stun counter; the creature does not untap
-    // on its controller's next untap step and instead removes one stun
-    // counter, untapping only on the following untap.
+fn cr_122_1d_stun_counter_persists_through_untap() {
+    // End-to-end CR 122.1d via Containment Studies: it taps a creature and
+    // gives it two stun counters; each of the controller's untap steps
+    // consumes one counter instead of untapping, untapping only once both
+    // are gone.
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::academic_probation());
+    let id = g.add_card_to_hand(0, catalog::containment_studies());
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(opp_bear)),
         additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Academic Probation castable for {1}{W}");
+    .expect("Containment Studies castable for {2}{W}");
     drain_stack(&mut g);
     {
         let bear = g.battlefield_find(opp_bear).unwrap();
         assert!(bear.tapped);
-        assert_eq!(bear.counter_count(CounterType::Stun), 1);
+        assert_eq!(bear.counter_count(CounterType::Stun), 2);
     }
-    // Untap step for the stunned creature's controller (seat 1): the
-    // stun counter is consumed instead of untapping.
     g.active_player_idx = 1;
     g.do_untap();
     {
         let bear = g.battlefield_find(opp_bear).unwrap();
         assert!(bear.tapped, "stun keeps the creature tapped through one untap");
-        assert_eq!(bear.counter_count(CounterType::Stun), 0, "the stun counter is consumed");
+        assert_eq!(bear.counter_count(CounterType::Stun), 1, "one stun counter consumed");
     }
-    // Next untap: counter gone, untaps normally.
+    g.do_untap();
+    {
+        let bear = g.battlefield_find(opp_bear).unwrap();
+        assert!(bear.tapped, "still tapped with one stun counter left");
+        assert_eq!(bear.counter_count(CounterType::Stun), 0, "second stun counter consumed");
+    }
     g.do_untap();
     assert!(!g.battlefield_find(opp_bear).unwrap().tapped,
-        "untaps normally once the stun counter is gone");
+        "untaps normally once the stun counters are gone");
 }
 
 #[test]
