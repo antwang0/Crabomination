@@ -156,6 +156,13 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Type: {}", p.creature_types.join(" ")));
     }
 
+    // Legendary marker (CR 704.5j legend rule) — the peek art shows the type
+    // line, but on the crowded board a one-word reminder helps players spot a
+    // second copy that's about to die to the legend rule.
+    if p.is_legendary {
+        lines.push(String::from("Legendary"));
+    }
+
     // Chosen color for "choose-a-color" mana rocks (Coldsteel Heart): show
     // which color this source now taps for.
     if let Some(c) = p.chosen_color {
@@ -925,6 +932,19 @@ mod tests {
         assert!(body.contains("marked: 2 damage"), "got: {body}");
         assert!(body.contains("LETHAL"),
             "2 damage on a 2-tough body should be flagged lethal: {body}");
+    }
+
+    #[test]
+    fn legendary_marker_surfaces_for_legends_only() {
+        let mut p = make_permanent_view(0, 2);
+        p.creature_types = vec!["Spirit".into()];
+        p.is_legendary = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("Legendary"), "legends are flagged: {body}");
+
+        p.is_legendary = false;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(!body.contains("Legendary"), "non-legends are not: {body}");
     }
 
     #[test]
