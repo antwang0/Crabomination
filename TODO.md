@@ -3525,23 +3525,41 @@ were stale). See git history for the per-card details.
 
 ### Content — Theros Beyond Death (THB) is the active set being filled
 Regenerate the remaining list with `cargo run -p crabomination_catalog
---example dump_names thb` diffed against a `set:thb` Scryfall name dump.
-Still deferred — each wants a primitive the engine lacks:
-- **Type/PT-change auras** (Ichthyomorphosis, One with the Stars) — need a
-  static "enchanted permanent becomes [type] with base P/T, loses abilities"
-  (the one-shot `SetBasePT`/`LoseAllAbilities` exist, but not as aura statics).
-- **Scaled negative pump** (Enemy of Enlightenment "-1/-1 per card in opponents'
-  hands") — `Value` has no subtraction; dynamic_pt can't express base-minus-N.
-- **Conditional mana** (Ilysian Caryatid "add two if you control power-4+") —
-  mana-ability output gated on a board predicate.
-- **Land-search count** (Deathbellow War Cry, Nylea's Intervention mode 0) —
-  `Effect::Search` takes no count; "up to N (different-named) cards" is unwired.
-- **Chosen-name saga** (Medomai's Prophecy II/III), aura-reanimation (Storm
-  Herald), aura-death draw (Hateful Eidolon), pile-split (Atris), dies→Aura
-  (Bronzehide Lion), task counters (Heliod's Punishment), Haktos protection-by-MV.
-- **THB planeswalkers** (Athreos god + Calix / Elspeth ×2 / Ashiok ×2) — loyalty
-  bodies; Elspeth/Ashiok ×2 would also unblock their tutor 2-drops (Devotee,
-  Forerunner) and Sunlit Hoplite / Swimmer's planeswalker riders.
+--example dump_names thb` diffed against a `set:thb` Scryfall name dump. The
+earlier "still deferred" list (type/PT-change auras, scaled negative pump,
+conditional mana, land-search count, the planeswalkers, the demigods) all
+shipped — see git. **Genuinely-absent THB cards remaining** (each wants the
+primitive noted):
+- **Atris, Oracle of Half-Truths** — pile-split decision (opponent separates a
+  face-up/face-down pile; you pick one for hand, other to graveyard). Fact or
+  Fiction is currently approximated as plain Draw 2; this needs a real
+  `Decision::SplitPiles`.
+- **Allure of the Unknown** — reveal top 6, an opponent exiles a nonland, rest
+  to your hand, that opponent may cast the exiled card free. Needs the reveal /
+  opponent-exile-one / opponent-may-cast-from-exile pipeline.
+- **Bronzehide Lion** — dies → returns as an Aura granting indestructible
+  (creature→Aura transform on return). Unique; no primitive yet.
+- **Athreos, Shroud-Veiled** — coin-counter control-while-counter + return on
+  death/exile (the demigod body ships via `NotCreatureWhileDevotionBelow`).
+- **Storm Herald** — mass aura-reanimate from gy attached to creatures +
+  delayed exile (`Effect::Attach` exists; needs the multi-aura picker + the
+  "if would leave, exile instead" rider).
+- **Dreamshaper Shaman** — end-step pay-{2}{R}+sac → reveal-until-nonland-
+  permanent onto battlefield (`RevealUntilFind` exists; needs the optional
+  pay+sac end-step cost).
+- **Entrancing Lyre** — `{X},{T}: tap a creature; it doesn't untap while the
+  Lyre stays tapped` (tap-lock linked to the source's tapped state).
+- **Haktos the Unscarred** — random choice of 2/3/4 on ETB + protection from
+  each mana value other than the chosen number (protection-by-MV-parity).
+- **Medomai's Prophecy** — chosen-name Saga (II names a card, III is a delayed
+  "first time you cast a spell with that name, draw two").
+- **Ashiok's Erasure** — counter+exile a spell + *permanent* (not turn-scoped)
+  opponents-can't-cast-that-name lock + return on leave. The turn-scoped
+  `opponents_cant_cast_named` lock (Academic Probation) needs a
+  permanent-bound variant.
+Shipped this run: Altar of the Pantheon, Hateful Eidolon, Dawn Evangel,
+Minion's Return, Inspire Awe (+ `auras_at_death` capture,
+`EventScope::EnchantedBySource`, fog-with-exception).
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 

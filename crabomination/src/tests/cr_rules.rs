@@ -2915,3 +2915,69 @@ fn cr_701_19_search_up_to_n_picks_matches_only() {
     assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
         "the non-Minotaur stays in the library");
 }
+
+// ── CR 700.5 — Devotion (Altar of the Pantheon bonus flips a God on) ─────────
+
+#[test]
+fn cr_700_5_altar_devotion_bonus_flips_god_to_creature() {
+    let mut g = two_player_game();
+    let heliod = g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun()); // {3}{W}, threshold 5
+    g.add_card_to_battlefield(0, catalog::soul_warden()); // {W}
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    g.add_card_to_battlefield(0, catalog::soul_warden()); // 3 + Heliod's W = 4 devotion
+    assert!(
+        !g.computed_permanent(heliod).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "devotion 4 < 5 — Heliod isn't a creature"
+    );
+    g.add_card_to_battlefield(0, catalog::altar_of_the_pantheon()); // +1 → 5
+    assert!(
+        g.computed_permanent(heliod).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "Altar's +1 devotion (CR 700.5) reaches 5 — Heliod is now a creature"
+    );
+}
+
+// ── CR 615.1 / 702.15g — fog exception still lets exempt creatures lifelink ──
+
+#[test]
+fn cr_615_1_inspire_awe_exempt_enchantment_creature_deals_and_lifelinks() {
+    let mut g = two_player_game();
+    let vanilla = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // fogged
+    let eidolon = g.add_card_to_battlefield(0, catalog::hateful_eidolon()); // 1/2 enchantment creature, lifelink
+    g.clear_sickness(vanilla);
+    g.clear_sickness(eidolon);
+    let spell = g.add_card_to_hand(0, catalog::inspire_awe());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Inspire Awe");
+    drain_stack(&mut g);
+    let opp = g.players[1].life;
+    let me = g.players[0].life;
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: vanilla, target: AttackTarget::Player(1) },
+        Attack { attacker: eidolon, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, opp - 1, "only the exempt 1/2 enchantment creature connects");
+    assert_eq!(g.players[0].life, me + 1, "lifelink scales off the unprevented 1 damage (CR 702.15g)");
+}
+
+// ── CR 702.3b — Defender can't attack ───────────────────────────────────────
+
+#[test]
+fn cr_702_3b_defender_cannot_be_declared_attacker() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(0, catalog::sylvan_caryatid()); // 0/3 Defender
+    g.clear_sickness(wall);
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: wall, target: AttackTarget::Player(1) },
+    ]));
+    assert!(err.is_err(), "a Defender creature can't be declared as an attacker (CR 702.3b)");
+}
