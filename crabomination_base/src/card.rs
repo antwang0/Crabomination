@@ -445,6 +445,14 @@ pub enum Keyword {
     /// CR 702.16 — "protection from creatures" (Spirit Mantle): can't be
     /// blocked, and all damage from creature sources is prevented.
     ProtectionFromCreatures,
+    /// CR 702.16e — protection from a creature type (Kitsune Riftwalker's
+    /// "protection from Spirits"): can't be blocked by, damaged by, enchanted
+    /// or equipped by, or targeted by a permanent of that creature type.
+    ProtectionFromCreatureType(CreatureType),
+    /// CR 702.16 — protection from a spell subtype (Kitsune Riftwalker's
+    /// "protection from Arcane"). Cast-time targeting gate: a spell with the
+    /// subtype can't target this permanent.
+    ProtectionFromSpellSubtype(SpellSubtype),
     /// CR 702.89 — Umbra armor (on an Aura): if the enchanted creature
     /// would be destroyed, instead remove all damage from it and destroy
     /// this Aura (Hyena Umbra, Spider Umbra).

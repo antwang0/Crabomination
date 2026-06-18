@@ -4225,8 +4225,20 @@ impl GameState {
         if src_is_creature && tgt.keywords.contains(&Keyword::ProtectionFromCreatures) {
             return true;
         }
-        tgt.keywords.iter().any(|kw| {
-            matches!(kw, Keyword::Protection(color) if src_colors.contains(color))
+        // CR 702.16e — protection from a creature type prevents damage from a
+        // source of that type.
+        let src_creature_types = self
+            .computed_permanent(source)
+            .map(|c| c.subtypes.creature_types)
+            .unwrap_or_else(|| {
+                self.battlefield_find(source)
+                    .map(|c| c.definition.subtypes.creature_types.clone())
+                    .unwrap_or_default()
+            });
+        tgt.keywords.iter().any(|kw| match kw {
+            Keyword::Protection(color) => src_colors.contains(color),
+            Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
+            _ => false,
         })
     }
 
@@ -9547,6 +9559,13 @@ pub(crate) fn can_block_attacker_computed(
         }
         // CR 702.16b — protection from creatures: can't be blocked at all.
         if matches!(kw, Keyword::ProtectionFromCreatures) {
+            return false;
+        }
+        // CR 702.16e — protection from a creature type: can't be blocked by a
+        // creature of that type.
+        if let Keyword::ProtectionFromCreatureType(ty) = kw
+            && blocker_computed.subtypes.creature_types.contains(ty)
+        {
             return false;
         }
     }

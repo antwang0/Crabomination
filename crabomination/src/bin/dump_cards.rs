@@ -132,7 +132,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Fortify(_) => "Fortify",
         Keyword::Protection(_)
         | Keyword::ProtectionFromColoredSpells
-        | Keyword::ProtectionFromSpells => "Protection",
+        | Keyword::ProtectionFromSpells
+        | Keyword::ProtectionFromCreatureType(_)
+        | Keyword::ProtectionFromSpellSubtype(_) => "Protection",
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));
         }

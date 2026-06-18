@@ -2224,6 +2224,15 @@ fn heartbeat_of_spring_doubles_land_mana() {
         card_id: forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("tap forest");
     assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Green), 2, "{{G}} becomes {{G}}{{G}}");
+    // Symmetric: the opponent's land also produces the extra (it affects every
+    // player's lands, not just the controller's). Hand priority to player 1 so
+    // the mana ability is legal off-turn.
+    let opp_forest = g.add_card_to_battlefield(1, catalog::forest());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: opp_forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap opponent forest");
+    assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
 /// Kagemaro is sized to your hand and wraths for -X/-X on sacrifice.
@@ -2787,6 +2796,60 @@ fn nezumi_graverobber_flips_when_opponent_graveyard_emptied() {
     drain_stack(&mut g);
     let rean = g.battlefield_find(corpse).expect("reanimated onto battlefield");
     assert_eq!(rean.controller, 0, "under Nighteyes' controller");
+}
+
+/// Kitsune Riftwalker has protection from Spirits: a Spirit can't block it.
+#[test]
+fn kitsune_riftwalker_cant_be_blocked_by_spirits() {
+    let mut g = two_player_game();
+    let rift = g.add_card_to_battlefield(0, catalog::kitsune_riftwalker());
+    g.clear_sickness(rift);
+    let kami = g.add_card_to_battlefield(1, catalog::gibbering_kami()); // 2/2 Spirit
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rift, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::DeclareBlockers);
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(kami, rift)]));
+    assert!(err.is_err(), "a Spirit can't block a creature with protection from Spirits");
+}
+
+/// Protection from Spirits prevents combat damage from a Spirit source: the
+/// Riftwalker survives blocking a much larger Spirit.
+#[test]
+fn kitsune_riftwalker_prevents_spirit_combat_damage() {
+    let mut g = two_player_game();
+    let moss = g.add_card_to_battlefield(1, catalog::moss_kami()); // 5/5 Spirit
+    g.clear_sickness(moss);
+    let rift = g.add_card_to_battlefield(0, catalog::kitsune_riftwalker()); // 2/1
+    // Make it the opponent's turn so Moss Kami can attack and Riftwalker block.
+    g.active_player_idx = 1;
+    g.give_priority_to_active();
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: moss, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(rift, moss)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::PostCombatMain);
+    assert!(g.battlefield_find(rift).is_some(), "Riftwalker survives — Spirit damage prevented");
+}
+
+/// Protection from Arcane: an Arcane spell can't target the Riftwalker.
+#[test]
+fn kitsune_riftwalker_cant_be_targeted_by_arcane() {
+    let mut g = two_player_game();
+    let rift = g.add_card_to_battlefield(1, catalog::kitsune_riftwalker());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray()); // Arcane
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: ray, target: Some(Target::Permanent(rift)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "an Arcane spell can't target protection-from-Arcane");
 }
 
 /// "Target creature that was dealt damage this turn" rejects an undamaged

@@ -3208,6 +3208,14 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16 — protection from a spell subtype (Kitsune
+                // Riftwalker's "protection from Arcane").
+                if let Keyword::ProtectionFromSpellSubtype(sub) = kw
+                    && card.definition.subtypes.spell_subtypes.contains(sub)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
             }
         }
 

@@ -4144,6 +4144,24 @@ pub fn kitsune_mystic() -> CardDefinition {
     }
 }
 
+/// Kitsune Riftwalker — {1}{W}{W} Fox Wizard 2/1. "Protection from Spirits
+/// and from Arcane." (CR 702.16e — creature-type + spell-subtype protection.)
+pub fn kitsune_riftwalker() -> CardDefinition {
+    CardDefinition {
+        name: "Kitsune Riftwalker",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Fox, CreatureType::Wizard]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![
+            Keyword::ProtectionFromCreatureType(CreatureType::Spirit),
+            Keyword::ProtectionFromSpellSubtype(SpellSubtype::Arcane),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Bushi Tenderfoot // Kenzo the Hardhearted — {W} Human Soldier 1/1.
 /// "When a creature dealt damage by this creature this turn dies, flip this
 /// creature." Flips into Kenzo, a 3/4 Legendary Human Samurai with double

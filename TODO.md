@@ -122,9 +122,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     Matsu-Tribe Decoy / Matsu-Tribe Sniper (a "target creature must block this"
     grant + tap-and-skip-untap-on-combat-damage); Masumaro / Adamaro (CDA on
     *twice* / *opponent's-max* hand size — extend `DynamicPt::ControllerHandSize`
-    with a multiplier and an opponent-max variant); Kitsune Riftwalker
-    (protection from a creature **type** / spell **subtype** — Protection only
-    models color/creatures/spells today); Sokenzan Renegade / Kiyomaro
+    with a multiplier and an opponent-max variant); Sokenzan Renegade / Kiyomaro
     (hand-size-gated keyword grants + "player with most cards" predicate).
   - Generalize "target player discards" auto-targeting so an ETB
     `Discard { who: Player(Target(0)) }` picks an opponent (Kemuri-Onna is
@@ -3725,27 +3723,9 @@ in the topical sections above, are:
   Tarmogoyf-specific CDA formula (Wight of the Reliquary, Nighthowler, Master
   of Etherium).
 
-### Kamigawa flip cards — remaining (push modern_decks)
-- The flip mechanic (CR 711) ships (`flip_face`, `Effect::Flip`, ki counters,
-  `dealt_damage_this_turn`). Remaining cycle members need new primitives:
-  - **Bushi Tenderfoot // Kenzo** — "a creature dealt damage *by this* this turn
-    dies → flip": needs per-source damaged-by tracking + a death-watch keyed to
-    it (the `dealt_damage_this_turn` bool isn't source-scoped).
-  - **Kitsune Mystic // Autumn-Tail** — end-step flip if enchanted by 2+ Auras
-    (need an aura-count Value), and Autumn-Tail's move-an-Aura ability.
-  - **Student of Elements // Tobita** — "when this has flying, flip it" (a
-    state trigger on gaining a keyword) + Tobita's team-flying anthem.
-  - **Nezumi Graverobber // Nighteyes** — exile *one* target card from an
-    opponent's graveyard + conditional flip if that graveyard is now empty;
-    Nighteyes reanimates (Move gy-creature → battlefield under your control).
-- **Heartbeat of Spring** — symmetric mana-doubling-on-tap for *all* players;
-  `ManaProductionDoubled` is controller-scoped. Add an all-players variant.
+### Kamigawa cards — remaining primitives (push modern_decks)
 - **Threads of Disloyalty** — control Aura (MV≤2). No aura-grants-control path
   yet; `GainControlWhileSourceRemains` is only wired as a creature ETB.
-- **Kitsune Riftwalker** — protection from a *creature type / spell subtype*
-  (Spirits, Arcane); `Keyword::Protection` is color-only today.
-- Devouring Greed / Devouring Rage model their "sacrifice any number of Spirits"
-  additional cost at resolution (`SacrificeAnyNumber`), not at cast.
 
 ### Content / pools
 - **Deck-construction archetype weighting** — tribal subpools (Silverquill
