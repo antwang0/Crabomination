@@ -4726,3 +4726,198 @@ pub fn swimmer_in_nightmares() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gold token (CR 111.10) — artifact, "Sacrifice this token: Add one mana of
+/// any color." (Treasure without the {T}.)
+fn gold_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Gold".into(),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The First Iroan Games — {2}{G} Saga. I: 1/1 Human Soldier. II: three +1/+1
+/// counters on a creature you control. III: if you control a power-4+ creature,
+/// draw two. IV: make a Gold token.
+pub fn the_first_iroan_games() -> CardDefinition {
+    CardDefinition {
+        name: "The First Iroan Games",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: human_soldier_token() }),
+            (
+                2,
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(3),
+                },
+            ),
+            (
+                3,
+                Effect::If {
+                    cond: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::PowerAtLeast(4)),
+                        ),
+                        n: Value::ONE,
+                    },
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ),
+            (4, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: gold_token() }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Binding of the Titans — {1}{G} Saga. I: each player mills three. II:
+/// exile up to two target cards from graveyards. III: return a creature or land
+/// card from your graveyard to your hand. (The per-creature life gain on II is
+/// omitted.)
+pub fn the_binding_of_the_titans() -> CardDefinition {
+    CardDefinition {
+        name: "The Binding of the Titans",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) }),
+            (2, Effect::ExileUpToNFromGraveyards { count: Value::Const(2) }),
+            (
+                3,
+                Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::EachMatching {
+                            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                            filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                        }),
+                        count: Box::new(Value::ONE),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kiora Bests the Sea God — {5}{U}{U} Saga. I: 8/8 hexproof Kraken. II: tap
+/// each nonland permanent your opponents control; it stays tapped through their
+/// next untap. III: gain control of a permanent an opponent controls, untapped.
+pub fn kiora_bests_the_sea_god() -> CardDefinition {
+    let kraken = TokenDefinition {
+        name: "Kraken".into(),
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        keywords: vec![Keyword::Hexproof],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kraken], ..Default::default() },
+        power: 8,
+        toughness: 8,
+        ..Default::default()
+    };
+    let opp_nonland = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+        )
+    };
+    CardDefinition {
+        name: "Kiora Bests the Sea God",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: kraken }),
+            (
+                2,
+                Effect::Seq(vec![
+                    Effect::Tap { what: opp_nonland() },
+                    Effect::AddCounter { what: opp_nonland(), kind: CounterType::Stun, amount: Value::ONE },
+                ]),
+            ),
+            (
+                3,
+                Effect::GainControl {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    to: Some(PlayerRef::You),
+                    duration: Duration::Permanent,
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Akroan War — {3}{R} Saga. I: gain control of a creature while this Saga
+/// remains. II: until your next turn, creatures your opponents control attack
+/// each combat if able. III: each tapped creature deals damage to itself equal
+/// to its power.
+pub fn the_akroan_war() -> CardDefinition {
+    CardDefinition {
+        name: "The Akroan War",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::GainControlWhileSourceRemains {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+            ),
+            (
+                2,
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    keyword: Keyword::MustAttack,
+                    duration: Duration::UntilNextTurn,
+                },
+            ),
+            (
+                3,
+                Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+                    ),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

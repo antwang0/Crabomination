@@ -2951,3 +2951,64 @@ fn swimmer_in_nightmares_scales_and_evades() {
     assert!(g.computed_permanent(swimmer).unwrap().keywords.contains(&crate::card::Keyword::Unblockable),
         "unblockable under Ashiok");
 }
+
+// ── THB sagas ─────────────────────────────────────────────────────────────────
+
+/// Resolve a saga's chapter `idx` (0-based) with the given target.
+fn resolve_chapter(g: &mut GameState, saga: CardId, controller: usize, idx: usize, target: Option<Target>) {
+    let def = g.battlefield_find(saga).unwrap().definition.clone();
+    let eff = def.saga_chapters[idx].1.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(saga, controller, target, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+}
+
+/// The First Iroan Games I makes a Human Soldier; III draws two under a big body.
+#[test]
+fn first_iroan_games_chapters() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::the_first_iroan_games());
+    resolve_chapter(&mut g, saga, 0, 0, None);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Human Soldier"), "made a Soldier");
+    g.add_card_to_battlefield(0, catalog::terror_of_mount_velus()); // 5/5 power ≥ 4
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    resolve_chapter(&mut g, saga, 0, 2, None);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew two with a power-4+ creature");
+}
+
+/// The Binding of the Titans I mills three from each player.
+#[test]
+fn binding_of_the_titans_mills() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::the_binding_of_the_titans());
+    for p in 0..2 {
+        for _ in 0..5 { g.add_card_to_library(p, catalog::grizzly_bears()); }
+    }
+    resolve_chapter(&mut g, saga, 0, 0, None);
+    assert_eq!(g.players[0].graveyard.len(), 3, "you milled three");
+    assert_eq!(g.players[1].graveyard.len(), 3, "opponent milled three");
+}
+
+/// Kiora Bests the Sea God I creates an 8/8 hexproof Kraken.
+#[test]
+fn kiora_makes_kraken() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::kiora_bests_the_sea_god());
+    resolve_chapter(&mut g, saga, 0, 0, None);
+    let kraken = g.battlefield.iter().find(|c| c.definition.name == "Kraken").expect("made a Kraken");
+    assert_eq!((kraken.definition.power, kraken.definition.toughness), (8, 8));
+    assert!(kraken.definition.keywords.contains(&crate::card::Keyword::Hexproof));
+}
+
+/// The Akroan War III makes each tapped creature damage itself for its power.
+#[test]
+fn akroan_war_tapped_creatures_self_damage() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::the_akroan_war());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    resolve_chapter(&mut g, saga, 0, 2, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "tapped 2/2 took 2 and died");
+}

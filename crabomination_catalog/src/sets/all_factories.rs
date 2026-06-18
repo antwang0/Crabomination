@@ -7948,6 +7948,10 @@ static THB: &[Factory] = &[
     super::thb::grasping_giant,
     super::thb::sunlit_hoplite,
     super::thb::swimmer_in_nightmares,
+    super::thb::the_first_iroan_games,
+    super::thb::the_binding_of_the_titans,
+    super::thb::kiora_bests_the_sea_god,
+    super::thb::the_akroan_war,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,
