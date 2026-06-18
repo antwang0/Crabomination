@@ -4611,3 +4611,25 @@ pub fn naiad_of_hidden_coves() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Grasping Giant — {5}{W} 5/7 Giant. Vigilance; whenever it becomes blocked by
+/// a creature, exile that creature until Grasping Giant leaves the battlefield.
+pub fn grasping_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Grasping Giant",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 5,
+        toughness: 7,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: Selector::BlockingCreatures,
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}

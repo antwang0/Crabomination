@@ -2901,3 +2901,22 @@ fn naiad_discounts_only_on_opponents_turns() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Restoration Angel"));
 }
+
+/// Grasping Giant exiles the creature that blocks it (until it leaves).
+#[test]
+fn grasping_giant_exiles_its_blocker() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::grasping_giant());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(giant);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, giant)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).is_none(), "blocker exiled");
+    assert!(g.exile.iter().any(|c| c.id == blocker), "blocker is in exile");
+}

@@ -118,6 +118,11 @@ pub enum Selector {
     /// Resolves via `GameState.block_map[source]`. Used by "whenever this
     /// blocks a creature, [affect that creature]" triggers (Wall of Frost).
     BlockedAttacker,
+    /// The mirror of `BlockedAttacker`: every creature currently blocking the
+    /// source attacker (reverse-lookup of `GameState.block_map`). Used by
+    /// "whenever this becomes blocked by a creature, [affect that creature]"
+    /// triggers (Grasping Giant).
+    BlockingCreatures,
     /// CR 702.76 — the card hidden (exiled) by the source via Hideaway: the
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.

@@ -9679,6 +9679,18 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
+            Selector::BlockingCreatures => ctx
+                .source
+                .map(|attacker| {
+                    self.block_map
+                        .iter()
+                        .filter(|(_, aid)| **aid == attacker)
+                        .map(|(bid, _)| *bid)
+                        .filter(|bid| self.battlefield.iter().any(|c| c.id == *bid))
+                        .map(EntityRef::Permanent)
+                        .collect()
+                })
+                .unwrap_or_default(),
             Selector::CardExiledWithSource => self
                 .exile
                 .iter()
