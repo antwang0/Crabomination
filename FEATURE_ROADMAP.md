@@ -42,8 +42,10 @@ exercising each) was elided in a compaction pass; recover it from
   manlands, living weapon, clones/token-copies/spell-copies.
 - **Replacement effects:** enters-tapped, enters-with-counters,
   token/counter/damage/mana doubling, regeneration, EtbTriggerTax, Maze-of-Ith
-  per-source prevention, prevention shields, finality exile-instead. Counters
-  cease on zone change (122.2).
+  per-source prevention, prevention shields, finality exile-instead, fog
+  (CR 615.1) incl. a per-dealer exception (`prevent_combat_damage_except` —
+  Inspire Awe "except enchanted/enchantment creatures"). Counters cease on
+  zone change (122.2).
 - **Statics (misc):** no-max-hand-size, play-lands-from-graveyard,
   artifact/creature non-mana-ability locks, spell-tax, two-player coin-flip-off
   (Mana Clash), reveal-top-land-else-hand, opponents'-turn cost reduction
@@ -54,7 +56,10 @@ exercising each) was elided in a compaction pass; recover it from
 - **Ability/trigger riders:** statics-granted triggered abilities (Kataki),
   conditional aura riders, rhystic taxes (Esper Sentinel), once-per-turn
   triggers (603.3d), opponents-only activations, discard-self cost,
-  counter-to-exile, blink-return-EOT.
+  counter-to-exile, blink-return-EOT, "when enchanted creature dies" Aura LKI
+  triggers (`EventScope::EnchantedBySource` — Minion's Return) and
+  auras-on-dying-creature payoffs (`auras_at_death` +
+  `Value::AurasYouControlledOnDyingSubject` — Hateful Eidolon, Dawn Evangel).
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant; vs-bot,
   networked TCP multiplayer, draft + cube, Learn/Lessons sideboard, full-state
   serde snapshots (save/restore + replay foundation).
@@ -121,9 +126,10 @@ Each unblocks a large swath of cards.
   text-box swaps, "becomes a copy of" layer interaction.
 - 🟡 **Static ability framework:** cost-reduction statics, "you may play"
   permissions, anthem stacking incl. disjunctive multi-type lords (Blex);
-  devotion-gated god states (`NotCreatureWhileDevotionBelow`); keyword loss
-  (`LoseKeyword` — Nowhere to Run). Remaining: broader "you may play",
-  devotion-gated non-type states.
+  devotion-gated god states (`NotCreatureWhileDevotionBelow`) + devotion
+  bonuses (`StaticEffect::DevotionBonus` — Altar of the Pantheon, CR 700.5);
+  keyword loss (`LoseKeyword` — Nowhere to Run). Remaining: broader "you may
+  play", devotion-gated non-type states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
 - ✅ **Regeneration shields & "next time" prevention** as proper shields.
 - ⏳ **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
