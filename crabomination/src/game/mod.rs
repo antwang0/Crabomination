@@ -3302,6 +3302,21 @@ impl GameState {
                     modification: Modification::ModifyPowerToughness(bp, bt),
                 });
             }
+            // "Loses all abilities AND has [keywords]" auras (Heliod's
+            // Punishment): the removal must precede the aura's own keyword
+            // grants so they survive (same timestamp → stable insertion
+            // order; CR 613.7 grant-after-removal).
+            if bonus.remove_abilities {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(vec![target]),
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::RemoveAllAbilities,
+                });
+            }
             for kw in &bonus.keywords {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
@@ -3315,7 +3330,7 @@ impl GameState {
             }
             // Characteristic-overriding Auras (Ichthyomorphosis,
             // One with the Stars): set base P/T (7b), card/creature types,
-            // colors, and ability loss (6) on the host while attached.
+            // and colors on the host while attached.
             let push_mod = |effects: &mut Vec<ContinuousEffect>, layer, sublayer, m| {
                 effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
@@ -3342,10 +3357,6 @@ impl GameState {
             if let Some(colors) = &bonus.set_colors {
                 push_mod(&mut all_effects, Layer::L5Color, None,
                     Modification::SetColors(colors.clone()));
-            }
-            if bonus.remove_abilities {
-                push_mod(&mut all_effects, Layer::L6Ability, None,
-                    Modification::RemoveAllAbilities);
             }
             // Host-conditional riders ("as long as enchanted creature is
             // green, …" — Shield of the Oversoul). Evaluated against the

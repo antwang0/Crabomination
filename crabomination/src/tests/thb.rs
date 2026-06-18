@@ -3519,3 +3519,23 @@ fn one_with_the_stars_makes_an_enchantment() {
     assert!(cp.card_types.contains(&CardType::Enchantment), "now an enchantment");
     assert!(!cp.card_types.contains(&CardType::Creature), "no longer a creature");
 }
+
+/// Heliod's Punishment strips the creature's abilities and stops it attacking
+/// or blocking.
+#[test]
+fn heliods_punishment_neutralizes() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // flying/vigilance
+    let aura = g.add_card_to_hand(0, catalog::heliods_punishment());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Heliod's Punishment");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert!(!cp.keywords.contains(&crate::card::Keyword::Flying), "lost flying");
+    assert!(cp.keywords.contains(&crate::card::Keyword::CantAttack), "can't attack");
+    assert!(cp.keywords.contains(&crate::card::Keyword::CantBlock), "can't block");
+}

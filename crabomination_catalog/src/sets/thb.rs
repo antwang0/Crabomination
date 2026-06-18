@@ -5877,3 +5877,30 @@ pub fn one_with_the_stars() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Heliod's Punishment — {1}{W} Aura. Enchant creature. Enchanted creature
+/// can't attack or block and loses all abilities. (The four task-counter
+/// self-removal timer is dropped — the lock is modeled as permanent, the
+/// printed play pattern of neutralizing the creature.)
+pub fn heliods_punishment() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Heliod's Punishment",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            remove_abilities: true,
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
