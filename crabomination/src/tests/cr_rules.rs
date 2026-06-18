@@ -2768,3 +2768,75 @@ fn cr_509_1b_serpent_only_blocked_by_sea_creatures() {
     assert!(g.blocker_can_block_attacker(kraken, serpent), "Kraken can block");
     assert!(!g.blocker_can_block_attacker(bear, serpent), "non-sea creature can't");
 }
+
+// ── CR 509 (declare blockers) + 702.20 (Vigilance) — Grasping Giant ───────────
+
+fn cr_advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
+/// CR 509.1c — a creature becomes blocked by *each* creature blocking it, so
+/// Grasping Giant exiles every blocker (the `Selector::BlockingCreatures`
+/// reverse-lookup of the block map).
+#[test]
+fn cr_509_1c_grasping_giant_exiles_every_blocker() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::grasping_giant());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(giant);
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    // CR 702.20 — Vigilance: attacking doesn't tap the giant.
+    assert!(!g.battlefield_find(giant).unwrap().tapped, "vigilant attacker stays untapped");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, giant), (b2, giant)])).expect("double block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b1).is_none() && g.battlefield_find(b2).is_none(), "both blockers exiled");
+}
+
+// ── CR 117.7c / 601.2f — cost reductions can't reduce colored pips ─────────────
+
+/// CR 601.2f — Thryx's {1}-off discount applies to the generic part only; a
+/// mana-value-5+ spell still needs all its colored pips.
+#[test]
+fn cr_601_2f_thryx_discount_does_not_pay_colored() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thryx_the_sudden_storm());
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon()); // {4}{R}{R} → {3}{R}{R}
+    // Only {3}{R} available — the second red pip is unpaid even with the discount.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: dragon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "discount can't cover a colored pip");
+}
+
+/// CR 509.1h / 510.1c — once a creature is blocked it stays blocked even if its
+/// blocker leaves; Grasping Giant exiles its lone blocker yet deals no combat
+/// damage to the defending player.
+#[test]
+fn cr_510_1c_grasping_giant_stays_blocked_after_exiling_blocker() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::grasping_giant());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(giant);
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, giant)])).expect("block");
+    drain_stack(&mut g); // becomes-blocked trigger exiles the blocker
+    assert!(g.battlefield_find(blocker).is_none(), "blocker exiled before damage");
+    let life_before = g.players[1].life;
+    cr_advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before, "blocked attacker deals no damage to the player");
+}
