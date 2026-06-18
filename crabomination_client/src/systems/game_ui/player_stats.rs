@@ -59,6 +59,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Night => (Color::srgba(0.14, 0.16, 0.30, 1.0), theme::TEXT_PRIMARY),
         // No-lifegain lock (CR 119.7) — a muted blood red.
         StatChipKind::NoLifegain => (Color::srgba(0.34, 0.12, 0.12, 1.0), theme::TEXT_PRIMARY),
+        // Combat-damage fog (CR 615.1) — a hazy slate grey.
+        StatChipKind::Fog => (Color::srgba(0.30, 0.32, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
         // parchment green so the public information reads at a glance.
         StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
@@ -83,6 +85,7 @@ pub(super) enum StatChipKind {
     Day,
     Night,
     NoLifegain,
+    Fog,
     TopCard,
 }
 
@@ -558,6 +561,11 @@ pub fn update_player_stats_chips(
             Some(true) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Day, "☀ day".to_string()),
             Some(false) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Night, "☾ night".to_string()),
             None => {}
+        }
+        // CR 615.1 fog — a global turn state; surface once, on the active
+        // player's row, so combat won't surprise either seat.
+        if cv.combat_damage_prevented_this_turn && p.seat == cv.active_player {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Fog, "🌫 fog".to_string());
         }
     });
 }

@@ -205,6 +205,7 @@ mod tests {
             exile: vec![],
             game_over: None,
             damage_cant_be_prevented_this_turn: false,
+            combat_damage_prevented_this_turn: false,
             day_night: None,
             combat_preview: None,
             castable_hand: vec![],

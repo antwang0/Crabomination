@@ -104,6 +104,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         exile: state.exile.iter().map(|c| exile_entry(c, viewer)).collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
+        combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
         combat_preview: combat_preview(state),
         // One pass over the hand builds a single library-stripped probe

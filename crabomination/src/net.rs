@@ -248,6 +248,11 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR 615.1 — true while a "prevent all combat damage this turn" fog is
+    /// active (Fog, Holy Day, Inspire Awe). Surfaced so UIs can warn that
+    /// combat won't deal damage this turn. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub combat_damage_prevented_this_turn: bool,
     /// CR 731 — the game's day/night designation: `None` = neither (the
     /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
     /// so UIs can show a day/night indicator. `#[serde(default)]` for

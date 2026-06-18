@@ -264,6 +264,13 @@ impl Bot for RandomBot {
                             if lethal_swing {
                                 return true;
                             }
+                            // CR 615.1 — don't swing with a creature whose
+                            // combat damage is prevented this turn (Fog /
+                            // Inspire Awe's exception); attacking only risks it
+                            // for no damage.
+                            if state.combat_damage_prevented_for_dealer(c.id) {
+                                return false;
+                            }
                             // Unblockable by the current board: if the
                             // opponent has creatures but none can legally
                             // block this attacker (Unblockable, "can't be
@@ -3200,6 +3207,26 @@ mod tests {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
                     "menace attacker should swing past a lone blocker");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// Under a global fog (CR 615.1), the bot holds back a non-lethal
+    /// attacker whose combat damage would be prevented.
+    #[test]
+    fn bot_holds_back_attackers_under_fog() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        g.prevent_combat_damage_this_turn = true; // a Fog is active
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.is_empty(), "fogged attacker stays home");
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }
