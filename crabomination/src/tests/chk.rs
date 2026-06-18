@@ -2235,6 +2235,71 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Seizan drains and refills the active player at each upkeep.
+#[test]
+fn seizan_drains_and_draws_for_active_player() {
+    let mut g = two_player_game();
+    let seizan = g.add_card_to_battlefield(0, catalog::seizan_perverter_of_truth());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    // Active player is seat 0 in a fresh game → its upkeep trigger.
+    let trig = catalog::seizan_perverter_of_truth().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(seizan, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "active player loses 2");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "and draws two");
+}
+
+/// Soul of Magma pings a creature on a Spirit/Arcane cast.
+#[test]
+fn soul_of_magma_spiritcraft_pings() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::soul_of_magma());
+    let x1 = g.add_card_to_battlefield(1, catalog::lantern_kami()); // 1/1
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: Some(Target::Permanent(x1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(x1).is_none(), "1/1 dies to the 1-damage ping");
+}
+
+/// Part the Veil returns only your creatures to hand.
+#[test]
+fn part_the_veil_bounces_your_creatures_only() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let part = g.add_card_to_hand(0, catalog::part_the_veil());
+    g.perform_action(GameAction::CastSpell {
+        card_id: part, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Part the Veil");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "your creature bounced");
+    assert!(g.battlefield_find(theirs).is_some(), "opponent's creature stays");
+}
+
+/// Reito Lantern tucks a graveyard card under its owner's library.
+#[test]
+fn reito_lantern_bottoms_a_graveyard_card() {
+    let mut g = two_player_game();
+    let lantern = g.add_card_to_battlefield(0, catalog::reito_lantern());
+    let card = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lantern, ability_index: 0, target: Some(Target::Permanent(card)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("tuck the card");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != card), "left the graveyard");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(card), "now on the bottom of its owner's library");
+}
+
 /// Okina pumps a legendary creature but can't target a non-legendary one.
 #[test]
 fn okina_pumps_only_legendary_creatures() {

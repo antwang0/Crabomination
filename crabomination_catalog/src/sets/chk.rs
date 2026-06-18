@@ -4277,6 +4277,99 @@ pub fn uncontrollable_anger() -> CardDefinition {
     }
 }
 
+/// Seizan, Perverter of Truth — {3}{B}{B} Legendary Demon Spirit 6/5. At the
+/// beginning of each player's upkeep, that player loses 2 life and draws two.
+pub fn seizan_perverter_of_truth() -> CardDefinition {
+    CardDefinition {
+        name: "Seizan, Perverter of Truth",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Demon, CreatureType::Spirit]),
+        power: 6,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::Player(PlayerRef::ActivePlayer), amount: Value::Const(2) },
+                Effect::Draw { who: Selector::Player(PlayerRef::ActivePlayer), amount: Value::Const(2) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thousand-legged Kami — {6}{G}{G} Spirit 6/6. Soulshift 7.
+pub fn thousand_legged_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Thousand-legged Kami",
+        cost: cost(&[generic(6), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(7)],
+        ..Default::default()
+    }
+}
+
+/// Soul of Magma — {3}{R}{R} Spirit 2/2. Spiritcraft: whenever you cast a
+/// Spirit or Arcane spell, this creature deals 1 damage to target creature.
+pub fn soul_of_magma() -> CardDefinition {
+    CardDefinition {
+        name: "Soul of Magma",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Part the Veil — {3}{U} Instant — Arcane. Return all creatures you control to
+/// their owner's hand.
+pub fn part_the_veil() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Part the Veil",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::Move {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
+        ..Default::default()
+    }
+}
+
+/// Reito Lantern — {2} Artifact. {3}: Put target card from a graveyard on the
+/// bottom of its owner's library.
+pub fn reito_lantern() -> CardDefinition {
+    use crate::effect::{LibraryPosition, ZoneDest};
+    CardDefinition {
+        name: "Reito Lantern",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::InGraveyard),
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Masako the Humorless — {2}{W} Legendary Human Advisor 2/1. Flash. Tapped
 /// creatures you control can block as though they were untapped.
 pub fn masako_the_humorless() -> CardDefinition {
