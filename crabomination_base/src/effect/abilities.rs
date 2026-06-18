@@ -136,6 +136,11 @@ pub enum StaticEffect {
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// Generic cost reduction for spells the controller casts *from their
+    /// graveyard* (Gravebreaker Lamia — "Spells you cast from your graveyard
+    /// cost {1} less"). Applied only on the graveyard-cast paths (flashback /
+    /// retrace / escape / disturb / aftermath); clamped at the generic pip.
+    GraveyardCastCostReduction { amount: u32 },
     /// Like `CostReduction`, but only on turns other than the controller's
     /// (Naiad of Hidden Coves — "During turns other than yours, spells you
     /// cast cost {1} less"). Applied in `cost_reduction_for_spell` when the

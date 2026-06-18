@@ -223,11 +223,29 @@ pub(crate) fn cost_reduction_for_spell(
     card: &crate::card::CardInstance,
     target: Option<&crate::game::Target>,
 ) -> u32 {
+    cost_reduction_for_spell_zoned(state, caster, card, target, false)
+}
+
+/// Like `cost_reduction_for_spell`, but `from_graveyard` toggles the
+/// graveyard-cast-only statics (Gravebreaker Lamia). The graveyard-cast paths
+/// (flashback / retrace / escape / disturb / aftermath) pass `true`.
+pub(crate) fn cost_reduction_for_spell_zoned(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
+    from_graveyard: bool,
+) -> u32 {
     use crate::effect::StaticEffect;
     let mut reduction = 0u32;
     for src in &state.battlefield {
         for sa in &src.definition.static_abilities {
             match &sa.effect {
+                StaticEffect::GraveyardCastCostReduction { amount }
+                    if from_graveyard && src.controller == caster =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReduction { filter, amount }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -4242,7 +4260,7 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly);
         }
         let mut cost = disturb_cost;
-        let reduction = cost_reduction_for_spell(self, p, &card, None);
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, None, true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -4365,7 +4383,7 @@ impl GameState {
         // Flashback IS a cast (CR 702.34a), so Killian-style target-aware
         // cost reductions apply the same as for hand casts. Drain
         // generic-only pips after substituting X.
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -4536,7 +4554,7 @@ impl GameState {
         } else {
             card.definition.cost.clone()
         };
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
@@ -4632,7 +4650,7 @@ impl GameState {
         } else {
             escape_cost
         };
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }

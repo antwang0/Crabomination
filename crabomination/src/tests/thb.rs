@@ -3199,3 +3199,53 @@ fn warden_of_the_chained_needs_a_big_friend() {
     assert!(!g.computed_permanent(warden).unwrap().keywords.contains(&crate::card::Keyword::CantAttack),
         "can attack with a power-4+ ally");
 }
+
+/// Elspeth, Sun's Nemesis −2 mints two 1/1 Soldiers.
+#[test]
+fn elspeth_suns_nemesis_makes_soldiers() {
+    let mut g = two_player_game();
+    let e = g.add_card_to_battlefield(0, catalog::elspeth_suns_nemesis());
+    g.battlefield_find_mut(e).unwrap().counters.insert(CounterType::Loyalty, 5);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: e, ability_index: 1, target: None, x_value: None,
+    }).expect("-2 activatable");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Soldier))
+        .count();
+    assert_eq!(soldiers, 2, "two 1/1 Soldier tokens");
+    assert_eq!(g.battlefield_find(e).unwrap().counter_count(CounterType::Loyalty), 3, "5 - 2");
+}
+
+/// Elspeth, Sun's Nemesis can be recast from the graveyard via Escape.
+#[test]
+fn elspeth_suns_nemesis_escapes() {
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let e = catalog::elspeth_suns_nemesis();
+    let id = g.add_card_to_graveyard(0, e);
+    // Four other cards to exile for the escape cost.
+    for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
+    let fodder: Vec<_> =
+        g.players[0].graveyard.iter().filter(|c| c.id != id).take(4).map(|c| c.id).collect();
+    g.perform_action(GameAction::CastEscape {
+        card_id: id, exile_cards: fodder,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "Elspeth entered from graveyard");
+}
+
+/// Gravebreaker Lamia discounts spells cast from the graveyard by {1}, but
+/// not spells cast from elsewhere.
+#[test]
+fn gravebreaker_lamia_discounts_graveyard_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gravebreaker_lamia());
+    let id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let card = g.players[0].graveyard.iter().find(|c| c.id == id).unwrap().clone();
+    use crate::game::actions::cost_reduction_for_spell_zoned;
+    assert_eq!(cost_reduction_for_spell_zoned(&g, 0, &card, None, true), 1, "graveyard cast: {{1}} off");
+    assert_eq!(cost_reduction_for_spell_zoned(&g, 0, &card, None, false), 0, "hand cast: no discount");
+}

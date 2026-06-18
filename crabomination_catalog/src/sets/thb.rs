@@ -3,8 +3,9 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
-    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, Selector,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, LoyaltyAbility,
+    PlaneswalkerSubtype, SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
@@ -5279,6 +5280,106 @@ pub fn warden_of_the_chained() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::CantAttack],
             },
+        }],
+        ..Default::default()
+    }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// THB planeswalkers, gods, and the aura-matters tail (modern_decks finish pass)
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Elspeth, Sun's Nemesis — {2}{W}{W} Elspeth planeswalker, 5 loyalty.
+/// −1: up to two creatures you control get +2/+1. −2: make two 1/1 Soldiers.
+/// −3: gain 5 life. Escape—{4}{W}{W}, exile four other graveyard cards.
+pub fn elspeth_suns_nemesis() -> CardDefinition {
+    CardDefinition {
+        name: "Elspeth, Sun's Nemesis",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Elspeth],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Escape(cost(&[generic(4), w(), w()]), 4)],
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 2,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                    effect: Box::new(Effect::PumpPT {
+                        what: Selector::Target(0),
+                        power: Value::Const(2),
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: soldier_token(),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// 1/1 white Human Soldier token.
+fn soldier_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Gravebreaker Lamia — {4}{B} 4/4 Snake Lamia with Lifelink. ETB: search
+/// your library for a card and put it into your graveyard. Spells you cast
+/// from your graveyard cost {1} less.
+pub fn gravebreaker_lamia() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Gravebreaker Lamia",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Lamia],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Any,
+            to: ZoneDest::Graveyard,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast from your graveyard cost {1} less to cast.",
+            effect: StaticEffect::GraveyardCastCostReduction { amount: 1 },
         }],
         ..Default::default()
     }

@@ -47,7 +47,7 @@ pub enum CreatureType {
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph, Demigod,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
-    Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith,
+    Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith, Lamia,
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
