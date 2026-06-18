@@ -2547,3 +2547,261 @@ pub fn wrap_in_flames() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// THB extra batch (modern_decks rebase): cards not in the constellation batch.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Setessan Skirmisher — {1}{G} 2/1 Human Warrior. Constellation — whenever
+/// an enchantment you control enters, this creature gets +1/+1 until end of turn.
+pub fn setessan_skirmisher() -> CardDefinition {
+    CardDefinition {
+        name: "Setessan Skirmisher",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![constellation(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gift of Strength — {1}{G} Instant. Target creature gets +3/+3 and gains
+/// reach until end of turn.
+pub fn gift_of_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Gift of Strength",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Reach,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Karametra's Blessing — {W} Instant. Target creature gets +2/+2 until end
+/// of turn. If it's an enchanted creature or enchantment creature, it also
+/// gains hexproof and indestructible until end of turn.
+pub fn karametras_blessing() -> CardDefinition {
+    CardDefinition {
+        name: "Karametra's Blessing",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::IsEnchanted
+                        .or(SelectionRequirement::Enchantment),
+                },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Hexproof,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Underworld Fires — {1}{R} Sorcery. 1 damage to each creature and each
+/// planeswalker. If a permanent dealt damage this way would die this turn,
+/// exile it instead.
+pub fn underworld_fires() -> CardDefinition {
+    let each = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+        )
+    };
+    CardDefinition {
+        name: "Underworld Fires",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: each() },
+            Effect::ForEach {
+                selector: each(),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(1),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Satyr's Cunning — {R} Sorcery. Create a 1/1 red Satyr with "can't block".
+/// Escape — {2}{R}, exile two other cards.
+pub fn satyrs_cunning() -> CardDefinition {
+    CardDefinition {
+        name: "Satyr's Cunning",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Escape(cost(&[generic(2), r()]), 2)],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Satyr".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Red],
+                keywords: vec![Keyword::CantBlock],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Satyr],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Traveler's Amulet — {1} Artifact. {1}, Sacrifice this: search your library
+/// for a basic land card, reveal it, put it into your hand, then shuffle.
+pub fn travelers_amulet() -> CardDefinition {
+    CardDefinition {
+        name: "Traveler's Amulet",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Escape Velocity — {R} Aura. Enchant creature; enchanted creature gets
+/// +1/+0 and has haste. Escape — {1}{R}, exile two other cards.
+pub fn escape_velocity() -> CardDefinition {
+    CardDefinition {
+        name: "Escape Velocity",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Escape(cost(&[generic(1), r()]), 2)],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 0,
+            keywords: vec![Keyword::Haste],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Setessan Training — {1}{G} Aura. Enchant creature; ETB draw a card;
+/// enchanted creature gets +1/+0 and has trample.
+pub fn setessan_training() -> CardDefinition {
+    CardDefinition {
+        name: "Setessan Training",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 0,
+            keywords: vec![Keyword::Trample],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Staggering Insight — {W}{U} Aura. Enchant creature; enchanted creature
+/// gets +1/+1, has lifelink, and "Whenever this creature deals combat damage
+/// to a player, draw a card."
+pub fn staggering_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Staggering Insight",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Lifelink],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

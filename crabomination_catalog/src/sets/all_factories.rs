@@ -7866,6 +7866,15 @@ static THB: &[Factory] = &[
     super::thb::dreadful_apathy,
     super::thb::sea_gods_scorn,
     super::thb::wrap_in_flames,
+    super::thb::setessan_skirmisher,
+    super::thb::gift_of_strength,
+    super::thb::karametras_blessing,
+    super::thb::underworld_fires,
+    super::thb::satyrs_cunning,
+    super::thb::travelers_amulet,
+    super::thb::escape_velocity,
+    super::thb::setessan_training,
+    super::thb::staggering_insight,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

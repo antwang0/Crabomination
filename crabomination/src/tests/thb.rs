@@ -1916,3 +1916,162 @@ fn wrap_in_flames_pings_and_locks_blocking() {
     let cp = g.computed_permanent(c1).expect("computed");
     assert!(cp.keywords.contains(&crate::card::Keyword::CantBlock), "can't block this turn");
 }
+
+// ── THB extra batch (modern_decks rebase) ───────────────────────────────────
+
+#[test]
+fn setessan_skirmisher_constellation_self_pump() {
+    let mut g = two_player_game();
+    let sk = g.add_card_to_battlefield(0, catalog::setessan_skirmisher());
+    let omen = g.add_card_to_hand(0, catalog::omen_of_the_sea());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: omen, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("omen");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(sk).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 2), "constellation +1/+1 EOT");
+}
+
+#[test]
+fn gift_of_strength_pumps_and_grants_reach() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::gift_of_strength());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("gift of strength");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "+3/+3");
+    assert!(c.keywords.contains(&Keyword::Reach));
+}
+
+#[test]
+fn karametras_blessing_protects_an_enchanted_creature() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::escape_velocity());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("aura");
+    drain_stack(&mut g);
+    let blessing = g.add_card_to_hand(0, catalog::karametras_blessing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blessing, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("blessing");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::Indestructible) && c.keywords.contains(&Keyword::Hexproof),
+        "enchanted creature gains hexproof + indestructible");
+}
+
+#[test]
+fn underworld_fires_sweeps_one_and_exiles() {
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let big = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::underworld_fires());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("underworld fires");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == small), "1/1 dies and is exiled");
+    assert!(g.battlefield.iter().any(|c| c.id == big), "2/2 survives");
+}
+
+#[test]
+fn satyrs_cunning_makes_a_cant_block_satyr() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::satyrs_cunning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("satyr's cunning");
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Satyr").expect("Satyr");
+    assert!(tok.definition.keywords.contains(&Keyword::CantBlock));
+}
+
+#[test]
+fn travelers_amulet_fetches_a_basic_land() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let amulet = g.add_card_to_battlefield(0, catalog::travelers_amulet());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: amulet, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("amulet");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic fetched to hand");
+    assert!(!g.battlefield.iter().any(|c| c.id == amulet), "sacrificed");
+}
+
+#[test]
+fn escape_velocity_grants_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::escape_velocity());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape velocity");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 3, "+1/+0");
+    assert!(c.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn setessan_training_draws_on_etb_and_grants_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let aura = g.add_card_to_hand(0, catalog::setessan_training());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("setessan training");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "aura left hand (-1), ETB drew (+1)");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn staggering_insight_grants_lifelink() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::staggering_insight());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("staggering insight");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
+    assert!(c.keywords.contains(&Keyword::Lifelink));
+}
