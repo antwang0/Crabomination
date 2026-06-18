@@ -2235,6 +2235,59 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Okina pumps a legendary creature but can't target a non-legendary one.
+#[test]
+fn okina_pumps_only_legendary_creatures() {
+    let mut g = two_player_game();
+    let okina = g.add_card_to_battlefield(0, catalog::okina_temple_to_the_grandfathers());
+    let legend = g.add_card_to_battlefield(0, catalog::masako_the_humorless()); // legendary 2/1
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // not legendary
+    // Non-legendary target rejected.
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: okina, ability_index: 1, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "can't pump a non-legendary creature");
+    // Legendary target works.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: okina, ability_index: 1, target: Some(Target::Permanent(legend)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("pump the legend");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(legend).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+1");
+}
+
+/// Minamo untaps a tapped legendary permanent.
+#[test]
+fn minamo_untaps_a_legendary_permanent() {
+    let mut g = two_player_game();
+    let minamo = g.add_card_to_battlefield(0, catalog::minamo_school_at_waters_edge());
+    let legend = g.add_card_to_battlefield(0, catalog::masako_the_humorless());
+    g.battlefield_find_mut(legend).unwrap().tapped = true;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: minamo, ability_index: 1, target: Some(Target::Permanent(legend)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("untap the legend");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(legend).unwrap().tapped, "legendary permanent untapped");
+}
+
+/// Uncontrollable Anger gives +2/+2 and forces attacks.
+#[test]
+fn uncontrollable_anger_pumps_and_forces_attack() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let aura = g.add_card_to_hand(0, catalog::uncontrollable_anger());
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::MustAttack), "attacks each combat if able");
+}
+
 /// Masako lets a tapped creature block as though untapped (CR 509.1a).
 #[test]
 fn masako_lets_tapped_creatures_block() {

@@ -4144,6 +4144,144 @@ pub fn kitsune_mystic() -> CardDefinition {
     }
 }
 
+/// Helper: a Kamigawa legendary land's mana-tap plus a `{color},{T}` ability
+/// targeting a legendary creature.
+fn legendary_land(
+    name: &'static str,
+    color: crate::mana::Color,
+    pip: crate::mana::ManaSymbol,
+    target_req: SelectionRequirement,
+    effect: Effect,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add(color),
+            ActivatedAbility { mana_cost: cost(&[pip]), tap_cost: true, effect, ..Default::default() },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shizo, Death's Storehouse — Legendary Land. {T}: Add {B}. {B}, {T}: Target
+/// legendary creature gains fear until end of turn.
+pub fn shizo_deaths_storehouse() -> CardDefinition {
+    legendary_land(
+        "Shizo, Death's Storehouse",
+        crate::mana::Color::Black,
+        b(),
+        SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+        Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+            ),
+            keyword: Keyword::Fear,
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Shinka, the Bloodsoaked Keep — Legendary Land. {T}: Add {R}. {R}, {T}:
+/// Target legendary creature gains first strike until end of turn.
+pub fn shinka_the_bloodsoaked_keep() -> CardDefinition {
+    legendary_land(
+        "Shinka, the Bloodsoaked Keep",
+        crate::mana::Color::Red,
+        r(),
+        SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+        Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+            ),
+            keyword: Keyword::FirstStrike,
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Okina, Temple to the Grandfathers — Legendary Land. {T}: Add {G}. {G}, {T}:
+/// Target legendary creature gets +1/+1 until end of turn.
+pub fn okina_temple_to_the_grandfathers() -> CardDefinition {
+    legendary_land(
+        "Okina, Temple to the Grandfathers",
+        crate::mana::Color::Green,
+        g(),
+        SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+        Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Minamo, School at Water's Edge — Legendary Land. {T}: Add {U}. {U}, {T}:
+/// Untap target legendary permanent.
+pub fn minamo_school_at_waters_edge() -> CardDefinition {
+    legendary_land(
+        "Minamo, School at Water's Edge",
+        crate::mana::Color::Blue,
+        u(),
+        SelectionRequirement::HasSupertype(Supertype::Legendary),
+        Effect::Untap {
+            what: target_filtered(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+            up_to: None,
+        },
+    )
+}
+
+/// Unnatural Speed — {R} Instant — Arcane. Target creature gains haste until
+/// end of turn.
+pub fn unnatural_speed() -> CardDefinition {
+    CardDefinition {
+        name: "Unnatural Speed",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Haste,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Uncontrollable Anger — {2}{R}{R} Aura. Flash. Enchant creature. Enchanted
+/// creature gets +2/+2 and attacks each combat if able.
+pub fn uncontrollable_anger() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Uncontrollable Anger",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::MustAttack],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Masako the Humorless — {2}{W} Legendary Human Advisor 2/1. Flash. Tapped
 /// creatures you control can block as though they were untapped.
 pub fn masako_the_humorless() -> CardDefinition {
