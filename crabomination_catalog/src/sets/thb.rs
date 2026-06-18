@@ -3601,3 +3601,121 @@ pub fn skola_grovedancer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB combat-restriction / loyalty-tax / utility-land bodies ───────────────
+
+/// Labyrinth of Skophos — Land. {T}: Add {C}. {4}, {T}: Remove target
+/// attacking or blocking creature from combat.
+pub fn labyrinth_of_skophos() -> CardDefinition {
+    CardDefinition {
+        name: "Labyrinth of Skophos",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                tap_cost: true,
+                effect: Effect::RemoveFromCombat {
+                    what: target_filtered(
+                        SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Unknown Shores — Land. {T}: Add {C}. {1}, {T}: Add one mana of any color.
+pub fn unknown_shores() -> CardDefinition {
+    CardDefinition {
+        name: "Unknown Shores",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Temple Thief — {1}{B} 2/2 Human Rogue. Can't be blocked by enchanted
+/// creatures or enchantment creatures.
+pub fn temple_thief() -> CardDefinition {
+    CardDefinition {
+        name: "Temple Thief",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(
+            SelectionRequirement::IsEnchanted.or(SelectionRequirement::Enchantment),
+        ))],
+        ..Default::default()
+    }
+}
+
+/// Serpent of Yawning Depths — {4}{U}{U} 6/6 Enchantment Creature — Serpent.
+/// Krakens, Leviathans, Octopuses, and Serpents you control can't be blocked
+/// except by Krakens, Leviathans, Octopuses, and Serpents.
+pub fn serpent_of_yawning_depths() -> CardDefinition {
+    use crate::card::StaticAbility;
+    let sea = || {
+        SelectionRequirement::HasCreatureType(CreatureType::Kraken)
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Leviathan))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Octopus))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Serpent))
+    };
+    CardDefinition {
+        name: "Serpent of Yawning Depths",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        static_abilities: vec![StaticAbility {
+            description: "Sea creatures you control can't be blocked except by sea creatures.",
+            effect: crate::effect::StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    sea().and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::CantBeBlockedExceptBy(Box::new(sea())),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eidolon of Obstruction — {1}{W} 2/1 Enchantment Creature — Spirit. First
+/// strike. Loyalty abilities of planeswalkers your opponents control cost {1}
+/// more to activate.
+pub fn eidolon_of_obstruction() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Eidolon of Obstruction",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![StaticAbility {
+            description: "Opponents' planeswalker loyalty abilities cost {1} more to activate.",
+            effect: crate::effect::StaticEffect::OpponentLoyaltyActivationTax { amount: 1 },
+        }],
+        ..Default::default()
+    }
+}

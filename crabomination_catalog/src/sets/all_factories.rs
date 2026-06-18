@@ -7911,6 +7911,11 @@ static THB: &[Factory] = &[
     super::thb::nadir_kraken,
     super::thb::sunmane_pegasus,
     super::thb::skola_grovedancer,
+    super::thb::labyrinth_of_skophos,
+    super::thb::unknown_shores,
+    super::thb::temple_thief,
+    super::thb::serpent_of_yawning_depths,
+    super::thb::eidolon_of_obstruction,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

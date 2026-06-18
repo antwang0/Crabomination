@@ -2400,6 +2400,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveFromCombat { what } => {
+                // CR 506.4 — pull each targeted creature out of combat.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.remove_from_combat(cid);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Suspect { what } => {
                 // CR 701.60 — mark each target creature as suspected (menace +
                 // can't block, injected as computed keywords).

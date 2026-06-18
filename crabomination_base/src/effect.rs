@@ -2183,6 +2183,11 @@ pub enum Effect {
     /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
     ExileReturnNextEndStep { what: Selector },
     Tap     { what: Selector },
+    /// CR 506.4 — remove every targeted creature from combat: an attacker is
+    /// pulled from the attack (its blocks released), a blocker is unassigned.
+    /// It stops being an attacking/blocking creature but stays on the
+    /// battlefield (Labyrinth of Skophos, Falter-style effects).
+    RemoveFromCombat { what: Selector },
     /// CR 702.26 — phase out every permanent the selector resolves to. The
     /// permanent moves to `GameState.phased_out` (treated as nonexistent) and
     /// phases back in during its controller's next untap step. Vodalian

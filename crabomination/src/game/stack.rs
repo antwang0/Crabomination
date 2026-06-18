@@ -2370,6 +2370,34 @@ impl GameState {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
+        // CR 704.5n / 303.4f — an Aura attached to an object it can no longer
+        // legally enchant (host lost the required type, or a "you control"
+        // Aura's host changed controllers) is put into its owner's graveyard.
+        // Only checked when the Aura's "enchant ___" filter is recoverable and
+        // its (live) host fails that filter — distinct from the missing-host
+        // sweep above. Bestowed Auras are exempt (their host loss reverts them
+        // to creatures, handled earlier).
+        let illegally_attached: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.is_aura() && !c.bestowed)
+            .filter_map(|c| {
+                let host = c.attached_to?;
+                let filter = c.definition.aura_enchant_filter()?;
+                let host_live = self.battlefield.iter().any(|b| b.id == host);
+                if host_live
+                    && !self.evaluate_requirement(filter, &Target::Permanent(host), c.controller)
+                {
+                    Some(c.id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        for id in illegally_attached {
+            events.append(&mut self.remove_to_graveyard_with_triggers(id));
+        }
+
         // CR 704.5y — if a permanent has more than one Role controlled by
         // the same player attached, each but the newest (by battlefield
         // timestamp, CardId tiebreak) goes to its owner's graveyard.

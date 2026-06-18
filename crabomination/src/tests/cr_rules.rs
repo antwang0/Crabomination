@@ -2654,3 +2654,117 @@ fn cr_702_16c_ability_cant_target_protection_from_source_color() {
         additional_targets: Vec::new(), x_value: None,
     }).expect("can ping an unprotected creature");
 }
+
+// ── CR 704.5n / 303.4f — illegally-attached Aura SBA ──────────────────────────
+
+/// An "enchant creature you control" Aura whose host changes controllers is
+/// put into its owner's graveyard (CR 704.5n).
+#[test]
+fn cr_704_5n_you_control_aura_falls_off_on_control_change() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::starlit_mantle());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Starlit Mantle on own creature");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(bear), "attached");
+    // The opponent gains control of the bear; the "you control" Aura is now
+    // illegally attached and is put into its owner's graveyard.
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(aura).is_none(), "Aura left the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == aura), "into owner's graveyard");
+}
+
+/// A plain "enchant creature" Aura stays attached when its host merely changes
+/// controllers (no control restriction to violate).
+#[test]
+fn cr_704_5n_plain_creature_aura_survives_control_change() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::aspect_of_manticore());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Aspect of Manticore");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(bear).unwrap().controller = 1;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(bear),
+        "plain enchant-creature Aura stays put");
+}
+
+// ── CR 506.4 — remove from combat ─────────────────────────────────────────────
+
+/// Labyrinth of Skophos removes a declared attacker from combat (CR 506.4).
+#[test]
+fn cr_506_4_labyrinth_removes_attacker_from_combat() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let labyrinth = g.add_card_to_battlefield(0, catalog::labyrinth_of_skophos());
+    g.clear_sickness(labyrinth);
+    g.set_attacking(vec![Attack { attacker, target: AttackTarget::Player(0) }]);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: labyrinth, ability_index: 1, target: Some(Target::Permanent(attacker)),
+        additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate Labyrinth removal");
+    drain_stack(&mut g);
+    assert!(!g.attacking().iter().any(|a| a.attacker == attacker),
+        "attacker removed from combat");
+}
+
+// ── CR 606 — opponent loyalty-ability tax ─────────────────────────────────────
+
+/// Eidolon of Obstruction makes an opponent's loyalty ability cost {1} more.
+#[test]
+fn cr_606_eidolon_taxes_opponent_loyalty() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::eidolon_of_obstruction());
+    let karn = g.add_card_to_battlefield(1, catalog::karn_scion_of_urza());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    // No mana → the {1} tax can't be paid, activation is rejected.
+    assert!(g.activate_loyalty_ability(karn, 0, None, None).is_err(),
+        "untaxed activation blocked with no mana");
+    // Pay the tax and it goes through.
+    g.players[1].mana_pool.add_colorless(1);
+    assert!(g.activate_loyalty_ability(karn, 0, None, None).is_ok(),
+        "activation succeeds once the {{1}} tax is paid");
+}
+
+// ── CR 509.1b — block restrictions ────────────────────────────────────────────
+
+/// Temple Thief can't be blocked by enchantment creatures (CR 509.1b).
+#[test]
+fn cr_509_1b_temple_thief_cant_be_blocked_by_enchantment_creatures() {
+    let mut g = two_player_game();
+    let thief = g.add_card_to_battlefield(0, catalog::temple_thief());
+    let ench_creature = g.add_card_to_battlefield(1, catalog::skola_grovedancer()); // ench creature
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(!g.blocker_can_block_attacker(ench_creature, thief), "enchantment creature can't block");
+    assert!(g.blocker_can_block_attacker(bear, thief), "plain creature can block");
+}
+
+/// Serpent of Yawning Depths can only be blocked by sea creatures (CR 509.1b).
+#[test]
+fn cr_509_1b_serpent_only_blocked_by_sea_creatures() {
+    let mut g = two_player_game();
+    let serpent = g.add_card_to_battlefield(0, catalog::serpent_of_yawning_depths());
+    let kraken = g.add_card_to_battlefield(1, catalog::nadir_kraken()); // Kraken
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.blocker_can_block_attacker(kraken, serpent), "Kraken can block");
+    assert!(!g.blocker_can_block_attacker(bear, serpent), "non-sea creature can't");
+}

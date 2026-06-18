@@ -6918,6 +6918,24 @@ impl GameState {
             }
         }
 
+        // CR 606 — opponents' loyalty-tax statics (Eidolon of Obstruction)
+        // make this activation cost extra generic mana. Pay it before the
+        // loyalty cost so an unpayable tax aborts cleanly.
+        let opps = self.opponents_of(p);
+        let loyalty_tax: u32 = self
+            .battlefield
+            .iter()
+            .filter(|c| opps.contains(&c.controller))
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::OpponentLoyaltyActivationTax { amount } => Some(amount),
+                _ => None,
+            })
+            .sum();
+        if loyalty_tax > 0 {
+            self.try_pay_with_auto_tap(p, &crate::mana::cost(&[crate::mana::generic(loyalty_tax)]))?;
+        }
+
         // Apply loyalty cost. CR 606.5: a `-X` ability lets the player pick X
         // (0..=current loyalty); the cost paid is X loyalty and the body reads
         // X via `Value::XFromCost`. Fixed-cost abilities ignore `x_value`.
@@ -9257,6 +9275,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // ActivationTax (Suppression Field) — consulted in
             // `activate_ability`; no layer effect.
             | StaticEffect::ActivationTax { .. }
+            // OpponentLoyaltyActivationTax (Eidolon of Obstruction) —
+            // consulted in `activate_loyalty_ability`; no layer effect.
+            | StaticEffect::OpponentLoyaltyActivationTax { .. }
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAllYoursEachUntapStep

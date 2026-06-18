@@ -2197,6 +2197,23 @@ impl CardDefinition {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
     }
 
+    /// The "enchant ___" restriction an Aura attaches under, recovered from
+    /// its resolution `Effect::Attach { to: TargetFiltered { filter, .. } }`
+    /// (CR 303.4a). Returns `None` when the attach target can't be read as a
+    /// single filtered selector (bestow, scripted attaches), so callers that
+    /// re-check legality (the 704.5n SBA) can conservatively skip it.
+    pub fn aura_enchant_filter(&self) -> Option<&SelectionRequirement> {
+        fn from_effect(e: &crate::effect::Effect) -> Option<&SelectionRequirement> {
+            use crate::effect::{Effect, Selector};
+            match e {
+                Effect::Attach { to: Selector::TargetFiltered { filter, .. }, .. } => Some(filter),
+                Effect::Seq(inner) => inner.iter().find_map(from_effect),
+                _ => None,
+            }
+        }
+        from_effect(&self.effect)
+    }
+
     pub fn has_flashback(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Flashback(cost) = kw { Some(cost) } else { None }

@@ -493,6 +493,11 @@ pub enum StaticEffect {
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).
     ActivationTax { amount: u32 },
+    /// CR 606 — "Loyalty abilities of planeswalkers your opponents control
+    /// cost {N} more to activate" (Eidolon of Obstruction). Summed across the
+    /// taxers an activating player's opponents control and paid as extra
+    /// generic mana at `activate_loyalty_ability`.
+    OpponentLoyaltyActivationTax { amount: u32 },
     /// "During each of your turns, you may cast a permanent spell of each
     /// permanent type from your graveyard." Muldrotha, the Gravetide
     /// (checked in `cast_spell`; per-type-per-turn tally on the player).

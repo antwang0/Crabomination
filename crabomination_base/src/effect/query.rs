@@ -365,6 +365,7 @@ impl Effect {
             | Effect::ExileReturnNextEndStep { what }
             | Effect::PhaseOut { what }
             | Effect::Tap { what }
+            | Effect::RemoveFromCombat { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
             | Effect::CounterSpell { what }
