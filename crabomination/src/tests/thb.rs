@@ -2697,3 +2697,47 @@ fn alirios_enters_tapped_with_reflection() {
     assert!(g.battlefield_find(id).unwrap().tapped, "enters tapped");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Reflection"), "made a Reflection");
 }
+
+// ── THB "first spell each opponent's turn" tests ──────────────────────────────
+
+/// Arena Trickster grows on your first spell during an opponent's turn.
+#[test]
+fn arena_trickster_grows_on_first_spell_opp_turn() {
+    let mut g = two_player_game();
+    let trickster = g.add_card_to_battlefield(0, catalog::arena_trickster());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // It's the opponent's turn; player 0 casts at instant speed.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Bolt on opponent's turn");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(trickster).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "grew on the first off-turn spell");
+}
+
+/// Stinging Lionfish can tap a permanent on your first off-turn spell.
+#[test]
+fn stinging_lionfish_taps_on_first_off_turn_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stinging_lionfish());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Mode(0), // tap
+        crate::decision::DecisionAnswer::Target(Target::Permanent(victim)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Bolt on opponent's turn");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "Lionfish tapped the target");
+}

@@ -4214,3 +4214,103 @@ pub fn alirios_enraptured() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB "first spell each opponent's turn" payoffs ───────────────────────────
+
+/// "Whenever you cast your first spell during each opponent's turn, `body`."
+/// (CR 603.2 — a `SpellCast`/`YourControl` trigger gated on it not being your
+/// turn and being your first spell that turn; the Wavebreak Hippocamp shape.)
+fn first_spell_each_opponents_turn(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::All(vec![
+                Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::ONE },
+            ]),
+        ),
+        effect: body,
+    }
+}
+
+/// Arena Trickster — {3}{R} 3/3 Human Shaman. First spell each opponent's turn
+/// → put a +1/+1 counter on this creature.
+pub fn arena_trickster() -> CardDefinition {
+    CardDefinition {
+        name: "Arena Trickster",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![first_spell_each_opponents_turn(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dreamstalker Manticore — {2}{R} 4/2 Enchantment Creature — Manticore. First
+/// spell each opponent's turn → deal 1 damage to any target.
+pub fn dreamstalker_manticore() -> CardDefinition {
+    CardDefinition {
+        name: "Dreamstalker Manticore",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Manticore], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![first_spell_each_opponents_turn(Effect::DealDamage {
+            to: target_any(),
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mischievous Chimera — {U}{R} 2/2 Enchantment Creature — Chimera. Flying.
+/// First spell each opponent's turn → deal 1 to each opponent, then scry 1.
+pub fn mischievous_chimera() -> CardDefinition {
+    CardDefinition {
+        name: "Mischievous Chimera",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Chimera], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![first_spell_each_opponents_turn(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Stinging Lionfish — {1}{U} 2/1 Enchantment Creature — Fish. First spell each
+/// opponent's turn → you may tap or untap target nonland permanent.
+pub fn stinging_lionfish() -> CardDefinition {
+    CardDefinition {
+        name: "Stinging Lionfish",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![first_spell_each_opponents_turn(Effect::MayDo {
+            description: "Tap or untap target nonland permanent?".into(),
+            body: Box::new(Effect::ChooseMode(vec![
+                Effect::Tap { what: target_filtered(SelectionRequirement::Nonland) },
+                Effect::Untap { what: target_filtered(SelectionRequirement::Nonland), up_to: None },
+            ])),
+        })],
+        ..Default::default()
+    }
+}

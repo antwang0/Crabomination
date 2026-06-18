@@ -7931,6 +7931,10 @@ static THB: &[Factory] = &[
     super::thb::archon_of_falling_stars,
     super::thb::elspeths_nightmare,
     super::thb::alirios_enraptured,
+    super::thb::arena_trickster,
+    super::thb::dreamstalker_manticore,
+    super::thb::mischievous_chimera,
+    super::thb::stinging_lionfish,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,
