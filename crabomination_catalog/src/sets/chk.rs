@@ -4144,6 +4144,34 @@ pub fn kitsune_mystic() -> CardDefinition {
     }
 }
 
+/// Masumaro, First to Live — {3}{G}{G}{G} Legendary Spirit. */* equal to twice
+/// the number of cards in your hand.
+pub fn masumaro_first_to_live() -> CardDefinition {
+    CardDefinition {
+        name: "Masumaro, First to Live",
+        cost: cost(&[generic(3), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        dynamic_pt: Some(crate::card::DynamicPt::ControllerHandSizeTimes { factor: 2 }),
+        ..Default::default()
+    }
+}
+
+/// Adamaro, First to Desire — {1}{R}{R} Legendary Spirit. */* equal to the
+/// cards in the hand of the opponent with the most cards.
+pub fn adamaro_first_to_desire() -> CardDefinition {
+    CardDefinition {
+        name: "Adamaro, First to Desire",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        dynamic_pt: Some(crate::card::DynamicPt::MaxOpponentHandSize),
+        ..Default::default()
+    }
+}
+
 /// Threads of Disloyalty — {1}{U}{U} Aura. "Enchant creature with mana value 2
 /// or less. You control enchanted creature." (CR 711-era control Aura — the
 /// steal lasts while the Aura stays attached, via `temporary_control`.)

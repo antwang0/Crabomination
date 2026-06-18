@@ -3924,6 +3924,21 @@ impl GameState {
                     let n = self.players[card.controller].hand.len() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::ControllerHandSizeTimes { factor } => {
+                    let n = self.players[card.controller].hand.len() as i32 * factor;
+                    (n, n)
+                }
+                crate::card::DynamicPt::MaxOpponentHandSize => {
+                    let n = self
+                        .players
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| *i != card.controller)
+                        .map(|(_, p)| p.hand.len())
+                        .max()
+                        .unwrap_or(0) as i32;
+                    (n, n)
+                }
                 crate::card::DynamicPt::ArtifactsControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_artifact()

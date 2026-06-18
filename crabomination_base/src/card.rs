@@ -1907,8 +1907,14 @@ pub enum DynamicPt {
     /// controls. Lumra, Bellow of the Woods (base 0/0).
     LandsControlled { base: i32 },
     /// Power = toughness = the number of cards in the controller's hand.
-    /// Maro, Masumaro, Kagemaro.
+    /// Maro, Kagemaro.
     ControllerHandSize,
+    /// Power = toughness = `factor` × the cards in the controller's hand.
+    /// Masumaro, First to Live (twice your hand size).
+    ControllerHandSizeTimes { factor: i32 },
+    /// Power = toughness = the size of the largest hand among the controller's
+    /// opponents. Adamaro, First to Desire.
+    MaxOpponentHandSize,
     /// Power = toughness = `base` + the number of artifacts the controller
     /// controls (counting the source). Broodstar (base 0/0, CR 604.3 CDA).
     ArtifactsControlled { base: i32 },

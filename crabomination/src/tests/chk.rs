@@ -2235,6 +2235,27 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Masumaro is */* equal to twice the cards in your hand.
+#[test]
+fn masumaro_sizes_to_twice_your_hand() {
+    let mut g = two_player_game();
+    let masumaro = g.add_card_to_battlefield(0, catalog::masumaro_first_to_live());
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::forest()); }
+    let cp = g.computed_permanent(masumaro).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "twice a 3-card hand");
+}
+
+/// Adamaro is */* equal to the opponent with the most cards in hand.
+#[test]
+fn adamaro_sizes_to_largest_opponent_hand() {
+    let mut g = two_player_game();
+    let adamaro = g.add_card_to_battlefield(0, catalog::adamaro_first_to_desire());
+    for _ in 0..4 { g.add_card_to_hand(1, catalog::mountain()); } // opponent holds 4
+    for _ in 0..9 { g.add_card_to_hand(0, catalog::mountain()); } // own hand doesn't count
+    let cp = g.computed_permanent(adamaro).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "reads the opponent's hand, not yours");
+}
+
 /// Kagemaro is sized to your hand and wraths for -X/-X on sacrifice.
 #[test]
 fn kagemaro_sizes_to_hand_and_wraths() {

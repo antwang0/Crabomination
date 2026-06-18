@@ -246,6 +246,8 @@ static CHK: &[Factory] = &[
     super::chk::kitsune_mystic,
     super::chk::kitsune_riftwalker,
     super::chk::threads_of_disloyalty,
+    super::chk::masumaro_first_to_live,
+    super::chk::adamaro_first_to_desire,
     super::chk::bushi_tenderfoot,
     super::chk::nezumi_graverobber,
     super::chk::initiate_of_blood,
