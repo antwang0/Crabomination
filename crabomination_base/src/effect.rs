@@ -2020,6 +2020,13 @@ pub enum Effect {
     Move { what: Selector, to: ZoneDest },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// "Search your library for up to `count` cards matching `filter` and put
+    /// them into `to`." Resolves as a chain of single `Search` picks (each
+    /// reuses the `SearchPending` suspend), shrinking `count` per pick.
+    /// AutoDecider declines (finds none). Nylea's Intervention (lands → hand),
+    /// Deathbellow War Cry (Minotaurs → battlefield). The "different names"
+    /// rider is not enforced.
+    SearchUpToN { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest, count: Value },
     /// CR 701.19a — `picker` searches `who`'s library: the pick decision
     /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
     /// "search target opponent's library ... exile that card").

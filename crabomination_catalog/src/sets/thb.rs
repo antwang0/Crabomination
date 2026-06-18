@@ -5904,3 +5904,49 @@ pub fn heliods_punishment() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nylea's Intervention — {X}{G}{G} Sorcery. Choose one — search your library
+/// for up to X land cards and put them into your hand; or deal twice X damage
+/// to each creature with flying.
+pub fn nyleas_intervention() -> CardDefinition {
+    CardDefinition {
+        name: "Nylea's Intervention",
+        cost: cost(&[x(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Hand(PlayerRef::You),
+                count: Value::XFromCost,
+            },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ),
+                amount: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Deathbellow War Cry — {5}{R}{R}{R} Sorcery. Search your library for up to
+/// four Minotaur creature cards and put them onto the battlefield, then
+/// shuffle. (The "different names" rider is not enforced.)
+pub fn deathbellow_war_cry() -> CardDefinition {
+    CardDefinition {
+        name: "Deathbellow War Cry",
+        cost: cost(&[generic(5), r(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Minotaur)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            count: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}

@@ -5889,6 +5889,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchUpToN { who, filter, to, count } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                if n == 0 { return Ok(()); }
+                // Run one Search; chain the remaining picks as the suspend
+                // continuation (or run them inline under AutoDecider). The
+                // single-Search arm already handles tax/limit/zone routing.
+                let one = Effect::Search { who: who.clone(), filter: filter.clone(), to: to.clone() };
+                let rest = Effect::SearchUpToN {
+                    who: who.clone(),
+                    filter: filter.clone(),
+                    to: to.clone(),
+                    count: crate::effect::Value::Const(n - 1),
+                };
+                self.run_effect(&one, ctx, events)?;
+                // If the single Search suspended (wants_ui), splice the
+                // remaining picks after it; otherwise loop inline.
+                if let Some((d, p, tail)) = self.suspend_signal.take() {
+                    let chained = Effect::Seq(vec![tail, rest]);
+                    self.suspend_signal = Some((d, p, chained));
+                    return Ok(());
+                }
+                self.run_effect(&rest, ctx, events)
+            }
+
             e @ (Effect::Search { .. } | Effect::SearchPickedBy { .. }) => {
                 use crate::decision::Decision;
                 let (who, picker_ref, filter, to) = match e {

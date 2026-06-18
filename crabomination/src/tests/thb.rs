@@ -3539,3 +3539,46 @@ fn heliods_punishment_neutralizes() {
     assert!(cp.keywords.contains(&crate::card::Keyword::CantAttack), "can't attack");
     assert!(cp.keywords.contains(&crate::card::Keyword::CantBlock), "can't block");
 }
+
+/// Deathbellow War Cry tutors up to four Minotaurs straight onto the
+/// battlefield.
+#[test]
+fn deathbellow_war_cry_tutors_minotaurs() {
+    let mut g = two_player_game();
+    let m1 = g.add_card_to_library(0, catalog::rage_scarred_berserker());
+    let m2 = g.add_card_to_library(0, catalog::skophos_maze_warden());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // not a Minotaur
+    let spell = g.add_card_to_hand(0, catalog::deathbellow_war_cry());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(m1)),
+        crate::decision::DecisionAnswer::Search(Some(m2)),
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Deathbellow War Cry");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(m1).is_some() && g.battlefield_find(m2).is_some(),
+        "both Minotaurs hit the battlefield");
+}
+
+/// Nylea's Intervention mode 2 deals twice X to each flyer.
+#[test]
+fn nyleas_intervention_burns_flyers() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 no fly
+    let spell = g.add_card_to_hand(0, catalog::nyleas_intervention());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(1), x_value: Some(2),
+    }).expect("cast Nylea's Intervention mode 2, X=2");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(flyer).is_none(), "4/4 flyer took 4 and died");
+    assert!(g.battlefield_find(ground).is_some(), "ground creature untouched");
+}
