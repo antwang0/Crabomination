@@ -3545,9 +3545,11 @@ primitive noted):
   exile" half of the return trigger is still approximated (counters clear on
   the exile zone-change before the trigger reads them — would need an
   exile-from-battlefield LKI snapshot).
-- **Storm Herald** — mass aura-reanimate from gy attached to creatures +
-  delayed exile (`Effect::Attach` exists; needs the multi-aura picker + the
-  "if would leave, exile instead" rider).
+- **Storm Herald** ✅ — `Effect::ReanimateAurasExileEot` returns gy Auras
+  attached to your creatures (auto-picks a legal creature per aura) + a
+  per-aura `NextEndStep` delayed exile. Remaining nicety: the "if those Auras
+  would leave, exile instead" replacement rider (currently a plain delayed
+  exile).
 Shipped this run: Ashiok's Erasure (`StaticEffect::OpponentsCantCastNamed` +
 `Effect::CounterSpellExileNameLock`, linked counter-exile returning to hand on
 leave), Entrancing Lyre (`CardInstance.untap_locked_by` tap-lock +

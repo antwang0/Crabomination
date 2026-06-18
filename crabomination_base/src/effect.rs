@@ -3184,6 +3184,10 @@ pub enum Effect {
     /// you keep the pile with the greater total mana value), so it resolves
     /// without an interactive `Decision::SplitPiles`.
     FactOrFiction { count: Value },
+    /// Storm Herald — return all Aura cards from your graveyard to the
+    /// battlefield, each attached to a legal creature (auras with no legal
+    /// creature stay in the graveyard); exile them at the next end step.
+    ReanimateAurasExileEot,
 
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller

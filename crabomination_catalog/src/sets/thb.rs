@@ -33,6 +33,26 @@ pub fn ashioks_erasure() -> CardDefinition {
     }
 }
 
+/// Storm Herald — {2}{R} 3/2 Human Shaman, Haste. ETB returns Aura cards from
+/// your graveyard to the battlefield attached to creatures you control, then
+/// exiles them at your next end step (`Effect::ReanimateAurasExileEot`).
+pub fn storm_herald() -> CardDefinition {
+    CardDefinition {
+        name: "Storm Herald",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::ReanimateAurasExileEot)],
+        ..Default::default()
+    }
+}
+
 /// Atris, Oracle of Half-Truths — {2}{U}{B} 3/2 Human Advisor, Menace. ETB an
 /// opponent splits the top three of your library into two piles; one to hand,
 /// the other to graveyard (`Effect::FactOrFiction` heuristic).

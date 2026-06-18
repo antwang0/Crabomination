@@ -3994,3 +3994,22 @@ fn atris_splits_top_three_into_hand_and_graveyard() {
     assert_eq!(g.players[0].graveyard.len(), gy_before + 2, "the other two cards went to the graveyard");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "kept the bear");
 }
+
+/// Storm Herald: ETB returns Aura cards from your graveyard attached to your
+/// creatures, then exiles them at your next end step.
+#[test]
+fn storm_herald_returns_auras_then_exiles_eot() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_graveyard(0, catalog::pacifism());
+    let herald = g.add_card_to_battlefield(0, catalog::storm_herald());
+    let eff = catalog::storm_herald().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(herald, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let a = g.battlefield_find(aura).expect("Pacifism returned to the battlefield");
+    assert_eq!(a.attached_to, Some(bear), "attached to a creature you control");
+    // Exiled at the next end step.
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == aura), "the returned Aura is exiled at the next end step");
+}

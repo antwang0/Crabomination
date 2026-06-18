@@ -7999,6 +7999,57 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReanimateAurasExileEot => {
+                use crate::effect::ZoneDest;
+                use crate::game::types::Target;
+                let p = ctx.controller;
+                let aura_ids: Vec<CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_aura())
+                    .map(|c| c.id)
+                    .collect();
+                let creatures: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && c.controller == p)
+                    .map(|c| c.id)
+                    .collect();
+                for aid in aura_ids {
+                    let filter = self.players[p]
+                        .graveyard
+                        .iter()
+                        .find(|c| c.id == aid)
+                        .and_then(|c| c.definition.aura_enchant_filter().cloned());
+                    let target = creatures.iter().copied().find(|&cid| {
+                        filter
+                            .as_ref()
+                            .is_none_or(|f| self.evaluate_requirement_static(f, &Target::Permanent(cid), p, Some(aid)))
+                    });
+                    let Some(tgt) = target else { continue };
+                    self.move_card_to(
+                        aid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                        ctx,
+                        events,
+                    );
+                    if let Some(c) = self.battlefield_find_mut(aid) {
+                        c.attached_to = Some(tgt);
+                    }
+                    events.push(GameEvent::AttachmentMoved { attachment: aid, attached_to: Some(tgt) });
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: p,
+                        source: aid,
+                        kind: crate::game::types::DelayedKind::NextEndStep,
+                        effect: Effect::Exile { what: Selector::This },
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::OnYourNextNamedSpellThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {
