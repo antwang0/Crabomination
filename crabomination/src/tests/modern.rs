@@ -37284,18 +37284,24 @@ fn chrome_mox_with_no_imprint_makes_no_mana() {
 }
 
 #[test]
-fn fact_or_fiction_draws_two() {
+fn fact_or_fiction_splits_revealed_into_hand_and_graveyard() {
     let mut g = two_player_game();
-    for _ in 0..3 { g.add_card_to_library(0, catalog::shock()); }
-    let lib = g.players[0].library.len();
+    // Three equal-value cards on top: the opponent isolates one (pile A, MV 1),
+    // the other two form pile B (MV 2) — you keep the higher-value pile B.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::shock()); } // MV 1 each
     let fof = g.add_card_to_hand(0, catalog::fact_or_fiction());
+    let gy_before = g.players[0].graveyard.len();
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: fof, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Fact or Fiction");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].library.len(), lib - 2, "drew two");
+    assert_eq!(g.players[0].library.len(), 0, "all three revealed cards left the library");
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Shock").count(), 2,
+        "the larger pile (2 cards) went to hand");
+    // One Shock to graveyard from the split, plus Fact or Fiction itself.
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2, "one Shock + the spell hit the graveyard");
 }
 
 #[test]

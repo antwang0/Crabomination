@@ -3177,6 +3177,13 @@ pub enum Effect {
     /// library, the rest enter the battlefield. Auto-pickers: caster takes
     /// the highest-MV candidates, the opponent denies the two biggest.
     SearchSplitWithOpponent { count: u32 },
+    /// Fact or Fiction / Atris — reveal the top `count` cards of your library;
+    /// an opponent separates them into two piles; put one pile into your hand
+    /// and the other into your graveyard. The split + pick are modeled by a
+    /// value heuristic (opponent isolates the single highest-mana-value card;
+    /// you keep the pile with the greater total mana value), so it resolves
+    /// without an interactive `Decision::SplitPiles`.
+    FactOrFiction { count: Value },
 
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller

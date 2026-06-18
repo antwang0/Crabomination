@@ -7996,6 +7996,7 @@ static THB: &[Factory] = &[
     super::thb::entrancing_lyre,
     super::thb::haktos_the_unscarred,
     super::thb::medomais_prophecy,
+    super::thb::atris_oracle_of_half_truths,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

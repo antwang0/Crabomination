@@ -7960,6 +7960,45 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FactOrFiction { count } => {
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = (self.evaluate_value(count, ctx).max(0) as usize)
+                    .min(self.players[p].library.len());
+                if n == 0 {
+                    return Ok(());
+                }
+                // Reveal the top `n` cards (top = index 0).
+                let revealed: Vec<(CardId, u32)> = self.players[p].library[..n]
+                    .iter()
+                    .map(|c| (c.id, c.definition.cost.cmc()))
+                    .collect();
+                // Opponent isolates the single highest-MV card (pile A); the
+                // rest form pile B. You keep the pile with the greater total
+                // mana value; ties keep the larger pile.
+                let best = revealed.iter().enumerate().max_by_key(|(_, (_, mv))| *mv).map(|(i, _)| i);
+                let (mut pile_a, mut pile_b): (Vec<CardId>, Vec<CardId>) = (Vec::new(), Vec::new());
+                let (mut sum_a, mut sum_b) = (0u32, 0u32);
+                for (i, (cid, mv)) in revealed.iter().enumerate() {
+                    if Some(i) == best {
+                        pile_a.push(*cid);
+                        sum_a += *mv;
+                    } else {
+                        pile_b.push(*cid);
+                        sum_b += *mv;
+                    }
+                }
+                let take_a = sum_a > sum_b || (sum_a == sum_b && pile_a.len() >= pile_b.len());
+                let (to_hand, to_gy) = if take_a { (pile_a, pile_b) } else { (pile_b, pile_a) };
+                for cid in to_hand {
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                }
+                for cid in to_gy {
+                    self.move_card_to(cid, &ZoneDest::Graveyard, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::OnYourNextNamedSpellThisTurn { body } => {
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 self.delayed_triggers.push(DelayedTrigger {

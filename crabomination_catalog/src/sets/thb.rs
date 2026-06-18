@@ -33,6 +33,27 @@ pub fn ashioks_erasure() -> CardDefinition {
     }
 }
 
+/// Atris, Oracle of Half-Truths — {2}{U}{B} 3/2 Human Advisor, Menace. ETB an
+/// opponent splits the top three of your library into two piles; one to hand,
+/// the other to graveyard (`Effect::FactOrFiction` heuristic).
+pub fn atris_oracle_of_half_truths() -> CardDefinition {
+    CardDefinition {
+        name: "Atris, Oracle of Half-Truths",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::FactOrFiction { count: Value::Const(3) })],
+        ..Default::default()
+    }
+}
+
 /// Medomai's Prophecy — {1}{U} Saga. I: Scry 2. II: choose a card name.
 /// III: when you next cast a spell with that name this turn, draw two. IV:
 /// look at the top card of each player's library (informational — no effect).

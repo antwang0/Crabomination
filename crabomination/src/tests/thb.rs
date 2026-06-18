@@ -3971,3 +3971,26 @@ fn medomais_prophecy_chapter_iii_draws_on_named_cast() {
     // Bolt leaves hand (-1) and the chapter-III trigger draws two (+2).
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "casting the named spell drew two");
 }
+
+/// Atris, Oracle of Half-Truths: ETB reveals the top three of your library and
+/// splits them into hand/graveyard (value heuristic — highest-MV card isolated,
+/// you keep the higher-value pile).
+#[test]
+fn atris_splits_top_three_into_hand_and_graveyard() {
+    let mut g = two_player_game();
+    // Top of library (index 0 first): a 2-MV bear, then two 0-MV lands.
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 — isolated pile A
+    g.add_card_to_library(0, catalog::island());        // MV 0
+    g.add_card_to_library(0, catalog::island());        // MV 0
+    let atris = g.add_card_to_battlefield(0, catalog::atris_oracle_of_half_truths());
+    let eff = catalog::atris_oracle_of_half_truths().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(atris, 0, None, 0);
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    g.resolve_effect(&eff, &ctx).unwrap();
+    // Pile A (the bear, total MV 2) outweighs pile B (two lands, MV 0) → bear
+    // to hand, the two lands to the graveyard.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "the higher-value pile (1 card) went to hand");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 2, "the other two cards went to the graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "kept the bear");
+}

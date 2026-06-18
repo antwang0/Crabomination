@@ -3531,10 +3531,11 @@ earlier "still deferred" list (type/PT-change auras, scaled negative pump,
 conditional mana, land-search count, the planeswalkers, the demigods) all
 shipped — see git. **Genuinely-absent THB cards remaining** (each wants the
 primitive noted):
-- **Atris, Oracle of Half-Truths** — pile-split decision (opponent separates a
-  face-up/face-down pile; you pick one for hand, other to graveyard). Fact or
-  Fiction is currently approximated as plain Draw 2; this needs a real
-  `Decision::SplitPiles`.
+- **Pile-split — fully interactive.** Atris + Fact or Fiction now ship via
+  `Effect::FactOrFiction` (a value heuristic: opponent isolates the single
+  highest-MV card, you keep the higher-value pile). A genuinely interactive
+  `Decision::SplitPiles` (opponent chooses the partition, you choose the pile)
+  remains a refinement — would need a two-step inline decision shape.
 - **Allure of the Unknown** — reveal top 6, an opponent exiles a nonland, rest
   to your hand, that opponent may cast the exiled card free. Needs the reveal /
   opponent-exile-one / opponent-may-cast-from-exile pipeline.

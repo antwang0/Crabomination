@@ -1664,16 +1664,15 @@ pub fn comeuppance() -> CardDefinition {
     }
 }
 
-/// Fact or Fiction — {3}{U} Instant. "Reveal the top five cards of your library.
-/// An opponent separates them into two piles; put one pile into your hand and
-/// the rest into your graveyard." Simplified to "draw two cards" (the
-/// reveal-and-split is not modeled).
+/// Fact or Fiction — {3}{U} Instant. Reveal the top five cards of your library;
+/// an opponent separates them into two piles; one pile to hand, the rest to
+/// graveyard (`Effect::FactOrFiction` value heuristic).
 pub fn fact_or_fiction() -> CardDefinition {
     CardDefinition {
         name: "Fact or Fiction",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::FactOrFiction { count: Value::Const(5) },
         ..Default::default()
     }
 }

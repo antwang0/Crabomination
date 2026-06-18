@@ -231,6 +231,7 @@ impl Effect {
             Effect::OnYourNextSpellCastThisTurn { body }
             | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
+            Effect::FactOrFiction { .. } => false,
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
