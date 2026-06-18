@@ -6235,3 +6235,60 @@ pub fn dreamshaper_shaman() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Athreos, Shroud-Veiled — {4}{W}{B} Legendary Enchantment Creature — God.
+/// Indestructible; not a creature while devotion to W/B < 7. At your end
+/// step, put a coin counter on another target creature. When a coin-countered
+/// creature dies, return it to the battlefield under your control.
+/// (The "or is put into exile" half of the return trigger is approximated —
+/// the engine clears counters on the exile zone-change before it can read
+/// them, so only the death case fires.)
+pub fn athreos_shroud_veiled() -> CardDefinition {
+    use crate::card::{StaticAbility, Supertype};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Athreos, Shroud-Veiled",
+        cost: cost(&[generic(4), w(), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        power: 4,
+        toughness: 7,
+        keywords: vec![Keyword::Indestructible],
+        static_abilities: vec![StaticAbility {
+            description: "As long as your devotion to white and black is less than seven, Athreos isn't a creature.",
+            effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                colors: vec![Color::White, Color::Black],
+                threshold: 7,
+            },
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                    ),
+                    kind: CounterType::Coin,
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::WithCounter(CounterType::Coin),
+                    },
+                ),
+                effect: Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

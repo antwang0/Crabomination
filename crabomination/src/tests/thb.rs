@@ -3816,3 +3816,25 @@ fn dreamshaper_shaman_digs_to_a_permanent() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
         "the revealed nonland permanent entered the battlefield");
 }
+
+/// Athreos, Shroud-Veiled: a coin-countered creature that dies returns under
+/// your control; the end-step trigger places the coin counter.
+#[test]
+fn athreos_reclaims_coin_countered_creature() {
+    let mut g = two_player_game();
+    let athreos = g.add_card_to_battlefield(0, catalog::athreos_shroud_veiled());
+    // End-step trigger places a coin counter on another target creature.
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eff = g.battlefield_find(athreos).unwrap().definition.triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(athreos, 0, Some(Target::Permanent(victim)), 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(victim).unwrap().counter_count(CounterType::Coin), 1, "coin counter placed");
+    // The coin-countered creature dies → returns under our control.
+    g.battlefield_find_mut(victim).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears");
+    assert!(back.is_some(), "the coin-countered creature returned to the battlefield");
+    assert_eq!(back.unwrap().controller, 0, "returned under Athreos's controller's control");
+}

@@ -3539,8 +3539,10 @@ primitive noted):
   opponent-exile-one / opponent-may-cast-from-exile pipeline.
 - **Bronzehide Lion** — dies → returns as an Aura granting indestructible
   (creature→Aura transform on return). Unique; no primitive yet.
-- **Athreos, Shroud-Veiled** — coin-counter control-while-counter + return on
-  death/exile (the demigod body ships via `NotCreatureWhileDevotionBelow`).
+- **Athreos, Shroud-Veiled** — death-reanimate ships; the "or is put into
+  exile" half of the return trigger is still approximated (counters clear on
+  the exile zone-change before the trigger reads them — would need an
+  exile-from-battlefield LKI snapshot).
 - **Storm Herald** — mass aura-reanimate from gy attached to creatures +
   delayed exile (`Effect::Attach` exists; needs the multi-aura picker + the
   "if would leave, exile instead" rider).
@@ -3555,9 +3557,10 @@ primitive noted):
   `opponents_cant_cast_named` lock (Academic Probation) needs a
   permanent-bound variant.
 Shipped this run: Altar of the Pantheon, Hateful Eidolon, Dawn Evangel,
-Minion's Return, Inspire Awe, Ironscale Hydra, Dreamshaper Shaman
-(+ `auras_at_death` capture, `EventScope::EnchantedBySource`,
-fog-with-exception, `PreventCombatDamageToSelfAndGrow`).
+Minion's Return, Inspire Awe, Ironscale Hydra, Dreamshaper Shaman, Athreos
+Shroud-Veiled (death half) (+ `auras_at_death` capture,
+`EventScope::EnchantedBySource`, fog-with-exception,
+`PreventCombatDamageToSelfAndGrow`, `CounterType::Coin`).
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 

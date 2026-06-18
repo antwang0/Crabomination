@@ -309,6 +309,10 @@ pub enum CounterType {
     /// Hired Muscle, …) accrue these on Spirit/Arcane casts and flip at two or
     /// more; the bottom faces spend them for their activated abilities.
     Ki,
+    /// Coin counter — Athreos, Shroud-Veiled marks creatures with these; when
+    /// a coin-countered creature dies, its card returns under Athreos's
+    /// controller's control.
+    Coin,
 }
 
 /// Every zone a card can occupy.
