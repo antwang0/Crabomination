@@ -1538,6 +1538,12 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Crew (CR 702.122): turn an uncrewed Vehicle into an attacker by tapping
+    // the bot's least-valuable untapped creatures. Dry-run-gated.
+    if let Some(action) = pick_crew(state, seat) {
+        return action;
+    }
+
     // Equip (CR 702.6): if the bot controls an Equipment that isn't yet
     // attached to one of its creatures, and it controls a creature to wear
     // it, move the Equipment onto the biggest such creature. Dry-run-gated
@@ -1800,6 +1806,60 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
 /// there's nothing worth equipping. Dry-run gated by the caller's
 /// `would_accept` is bypassed here (we gate inline) so the bot doesn't
 /// thrash re-equipping the same creature.
+/// Crew an uncrewed Vehicle (CR 702.122) the bot controls, tapping the
+/// smallest untapped creatures that together meet the crew cost. Skipped
+/// unless the Vehicle's power is worth more than the creatures spent on it
+/// (so the bot never taps a bigger attacker to animate a smaller Vehicle).
+fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
+    for vehicle in &state.battlefield {
+        if vehicle.controller != seat {
+            continue;
+        }
+        let Some(crew_n) = vehicle.definition.crew_cost() else { continue };
+        // Already a creature this turn (crewed / animated)? Don't re-crew.
+        if state
+            .computed_permanent(vehicle.id)
+            .is_some_and(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+        {
+            continue;
+        }
+        // Candidate crew members: the bot's untapped creatures, smallest first.
+        let mut crew: Vec<(CardId, u32)> = state
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == seat
+                    && c.id != vehicle.id
+                    && c.definition.is_creature()
+                    && !c.tapped
+            })
+            .map(|c| (c.id, c.power().max(0) as u32))
+            .collect();
+        crew.sort_by_key(|&(_, p)| p);
+        let mut picked = Vec::new();
+        let mut total = 0u32;
+        for (id, p) in &crew {
+            if total >= crew_n {
+                break;
+            }
+            picked.push(*id);
+            total += p;
+        }
+        if total < crew_n {
+            continue;
+        }
+        // Don't spend more board power than the Vehicle is worth.
+        if total > vehicle.power().max(0) as u32 {
+            continue;
+        }
+        let action = GameAction::Crew { vehicle: vehicle.id, crew_creatures: picked };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
 fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
     // Best creature to wear an Equipment: highest current power.
     let target = state
@@ -2903,6 +2963,28 @@ mod tests {
         g.battlefield.retain(|c| c.id != frostling);
         g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
         assert!(pick_removal_ping(&g, 0).is_none(), "won't waste a ping on a survivor");
+    }
+
+    /// The bot crews a Vehicle with a spare small creature, but won't tap a
+    /// creature bigger than the Vehicle to do it.
+    #[test]
+    fn bot_crews_a_vehicle_with_a_small_creature() {
+        let mut g = two_player_game();
+        let chariot = g.add_card_to_battlefield(0, catalog::thundering_chariot()); // 3/3, Crew 1
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        g.clear_sickness(bear);
+        match pick_crew(&g, 0) {
+            Some(GameAction::Crew { vehicle, crew_creatures }) => {
+                assert_eq!(vehicle, chariot);
+                assert_eq!(crew_creatures, vec![bear]);
+            }
+            other => panic!("expected a crew action, got {other:?}"),
+        }
+        // Swap the bear for a 5/5: tapping it to animate a 3/3 isn't worth it.
+        g.battlefield.retain(|c| c.id != bear);
+        let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+        g.clear_sickness(dragon);
+        assert!(pick_crew(&g, 0).is_none(), "won't tap a bigger body to crew a smaller Vehicle");
     }
 
     /// The bot sacrifices Pus Kami to destroy a bigger opposing creature, but
