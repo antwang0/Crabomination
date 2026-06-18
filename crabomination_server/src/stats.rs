@@ -146,6 +146,12 @@ pub(crate) struct MatchStats {
     /// the Commander/Brawl formats; reads alongside `poison_wins`/`deck_wins`
     /// as a third distinct alternate-win path.
     pub(crate) commander_damage_wins: u64,
+    /// Subset of `deckout_wins` where at least one losing seat left for an
+    /// "other" reason (concession or a "you lose the game" effect — CR
+    /// 104.3a/104.3g) — not life, poison, deck-out, or commander damage.
+    /// Surfacing it completes the alternate-win decomposition so the
+    /// umbrella `deckout_wins` doesn't hide an unclassified residue.
+    pub(crate) other_wins: u64,
     /// Running sum of squared final turn counts (`Σ turns²`). Paired with
     /// `total_turns` (`Σ turns`) and the match count it yields the
     /// population standard deviation of game length via
@@ -397,6 +403,9 @@ impl MatchStats {
             if reasons.contains(&LossReason::CommanderDamage) {
                 self.commander_damage_wins = self.commander_damage_wins.saturating_add(1);
             }
+            if reasons.contains(&LossReason::Other) {
+                self.other_wins = self.other_wins.saturating_add(1);
+            }
             return;
         }
         // Fallback: no reason data → infer from life totals (every losing
@@ -461,6 +470,12 @@ impl MatchStats {
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     pub(crate) fn deck_pct(&self) -> u64 {
         self.deck_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
+    }
+    /// Percent of wins in which a losing seat left for an "other" reason
+    /// (concession / "you lose the game" effect). A sub-split of
+    /// `deckout_pct`; 0 when no wins recorded.
+    pub(crate) fn other_pct(&self) -> u64 {
+        self.other_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
     /// Percent of wins via 21+ commander damage (CR 903.10a).
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
@@ -723,6 +738,9 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                     s.commander_damage_wins,
                     s.commander_damage_pct()
                 ));
+            }
+            if s.other_wins > 0 {
+                out.push_str(&format!(" other={} ({}%)", s.other_wins, s.other_pct()));
             }
         }
         // Stuck/disconnected matches: prefer the explicit `inconclusive`

@@ -785,6 +785,13 @@ mod tests {
         // Precise life-depletion loss is NOT an alternate win.
         s.observe_win_kind(0, &[6, -1], &[None, Some(LossReason::LifeDepleted)]);
         assert_eq!(s.deckout_wins, 2, "life-damage loss stays out of alt bucket");
+        // Concession / "you lose the game" → alternate + the `other` bucket.
+        s.observe_win_kind(1, &[4, 7], &[Some(LossReason::Other), None]);
+        assert_eq!(s.deckout_wins, 3);
+        assert_eq!(s.other_wins, 1);
+        // other_pct is a share of recorded wins.
+        let shared = MatchStats { wins: 4, other_wins: 1, ..Default::default() };
+        assert_eq!(shared.other_pct(), 25);
     }
 
     #[test]
