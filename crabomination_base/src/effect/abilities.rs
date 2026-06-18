@@ -699,6 +699,11 @@ pub enum StaticEffect {
     /// is increased by one." Altar of the Pantheon. Each permanent the player
     /// controls carrying this static adds 1 to every non-empty devotion query.
     DevotionBonus,
+    /// CR 615 — "If a creature would deal combat damage to this creature,
+    /// prevent that damage and put a +1/+1 counter on this creature."
+    /// Ironscale Hydra. A self-only combat-damage replacement consulted at the
+    /// creature-vs-creature damage sites.
+    PreventCombatDamageToSelfAndGrow,
     /// CR 615 — "Prevent all damage that would be dealt to attacking
     /// creatures you control." Iroas, God of Victory. Consulted at both the
     /// combat strike-back and the shared non-combat damage funnel.

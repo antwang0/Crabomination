@@ -3771,3 +3771,28 @@ fn inspire_awe_fogs_all_but_enchanted() {
     // Only the enchantment creature (2/3) connects; the vanilla bear is fogged.
     assert_eq!(g.players[1].life, life - 2, "only the enchantment creature dealt damage");
 }
+
+/// Ironscale Hydra prevents combat damage dealt to it and grows with a +1/+1
+/// counter (CR 615), for both attacker- and blocker-dealt damage.
+#[test]
+fn ironscale_hydra_prevents_and_grows() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1; // opponent attacks into our Hydra
+    let hydra = g.add_card_to_battlefield(0, catalog::ironscale_hydra()); // 5/5
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(0) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(hydra, attacker)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    let h = g.battlefield_find(hydra).expect("Hydra survives — its damage was prevented");
+    assert_eq!(h.damage, 0, "no combat damage marked on the Hydra");
+    assert_eq!(h.counter_count(CounterType::PlusOnePlusOne), 1, "grew a +1/+1 counter");
+    // The 2/2 attacker took the Hydra's 5 and died.
+    assert!(g.battlefield_find(attacker).is_none(), "attacker took the Hydra's damage and died");
+}

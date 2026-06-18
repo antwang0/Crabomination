@@ -6168,3 +6168,23 @@ pub fn inspire_awe() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ironscale Hydra — {3}{G}{G} 5/5 Hydra. If a creature would deal combat
+/// damage to this creature, prevent that damage and put a +1/+1 counter on it.
+pub fn ironscale_hydra() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Ironscale Hydra",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "If a creature would deal combat damage to this creature, prevent that damage and put a +1/+1 counter on this creature.",
+            effect: StaticEffect::PreventCombatDamageToSelfAndGrow,
+        }],
+        ..Default::default()
+    }
+}

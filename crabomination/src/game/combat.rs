@@ -1561,6 +1561,9 @@ impl GameState {
                         Some(atk.id),
                         &mut events,
                     ) as i32;
+                    // Ironscale Hydra replaces the damage with a +1/+1 counter
+                    // (and so the attacker's lifelink scales off 0).
+                    let dealt = self.ironscale_replace(blocker_id, dealt, &mut events);
                     lifelink_dealt += dealt;
 
                     if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
@@ -1672,6 +1675,9 @@ impl GameState {
                             Some(bid),
                             &mut events,
                         );
+                        // Ironscale Hydra replaces the blocker's strike-back
+                        // with a +1/+1 counter (blocker's lifelink sees 0).
+                        let dmg = self.ironscale_replace(atk.id, dmg as i32, &mut events) as u32;
                         if dmg == 0 {
                             continue;
                         }
@@ -1783,6 +1789,36 @@ impl GameState {
                     self.battlefield_find(dealer).map(|c| c.controller).unwrap_or(0);
                 !self.evaluate_requirement(filter, &Target::Permanent(dealer), controller)
             }
+        }
+    }
+
+    /// Ironscale Hydra (CR 615) — does `id` replace incoming combat damage
+    /// with a +1/+1 counter? Reads `StaticEffect::PreventCombatDamageToSelfAndGrow`.
+    fn creature_prevents_combat_damage_grows(&self, id: CardId) -> bool {
+        self.battlefield_find(id).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|s| {
+                matches!(s.effect, crate::effect::StaticEffect::PreventCombatDamageToSelfAndGrow)
+            })
+        })
+    }
+
+    /// Apply the Ironscale replacement to `recipient` taking `dealt` combat
+    /// damage: if it has the static and `dealt > 0`, add one +1/+1 counter,
+    /// emit the event, and return 0 (the damage is prevented); otherwise
+    /// return `dealt` unchanged.
+    fn ironscale_replace(&mut self, recipient: CardId, dealt: i32, events: &mut Vec<GameEvent>) -> i32 {
+        if dealt > 0 && self.creature_prevents_combat_damage_grows(recipient) {
+            if let Some(c) = self.battlefield_find_mut(recipient) {
+                c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+            }
+            events.push(GameEvent::CounterAdded {
+                card_id: recipient,
+                counter_type: crate::card::CounterType::PlusOnePlusOne,
+                count: 1,
+            });
+            0
+        } else {
+            dealt
         }
     }
 
