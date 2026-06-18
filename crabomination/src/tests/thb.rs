@@ -3249,3 +3249,56 @@ fn gravebreaker_lamia_discounts_graveyard_casts() {
     assert_eq!(cost_reduction_for_spell_zoned(&g, 0, &card, None, true), 1, "graveyard cast: {{1}} off");
     assert_eq!(cost_reduction_for_spell_zoned(&g, 0, &card, None, false), 0, "hand cast: no discount");
 }
+
+/// Calix, Destiny's Hand −7 returns all enchantment cards from your
+/// graveyard to the battlefield.
+#[test]
+fn calix_ultimate_reanimates_enchantments() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::calix_destinys_hand());
+    g.battlefield_find_mut(c).unwrap().counters.insert(CounterType::Loyalty, 7);
+    let ench = g.add_card_to_graveyard(0, catalog::omen_of_the_sun()); // enchantment
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // not an enchantment
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: c, ability_index: 2, target: None, x_value: None,
+    }).expect("-7 activatable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_some(), "enchantment returned");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_creature()).count(), 1,
+        "creature stays in graveyard");
+}
+
+/// Ashiok, Nightmare Muse +1 mints a 2/3 Nightmare.
+#[test]
+fn ashiok_nightmare_muse_makes_token() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::ashiok_nightmare_muse());
+    g.battlefield_find_mut(a).unwrap().counters.insert(CounterType::Loyalty, 5);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: a, ability_index: 0, target: None, x_value: None,
+    }).expect("+1");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c|
+        c.controller == 0 && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare)).unwrap();
+    assert_eq!((token.power(), token.toughness()), (2, 3));
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::Loyalty), 6, "5 + 1");
+}
+
+/// Ashiok −3 bounces a permanent and makes its owner exile a card from hand.
+#[test]
+fn ashiok_nightmare_muse_bounce_and_exile() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::ashiok_nightmare_muse());
+    g.battlefield_find_mut(a).unwrap().counters.insert(CounterType::Loyalty, 5);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a card to exile from hand
+    let before = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: a, ability_index: 1, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("-3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "permanent left the battlefield");
+    // Bounced card returned to hand (+1), then owner exiled one (−1) → net = before.
+    assert_eq!(g.players[1].hand.len(), before, "bounce +1 then exile −1");
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 1).count(), 1, "one card exiled from hand");
+}

@@ -2155,6 +2155,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileFromHand { who, amount } => {
+                // Player exiles `amount` cards from their hand. Auto-picks by
+                // hand order (a wants_ui client could surface a picker; the
+                // bot harness only cares which cards leave). Ashiok −3.
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            let Some(cid) = self.players[p].hand.first().map(|c| c.id) else {
+                                break;
+                            };
+                            let card = self.players[p].hand.remove(0);
+                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                            self.last_moved_cards.push(cid);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Mill { who, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
@@ -6918,6 +6938,32 @@ impl GameState {
                     self.move_card_to(id, &ZoneDest::Exile, ctx, events);
                     if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
                         c.add_counters(*counter, 1);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CastUpToNFromOpponentsExile { count } => {
+                // Grant the controller a free end-of-turn cast permission on
+                // up to `count` opponent-owned cards in exile. Ashiok −7.
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let ids: Vec<crate::card::CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.owner != p && !self.same_team(c.owner, p))
+                    .take(n)
+                    .map(|c| c.id)
+                    .collect();
+                let granted_turn = self.turn_number;
+                for id in ids {
+                    if let Some(card) = self.exile.iter_mut().find(|c| c.id == id) {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: p,
+                            granted_turn,
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            exile_after: false,
+                        });
                     }
                 }
                 Ok(())

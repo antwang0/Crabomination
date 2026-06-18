@@ -5384,3 +5384,136 @@ pub fn gravebreaker_lamia() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Calix, Destiny's Hand — {2}{G}{W} Calix planeswalker, 4 loyalty.
+/// +1: dig four for an enchantment to hand, rest to bottom. −3: exile a
+/// creature/enchantment you don't control until Calix leaves. −7: return all
+/// enchantment cards from your graveyard to the battlefield.
+pub fn calix_destinys_hand() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::ZoneRef;
+    CardDefinition {
+        name: "Calix, Destiny's Hand",
+        cost: cost(&[generic(2), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Calix],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(SelectionRequirement::Enchantment),
+                    take: None,
+                    to_battlefield: false,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::ExileUntilSourceLeaves {
+                    what: target_filtered(
+                        (SelectionRequirement::Creature.or(SelectionRequirement::Enchantment))
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    return_to: ExileReturnZone::Battlefield,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Move {
+                    what: Selector::EachMatching {
+                        zone: ZoneRef::Graveyard(PlayerRef::You),
+                        filter: SelectionRequirement::Enchantment,
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// 2/3 blue-and-black Nightmare token whose attack/block raids each
+/// opponent's library for two cards.
+fn ashiok_nightmare_token() -> TokenDefinition {
+    let raid = |kind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::SelfSource),
+        effect: Effect::ExileTopOfLibrary {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+            link_to_source: false,
+            face_down: false,
+        },
+    };
+    TokenDefinition {
+        name: "Nightmare".into(),
+        power: 2,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue, Color::Black],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
+        triggered_abilities: vec![raid(EventKind::Attacks), raid(EventKind::Blocks)],
+        ..Default::default()
+    }
+}
+
+/// Ashiok, Nightmare Muse — {3}{U}{B} Ashiok planeswalker, 5 loyalty.
+/// +1: make a 2/3 Nightmare that mills opponents on attack/block. −3: bounce
+/// a nonland permanent, then its owner exiles a card from hand. −7: cast up
+/// to three opponent-owned cards from exile for free this turn.
+pub fn ashiok_nightmare_muse() -> CardDefinition {
+    CardDefinition {
+        name: "Ashiok, Nightmare Muse",
+        cost: cost(&[generic(3), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ashiok],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: ashiok_nightmare_token(),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Nonland),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    },
+                    Effect::ExileFromHand {
+                        who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                        amount: Value::ONE,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CastUpToNFromOpponentsExile { count: Value::Const(3) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -193,6 +193,8 @@ pub enum PlaneswalkerSubtype {
     // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
     // Geyadrone Dihada, Urza Chief Artificer).
     Saheeli, Tamiyo, Dihada, Urza,
+    // THB walker.
+    Calix,
     // modern_decks: Narset, Parter of Veils.
     Narset,
     // STX: Kasmina, Enigma Sage.

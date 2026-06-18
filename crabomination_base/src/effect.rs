@@ -1740,6 +1740,10 @@ pub enum Effect {
     Learn   { who: PlayerRef },
     /// Discard `amount` cards. If `random`, chosen randomly; else by `who`.
     Discard { who: Selector, amount: Value, random: bool },
+    /// "`who` exiles `amount` card(s) from their hand" — the player chooses
+    /// (auto-decider exiles by hand order). Like `Discard` but routes to
+    /// exile instead of the graveyard (Ashiok, Nightmare Muse −3).
+    ExileFromHand { who: Selector, amount: Value },
     /// "Each resolved player discards their whole hand, then draws that many
     /// cards." Captures the hand size *before* discarding (Soratami Seer,
     /// Mind's Eye-style wheels). Distinct from `Discard` + `Draw` because the
@@ -2988,6 +2992,14 @@ pub enum Effect {
     /// Imbraham, Dean of Theory — exile the top `count` cards of the
     /// controller's library, each with one `counter` counter on it.
     ExileTopWithCounters { count: Value, counter: crate::card::CounterType },
+
+    /// "You may cast up to `count` spells from among face-up cards your
+    /// opponents own from exile this turn without paying their mana costs."
+    /// Grants the controller a free `may_play_until` end-of-turn permission
+    /// on up to `count` opponent-owned cards in exile (Ashiok, Nightmare
+    /// Muse −7). Approximation: the per-spell cast cap isn't enforced beyond
+    /// the number of cards granted.
+    CastUpToNFromOpponentsExile { count: Value },
 
     /// Omnath, Locus of Creation — run `branches[n]` where `n` is the number
     /// of times an escalating ability the controller owns has already resolved

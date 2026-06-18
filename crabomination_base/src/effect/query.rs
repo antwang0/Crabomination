@@ -281,6 +281,8 @@ impl Effect {
             }
             Effect::MillTwoRepeatSharedColor { who } => sel_has_target(who),
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
+            Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
+            Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who } => sel_has_target(who),
             Effect::SetMaxHandSize { who, size } => sel_has_target(who) || value_has_target(size),

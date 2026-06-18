@@ -7965,6 +7965,8 @@ static THB: &[Factory] = &[
     super::thb::warden_of_the_chained,
     super::thb::elspeth_suns_nemesis,
     super::thb::gravebreaker_lamia,
+    super::thb::calix_destinys_hand,
+    super::thb::ashiok_nightmare_muse,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,
