@@ -147,6 +147,8 @@ pub enum CreatureType {
     Chimera,
     // Kamigawa Zubera (the five Zubera with scaling death triggers).
     Zubera,
+    // THB Nadir Kraken's Tentacle token.
+    Tentacle,
 }
 
 /// Land subtypes (basic land types + others).

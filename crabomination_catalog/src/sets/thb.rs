@@ -2805,3 +2805,799 @@ pub fn staggering_insight() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// THB fill batch — lands, spells, and creatures on existing primitives.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Scry-tapland helper: no basic land types, enters tapped, scry 1, taps for
+/// either of two colors (the Theros "Temple" cycle).
+fn temple(name: &'static str, a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![super::tap_add(a), super::tap_add(b)],
+        triggered_abilities: vec![super::etb_tap_then_scry_one()],
+        ..Default::default()
+    }
+}
+
+/// Temple of Abandon — Land. Enters tapped, scry 1, {T}: Add {R} or {G}.
+pub fn temple_of_abandon() -> CardDefinition {
+    temple("Temple of Abandon", Color::Red, Color::Green)
+}
+/// Temple of Deceit — Land. Enters tapped, scry 1, {T}: Add {U} or {B}.
+pub fn temple_of_deceit() -> CardDefinition {
+    temple("Temple of Deceit", Color::Blue, Color::Black)
+}
+/// Temple of Enlightenment — Land. Enters tapped, scry 1, {T}: Add {W} or {U}.
+pub fn temple_of_enlightenment() -> CardDefinition {
+    temple("Temple of Enlightenment", Color::White, Color::Blue)
+}
+/// Temple of Malice — Land. Enters tapped, scry 1, {T}: Add {B} or {R}.
+pub fn temple_of_malice() -> CardDefinition {
+    temple("Temple of Malice", Color::Black, Color::Red)
+}
+/// Temple of Plenty — Land. Enters tapped, scry 1, {T}: Add {G} or {W}.
+pub fn temple_of_plenty() -> CardDefinition {
+    temple("Temple of Plenty", Color::Green, Color::White)
+}
+
+/// Fateful End — {2}{R} Instant. Deal 3 damage to any target, then scry 1.
+pub fn fateful_end() -> CardDefinition {
+    CardDefinition {
+        name: "Fateful End",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Memory Drain — {2}{U}{U} Instant. Counter target spell, then scry 2.
+pub fn memory_drain() -> CardDefinition {
+    CardDefinition {
+        name: "Memory Drain",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(SelectionRequirement::Any) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Scavenging Harpy — {2}{B} 2/1 Harpy. Flying. ETB: exile target card from
+/// an opponent's graveyard.
+pub fn scavenging_harpy() -> CardDefinition {
+    CardDefinition {
+        name: "Scavenging Harpy",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Harpy], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Exile {
+            what: target_filtered(SelectionRequirement::InOpponentGraveyard),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sphinx Mindbreaker — {5}{U}{U} 6/6 Sphinx. Flying. ETB: each opponent
+/// mills ten cards.
+pub fn sphinx_mindbreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Sphinx Mindbreaker",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(10),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Thaumaturge's Familiar — {3} 1/3 artifact Bird. Flying. ETB: scry 1.
+pub fn thaumaturges_familiar() -> CardDefinition {
+    CardDefinition {
+        name: "Thaumaturge's Familiar",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        ..Default::default()
+    }
+}
+
+/// Mindwrack Harpy — {3}{B} 3/2 Enchantment Creature — Harpy. Flying. At the
+/// beginning of combat on your turn, each player mills three cards.
+pub fn mindwrack_harpy() -> CardDefinition {
+    CardDefinition {
+        name: "Mindwrack Harpy",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Harpy], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Demon of Loathing — {5}{B}{B} 7/7 Demon. Flying, trample. Combat damage to
+/// a player → that player sacrifices a creature of their choice.
+pub fn demon_of_loathing() -> CardDefinition {
+    CardDefinition {
+        name: "Demon of Loathing",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::DefendingPlayer),
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Victory's Envoy — {3}{W}{W} 3/3 Human Cleric. At the beginning of your
+/// upkeep, put a +1/+1 counter on each other creature you control.
+pub fn victorys_envoy() -> CardDefinition {
+    CardDefinition {
+        name: "Victory's Envoy",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Witness of Tomorrows — {4}{U} 3/4 Enchantment Creature — Sphinx. Flying.
+/// {3}{U}: Scry 1.
+pub fn witness_of_tomorrows() -> CardDefinition {
+    CardDefinition {
+        name: "Witness of Tomorrows",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Towering-Wave Mystic — {1}{U} 2/1 Merfolk Wizard. Whenever this creature
+/// deals damage, target player mills that many cards.
+pub fn towering_wave_mystic() -> CardDefinition {
+    CardDefinition {
+        name: "Towering-Wave Mystic",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        // "Whenever this creature deals damage" — modeled on the two combat-
+        // damage events (engine has no non-combat damage source on this body).
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::TriggerEventAmount,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToCreature,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::TriggerEventAmount,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Transcendent Envoy — {1}{W} 1/2 Enchantment Creature — Griffin. Flying.
+/// Aura spells you cast cost {1} less to cast.
+pub fn transcendent_envoy() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Transcendent Envoy",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Aura spells you cast cost {1} less to cast",
+            effect: crate::effect::StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pharika's Libation — {2}{B} Instant. Choose one — target opponent
+/// sacrifices a creature of their choice; or sacrifices an enchantment.
+pub fn pharikas_libation() -> CardDefinition {
+    CardDefinition {
+        name: "Pharika's Libation",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: SelectionRequirement::Enchantment,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Return to Nature — {1}{G} Instant. Choose one — destroy target artifact;
+/// destroy target enchantment; or exile target card from a graveyard.
+pub fn return_to_nature() -> CardDefinition {
+    CardDefinition {
+        name: "Return to Nature",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::Exile { what: target_filtered(SelectionRequirement::InGraveyard) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Portent of Betrayal — {3}{R} Sorcery. Gain control of target creature
+/// until end of turn, untap it, it gains haste; then scry 1.
+pub fn portent_of_betrayal() -> CardDefinition {
+    CardDefinition {
+        name: "Portent of Betrayal",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+
+/// Renata, Called to the Hunt — {2}{G}{G} */3 Demigod. Power = devotion to
+/// green. Other creatures you cast enter with an extra +1/+1 counter.
+pub fn renata_called_to_the_hunt() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Renata, Called to the Hunt",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demigod], ..Default::default() },
+        dynamic_pt: Some(DynamicPt::DevotionTo { color: Color::Green, base_t: 3 }),
+        static_abilities: vec![StaticAbility {
+            description: "Each other creature you control enters with an additional +1/+1 counter.",
+            effect: crate::effect::StaticEffect::ExtraEtbCountersForCreatureCasts {
+                kind: CounterType::PlusOnePlusOne,
+                value: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nyx Lotus — {4} Legendary Artifact. Enters tapped. {T}: Choose a color,
+/// add mana of that color equal to your devotion to it.
+pub fn nyx_lotus() -> CardDefinition {
+    CardDefinition {
+        name: "Nyx Lotus",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![super::etb_tap()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::DevotionOfChosenColor,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Flicker of Fate — {1}{W} Instant. Exile target creature or enchantment,
+/// then return it to the battlefield under its owner's control.
+pub fn flicker_of_fate() -> CardDefinition {
+    CardDefinition {
+        name: "Flicker of Fate",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── THB auras / equipment / constellation bodies ─────────────────────────────
+
+/// Aura helper: enchant-creature `CardDefinition` that attaches on resolution.
+fn creature_aura(name: &'static str, mana: crate::mana::ManaCost) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}
+
+/// Aspect of Manticore — {2}{R} Flash Aura. ETB: enchanted creature gains
+/// first strike until end of turn. Enchanted creature gets +2/+0.
+pub fn aspect_of_manticore() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let mut c = creature_aura("Aspect of Manticore", cost(&[generic(2), r()]));
+    c.keywords = vec![Keyword::Flash];
+    c.triggered_abilities = vec![etb(Effect::GrantKeyword {
+        what: Selector::AttachedTo(Box::new(Selector::This)),
+        keyword: Keyword::FirstStrike,
+        duration: Duration::EndOfTurn,
+    })];
+    c.equipped_bonus = Some(EquipBonus { power: 2, toughness: 0, ..Default::default() });
+    c
+}
+
+/// Commanding Presence — {3}{W} Aura. Enchanted creature gets +2/+2, has first
+/// strike, and "Combat damage to a player → make a 1/1 white Human Soldier."
+pub fn commanding_presence() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let mut c = creature_aura("Commanding Presence", cost(&[generic(3), w()]));
+    c.equipped_bonus = Some(EquipBonus {
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: human_soldier_token(),
+            },
+        }],
+        ..Default::default()
+    });
+    c
+}
+
+/// Hydra's Growth — {2}{G} Aura. ETB: +1/+1 counter on enchanted creature.
+/// Your upkeep: double the +1/+1 counters on enchanted creature.
+pub fn hydras_growth() -> CardDefinition {
+    let mut c = creature_aura("Hydra's Growth", cost(&[generic(2), g()]));
+    c.triggered_abilities = vec![
+        etb(Effect::AddCounter {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::ONE,
+        }),
+        TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::DoubleCountersOnEach {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                kind: CounterType::PlusOnePlusOne,
+            },
+        },
+    ];
+    c
+}
+
+/// Warbriar Blessing — {1}{G} Aura (enchant creature you control). ETB:
+/// enchanted creature fights up to one target creature you don't control.
+/// Enchanted creature gets +0/+2.
+pub fn warbriar_blessing() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let mut c = creature_aura("Warbriar Blessing", cost(&[generic(1), g()]));
+    c.effect = Effect::Attach {
+        what: Selector::This,
+        to: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+    };
+    c.triggered_abilities = vec![etb(Effect::Fight {
+        attacker: Selector::AttachedTo(Box::new(Selector::This)),
+        defender: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+        ),
+    })];
+    c.equipped_bonus = Some(EquipBonus { power: 0, toughness: 2, ..Default::default() });
+    c
+}
+
+/// Starlit Mantle — {1}{U} Flash Aura (enchant creature you control). ETB:
+/// enchanted creature gains hexproof until end of turn. It gets +1/+1.
+pub fn starlit_mantle() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let mut c = creature_aura("Starlit Mantle", cost(&[generic(1), u()]));
+    c.keywords = vec![Keyword::Flash];
+    c.effect = Effect::Attach {
+        what: Selector::This,
+        to: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+    };
+    c.triggered_abilities = vec![etb(Effect::GrantKeyword {
+        what: Selector::AttachedTo(Box::new(Selector::This)),
+        keyword: Keyword::Hexproof,
+        duration: Duration::EndOfTurn,
+    })];
+    c.equipped_bonus = Some(EquipBonus { power: 1, toughness: 1, ..Default::default() });
+    c
+}
+
+/// Mantle of the Wolf — {3}{G} Aura. Enchanted creature gets +4/+4. When this
+/// Aura is put into a graveyard from the battlefield, make two 2/2 Wolves.
+pub fn mantle_of_the_wolf() -> CardDefinition {
+    use crate::card::EquipBonus;
+    let mut c = creature_aura("Mantle of the Wolf", cost(&[generic(3), g()]));
+    c.equipped_bonus = Some(EquipBonus { power: 4, toughness: 4, ..Default::default() });
+    c.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::SelfSource),
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Wolf".into(),
+                power: 2,
+                toughness: 2,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Wolf],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+    }];
+    c
+}
+
+/// Bronze Sword — {1} Equipment. Equipped creature gets +2/+0. Equip {3}.
+pub fn bronze_sword() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Bronze Sword",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Wings of Hubris — {2} Equipment. Equipped creature has flying. Sacrifice:
+/// equipped creature can't be blocked this turn. Equip {1}.
+pub fn wings_of_hubris() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Wings of Hubris",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nexus Wardens — {2}{G} 1/4 Satyr Archer. Reach. Constellation — gain 2 life.
+pub fn nexus_wardens() -> CardDefinition {
+    CardDefinition {
+        name: "Nexus Wardens",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Satyr, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![constellation(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nessian Wanderer — {1}{G} 1/3 Satyr Scout. Constellation — look at the top
+/// three cards; you may put a land among them into your hand, rest on bottom.
+pub fn nessian_wanderer() -> CardDefinition {
+    CardDefinition {
+        name: "Nessian Wanderer",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Satyr, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![constellation(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Land),
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nyx Herald — {2}{G} 2/3 Enchantment Creature — Centaur Shaman. Begin combat
+/// on your turn: target enchanted/enchantment creature you control gets +1/+1
+/// and gains trample until end of turn.
+pub fn nyx_herald() -> CardDefinition {
+    CardDefinition {
+        name: "Nyx Herald",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::IsEnchanted.or(SelectionRequirement::Enchantment)),
+                    ),
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nadir Kraken — {1}{U}{U} 2/3 Kraken. Whenever you draw a card, you may pay
+/// {1}. If you do, put a +1/+1 counter on this and make a 1/1 blue Tentacle.
+pub fn nadir_kraken() -> CardDefinition {
+    CardDefinition {
+        name: "Nadir Kraken",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kraken], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {1} to grow Nadir Kraken and make a Tentacle?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: TokenDefinition {
+                            name: "Tentacle".into(),
+                            power: 1,
+                            toughness: 1,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Blue],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Tentacle],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sunmane Pegasus — {3}{W} 2/3 Pegasus. Flying. {1}{W}: gains vigilance and
+/// lifelink until end of turn.
+pub fn sunmane_pegasus() -> CardDefinition {
+    CardDefinition {
+        name: "Sunmane Pegasus",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skola Grovedancer — {1}{G} 2/2 Enchantment Creature — Satyr Druid. A land
+/// card put into your graveyard → gain 1 life. {2}{G}: mill a card.
+pub fn skola_grovedancer() -> CardDefinition {
+    CardDefinition {
+        name: "Skola Grovedancer",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Satyr, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::Mill { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

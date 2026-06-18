@@ -173,6 +173,18 @@ pub fn etb_tap_then_surveil_one() -> TriggeredAbility {
     }
 }
 
+/// Triggered ability: when this permanent enters, tap it AND scry 1
+/// (the Theros "scry tapland" cycle — Temple of Abandon et al.).
+pub fn etb_tap_then_scry_one() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: Selector::This },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+    }
+}
+
 /// Triggered ability: when this permanent enters, tap it AND gain 1 life
 /// (the Khans "life-gain tapland" cycle — Tranquil Cove et al.).
 pub fn etb_tap_then_gain_one() -> TriggeredAbility {

@@ -2075,3 +2075,423 @@ fn staggering_insight_grants_lifelink() {
     assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
     assert!(c.keywords.contains(&Keyword::Lifelink));
 }
+
+// ── THB fill batch tests ──────────────────────────────────────────────────────
+
+/// Temple of Abandon enters tapped (scry tapland) and taps for R or G.
+#[test]
+fn temple_of_abandon_enters_tapped() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_hand(0, catalog::temple_of_abandon());
+    g.perform_action(GameAction::PlayLand(land)).expect("play the Temple");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "Temple enters tapped");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("tap for {R}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "produced red");
+}
+
+/// Fateful End deals 3 to a player.
+#[test]
+fn fateful_end_burns_three() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::fateful_end());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Fateful End");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "3 damage to opponent");
+}
+
+/// Memory Drain counters a spell.
+#[test]
+fn memory_drain_counters_a_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    let drain = g.add_card_to_hand(0, catalog::memory_drain());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: drain, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Memory Drain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Bolt countered, never dealt damage");
+}
+
+/// Scavenging Harpy exiles a card from an opponent's graveyard on ETB.
+#[test]
+fn scavenging_harpy_exiles_from_opponent_graveyard() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let harpy = g.add_card_to_hand(0, catalog::scavenging_harpy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(dead)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: harpy, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Harpy");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead), "card exiled from gy");
+}
+
+/// Sphinx Mindbreaker mills each opponent ten on ETB.
+#[test]
+fn sphinx_mindbreaker_mills_ten() {
+    let mut g = two_player_game();
+    for _ in 0..12 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let gy = g.players[1].graveyard.len();
+    let sphinx = g.add_card_to_hand(0, catalog::sphinx_mindbreaker());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sphinx, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Sphinx");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy + 10, "opponent milled ten");
+}
+
+/// Demon of Loathing forces a sacrifice on combat damage to a player.
+#[test]
+fn demon_of_loathing_forces_sacrifice() {
+    let mut g = two_player_game();
+    let demon = g.add_card_to_battlefield(0, catalog::demon_of_loathing());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.fire_combat_damage_to_player_triggers(demon, 1, 7);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their creature");
+}
+
+/// Victory's Envoy puts a +1/+1 counter on each other creature at upkeep.
+#[test]
+fn victorys_envoy_pumps_team_at_upkeep() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let envoy = g.add_card_to_battlefield(0, catalog::victorys_envoy());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(envoy).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "not itself");
+}
+
+/// Pharika's Libation mode 0 makes an opponent sacrifice a creature.
+#[test]
+fn pharikas_libation_sacrifices_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::pharikas_libation());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: Some(0), x_value: None,
+    })
+    .expect("cast Pharika's Libation mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed a creature");
+}
+
+/// Return to Nature mode 1 destroys an enchantment.
+#[test]
+fn return_to_nature_destroys_enchantment() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::escape_protocol());
+    let spell = g.add_card_to_hand(0, catalog::return_to_nature());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(ench)), additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("cast Return to Nature mode 1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
+/// Portent of Betrayal steals a creature, untapping it and giving haste.
+#[test]
+fn portent_of_betrayal_steals_creature() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(creature).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::portent_of_betrayal());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(creature)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Portent of Betrayal");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(creature).unwrap().controller, 0, "stolen for the turn");
+    assert!(!g.battlefield_find(creature).unwrap().tapped, "untapped");
+}
+
+/// Nyx Lotus taps for devotion-many mana of a chosen color.
+#[test]
+fn nyx_lotus_taps_for_devotion() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // no pips
+    // Two black pips on the battlefield → devotion to black 2.
+    g.add_card_to_battlefield(0, catalog::gray_merchant_of_asphodel());
+    let lotus = g.add_card_to_battlefield(0, catalog::nyx_lotus());
+    g.clear_sickness(lotus);
+    g.battlefield_find_mut(lotus).unwrap().tapped = false;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(Color::Black),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lotus, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("tap Nyx Lotus");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2, "devotion-2 black mana");
+}
+
+/// Flicker of Fate blinks a creature (removing damage / re-triggering ETB).
+#[test]
+fn flicker_of_fate_blinks_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::flicker_of_fate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Flicker of Fate");
+    drain_stack(&mut g);
+    // A new object exists under the same owner (the bear id is gone, replaced).
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 1,
+        "creature returned to the battlefield");
+}
+
+/// Renata's power equals devotion to green; it grants entering creatures +1/+1.
+#[test]
+fn renata_power_scales_with_devotion() {
+    let mut g = two_player_game();
+    let renata = g.add_card_to_battlefield(0, catalog::renata_called_to_the_hunt());
+    // {2}{G}{G} = two green pips → devotion 2.
+    assert_eq!(g.computed_permanent(renata).unwrap().power, 2, "power = devotion to green");
+}
+
+// ── THB aura / equipment / constellation batch tests ──────────────────────────
+
+/// Aspect of Manticore gives +2/+0 and first strike on enter.
+#[test]
+fn aspect_of_manticore_grants_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::aspect_of_manticore());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Aspect of Manticore");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 4, "+2/+0");
+    assert!(c.keywords.contains(&Keyword::FirstStrike), "first strike until EOT");
+}
+
+/// Commanding Presence is a +2/+2 first-strike aura.
+#[test]
+fn commanding_presence_pumps_and_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::commanding_presence());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Commanding Presence");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
+    assert!(c.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Hydra's Growth adds a +1/+1 counter on enter, then doubles it at upkeep.
+#[test]
+fn hydras_growth_doubles_counters_at_upkeep() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::hydras_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Hydra's Growth");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "doubled at upkeep");
+}
+
+/// Warbriar Blessing fights an opposing creature on enter.
+#[test]
+fn warbriar_blessing_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::nessian_boar()); // big body
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::warbriar_blessing());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(enemy)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Warbriar Blessing");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(enemy).is_none(), "fought and killed the bear");
+}
+
+/// Bronze Sword grants +2/+0 on equip.
+#[test]
+fn bronze_sword_equips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::bronze_sword());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+2/+0");
+}
+
+/// Wings of Hubris grants flying on equip.
+#[test]
+fn wings_of_hubris_grants_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wings = g.add_card_to_battlefield(0, catalog::wings_of_hubris());
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::Equip { equipment: wings, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Nexus Wardens gains 2 life on constellation.
+#[test]
+fn nexus_wardens_constellation_gain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nexus_wardens());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    let life = g.players[0].life;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "constellation gained 2");
+}
+
+/// Nadir Kraken grows and makes a Tentacle when you pay {1} on a draw.
+#[test]
+fn nadir_kraken_grows_on_draw() {
+    let mut g = two_player_game();
+    let kraken = g.add_card_to_battlefield(0, catalog::nadir_kraken());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    let tokens_before = g.battlefield.iter().filter(|c| c.definition.name == "Tentacle").count();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let mut ev = Vec::new();
+    g.draw_one(0, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(kraken).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "+1/+1 counter");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Tentacle").count(),
+        tokens_before + 1, "made a Tentacle");
+}
+
+/// Sunmane Pegasus gains vigilance and lifelink for the turn.
+#[test]
+fn sunmane_pegasus_gains_vigilance_lifelink() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let peg = g.add_card_to_battlefield(0, catalog::sunmane_pegasus());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: peg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate pump");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(peg).unwrap();
+    assert!(c.keywords.contains(&Keyword::Vigilance) && c.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Skola Grovedancer's activated mill puts a card in your graveyard.
+#[test]
+fn skola_grovedancer_mills() {
+    let mut g = two_player_game();
+    let skola = g.add_card_to_battlefield(0, catalog::skola_grovedancer());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skola, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate mill");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "milled one");
+}
+
+/// Mantle of the Wolf makes two Wolves when it's destroyed (leaves for gy).
+#[test]
+fn mantle_of_the_wolf_makes_wolves_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::mantle_of_the_wolf());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Mantle of the Wolf");
+    drain_stack(&mut g);
+    let wolves_before = g.battlefield.iter().filter(|c| c.definition.name == "Wolf").count();
+    // Destroy the aura with Return to Nature (mode 1).
+    let rtn = g.add_card_to_hand(0, catalog::return_to_nature());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rtn, target: Some(Target::Permanent(aura)), additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("destroy the Mantle");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Wolf").count(),
+        wolves_before + 2, "two Wolves on aura death");
+}
