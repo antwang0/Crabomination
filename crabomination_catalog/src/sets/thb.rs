@@ -4502,3 +4502,89 @@ pub fn thryx_the_sudden_storm() -> CardDefinition {
     }
 }
 
+
+/// Sleep of the Dead — {U} Sorcery. Tap target creature; it doesn't untap
+/// during its controller's next untap step. Escape—{2}{U}, exile three cards.
+pub fn sleep_of_the_dead() -> CardDefinition {
+    CardDefinition {
+        name: "Sleep of the Dead",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Escape(cost(&[generic(2), u()]), 3)],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::ONE,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Inevitable End — {2}{B} Aura. Enchant creature; enchanted creature has
+/// "At the beginning of your upkeep, sacrifice a creature."
+pub fn inevitable_end() -> CardDefinition {
+    CardDefinition {
+        name: "Inevitable End",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Creature,
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Impending Doom — {2}{R} Aura. Enchant creature; enchanted creature gets
+/// +3/+3 and attacks each combat if able. When it dies, this Aura deals 3
+/// damage to that creature's controller.
+pub fn impending_doom() -> CardDefinition {
+    CardDefinition {
+        name: "Impending Doom",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::MustAttack],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(3),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

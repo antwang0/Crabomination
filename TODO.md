@@ -3509,7 +3509,7 @@ were stale). See git history for the per-card details.
 
 ### Content — Theros Beyond Death (THB) is the active set being filled
 Regenerate the remaining list with `cargo run -p crabomination_catalog
---example dump_thb` diffed against a `set:thb` Scryfall name dump. Cards needing
+--example dump_names thb` diffed against a `set:thb` Scryfall name dump. Cards needing
 new primitives, deferred: Bronzehide Lion (dies → return as an Aura granting
 indestructible), Hateful Eidolon (die-with-attached-Aura LKI count), Haktos
 (protection from each mana value other than a chosen one), Athreos /

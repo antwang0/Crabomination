@@ -7941,6 +7941,9 @@ static THB: &[Factory] = &[
     super::thb::mirror_shield,
     super::thb::shimmerwing_chimera,
     super::thb::thryx_the_sudden_storm,
+    super::thb::sleep_of_the_dead,
+    super::thb::inevitable_end,
+    super::thb::impending_doom,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

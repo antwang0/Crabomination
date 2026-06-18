@@ -2834,3 +2834,52 @@ fn thryx_reduces_big_spells() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Shivan Dragon"));
 }
+
+/// Sleep of the Dead taps a creature and stuns it.
+#[test]
+fn sleep_of_the_dead_taps_and_stuns() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::sleep_of_the_dead());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sleep of the Dead");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.tapped, "creature tapped");
+    assert_eq!(c.counter_count(CounterType::Stun), 1, "stun counter applied");
+}
+
+/// Inevitable End forces the enchanted creature's controller to sacrifice a
+/// creature at upkeep.
+#[test]
+fn inevitable_end_sacrifices_at_upkeep() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::inevitable_end());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
+    // The granted upkeep trigger: only the bear is a creature, so it must go.
+    let ability = catalog::inevitable_end().equipped_bonus.unwrap().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(victim, 0, None, 0);
+    g.resolve_effect(&ability, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "controller sacrificed the bear");
+}
+
+/// Impending Doom burns the enchanted creature's controller when it dies.
+#[test]
+fn impending_doom_burns_on_death() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::impending_doom());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
+    let cp = g.computed_permanent(victim).unwrap();
+    assert_eq!(cp.power, 5, "2/2 + 3/3");
+    assert!(cp.keywords.contains(&crate::card::Keyword::MustAttack));
+    let life_before = g.players[1].life;
+    let dies = catalog::impending_doom().equipped_bonus.unwrap().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(victim, 1, None, 0);
+    g.resolve_effect(&dies, &ctx).unwrap();
+    assert_eq!(g.players[1].life, life_before - 3, "controller took 3");
+}
