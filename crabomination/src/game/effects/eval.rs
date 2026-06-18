@@ -1090,6 +1090,12 @@ impl GameState {
                     .contains(cid),
                 Target::Player(_) => false,
             },
+            R::PlayerDamagedBySourceThisTurn => match target {
+                Target::Player(p) => source.is_some_and(|s| {
+                    self.players[*p].creatures_that_damaged_me_this_turn.contains(&s)
+                }),
+                Target::Permanent(_) => false,
+            },
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
                 // Look on the battlefield first; fall through to graveyards,
@@ -1590,7 +1596,7 @@ impl GameState {
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::DealtDamageToControllerThisTurn | R::IsEnchanted
             | R::IsEquipped | R::IsModified | R::DealtDamageThisTurn
-            | R::DamagedBySourceThisTurn => false,
+            | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,
         }
     }
 }

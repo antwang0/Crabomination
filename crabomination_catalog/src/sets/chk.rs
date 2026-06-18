@@ -4277,6 +4277,31 @@ pub fn uncontrollable_anger() -> CardDefinition {
     }
 }
 
+/// Wicked Akuba — {B}{B} Spirit 2/2. {B}: Target player dealt damage by this
+/// creature this turn loses 1 life.
+pub fn wicked_akuba() -> CardDefinition {
+    CardDefinition {
+        name: "Wicked Akuba",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::LoseLife {
+                who: target_filtered(
+                    SelectionRequirement::Player
+                        .and(SelectionRequirement::PlayerDamagedBySourceThisTurn),
+                ),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Seizan, Perverter of Truth — {3}{B}{B} Legendary Demon Spirit 6/5. At the
 /// beginning of each player's upkeep, that player loses 2 life and draws two.
 pub fn seizan_perverter_of_truth() -> CardDefinition {

@@ -249,6 +249,7 @@ static CHK: &[Factory] = &[
     super::chk::masumaro_first_to_live,
     super::chk::adamaro_first_to_desire,
     super::chk::masako_the_humorless,
+    super::chk::wicked_akuba,
     super::chk::seizan_perverter_of_truth,
     super::chk::thousand_legged_kami,
     super::chk::soul_of_magma,

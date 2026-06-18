@@ -872,6 +872,9 @@ pub enum SelectionRequirement {
     /// (Bushi Tenderfoot's "a creature dealt damage by this creature this
     /// turn"). Reads the dying object's LKI snapshot.
     DamagedBySourceThisTurn,
+    /// The *player* target was dealt damage by the evaluating source this turn
+    /// (Wicked Akuba's "target player dealt damage by this creature this turn").
+    PlayerDamagedBySourceThisTurn,
     HasColor(Color),
     HasKeyword(Keyword),
     /// The card has any cycling ability (Cycling / CyclingLife /

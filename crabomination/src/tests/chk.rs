@@ -2235,6 +2235,29 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Wicked Akuba can only drain a player it dealt damage to this turn.
+#[test]
+fn wicked_akuba_drains_a_player_it_damaged() {
+    let mut g = two_player_game();
+    let akuba = g.add_card_to_battlefield(0, catalog::wicked_akuba());
+    g.clear_sickness(akuba);
+    // Hasn't damaged anyone yet → the activation is rejected.
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: akuba, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "no damage dealt yet → can't target");
+    // Record that Akuba damaged player 1 this turn (as combat would).
+    g.players[1].creatures_that_damaged_me_this_turn.push(akuba);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: akuba, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("now a legal target");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "loses 1 life");
+}
+
 /// Seizan drains and refills the active player at each upkeep.
 #[test]
 fn seizan_drains_and_draws_for_active_player() {
