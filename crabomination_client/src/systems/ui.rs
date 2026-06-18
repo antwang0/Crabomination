@@ -716,6 +716,38 @@ pub(crate) fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: 
 /// ("Menace — can only be blocked by two or more creatures."). Returns
 /// `(text, is_reminder)` pairs; reminder lines render dimmer. Empty when
 /// the name isn't in the catalog (tokens, fictional placeholders).
+/// Live characteristic-override notes for a battlefield permanent whose
+/// computed state diverges from its printed card (continuous effects —
+/// Ichthyomorphosis, Heliod's Punishment, Turn to Frog). Appended below the
+/// printed `hover_info_lines` so the player sees what the permanent *is now*,
+/// not just what it was printed as. Returns dimmed `(text, true)` reminder
+/// lines; empty when nothing diverges.
+fn live_override_lines(
+    name: &str,
+    lost_all_abilities: bool,
+    creature_subtypes: &[crabomination::card::CreatureType],
+) -> Vec<(String, bool)> {
+    let mut out = Vec::new();
+    if lost_all_abilities {
+        out.push(("Now: all abilities removed".to_string(), true));
+    }
+    // Computed creature subtypes that differ from the printed ones (a
+    // type-changing aura / animation). Only note it when there's an actual
+    // change so vanilla creatures stay quiet.
+    let printed_types = crabomination::catalog::lookup_by_name(name)
+        .map(|d| d.subtypes.creature_types)
+        .unwrap_or_default();
+    if !creature_subtypes.is_empty() && creature_subtypes != printed_types.as_slice() {
+        let line = creature_subtypes
+            .iter()
+            .map(|t| format!("{t:?}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        out.push((format!("Now: {line}"), true));
+    }
+    out
+}
+
 fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
     let Some(def) = crabomination::catalog::lookup_by_name(name) else {
         return Vec::new();
@@ -860,6 +892,7 @@ pub fn hover_card_preview(
     windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
     hovered_cards: Query<(&CardFrontTexture, Option<&GameCardId>), (With<Card>, With<CardHovered>)>,
     card_names: Res<crate::game::CardNames>,
+    view: Res<CurrentView>,
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
     mut existing: Query<(Entity, &mut Node, &HoverCardPreview)>,
@@ -891,9 +924,16 @@ pub fn hover_card_preview(
         return;
     };
 
-    let info = card_id
+    let mut info = card_id
         .map(|id| hover_info_lines(&card_names.get(id)))
         .unwrap_or_default();
+    // Append live characteristic-override notes (type-changing / ability-
+    // stripping continuous effects) from the current battlefield view.
+    if let (Some(id), Some(cv)) = (card_id, view.0.as_ref())
+        && let Some(pv) = cv.battlefield.iter().find(|p| p.id == id)
+    {
+        info.extend(live_override_lines(&pv.name, pv.lost_all_abilities, &pv.creature_subtypes));
+    }
     // Estimated panel height so the anchor keeps the whole column on screen
     // (reminder lines wrap to ~2 rows at this width).
     let info_height: f32 = if info.is_empty() {
@@ -1602,8 +1642,27 @@ pub fn reveal_popup(
 
 #[cfg(test)]
 mod tests {
-    use super::{preview_anchor, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_WIDTH, HOVER_PREVIEW_MARGIN};
+    use super::{
+        live_override_lines, preview_anchor, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN,
+        HOVER_PREVIEW_WIDTH,
+    };
     use bevy::math::Vec2;
+    use crabomination::card::CreatureType;
+
+    #[test]
+    fn override_lines_note_fish_and_lost_abilities() {
+        // Serra Angel turned into a 0/1 Fish with no abilities (Ichthyomorphosis).
+        let lines = live_override_lines("Serra Angel", true, &[CreatureType::Fish]);
+        assert!(lines.iter().any(|(t, _)| t.contains("abilities removed")));
+        assert!(lines.iter().any(|(t, _)| t.contains("Fish")));
+    }
+
+    #[test]
+    fn override_lines_quiet_for_unchanged_creature() {
+        // A Grizzly Bears still a Bear with its abilities → no override notes.
+        let lines = live_override_lines("Grizzly Bears", false, &[CreatureType::Bear]);
+        assert!(lines.is_empty(), "no notes when nothing diverges");
+    }
 
     const PW: f32 = HOVER_PREVIEW_WIDTH;
     const PH: f32 = HOVER_PREVIEW_HEIGHT;

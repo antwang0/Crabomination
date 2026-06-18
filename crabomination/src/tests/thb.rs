@@ -3609,3 +3609,24 @@ fn siona_finds_an_aura() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "Aura put into hand");
 }
+
+/// The client view surfaces an Ichthyomorphosis'd creature's computed Fish
+/// subtype and the lost-all-abilities flag.
+#[test]
+fn view_surfaces_aura_characteristic_override() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::serra_angel());
+    let aura = g.add_card_to_hand(0, catalog::ichthyomorphosis());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(host)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant");
+    drain_stack(&mut g);
+    let view = crate::server::view::project(&g, 0);
+    let pv = view.battlefield.iter().find(|p| p.id == host).unwrap();
+    assert!(pv.creature_subtypes.contains(&crate::card::CreatureType::Fish), "shown as a Fish");
+    assert!(pv.lost_all_abilities, "abilities-removed flag surfaced");
+    assert_eq!((pv.power, pv.toughness), (0, 1));
+}

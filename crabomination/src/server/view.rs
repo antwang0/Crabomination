@@ -812,6 +812,10 @@ fn project_permanent(
             .prepare_spell
             .as_ref()
             .is_some_and(|p| p.effect.requires_target()),
+        creature_subtypes: cp
+            .map(|c| c.subtypes.creature_types.clone())
+            .unwrap_or_else(|| card.definition.subtypes.creature_types.clone()),
+        lost_all_abilities: cp.is_some_and(|c| c.lost_all_abilities),
     }
 }
 

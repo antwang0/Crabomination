@@ -11,7 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::card::{CardId, CardType, CounterType, Keyword};
+use crate::card::{CardId, CardType, CounterType, CreatureType, Keyword};
 use crate::decision::Decision;
 use crate::game::{GameAction, GameEvent, Target, TurnStep};
 use crate::mana::{Color, ManaCost, ManaPool};
@@ -1168,6 +1168,17 @@ pub struct PermanentView {
     /// `CastPrepareSpell`. `false` when there is no prepare spell.
     #[serde(default)]
     pub prepare_needs_target: bool,
+    /// Computed creature subtypes after layer effects (so a creature turned
+    /// into a 0/1 Fish by Ichthyomorphosis shows as a Fish, and a granted
+    /// Changeling shows every type). Empty for noncreatures. `#[serde(default)]`
+    /// for older clients.
+    #[serde(default)]
+    pub creature_subtypes: Vec<CreatureType>,
+    /// True when a continuous effect has stripped all of this permanent's
+    /// abilities (CR 613.1f — Ichthyomorphosis, Heliod's Punishment, Turn to
+    /// Frog). A UI hint so clients can badge "abilities removed".
+    #[serde(default)]
+    pub lost_all_abilities: bool,
 }
 
 impl PermanentView {
