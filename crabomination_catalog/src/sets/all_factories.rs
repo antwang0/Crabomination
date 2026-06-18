@@ -7962,6 +7962,7 @@ static THB: &[Factory] = &[
     super::thb::purphoross_intervention,
     super::thb::dalakos_crafter_of_wonders,
     super::thb::the_triumph_of_anax,
+    super::thb::warden_of_the_chained,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

@@ -5246,3 +5246,40 @@ pub fn the_triumph_of_anax() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Warden of the Chained — {1}{R}{G} 4/4 Minotaur Warrior. Trample; can't attack
+/// unless you control another creature with power 4 or greater.
+pub fn warden_of_the_chained() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Warden of the Chained",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Can't attack unless you control another creature with power 4 or greater.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource)
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::ONE,
+                })),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::CantAttack],
+            },
+        }],
+        ..Default::default()
+    }
+}

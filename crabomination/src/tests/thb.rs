@@ -3187,3 +3187,15 @@ fn triumph_of_anax_pumps_by_lore() {
     assert_eq!(cp.power, 3, "2 + 1 lore counter");
     assert!(cp.keywords.contains(&crate::card::Keyword::Trample));
 }
+
+/// Warden of the Chained can't attack without another big creature.
+#[test]
+fn warden_of_the_chained_needs_a_big_friend() {
+    let mut g = two_player_game();
+    let warden = g.add_card_to_battlefield(0, catalog::warden_of_the_chained());
+    assert!(g.computed_permanent(warden).unwrap().keywords.contains(&crate::card::Keyword::CantAttack),
+        "can't attack alone");
+    g.add_card_to_battlefield(0, catalog::terror_of_mount_velus()); // 5/5
+    assert!(!g.computed_permanent(warden).unwrap().keywords.contains(&crate::card::Keyword::CantAttack),
+        "can attack with a power-4+ ally");
+}
