@@ -2547,11 +2547,20 @@ and has flying" (Dragon's Rage Channeler, Traverse the Ulvenwald-adjacent
 cards) — needs a layer-system static whose application is gated on a
 predicate. DRC isn't implemented yet pending this.
 
-### Client build can't be verified in the web sandbox
-`crabomination_client` links Bevy, which needs the system `wayland-client`
-library that isn't present here, so `cargo build/clippy -p crabomination_client`
-fails at the `wayland-sys` build script. Engine + server changes are fully
-verified; client-only edits (e.g. `keyword_label`) are reviewed by hand.
+### Client build CAN be verified in the web sandbox (pkg-config shim)
+`crabomination_client` links Bevy, whose `wayland-sys`/`alsa-sys` build
+scripts call `pkg-config` for libs whose runtime `.so`s exist here but whose
+`.pc` files don't. Drop minimal `.pc` shims in a temp dir and point
+`PKG_CONFIG_PATH` at it — then `cargo check/clippy -p crabomination_client`
+works (the libs only need to *link*, not run; we never open a window):
+```sh
+mkdir -p /tmp/pc && cd /tmp/pc
+for m in client cursor egl; do printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: wayland-%s\nVersion: 1.22.0\nLibs: -L${libdir} -lwayland-%s\nCflags:\n' $m $m > wayland-$m.pc; done
+printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: alsa\nVersion: 1.2.0\nLibs: -L${libdir} -lasound\nCflags:\n' > alsa.pc
+PKG_CONFIG_PATH=/tmp/pc cargo clippy -p crabomination_client
+```
+Runtime/GPU verification (opening a window) still needs the local
+`verifier-client` skill — only compile-checking works headless.
 
 ### Damage-as-(-1/-1)-counters replacement
 Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
@@ -3494,6 +3503,18 @@ sweep, and Karn, Scion of Urza's real text included — earlier ⏳ marks
 were stale). See git history for the per-card details.
 
 ## New TODO suggestions (push modern_decks)
+
+### Content — Theros Beyond Death (THB) is the active set being filled
+~220 THB cards remain unimplemented (32 shipped via the two `thb.rs` batches
+this run; `scripts/fetch_cards.py` + a `set:thb` Scryfall search diff against
+the catalog lists the rest). Next tractable batches: more Escape spells/auras,
+constellation payoffs, the devotion demigods (Tymaret/Klothys/etc. need
+`Value::DevotionTo`-gated states which already ship), and the mono-color
+"Intervention" X-modal cycle. Cards needing new primitives, deferred:
+Eidolon of Obstruction (opponent loyalty-ability tax), Hero of the Pride
+("spell that targets this" trigger), Mischievous Chimera / Stinging Lionfish
+("your first spell each opponent's turn" event), Bronzehide Lion
+(dies → return as an Aura), Heliod's Punishment (task-counter removal Aura).
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 

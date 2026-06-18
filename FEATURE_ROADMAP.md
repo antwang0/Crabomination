@@ -327,9 +327,11 @@ Each a small targeted feature; sweep batch by batch.
 ## Tier 13 — AI
 
 - 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value trades,
-  first-strike/deathtouch/trample awareness, gang-block-to-survive); attacking has
-  a suicide filter + evasion awareness + planeswalker redirection. Remaining: race
-  math, multi-blocker math, attacking-into-open-mana respect.
+  first-strike/deathtouch/trample awareness, gang-block-to-survive, **and
+  chump-blocking to save a planeswalker we control when its attackers are
+  lethal to its loyalty — the life-threat calc counts only player-bound
+  damage**); attacking has a suicide filter + evasion awareness + planeswalker
+  redirection. Remaining: race math, multi-blocker math, attacking-into-open-mana respect.
 - ⏳ **Better sequencing** (land drops, hold-up, when to cast).
 - 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
   color-screw awareness. Remaining: transitive fetch/dual sources.
