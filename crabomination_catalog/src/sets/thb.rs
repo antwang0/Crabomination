@@ -5192,3 +5192,57 @@ pub fn dalakos_crafter_of_wonders() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Triumph of Anax — {2}{R} Saga. I, II, III: target creature gains trample
+/// and +X/+0 until end of turn, where X is the number of lore counters on this
+/// Saga. IV: a creature you control fights one you don't.
+pub fn the_triumph_of_anax() -> CardDefinition {
+    let pump = || {
+        Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Lore,
+                },
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        ])
+    };
+    CardDefinition {
+        name: "The Triumph of Anax",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, pump()),
+            (2, pump()),
+            (3, pump()),
+            (
+                4,
+                Effect::Fight {
+                    attacker: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    },
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

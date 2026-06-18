@@ -3157,3 +3157,33 @@ fn dalakos_equips_grant_flying_haste() {
     assert!(cp.keywords.contains(&crate::card::Keyword::Flying), "equipped creature flies");
     assert!(cp.keywords.contains(&crate::card::Keyword::Haste), "equipped creature has haste");
 }
+
+/// The Triumph of Anax IV makes your creature fight an opponent's.
+#[test]
+fn triumph_of_anax_fight() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::the_triumph_of_anax());
+    let mine = g.add_card_to_battlefield(0, catalog::terror_of_mount_velus()); // 5/5
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let eff = g.battlefield_find(saga).unwrap().definition.saga_chapters[3].1.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(saga, 0, Some(Target::Permanent(mine)), 0);
+    ctx.targets.push(Target::Permanent(theirs)); // slot 1: defender
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(theirs).is_none(), "2/2 died to the 5/5");
+}
+
+/// The Triumph of Anax I pumps a creature by the lore count and grants trample.
+#[test]
+fn triumph_of_anax_pumps_by_lore() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::the_triumph_of_anax());
+    g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eff = g.battlefield_find(saga).unwrap().definition.saga_chapters[0].1.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(saga, 0, Some(Target::Permanent(bear)), 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "2 + 1 lore counter");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Trample));
+}
