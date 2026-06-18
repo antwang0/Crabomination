@@ -5517,3 +5517,118 @@ pub fn ashiok_nightmare_muse() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB batch (modern_decks): missing commons/uncommons on existing primitives ──
+
+/// Skophos Maze-Warden — {3}{R} 3/4 Minotaur Warrior. {1}: this gets +1/-1
+/// until end of turn. (The Labyrinth-of-Skophos fight rider is dropped — it
+/// keys off a specific named land's targeted ability.)
+pub fn skophos_maze_warden() -> CardDefinition {
+    CardDefinition {
+        name: "Skophos Maze-Warden",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Incendiary Oracle — {1}{R} 2/2 Human Shaman. {1}{R}: +1/+0 until end of
+/// turn. Creatures it damages that would die are exiled instead.
+pub fn incendiary_oracle() -> CardDefinition {
+    CardDefinition {
+        name: "Incendiary Oracle",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        damage_exiles_if_dies: true,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shoal Kraken — {4}{U} 3/5 Kraken. Constellation — whenever an enchantment
+/// you control enters, you may draw a card, then discard a card.
+pub fn shoal_kraken() -> CardDefinition {
+    CardDefinition {
+        name: "Shoal Kraken",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kraken], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![constellation(Effect::MayDo {
+            description: "draw a card, then discard a card".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ilysian Caryatid — {1}{G} 1/1 Plant. {T}: Add one mana of any color; add
+/// two mana of one color instead if you control a power-4-or-greater creature.
+pub fn ilysian_caryatid() -> CardDefinition {
+    CardDefinition {
+        name: "Ilysian Caryatid",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::ONE,
+                },
+                then: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::Const(2)),
+                }),
+                else_: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::ONE),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

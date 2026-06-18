@@ -27,6 +27,10 @@ fn is_mana_ability(effect: &Effect) -> bool {
     match effect {
         Effect::AddMana { .. } => true,
         Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
+        // A board-state-conditional that only ever adds mana on both branches
+        // is still a mana ability (CR 605.1a — Ilysian Caryatid's "add one of
+        // any color; add two instead if you control a power-4+ creature").
+        Effect::If { then, else_, .. } => is_mana_ability(then) && is_mana_ability(else_),
         _ => false,
     }
 }
@@ -985,6 +989,9 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             ManaPayload::ImprintedCardColor => false,
         },
         Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),
+        Effect::If { then, else_, .. } => {
+            effect_produces_color(then, color) || effect_produces_color(else_, color)
+        }
         _ => false,
     }
 }

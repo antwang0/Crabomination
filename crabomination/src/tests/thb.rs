@@ -3302,3 +3302,77 @@ fn ashiok_nightmare_muse_bounce_and_exile() {
     assert_eq!(g.players[1].hand.len(), before, "bounce +1 then exile −1");
     assert_eq!(g.exile.iter().filter(|c| c.owner == 1).count(), 1, "one card exiled from hand");
 }
+
+/// Skophos Maze-Warden's {1} ability pumps it +1/-1.
+#[test]
+fn skophos_maze_warden_pumps() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::skophos_maze_warden());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: w, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(w).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "3/4 → 4/3");
+}
+
+/// Incendiary Oracle exiles a creature it kills in combat instead of letting
+/// it die.
+#[test]
+fn incendiary_oracle_exiles_what_it_kills() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let oracle = g.add_card_to_battlefield(0, catalog::incendiary_oracle()); // 2/2
+    let block = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(oracle);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: oracle, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(block, oracle)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.exile.iter().any(|c| c.id == block), "blocker exiled, not killed to graveyard");
+}
+
+/// Shoal Kraken loots when an enchantment you control enters (if you choose to).
+#[test]
+fn shoal_kraken_constellation_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::shoal_kraken());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one (net 0)");
+    assert_eq!(g.players[0].graveyard.len(), 1, "discarded a card");
+}
+
+/// Ilysian Caryatid makes one mana normally, two with a big creature out.
+#[test]
+fn ilysian_caryatid_scales_with_power() {
+    let mut g = two_player_game();
+    let dork = g.add_card_to_battlefield(0, catalog::ilysian_caryatid());
+    g.clear_sickness(dork);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap for one");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "one mana with no big creature");
+    g.players[0].mana_pool.empty();
+    g.battlefield_find_mut(dork).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap for two");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "two mana with a power-4+ creature");
+}
