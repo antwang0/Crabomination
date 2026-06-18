@@ -3028,3 +3028,47 @@ fn thassas_intervention_digs() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "spell left hand, two cards in");
 }
+
+/// Relentless Pursuit puts up to two creature/land cards into hand.
+#[test]
+fn relentless_pursuit_takes_creature_and_land() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::relentless_pursuit());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Relentless Pursuit");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "took two; spell left hand");
+}
+
+/// Commanding Presence grants +2/+2 and first strike.
+#[test]
+fn commanding_presence_pumps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::commanding_presence());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&crate::card::Keyword::FirstStrike));
+}
+
+/// Furious Rise exiles a card to play while you control a big creature.
+#[test]
+fn furious_rise_exiles_with_big_creature() {
+    let mut g = two_player_game();
+    let rise = g.add_card_to_battlefield(0, catalog::furious_rise());
+    g.add_card_to_battlefield(0, catalog::terror_of_mount_velus()); // 5/5
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let eff = g.battlefield_find(rise).unwrap().definition.triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(rise, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"), "top card exiled to play");
+}

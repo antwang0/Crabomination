@@ -4950,3 +4950,60 @@ pub fn thassas_intervention() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Relentless Pursuit — {2}{G} Sorcery. Reveal the top four cards; put a
+/// creature and/or land from among them into your hand, the rest into your
+/// graveyard. (Modeled as "take up to two creature/land cards".)
+pub fn relentless_pursuit() -> CardDefinition {
+    CardDefinition {
+        name: "Relentless Pursuit",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: true,
+            pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
+            take: Some(Value::Const(2)),
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Furious Rise — {2}{R} Enchantment. At the beginning of your end step, if you
+/// control a creature with power 4 or greater, exile the top card of your
+/// library; you may play it while it remains exiled.
+pub fn furious_rise() -> CardDefinition {
+    CardDefinition {
+        name: "Furious Rise",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::ONE,
+                },
+                then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    duration: crate::card::MayPlayDuration::WhileExiled,
+                    pay_any_color: false,
+                    uncast_penalty: None,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
