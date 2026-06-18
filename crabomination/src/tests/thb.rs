@@ -3376,3 +3376,48 @@ fn ilysian_caryatid_scales_with_power() {
     }).expect("tap for two");
     assert_eq!(g.players[0].mana_pool.total(), 2, "two mana with a power-4+ creature");
 }
+
+/// Elspeth, Undaunted Hero +2 puts a counter on up to two creatures.
+#[test]
+fn elspeth_undaunted_hero_plus_two() {
+    let mut g = two_player_game();
+    let e = g.add_card_to_battlefield(0, catalog::elspeth_undaunted_hero());
+    g.battlefield_find_mut(e).unwrap().counters.insert(CounterType::Loyalty, 5);
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: e, ability_index: 0, target: Some(Target::Permanent(a)), x_value: None,
+    }).expect("+2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Elspeth, Undaunted Hero −8 pumps your team by devotion to white and grants
+/// flying. Elspeth's own {W}{W}{W} contributes devotion 3.
+#[test]
+fn elspeth_undaunted_hero_ultimate_devotion_pump() {
+    let mut g = two_player_game();
+    let e = g.add_card_to_battlefield(0, catalog::elspeth_undaunted_hero());
+    g.battlefield_find_mut(e).unwrap().counters.insert(CounterType::Loyalty, 11);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: e, ability_index: 2, target: None, x_value: None,
+    }).expect("-8");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "2/2 + devotion-to-white 3");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Flying), "gains flying");
+}
+
+/// Elspeth's Devotee tutors Elspeth, Undaunted Hero to hand on ETB.
+#[test]
+fn elspeths_devotee_tutors_elspeth() {
+    let mut g = two_player_game();
+    let walker = g.add_card_to_library(0, catalog::elspeth_undaunted_hero());
+    let dev = g.add_card_to_battlefield(0, catalog::elspeths_devotee());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(walker)),
+    ]));
+    g.fire_self_etb_triggers(dev, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == walker), "Elspeth tutored to hand");
+}

@@ -5632,3 +5632,112 @@ pub fn ilysian_caryatid() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Elspeth, Undaunted Hero — {2}{W}{W}{W} Elspeth planeswalker, 5 loyalty.
+/// +2: +1/+1 counter on up to two target creatures. −2: search library/
+/// graveyard for Sunlit Hoplite onto the battlefield. −8: until end of turn
+/// your creatures gain flying and get +X/+X, X = your devotion to white.
+pub fn elspeth_undaunted_hero() -> CardDefinition {
+    let mine = || {
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)
+    };
+    CardDefinition {
+        name: "Elspeth, Undaunted Hero",
+        cost: cost(&[generic(2), w(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Elspeth],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 2,
+                    filter: SelectionRequirement::Creature,
+                    effect: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasName("Sunlit Hoplite".into()),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::EachPermanent(mine()),
+                        power: Value::DevotionTo(vec![Color::White]),
+                        toughness: Value::DevotionTo(vec![Color::White]),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::EachPermanent(mine()),
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Elspeth's Devotee — {2}{W}{W} 3/3 Human Soldier. ETB: you may search your
+/// library for Elspeth, Undaunted Hero and put it into your hand. (The
+/// graveyard half is dropped — Search only walks the library.)
+pub fn elspeths_devotee() -> CardDefinition {
+    CardDefinition {
+        name: "Elspeth's Devotee",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasName("Elspeth, Undaunted Hero".into()),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ashiok's Forerunner — {3}{U}{B} 3/3 Human Wizard with Flash. ETB: you may
+/// search your library for Ashiok, Sculptor of Fears and put it into your hand.
+pub fn ashioks_forerunner() -> CardDefinition {
+    CardDefinition {
+        name: "Ashiok's Forerunner",
+        cost: cost(&[generic(3), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasName("Ashiok, Sculptor of Fears".into()),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
