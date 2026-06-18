@@ -20069,13 +20069,66 @@ fn shriekmaw_etb_destroys_nonblack_creature() {
 }
 
 #[test]
-fn phyrexian_obliterator_is_5_8_trample() {
+fn phyrexian_obliterator_is_5_5_trample() {
     use crate::card::Keyword;
     let card = catalog::phyrexian_obliterator();
     assert_eq!(card.name, "Phyrexian Obliterator");
     assert_eq!(card.power, 5);
     assert_eq!(card.toughness, 5);
     assert!(card.keywords.contains(&Keyword::Trample));
+
+    // Damage-retaliation: a SelfSource DealtDamage trigger → sacrifice
+    // (count = the damage amount).
+    use crate::card::{EventKind, EventScope};
+    use crate::effect::{Effect, Value};
+    let retaliate = card.triggered_abilities.iter().any(|ta| {
+        ta.event.kind == EventKind::DealtDamage
+            && ta.event.scope == EventScope::SelfSource
+            && matches!(
+                &ta.effect,
+                Effect::Sacrifice { count: Value::TriggerEventAmount, .. }
+            )
+    });
+    assert!(retaliate, "Phyrexian Obliterator should retaliate on being dealt damage");
+}
+
+#[test]
+fn phyrexian_obliterator_damage_forces_opponent_to_sacrifice_that_many() {
+    // 3 damage to the Obliterator → the opponent sacrifices 3 permanents.
+    // (P0 bolts its own Obliterator to deliver the damage — the EachOpponent
+    // approximation has the opponent sacrifice regardless of who dealt it.)
+    let mut g = two_player_game();
+    let _oblit = g.add_card_to_battlefield(0, catalog::phyrexian_obliterator()); // 5/5, survives 3
+    // Opponent board: four permanents, so post-sacrifice there's a remainder
+    // to count against.
+    for _ in 0..4 {
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    let opp_perms_before = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(opp_perms_before, 4);
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(_oblit)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield_find(_oblit).is_some(),
+        "Obliterator (5/5) survives 3 damage",
+    );
+    let opp_perms_after = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(
+        opp_perms_after,
+        opp_perms_before - 3,
+        "opponent sacrifices 3 permanents (= the 3 damage dealt)",
+    );
 }
 
 #[test]

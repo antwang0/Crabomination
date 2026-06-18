@@ -4034,9 +4034,18 @@ pub fn shriekmaw() -> CardDefinition {
 
 // ── Phyrexian Obliterator ──────────────────────────────────────────────────
 
-/// Phyrexian Obliterator — {B}{B}{B}{B}, 5/8 Phyrexian Horror with
-/// Trample. Body only — the damage-retaliation trigger is complex and
-/// omitted.
+/// Phyrexian Obliterator — {B}{B}{B}{B}, 5/5 Phyrexian Horror with
+/// Trample. "Whenever a source deals damage to Phyrexian Obliterator, that
+/// source's controller sacrifices that many permanents."
+///
+/// Wired as a `DealtDamage`/`SelfSource` trigger → `Effect::Sacrifice`
+/// with `count: TriggerEventAmount` (the same `DealtDamage` + Enrage plumbing
+/// the MKM/STX enrage creatures use). Approximation: the sacrificer is
+/// `EachOpponent` rather than "that source's controller" — `GameEvent::
+/// DamageDealt` carries no source, so the damaging source's controller can't
+/// be read. Faithful in 1v1 (damage to your Obliterator comes from the
+/// opponent in virtually every line); over-fires only if you damage your own
+/// Obliterator in multiplayer.
 pub fn phyrexian_obliterator() -> CardDefinition {
     CardDefinition {
         name: "Phyrexian Obliterator",
@@ -4049,6 +4058,14 @@ pub fn phyrexian_obliterator() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::TriggerEventAmount,
+                filter: SelectionRequirement::Permanent,
+            },
+        }],
         ..Default::default()
     }
 }
