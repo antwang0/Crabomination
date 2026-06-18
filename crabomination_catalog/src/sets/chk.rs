@@ -4144,6 +4144,140 @@ pub fn kitsune_mystic() -> CardDefinition {
     }
 }
 
+/// Deathcurse Ogre — {5}{B} Ogre Warrior 3/3. When it dies, each player loses
+/// 3 life.
+pub fn deathcurse_ogre() -> CardDefinition {
+    CardDefinition {
+        name: "Deathcurse Ogre",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Warrior]),
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(3),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cleanfall — {2}{W} Sorcery — Arcane. Destroy all enchantments.
+pub fn cleanfall() -> CardDefinition {
+    CardDefinition {
+        name: "Cleanfall",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Enchantment),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Graceful Adept — {2}{U} Human Wizard 1/3. You have no maximum hand size.
+pub fn graceful_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Graceful Adept",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Wizard]),
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eerie Procession — {2}{U} Sorcery — Arcane. Search your library for an
+/// Arcane card and put it into your hand, then shuffle.
+pub fn eerie_procession() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Eerie Procession",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Kodama of the South Tree — {2}{G}{G} Legendary Spirit 4/4. Spiritcraft:
+/// whenever you cast a Spirit or Arcane spell, each other creature you control
+/// gets +1/+1 and gains trample until end of turn.
+pub fn kodama_of_the_south_tree() -> CardDefinition {
+    CardDefinition {
+        name: "Kodama of the South Tree",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            body: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Horizon Seed — {4}{W} Spirit 2/1. Spiritcraft: whenever you cast a Spirit or
+/// Arcane spell, regenerate target creature.
+pub fn horizon_seed() -> CardDefinition {
+    CardDefinition {
+        name: "Horizon Seed",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::Regenerate {
+            what: target_filtered(SelectionRequirement::Creature),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ethereal Haze — {W} Instant — Arcane. Prevent all damage that would be dealt
+/// by creatures this turn.
+pub fn ethereal_haze() -> CardDefinition {
+    CardDefinition {
+        name: "Ethereal Haze",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::PreventAllCombatDamageThisTurn,
+        ..Default::default()
+    }
+}
+
 /// Masumaro, First to Live — {3}{G}{G}{G} Legendary Spirit. */* equal to twice
 /// the number of cards in your hand.
 pub fn masumaro_first_to_live() -> CardDefinition {

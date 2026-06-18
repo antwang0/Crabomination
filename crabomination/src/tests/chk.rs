@@ -2235,6 +2235,105 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Deathcurse Ogre drains each player 3 on death.
+#[test]
+fn deathcurse_ogre_drains_each_player() {
+    let mut g = two_player_game();
+    let ogre = g.add_card_to_battlefield(0, catalog::deathcurse_ogre());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    let events = g.remove_to_graveyard_with_triggers(ogre);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 - 3, "controller loses 3");
+    assert_eq!(g.players[1].life, l1 - 3, "opponent loses 3");
+}
+
+/// Cleanfall destroys every enchantment.
+#[test]
+fn cleanfall_destroys_all_enchantments() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::honden_of_cleansing_fire());
+    let theirs = g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let clean = g.add_card_to_hand(0, catalog::cleanfall());
+    g.perform_action(GameAction::CastSpell {
+        card_id: clean, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cleanfall");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(),
+        "both enchantments destroyed");
+}
+
+/// Graceful Adept removes your maximum hand size.
+#[test]
+fn graceful_adept_removes_max_hand_size() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::graceful_adept());
+    assert_eq!(g.effective_max_hand_size(0), None, "no maximum hand size while it's in play");
+}
+
+/// Eerie Procession tutors an Arcane card to hand.
+#[test]
+fn eerie_procession_finds_an_arcane_card() {
+    let mut g = two_player_game();
+    let ray = g.add_card_to_library(0, catalog::glacial_ray()); // Arcane
+    g.add_card_to_library(0, catalog::grizzly_bears()); // non-Arcane filler
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(ray)),
+    ]));
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let proc = g.add_card_to_hand(0, catalog::eerie_procession());
+    g.perform_action(GameAction::CastSpell {
+        card_id: proc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Eerie Procession");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Glacial Ray"),
+        "Arcane card put into hand");
+}
+
+/// Kodama of the South Tree pumps the team (but not itself) on a Spirit/Arcane
+/// cast.
+#[test]
+fn kodama_of_the_south_tree_spiritcraft_pumps_team() {
+    let mut g = two_player_game();
+    let kodama = g.add_card_to_battlefield(0, catalog::kodama_of_the_south_tree());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    let cb = g.computed_permanent(bear).unwrap();
+    assert_eq!((cb.power, cb.toughness), (3, 3), "other creature +1/+1");
+    assert!(cb.keywords.contains(&Keyword::Trample), "and gains trample");
+    let ck = g.computed_permanent(kodama).unwrap();
+    assert_eq!((ck.power, ck.toughness), (4, 4), "Kodama itself is unaffected (other creatures only)");
+}
+
+/// Ethereal Haze fogs all creature combat damage for the turn.
+#[test]
+fn ethereal_haze_fogs_combat() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    let haze = g.add_card_to_hand(0, catalog::ethereal_haze());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: haze, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ethereal Haze");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 20, "no combat damage got through");
+}
+
 /// Masumaro is */* equal to twice the cards in your hand.
 #[test]
 fn masumaro_sizes_to_twice_your_hand() {
