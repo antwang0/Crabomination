@@ -5996,3 +5996,38 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Flummoxed Cyclops — {3}{R} 4/4 Cyclops with Reach. While two or more
+/// creatures your opponents control are attacking, this creature can't block.
+/// (Modeled as a static active during the attack rather than a combat-scoped
+/// grant — functionally equivalent within the combat.)
+pub fn flummoxed_cyclops() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Flummoxed Cyclops",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cyclops], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Can't block while two or more creatures your opponents control are attacking.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent)
+                            .and(SelectionRequirement::IsAttacking),
+                    ),
+                    n: Value::Const(2),
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::CantBlock],
+            },
+        }],
+        ..Default::default()
+    }
+}

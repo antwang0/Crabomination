@@ -3630,3 +3630,28 @@ fn view_surfaces_aura_characteristic_override() {
     assert!(pv.lost_all_abilities, "abilities-removed flag surfaced");
     assert_eq!((pv.power, pv.toughness), (0, 1));
 }
+
+/// Flummoxed Cyclops can block a lone attacker but not a swarm of two-plus.
+#[test]
+fn flummoxed_cyclops_cant_block_a_swarm() {
+    let cant_block = |attackers: usize| -> bool {
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        let cyclops = g.add_card_to_battlefield(0, catalog::flummoxed_cyclops());
+        let atk: Vec<_> = (0..attackers)
+            .map(|_| {
+                let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+                g.clear_sickness(a);
+                a
+            })
+            .collect();
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        g.perform_action(GameAction::DeclareAttackers(
+            atk.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(0) }).collect(),
+        )).expect("attack");
+        drain_stack(&mut g);
+        g.computed_permanent(cyclops).unwrap().keywords.contains(&crate::card::Keyword::CantBlock)
+    };
+    assert!(!cant_block(1), "one attacker: can block");
+    assert!(cant_block(2), "two attackers: can't block");
+}
