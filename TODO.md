@@ -124,9 +124,8 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     (hand-size-gated keyword grants + "player with most cards" predicate);
     Takeno, Samurai General (anthem scaled by each Samurai's bushido total);
     Sachi, Daughter of Seshiro (granting "Shamans you control have {T}: Add
-    {G}{G}" — group-granted mana ability); Soratami Mirror-Mage / Soratami Seer
-    (return-N-lands additional activation cost; Seer's "discard hand, draw that
-    many" body).
+    {G}{G}" — group-granted mana ability); Soratami Seer ("discard your hand,
+    then draw that many" — needs a capture-hand-size-then-draw primitive).
   - Generalize "target player discards" auto-targeting so an ETB
     `Discard { who: Player(Target(0)) }` picks an opponent (Kemuri-Onna is
     modeled as `EachOpponent` to sidestep this).
