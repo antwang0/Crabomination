@@ -7946,6 +7946,8 @@ static THB: &[Factory] = &[
     super::thb::impending_doom,
     super::thb::naiad_of_hidden_coves,
     super::thb::grasping_giant,
+    super::thb::sunlit_hoplite,
+    super::thb::swimmer_in_nightmares,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

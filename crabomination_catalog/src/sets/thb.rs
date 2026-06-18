@@ -4633,3 +4633,96 @@ pub fn grasping_giant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sunlit Hoplite — {1}{W} 2/1 Human Soldier. Has first strike during your
+/// turn; gets +1/+0 while you control an Elspeth planeswalker.
+pub fn sunlit_hoplite() -> CardDefinition {
+    use crate::card::{PlaneswalkerSubtype, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Sunlit Hoplite",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, this creature has first strike.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::IsTurnOf(PlayerRef::You),
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::FirstStrike],
+                },
+            },
+            StaticAbility {
+                description: "Gets +1/+0 while you control an Elspeth planeswalker.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::Planeswalker
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::HasPlaneswalkerType(PlaneswalkerSubtype::Elspeth)),
+                        ),
+                        n: Value::ONE,
+                    },
+                    power: 1,
+                    toughness: 0,
+                    keywords: vec![],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Swimmer in Nightmares — {2}{U} 1/4 Nightmare Merfolk. +3/+0 while ten or
+/// more cards are in a single graveyard; can't be blocked while you control an
+/// Ashiok planeswalker.
+pub fn swimmer_in_nightmares() -> CardDefinition {
+    use crate::card::{PlaneswalkerSubtype, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Swimmer in Nightmares",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Merfolk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Gets +3/+0 while ten or more cards are in a single graveyard.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::ValueAtLeast(Value::MaxGraveyardSize, Value::Const(10)),
+                    power: 3,
+                    toughness: 0,
+                    keywords: vec![],
+                },
+            },
+            StaticAbility {
+                description: "Can't be blocked while you control an Ashiok planeswalker.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::Planeswalker
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::HasPlaneswalkerType(PlaneswalkerSubtype::Ashiok)),
+                        ),
+                        n: Value::ONE,
+                    },
+                    power: 0,
+                    toughness: 0,
+                    keywords: vec![Keyword::Unblockable],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

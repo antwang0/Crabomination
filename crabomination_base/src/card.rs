@@ -901,6 +901,7 @@ pub enum SelectionRequirement {
     HasLandType(LandType),
     HasArtifactSubtype(ArtifactSubtype),
     HasEnchantmentSubtype(EnchantmentSubtype),
+    HasPlaneswalkerType(PlaneswalkerSubtype),
     /// Spell subtype on an instant/sorcery (Arcane — Kamigawa spiritcraft
     /// triggers gate on `Spirit creature OR Arcane`).
     HasSpellSubtype(SpellSubtype),

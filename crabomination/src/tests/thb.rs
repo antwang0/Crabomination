@@ -2920,3 +2920,34 @@ fn grasping_giant_exiles_its_blocker() {
     assert!(g.battlefield_find(blocker).is_none(), "blocker exiled");
     assert!(g.exile.iter().any(|c| c.id == blocker), "blocker is in exile");
 }
+
+/// Sunlit Hoplite has first strike on your turn but not on opponents' turns.
+#[test]
+fn sunlit_hoplite_first_strike_on_your_turn() {
+    let mut g = two_player_game();
+    let hoplite = g.add_card_to_battlefield(0, catalog::sunlit_hoplite());
+    assert!(g.active_player_idx == 0);
+    assert!(g.computed_permanent(hoplite).unwrap().keywords.contains(&crate::card::Keyword::FirstStrike),
+        "first strike during your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(hoplite).unwrap().keywords.contains(&crate::card::Keyword::FirstStrike),
+        "no first strike on opponent's turn");
+}
+
+/// Swimmer in Nightmares grows with a stocked graveyard and is unblockable
+/// under an Ashiok planeswalker.
+#[test]
+fn swimmer_in_nightmares_scales_and_evades() {
+    let mut g = two_player_game();
+    let swimmer = g.add_card_to_battlefield(0, catalog::swimmer_in_nightmares());
+    assert_eq!(g.computed_permanent(swimmer).unwrap().power, 1, "base power");
+    for _ in 0..10 {
+        let id = g.next_id();
+        g.players[1].graveyard.push(crate::card::CardInstance::new(id, catalog::grizzly_bears(), 1));
+    }
+    assert_eq!(g.computed_permanent(swimmer).unwrap().power, 4, "+3 with a ten-card graveyard");
+    assert!(!g.computed_permanent(swimmer).unwrap().keywords.contains(&crate::card::Keyword::Unblockable));
+    g.add_card_to_battlefield(0, catalog::ashiok_nightmare_weaver());
+    assert!(g.computed_permanent(swimmer).unwrap().keywords.contains(&crate::card::Keyword::Unblockable),
+        "unblockable under Ashiok");
+}
