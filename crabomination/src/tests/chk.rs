@@ -2235,6 +2235,57 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Guardian of Solitude grants flying to a target on a Spirit/Arcane cast.
+#[test]
+fn guardian_of_solitude_spiritcraft_grants_flying() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::guardian_of_solitude());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "spiritcraft granted flying");
+}
+
+/// Earthshaker pings every non-flyer for 2 on a Spirit/Arcane cast.
+#[test]
+fn earthshaker_spiritcraft_sweeps_nonflyers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::earthshaker());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, no flying
+    let flyer = g.add_card_to_battlefield(1, catalog::hundred_talon_kami()); // 2/3 flying
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(ground).is_none(), "2/2 ground creature dies to 2 damage");
+    assert!(g.battlefield_find(flyer).is_some(), "flyer is untouched");
+}
+
+/// Dance of Shadows pumps your team +1/+0 and grants fear.
+#[test]
+fn dance_of_shadows_pumps_and_grants_fear() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let dance = g.add_card_to_hand(0, catalog::dance_of_shadows());
+    g.perform_action(GameAction::CastSpell {
+        card_id: dance, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dance of Shadows");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "+1/+0");
+    assert!(cp.keywords.contains(&Keyword::Fear), "and fear");
+}
+
 /// Deathcurse Ogre drains each player 3 on death.
 #[test]
 fn deathcurse_ogre_drains_each_player() {

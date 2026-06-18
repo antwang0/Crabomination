@@ -4144,6 +4144,128 @@ pub fn kitsune_mystic() -> CardDefinition {
     }
 }
 
+/// Hundred-Talon Kami — {4}{W} Spirit 2/3. Flying, Soulshift 4.
+pub fn hundred_talon_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Hundred-Talon Kami",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
+        ..Default::default()
+    }
+}
+
+/// Guardian of Solitude — {1}{U} Spirit 1/2. Spiritcraft: whenever you cast a
+/// Spirit or Arcane spell, target creature gains flying until end of turn.
+pub fn guardian_of_solitude() -> CardDefinition {
+    CardDefinition {
+        name: "Guardian of Solitude",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jukai Messenger — {G} Human Monk 1/1. Forestwalk.
+pub fn jukai_messenger() -> CardDefinition {
+    CardDefinition {
+        name: "Jukai Messenger",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Monk]),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Landwalk(LandType::Forest)],
+        ..Default::default()
+    }
+}
+
+/// Orbweaver Kumo — {4}{G}{G} Spirit 3/4. Reach. Spiritcraft: whenever you cast
+/// a Spirit or Arcane spell, this creature gains forestwalk until end of turn.
+pub fn orbweaver_kumo() -> CardDefinition {
+    CardDefinition {
+        name: "Orbweaver Kumo",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::Landwalk(LandType::Forest),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Earthshaker — {4}{R}{R} Spirit 4/5. Spiritcraft: whenever you cast a Spirit
+/// or Arcane spell, this creature deals 2 damage to each creature without flying.
+pub fn earthshaker() -> CardDefinition {
+    CardDefinition {
+        name: "Earthshaker",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+            ),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dance of Shadows — {3}{B}{B} Sorcery — Arcane. Creatures you control get
+/// +1/+0 and gain fear until end of turn.
+pub fn dance_of_shadows() -> CardDefinition {
+    CardDefinition {
+        name: "Dance of Shadows",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        subtypes: arcane(),
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Fear,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
 /// Deathcurse Ogre — {5}{B} Ogre Warrior 3/3. When it dies, each player loses
 /// 3 life.
 pub fn deathcurse_ogre() -> CardDefinition {
