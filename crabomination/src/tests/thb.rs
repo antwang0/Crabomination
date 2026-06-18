@@ -3072,3 +3072,23 @@ fn furious_rise_exiles_with_big_creature() {
     g.resolve_effect(&eff, &ctx).unwrap();
     assert!(g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"), "top card exiled to play");
 }
+
+/// Nightmare Shepherd exiles a dying creature to make a 1/1 Nightmare copy.
+#[test]
+fn nightmare_shepherd_copies_the_dead() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nightmare_shepherd());
+    let doomed = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let eff = catalog::nightmare_shepherd().triggered_abilities[0].effect.clone();
+    // The dying creature rides in as TriggerSource (source param of for_trigger).
+    let ctx = crate::game::effects::EffectContext::for_trigger(doomed, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(doomed).is_none(), "original exiled");
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Shivan Dragon" && c.is_token);
+    let copy = copy.expect("made a token copy");
+    assert_eq!((copy.definition.power, copy.definition.toughness), (1, 1), "copy is 1/1");
+    assert!(copy.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare));
+}

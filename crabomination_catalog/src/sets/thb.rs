@@ -5007,3 +5007,40 @@ pub fn furious_rise() -> CardDefinition {
     }
 }
 
+
+/// Nightmare Shepherd — {2}{B}{B} 4/4 Demon. Flying. Whenever another nontoken
+/// creature you control dies, you may exile it; if you do, make a token that's
+/// a copy of it except it's a 1/1 Nightmare.
+pub fn nightmare_shepherd() -> CardDefinition {
+    CardDefinition {
+        name: "Nightmare Shepherd",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken.and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::MayDo {
+                description: "Exile it to make a 1/1 Nightmare copy?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: Selector::TriggerSource,
+                        extra_creature_types: vec![CreatureType::Nightmare],
+                        override_pt: Some((1, 1)),
+                        non_legendary: false,
+                    },
+                    Effect::Exile { what: Selector::TriggerSource },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
