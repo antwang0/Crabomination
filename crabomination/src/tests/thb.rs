@@ -3921,3 +3921,24 @@ fn entrancing_lyre_respects_power_filter() {
     });
     assert!(res.is_err(), "power 2 > X=1 is an illegal target");
 }
+
+/// Haktos the Unscarred — the ETB roll (forced to "2") grants protection from
+/// each mana value other than 2: a MV-2 source connects, a MV-3 source can't.
+#[test]
+fn haktos_protection_from_each_mv_except_chosen() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1)])); // d3=1 → chosen 2
+    let haktos = g.add_card_to_battlefield(0, catalog::haktos_the_unscarred());
+    let eff = catalog::haktos_the_unscarred().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(haktos, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(
+        g.computed_permanent(haktos).unwrap().keywords.iter().any(|k|
+            matches!(k, crate::card::Keyword::ProtectionFromManaValueExcept(2))),
+        "gained protection from each mana value other than 2");
+    let mv2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // {1}{G} = MV 2
+    let mv3 = g.add_card_to_battlefield(1, catalog::gray_ogre());     // {2}{R} = MV 3
+    assert!(!g.damage_prevented_by_protection(mv2, haktos), "MV-2 source connects");
+    assert!(g.damage_prevented_by_protection(mv3, haktos), "MV-3 source is prevented by protection");
+}

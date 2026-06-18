@@ -4322,9 +4322,14 @@ impl GameState {
                     .map(|c| c.definition.subtypes.creature_types.clone())
                     .unwrap_or_default()
             });
+        let src_mv = self
+            .battlefield_find(source)
+            .map(|c| c.definition.cost.cmc())
+            .unwrap_or(0);
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src_colors.contains(color),
             Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
+            Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             _ => false,
         })
     }
@@ -9712,6 +9717,13 @@ pub(crate) fn can_block_attacker_computed(
         // creature of that type.
         if let Keyword::ProtectionFromCreatureType(ty) = kw
             && blocker_computed.subtypes.creature_types.contains(ty)
+        {
+            return false;
+        }
+        // CR 702.16 — protection from each mana value other than N (Haktos):
+        // can't be blocked by a creature whose mana value isn't N.
+        if let Keyword::ProtectionFromManaValueExcept(n) = kw
+            && blocker.definition.cost.cmc() != *n
         {
             return false;
         }

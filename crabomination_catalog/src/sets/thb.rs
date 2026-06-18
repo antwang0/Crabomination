@@ -33,6 +33,40 @@ pub fn ashioks_erasure() -> CardDefinition {
     }
 }
 
+/// Haktos the Unscarred — {R}{R}{W}{W} 6/1 Human Warrior. Attacks each combat;
+/// as it enters, choose 2/3/4 at random (modeled as a d3) and gain protection
+/// from each mana value other than that number.
+pub fn haktos_the_unscarred() -> CardDefinition {
+    use crate::card::Keyword as Kw;
+    let grant = |n: u32| Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: Kw::ProtectionFromManaValueExcept(n),
+        duration: Duration::Permanent,
+    };
+    CardDefinition {
+        name: "Haktos the Unscarred",
+        cost: cost(&[r(), r(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 1,
+        keywords: vec![Keyword::MustAttack],
+        triggered_abilities: vec![etb(Effect::RollDie {
+            sides: 3,
+            count: Value::ONE,
+            modifier: Value::ONE,
+            reroll_at_most: 0,
+            results: vec![(2, 2, grant(2)), (3, 3, grant(3)), (4, 4, grant(4))],
+            on_doubles: None,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Entrancing Lyre — {3} Artifact. {X},{T}: Tap target creature with power X
 /// or less; it doesn't untap while the Lyre stays tapped.
 pub fn entrancing_lyre() -> CardDefinition {

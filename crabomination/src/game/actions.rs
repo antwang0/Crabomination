@@ -5772,16 +5772,22 @@ impl GameState {
                 Keyword::Protection(_)
                     | Keyword::ProtectionFromCreatures
                     | Keyword::ProtectionFromCreatureType(_)
+                    | Keyword::ProtectionFromManaValueExcept(_)
             )
         }) {
             return false;
         }
         let Some(src) = self.computed_permanent(source) else { return false };
         let src_is_creature = src.card_types.contains(&CardType::Creature);
+        let src_mv = self
+            .battlefield_find(source)
+            .map(|c| c.definition.cost.cmc())
+            .unwrap_or(0);
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src.colors.contains(color),
             Keyword::ProtectionFromCreatures => src_is_creature,
             Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
+            Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             _ => false,
         })
     }

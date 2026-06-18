@@ -463,6 +463,10 @@ pub enum Keyword {
     /// "protection from Arcane"). Cast-time targeting gate: a spell with the
     /// subtype can't target this permanent.
     ProtectionFromSpellSubtype(SpellSubtype),
+    /// CR 702.16 — "protection from each mana value other than N" (Haktos the
+    /// Unscarred). Can't be blocked/damaged/targeted by a source whose mana
+    /// value isn't `N`. Granted at random on ETB.
+    ProtectionFromManaValueExcept(u32),
     /// CR 702.89 — Umbra armor (on an Aura): if the enchanted creature
     /// would be destroyed, instead remove all damage from it and destroy
     /// this Aura (Hyena Umbra, Spider Umbra).
