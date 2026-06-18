@@ -1735,6 +1735,11 @@ pub enum Effect {
     Learn   { who: PlayerRef },
     /// Discard `amount` cards. If `random`, chosen randomly; else by `who`.
     Discard { who: Selector, amount: Value, random: bool },
+    /// "Each resolved player discards their whole hand, then draws that many
+    /// cards." Captures the hand size *before* discarding (Soratami Seer,
+    /// Mind's Eye-style wheels). Distinct from `Discard` + `Draw` because the
+    /// draw count must read the pre-discard hand.
+    DiscardHandDrawThatMany { who: Selector },
     /// "`who` discards `count` cards unless they discard a card matching
     /// `instead`" (Wrench Mind). With a match in hand the discarder keeps
     /// the small side automatically (lowest-MV match); otherwise the full

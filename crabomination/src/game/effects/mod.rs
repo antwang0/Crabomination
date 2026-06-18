@@ -1976,6 +1976,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DiscardHandDrawThatMany { who } => {
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for p in seats {
+                    // Capture the pre-discard hand size, then dump the whole hand.
+                    let hand: Vec<crate::card::CardId> =
+                        self.players[p].hand.iter().map(|c| c.id).collect();
+                    let n = hand.len();
+                    for cid in hand {
+                        self.discard_card(p, cid, events);
+                    }
+                    for _ in 0..n {
+                        if !self.draw_one(p, events) {
+                            self.lose_to_empty_draw(p);
+                            break;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Learn { who } => {
                 // CR 701.45 — Learn. Reveal a Lesson from the sideboard into
                 // hand, or discard a card to draw a card. When no Lesson is

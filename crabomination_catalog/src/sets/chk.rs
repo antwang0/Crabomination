@@ -1088,6 +1088,27 @@ pub fn soratami_mirror_mage() -> CardDefinition {
     }
 }
 
+/// Soratami Seer — {4}{U} Moonfolk Wizard 2/3. Flying; {4}, Return two lands
+/// you control to their owner's hand: Discard your hand, then draw that many.
+pub fn soratami_seer() -> CardDefinition {
+    CardDefinition {
+        name: "Soratami Seer",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Moonfolk, CreatureType::Wizard]),
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 2)),
+            effect: Effect::DiscardHandDrawThatMany { who: Selector::You },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hana Kami — {G} Spirit 1/1. {1}{G}, Sacrifice this creature: Return target
 /// Arcane card from your graveyard to your hand.
 pub fn hana_kami() -> CardDefinition {

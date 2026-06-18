@@ -271,6 +271,7 @@ impl Effect {
             Effect::Drain { from, to, amount } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
+            Effect::DiscardHandDrawThatMany { who } => sel_has_target(who),
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount }
             | Effect::MillUntilLands { who, lands: amount }

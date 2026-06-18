@@ -107,6 +107,7 @@ static CHK: &[Factory] = &[
     super::chk::meloku_the_clouded_mirror,
     super::chk::soratami_cloudskater,
     super::chk::soratami_mirror_mage,
+    super::chk::soratami_seer,
     super::chk::hana_kami,
     super::chk::kami_of_the_crescent_moon,
     super::chk::honden_of_cleansing_fire,

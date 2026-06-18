@@ -2235,6 +2235,30 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Soratami Seer discards your hand and redraws that many (returning 2 lands).
+#[test]
+fn soratami_seer_discards_hand_then_redraws() {
+    let mut g = two_player_game();
+    let seer = g.add_card_to_battlefield(0, catalog::soratami_seer());
+    g.clear_sickness(seer);
+    let lands: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::island())).collect();
+    // Hand of 3 cards; library has fresh cards to redraw.
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::forest()); }
+    for _ in 0..5 { g.add_card_to_library(0, catalog::mountain()); }
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Seer");
+    drain_stack(&mut g);
+    // The 2 returned lands land in hand first (cost), so the wheel discards 5
+    // and redraws 5 — all fresh Mountains from the library.
+    assert_eq!(g.players[0].hand.len(), 5, "discarded the whole (post-cost) hand and redrew that many");
+    assert!(g.players[0].hand.iter().all(|c| c.definition.name == "Mountain"),
+        "old hand discarded, new cards drawn from library");
+    assert_eq!(lands.iter().filter(|id| g.battlefield_find(**id).is_some()).count(), 0,
+        "two lands returned as the cost");
+}
+
 /// Soratami Mirror-Mage bounces a creature by returning three of your lands.
 #[test]
 fn soratami_mirror_mage_bounces_creature_for_three_lands() {
