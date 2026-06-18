@@ -46,7 +46,11 @@ exercising each) was elided in a compaction pass; recover it from
   cease on zone change (122.2).
 - **Statics (misc):** no-max-hand-size, play-lands-from-graveyard,
   artifact/creature non-mana-ability locks, spell-tax, two-player coin-flip-off
-  (Mana Clash), reveal-top-land-else-hand.
+  (Mana Clash), reveal-top-land-else-hand, opponents'-turn cost reduction
+  (`CostReductionDuringOpponentsTurn` — Naiad of Hidden Coves).
+- **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
+  the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
+  (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders).
 - **Ability/trigger riders:** statics-granted triggered abilities (Kataki),
   conditional aura riders, rhystic taxes (Esper Sentinel), once-per-turn
   triggers (603.3d), opponents-only activations, discard-self cost,

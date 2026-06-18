@@ -3508,12 +3508,23 @@ were stale). See git history for the per-card details.
 
 ### Content — Theros Beyond Death (THB) is the active set being filled
 Regenerate the remaining list with `cargo run -p crabomination_catalog
---example dump_names thb` diffed against a `set:thb` Scryfall name dump. Cards needing
-new primitives, deferred: Bronzehide Lion (dies → return as an Aura granting
-indestructible), Hateful Eidolon (die-with-attached-Aura LKI count), Haktos
-(protection from each mana value other than a chosen one), Athreos /
-coin-counter return-from-exile-or-graveyard, Ashiok Nightmare Muse / Sculptor
-−ultimate cast-from-opponents'-exile, Skophos Maze-Warden land-target fight.
+--example dump_names thb` diffed against a `set:thb` Scryfall name dump.
+Still deferred — each wants a primitive the engine lacks:
+- **Type/PT-change auras** (Ichthyomorphosis, One with the Stars) — need a
+  static "enchanted permanent becomes [type] with base P/T, loses abilities"
+  (the one-shot `SetBasePT`/`LoseAllAbilities` exist, but not as aura statics).
+- **Scaled negative pump** (Enemy of Enlightenment "-1/-1 per card in opponents'
+  hands") — `Value` has no subtraction; dynamic_pt can't express base-minus-N.
+- **Conditional mana** (Ilysian Caryatid "add two if you control power-4+") —
+  mana-ability output gated on a board predicate.
+- **Land-search count** (Deathbellow War Cry, Nylea's Intervention mode 0) —
+  `Effect::Search` takes no count; "up to N (different-named) cards" is unwired.
+- **Chosen-name saga** (Medomai's Prophecy II/III), aura-reanimation (Storm
+  Herald), aura-death draw (Hateful Eidolon), pile-split (Atris), dies→Aura
+  (Bronzehide Lion), task counters (Heliod's Punishment), Haktos protection-by-MV.
+- **THB planeswalkers** (Athreos god + Calix / Elspeth ×2 / Ashiok ×2) — loyalty
+  bodies; Elspeth/Ashiok ×2 would also unblock their tutor 2-drops (Devotee,
+  Forerunner) and Sunlit Hoplite / Swimmer's planeswalker riders.
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 
