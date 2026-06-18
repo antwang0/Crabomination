@@ -9193,6 +9193,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // NoMaximumHandSize / OpponentsMaxHandSizeReduced — consulted
             // at cleanup via `effective_max_hand_size`; no layer effect.
             | StaticEffect::NoMaximumHandSize
+            // TappedCreaturesCanBlock — consulted at block declaration via
+            // `tapped_creatures_can_block`; no layer effect.
+            | StaticEffect::TappedCreaturesCanBlock
             | StaticEffect::OpponentsMaxHandSizeReduced(_)
             | StaticEffect::ControllerMaxHandSize(_)
             | StaticEffect::NamedSpellTax { .. }

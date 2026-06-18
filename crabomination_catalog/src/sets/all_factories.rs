@@ -248,6 +248,7 @@ static CHK: &[Factory] = &[
     super::chk::threads_of_disloyalty,
     super::chk::masumaro_first_to_live,
     super::chk::adamaro_first_to_desire,
+    super::chk::masako_the_humorless,
     super::chk::hundred_talon_kami,
     super::chk::guardian_of_solitude,
     super::chk::jukai_messenger,

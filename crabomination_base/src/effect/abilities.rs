@@ -710,6 +710,10 @@ pub enum StaticEffect {
     /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,
     /// Thought Vessel, Spellbook, Library of Leng-adjacent statics.
     NoMaximumHandSize,
+    /// CR 509.1a — "Tapped creatures you control can block as though they were
+    /// untapped." While the controller has a permanent carrying this static, a
+    /// tapped creature they control is a legal blocker (Masako the Humorless).
+    TappedCreaturesCanBlock,
     /// "Spells with the chosen name cost {N} more to cast" — reads the
     /// source's `named_card` (stamped at ETB via `Effect::NameCard`).
     /// Disruptor Flute. Folded into `extra_cost_for_spell`.

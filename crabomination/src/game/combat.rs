@@ -4,6 +4,20 @@ use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
+    /// CR 509.1a — true if `controller` has a permanent granting "tapped
+    /// creatures you control can block as though they were untapped" (Masako
+    /// the Humorless).
+    pub(crate) fn tapped_creatures_can_block(&self, controller: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::TappedCreaturesCanBlock))
+        })
+    }
+
     // ── Declare attackers ─────────────────────────────────────────────────────
 
     pub(crate) fn declare_attackers(
@@ -508,7 +522,9 @@ impl GameState {
             let blocker_is_creature = cp_of(blocker_id)
                 .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
                 .unwrap_or(false);
-            if !blocker_is_creature || blocker.tapped {
+            if !blocker_is_creature
+                || (blocker.tapped && !self.tapped_creatures_can_block(blocker.controller))
+            {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
@@ -746,7 +762,10 @@ impl GameState {
             if !self.attacking.iter().any(|a| a.attacker == required) { continue; }
             let b_is_creature = cp_of(b.id)
                 .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
-            if !b_is_creature || b.tapped || kws_of(b.id).contains(&Keyword::CantBlock) {
+            if !b_is_creature
+                || (b.tapped && !self.tapped_creatures_can_block(b.controller))
+                || kws_of(b.id).contains(&Keyword::CantBlock)
+            {
                 continue;
             }
             let Some(attacker) = self.battlefield_find(required) else { continue };

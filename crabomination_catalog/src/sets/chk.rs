@@ -4144,6 +4144,26 @@ pub fn kitsune_mystic() -> CardDefinition {
     }
 }
 
+/// Masako the Humorless — {2}{W} Legendary Human Advisor 2/1. Flash. Tapped
+/// creatures you control can block as though they were untapped.
+pub fn masako_the_humorless() -> CardDefinition {
+    CardDefinition {
+        name: "Masako the Humorless",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Human, CreatureType::Advisor]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "Tapped creatures you control can block as though they were untapped.",
+            effect: StaticEffect::TappedCreaturesCanBlock,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hundred-Talon Kami — {4}{W} Spirit 2/3. Flying, Soulshift 4.
 pub fn hundred_talon_kami() -> CardDefinition {
     CardDefinition {

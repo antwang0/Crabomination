@@ -2235,6 +2235,31 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Masako lets a tapped creature block as though untapped (CR 509.1a).
+#[test]
+fn masako_lets_tapped_creatures_block() {
+    let mut g = two_player_game();
+    // Opponent (seat 1) attacks; seat 0 blocks with a tapped creature.
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    let blocker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(blocker).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.give_priority_to_active();
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::DeclareBlockers);
+    // Without Masako, a tapped creature can't block.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, atk)])).is_err(),
+        "tapped creature can't block without Masako");
+    g.add_card_to_battlefield(0, catalog::masako_the_humorless());
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, atk)]))
+        .expect("with Masako, the tapped creature blocks");
+}
+
 /// Guardian of Solitude grants flying to a target on a Spirit/Arcane cast.
 #[test]
 fn guardian_of_solitude_spiritcraft_grants_flying() {
