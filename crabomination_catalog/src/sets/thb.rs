@@ -6068,3 +6068,56 @@ pub fn altar_of_the_pantheon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hateful Eidolon — {B} 1/2 Enchantment Creature — Spirit. Lifelink.
+/// Whenever an enchanted creature dies, draw a card for each Aura you
+/// controlled that was attached to it.
+pub fn hateful_eidolon() -> CardDefinition {
+    CardDefinition {
+        name: "Hateful Eidolon",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::ValueAtLeast(Value::AurasYouControlledOnDyingSubject, Value::Const(1)),
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::AurasYouControlledOnDyingSubject },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dawn Evangel — {2}{W} 2/3 Enchantment Creature — Human Cleric. Whenever a
+/// creature dies, if an Aura you controlled was attached to it, return target
+/// creature card with mana value 2 or less from your graveyard to your hand.
+pub fn dawn_evangel() -> CardDefinition {
+    CardDefinition {
+        name: "Dawn Evangel",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::ValueAtLeast(Value::AurasYouControlledOnDyingSubject, Value::Const(1)),
+            ),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(2))
+                        .and(SelectionRequirement::InYourGraveyard),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}

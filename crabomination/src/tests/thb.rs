@@ -3687,3 +3687,39 @@ fn altar_of_the_pantheon_devotion_and_conditional_life() {
     .expect("activate again");
     assert_eq!(g.players[0].life, life + 1, "God controlled → gain 1 life");
 }
+
+/// Hateful Eidolon draws one card per Aura you controlled on an enchanted
+/// creature when it dies.
+#[test]
+fn hateful_eidolon_draws_per_aura_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hateful_eidolon());
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::commanding_presence());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let hand_before = g.players[0].hand.len();
+    g.battlefield_find_mut(victim).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "enchanted creature died");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew one card for the Aura");
+}
+
+/// Dawn Evangel returns a small creature from your graveyard when a creature
+/// wearing one of your Auras dies.
+#[test]
+fn dawn_evangel_reanimates_on_aura_wearer_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dawn_evangel());
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::commanding_presence());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
+    let buried = g.add_card_to_graveyard(0, catalog::llanowar_elves()); // MV 1
+    g.battlefield_find_mut(victim).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == buried), "small creature returned to hand");
+}

@@ -794,6 +794,14 @@ pub struct GameState {
     /// don't need to preserve mid-SBA state.
     #[serde(skip)]
     pub(crate) died_card_snapshots: HashMap<CardId, CardInstance>,
+    /// Auras that lost their host this turn, keyed by the (now-gone) host's
+    /// CardId → list of `(aura id, aura controller)`. Populated in the
+    /// orphan-Aura SBA sweep before the Aura is sent to the graveyard, so
+    /// "whenever an enchanted creature dies" payoffs (Hateful Eidolon,
+    /// Dawn Evangel) can count the Auras you controlled that were on it at
+    /// resolution time. Cleared in `do_cleanup`. `#[serde(skip)]` — transient.
+    #[serde(skip)]
+    pub(crate) auras_at_death: HashMap<CardId, Vec<(CardId, usize)>>,
     /// CR 603.10 / 608.2h — last-known-information snapshots for
     /// leaves-the-battlefield triggers that read the dying object's
     /// characteristics *as they last existed on the battlefield* (e.g.
@@ -1053,6 +1061,7 @@ impl Clone for GameState {
             commander_cast_count: self.commander_cast_count.clone(),
             commander_damage: self.commander_damage.clone(),
             died_card_snapshots: self.died_card_snapshots.clone(),
+            auras_at_death: self.auras_at_death.clone(),
             leaves_bf_lki: self.leaves_bf_lki.clone(),
             resolving_lki_source: self.resolving_lki_source,
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
@@ -1181,6 +1190,7 @@ impl GameState {
             commander_cast_count: HashMap::new(),
             commander_damage: HashMap::new(),
             died_card_snapshots: HashMap::new(),
+            auras_at_death: HashMap::new(),
             leaves_bf_lki: HashMap::new(),
             resolving_lki_source: None,
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),

@@ -518,6 +518,12 @@ pub enum Value {
     /// resolution contexts (spells, activated abilities, delayed
     /// triggers that have moved past the original event).
     TriggerEventAmount,
+    /// The number of Auras the trigger's controller controlled that were
+    /// attached to the dying creature (the trigger subject) when it left the
+    /// battlefield. Read from `GameState.auras_at_death`. Powers Hateful
+    /// Eidolon's "draw a card for each Aura you controlled that was attached
+    /// to it".
+    AurasYouControlledOnDyingSubject,
     /// CR 706.4 — the result of the most recent die roll in this resolution.
     /// Set by the `Effect::RollDie` resolver just before it runs each result-
     /// table arm, so an inner effect can reference the rolled face ("create

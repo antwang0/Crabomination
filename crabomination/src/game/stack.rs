@@ -1741,6 +1741,7 @@ impl GameState {
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
         self.combat_damage_prevented_creatures.clear();
+        self.auras_at_death.clear();
         self.creature_etb_steal_this_turn.clear();
         self.search_tax_paid_this_turn.clear();
         self.damage_prevented_sources.clear();
@@ -2365,6 +2366,16 @@ impl GameState {
             .map(|c| c.id)
             .collect();
         for id in orphaned_auras {
+            // Record (aura → host) before the Aura leaves, so "whenever an
+            // enchanted creature dies" payoffs can count the Auras that were
+            // on the dying host (Hateful Eidolon, Dawn Evangel). Only meaningful
+            // when the lost host is gone (the common death case).
+            if let Some(aura) = self.battlefield.iter().find(|c| c.id == id)
+                && let Some(host) = aura.attached_to
+                && !self.battlefield.iter().any(|b| b.id == host)
+            {
+                self.auras_at_death.entry(host).or_default().push((id, aura.controller));
+            }
             // Fire any leaves-the-battlefield triggers on the Aura itself
             // (CR 603.6d) — e.g. Rancor's "return it to its owner's hand".
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
