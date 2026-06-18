@@ -128,8 +128,9 @@ Each unblocks a large swath of cards.
 - ⏳ **Loyalty fidelity:** loyalty-set effects, "any time" riders, proliferate on
   loyalty, attacking-planeswalker redirect.
 - 🟡 **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
-  legend rule ✅, saga sacrifice ✅, world rule ✅. Remaining: attached-Aura
-  orphan corners.
+  legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
+  (704.5n — host fails the printed enchant filter). Remaining: Battle/Dungeon
+  SBAs.
 
 ## Tier 3 — Object model & zones
 

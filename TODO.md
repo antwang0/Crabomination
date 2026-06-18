@@ -1566,8 +1566,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   spell-copy-off-stack identity ✅ (704.5d/e — the token-purge SBA sweeps
   copies from every non-stack zone; test
   `cr_704_5e_countered_spell_copy_ceases_to_exist`); Role uniqueness ✅
-  (704.5y). Battle / Dungeon / Speed SBAs remain; multi-SBA "collapse into
-  one replacement" (704.7).
+  (704.5y). Illegally-attached Aura ✅ (704.5n / 303.4f — an Aura whose live
+  host fails its printed `aura_enchant_filter`, e.g. a "you control" Aura on a
+  stolen creature, goes to the owner's graveyard; tests `cr_704_5n_*`). Battle /
+  Dungeon / Speed SBAs remain; multi-SBA "collapse into one replacement"
+  (704.7).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed.)
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel.)
@@ -1601,7 +1604,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
 - 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact.)
-- 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). `PlayerRef::DefendingPlayer` now resolves off the *triggering attacker* for `YourControl`-scoped Attacks triggers (not just the ability source), so "whenever a creature you control attacks, defending player loses N" fires correctly (Leeching Sliver, CR 509.2). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
+- 🟡 **CR 506 — Combat Phase** — remove-from-combat ✅ (506.4 — `Effect::RemoveFromCombat` pulls a targeted attacker/blocker out of combat, releasing its blockers; Labyrinth of Skophos, test `cr_506_4_*`). "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). `PlayerRef::DefendingPlayer` now resolves off the *triggering attacker* for `YourControl`-scoped Attacks triggers (not just the ability source), so "whenever a creature you control attacks, defending player loses N" fires correctly (Leeching Sliver, CR 509.2). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
 - ✅ **CR 508.1g — Attack tax** — `StaticEffect::AttackTaxToController { amount }`
   taxes attackers hitting the source's controller (Ghostly Prison, Propaganda).
   `declare_attackers` sums the tax across the batch and pays it from the
@@ -1612,7 +1615,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   resolve stack-free at the mana-ability fast path via
   `StaticEffect::ExtraManaOnLandTap` (Mana Flare, Vernal Bloom, Wild
   Growth, Utopia Sprawl; tests `cr_605_1b_*`).
-- ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
+- ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina); opponent loyalty-activation tax ✅ (`StaticEffect::OpponentLoyaltyActivationTax`, paid as extra generic mana — Eidolon of Obstruction, test `cr_606_eidolon_*`). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
 - ✅ **CR 701.12 — Exchange (control)** — `Effect::ExchangeControl { a, b }` swaps the controllers of two resolved permanents simultaneously (Switcheroo). Exchange-life-totals + exchange-hand/graveyard already ✅. Vedalken Plotter ✅ via `Effect::ExchangeControlChoosing` (controller picks their own permanent at resolution, the opponent's is the cast target). Remaining ⏳: an *until-end-of-turn* exchange variant.
@@ -3505,16 +3508,21 @@ were stale). See git history for the per-card details.
 ## New TODO suggestions (push modern_decks)
 
 ### Content — Theros Beyond Death (THB) is the active set being filled
-~220 THB cards remain unimplemented (32 shipped via the two `thb.rs` batches
-this run; `scripts/fetch_cards.py` + a `set:thb` Scryfall search diff against
-the catalog lists the rest). Next tractable batches: more Escape spells/auras,
-constellation payoffs, the devotion demigods (Tymaret/Klothys/etc. need
-`Value::DevotionTo`-gated states which already ship), and the mono-color
-"Intervention" X-modal cycle. Cards needing new primitives, deferred:
-Eidolon of Obstruction (opponent loyalty-ability tax), Hero of the Pride
-("spell that targets this" trigger), Mischievous Chimera / Stinging Lionfish
-("your first spell each opponent's turn" event), Bronzehide Lion
-(dies → return as an Aura), Heliod's Punishment (task-counter removal Aura).
+~50 THB cards remain unimplemented (regenerate the list with the
+`set:thb` Scryfall diff against the live catalog name dump — most of the gods,
+demigods, gold legends, and intervention cycle now ship). Next tractable
+batches: the mono-color "Intervention" X-modal cycle (Erebos's/Nylea's/
+Purphoros's/Thassa's Intervention), remaining sagas (The First Iroan Games, The
+Akroan War, The Binding of the Titans, Kiora Bests the Sea God, Medomai's
+Prophecy), and the Archon/Lamia enchantment-recursion package. Cards needing new
+primitives, deferred: Hero of the Pride ("spell that targets this" trigger is
+fine; uses heroic), Mischievous Chimera / Stinging Lionfish / Arena Trickster /
+Dreamstalker Manticore ("your first spell each opponent's turn" event — needs a
+new per-opponent-turn first-spell counter), Bronzehide Lion (dies → return as an
+Aura granting indestructible), Heliod's Punishment (task-counter removal Aura),
+Entrancing Lyre (tap-lock keyed to the source staying tapped), Ironscale Hydra
+(prevent-combat-damage-to-self-and-grow replacement), Haktos (protection from
+each mana value other than a chosen one).
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 
