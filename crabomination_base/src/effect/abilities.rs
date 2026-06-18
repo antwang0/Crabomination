@@ -136,6 +136,11 @@ pub enum StaticEffect {
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.
     CostReduction { filter: SelectionRequirement, amount: u32 },
+    /// Like `CostReduction`, but only on turns other than the controller's
+    /// (Naiad of Hidden Coves — "During turns other than yours, spells you
+    /// cast cost {1} less"). Applied in `cost_reduction_for_spell` when the
+    /// caster is not the active player.
+    CostReductionDuringOpponentsTurn { filter: SelectionRequirement, amount: u32 },
     /// Target-aware generic cost reduction for spells whose chosen target
     /// matches `target_filter`. Powers Killian, Ink Duelist's "spells you
     /// cast that target a creature cost {2} less to cast."

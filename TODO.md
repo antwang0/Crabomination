@@ -150,7 +150,6 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   - "Up to N targets" (Sea God's Scorn bounce-3, Wrap in Flames 1-to-each-of-3)
     — the Tier-2 targeting gap; unblocks a swath of cards.
   - Damage-dealt amount trigger (Towering-Wave Mystic "mill that many").
-  - Opponents'-turn cost reduction static (Naiad of Hidden Coves).
   - Aura-reanimation (Storm Herald), aura-death card draw (Hateful Eidolon),
     linked attack-exile / dies-return (Underworld Sentinel).
   - THB gods + planeswalkers (Klothys, Athreos, Calix, Elspeth Sun's Nemesis,

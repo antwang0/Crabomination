@@ -2883,3 +2883,21 @@ fn impending_doom_burns_on_death() {
     g.resolve_effect(&dies, &ctx).unwrap();
     assert_eq!(g.players[1].life, life_before - 3, "controller took 3");
 }
+
+/// Naiad of Hidden Coves discounts your spells only on opponents' turns.
+#[test]
+fn naiad_discounts_only_on_opponents_turns() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::naiad_of_hidden_coves());
+    let angel = g.add_card_to_hand(0, catalog::restoration_angel()); // {3}{W} flash
+    // Opponent's turn: discount applies → {2}{W} = 3 mana.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: angel, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("discounted on opponent's turn");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Restoration Angel"));
+}

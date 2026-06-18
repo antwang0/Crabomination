@@ -234,6 +234,13 @@ pub(crate) fn cost_reduction_for_spell(
                 {
                     reduction += amount;
                 }
+                StaticEffect::CostReductionDuringOpponentsTurn { filter, amount }
+                    if src.controller == caster
+                        && state.active_player_idx != caster
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    reduction += amount;
+                }
                 StaticEffect::CostReductionTargetingFilter {
                     spell_filter,
                     target_filter,

@@ -4588,3 +4588,26 @@ pub fn impending_doom() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Naiad of Hidden Coves — {2}{U} 2/3 Enchantment Creature — Nymph. During
+/// turns other than yours, spells you cast cost {1} less to cast.
+pub fn naiad_of_hidden_coves() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Naiad of Hidden Coves",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nymph], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "During turns other than yours, spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReductionDuringOpponentsTurn {
+                filter: SelectionRequirement::Any,
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
