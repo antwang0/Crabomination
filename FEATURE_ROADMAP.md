@@ -108,7 +108,10 @@ Each unblocks a large swath of cards.
   target filters (Hearth Kami's "artifact with mana value X" via
   `ManaValueExactlyXFromCost`). "Up to N targets" ships via
   `Effect::ApplyToTargets` (Sea God's Scorn bounce-3, Wrap in Flames
-  1-to-each-of-3). Remaining: "target each", protection-from-color re-check.
+  1-to-each-of-3). Protection now gates spells *and* abilities (CR 702.16c —
+  `ability_target_has_protection`) across color / creatures / creature-type
+  (Kitsune Riftwalker) / spell-subtype. Remaining: "target each",
+  protection-from-color combat re-check.
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
   land-type statics ✅ (Blood Moon, Urborg). Remaining: CDA corners, full
   text-box swaps, "becomes a copy of" layer interaction.
