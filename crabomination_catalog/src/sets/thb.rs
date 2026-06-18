@@ -4009,3 +4009,208 @@ pub fn underworld_sentinel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB intervention / enchantment-recursion / saga batch ────────────────────
+
+/// Erebos's Intervention — {X}{B} Instant. Choose one — target creature gets
+/// -X/-X until end of turn and you gain X life; or exile up to twice X target
+/// cards from graveyards.
+pub fn erebos_s_intervention() -> CardDefinition {
+    let neg_x = Value::Diff(Box::new(Value::ZERO), Box::new(Value::XFromCost));
+    CardDefinition {
+        name: "Erebos's Intervention",
+        cost: cost(&[x(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: neg_x.clone(),
+                    toughness: neg_x,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+            ]),
+            Effect::ExileUpToNFromGraveyards {
+                count: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Chainweb Aracnir — {G} 1/2 Spider. Reach. ETB: deal damage equal to its
+/// power to target creature with flying an opponent controls. Escape—{3}{G}{G},
+/// exile four; escapes with three +1/+1 counters.
+pub fn chainweb_aracnir() -> CardDefinition {
+    CardDefinition {
+        name: "Chainweb Aracnir",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Reach, Keyword::Escape(cost(&[generic(3), g(), g()]), 4)],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying))
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        })],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastFromEscape),
+                then: Box::new(Value::Const(3)),
+                else_: Box::new(Value::Const(0)),
+            },
+        )),
+        ..Default::default()
+    }
+}
+
+fn pegasus_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Pegasus".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        keywords: vec![Keyword::Flying],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Archon of Sun's Grace — {2}{W}{W} 3/4 Archon. Flying, lifelink. Pegasus you
+/// control have lifelink. Constellation — make a 2/2 white Pegasus with flying.
+pub fn archon_of_suns_grace() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Archon of Sun's Grace",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Archon], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "Pegasus creatures you control have lifelink.",
+            effect: crate::effect::StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Pegasus)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Lifelink,
+            },
+        }],
+        triggered_abilities: vec![constellation(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: pegasus_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Archon of Falling Stars — {4}{W}{W} 4/4 Archon. Flying. When it dies, you
+/// may return target enchantment card from your graveyard to the battlefield.
+pub fn archon_of_falling_stars() -> CardDefinition {
+    CardDefinition {
+        name: "Archon of Falling Stars",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Archon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Return an enchantment from your graveyard to the battlefield?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Enchantment
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elspeth's Nightmare — {2}{B} Saga. I: destroy target opponent creature with
+/// power ≤ 2. II: target opponent discards a chosen noncreature, nonland card.
+/// III: exile target opponent's graveyard.
+pub fn elspeths_nightmare() -> CardDefinition {
+    CardDefinition {
+        name: "Elspeth's Nightmare",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent)
+                            .and(SelectionRequirement::PowerAtMost(2)),
+                    ),
+                },
+            ),
+            (
+                2,
+                Effect::DiscardChosen {
+                    from: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::ONE,
+                    filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
+                },
+            ),
+            (3, Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Alirios, Enraptured — {2}{U} 2/3 Legendary Human. Enters tapped; ETB make a
+/// 3/2 blue Reflection. (The "doesn't untap while you control a Reflection"
+/// drawback is approximated — it untaps normally.)
+pub fn alirios_enraptured() -> CardDefinition {
+    CardDefinition {
+        name: "Alirios, Enraptured",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::Tap { what: Selector::This }),
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Reflection".into(),
+                    power: 3,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Reflection],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            }),
+        ],
+        ..Default::default()
+    }
+}

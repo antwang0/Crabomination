@@ -2601,3 +2601,99 @@ fn underworld_sentinel_exiles_then_returns() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(dead).is_some(), "exiled card returned to play");
 }
+
+// ── THB intervention / recursion / saga batch tests ───────────────────────────
+
+/// Erebos's Intervention mode 0 shrinks a creature by X and gains X life.
+#[test]
+fn erebos_intervention_shrinks_and_gains() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::erebos_s_intervention());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: Some(0), x_value: Some(2),
+    })
+    .expect("cast Erebos's Intervention X=2 mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "-2/-2 kills the 2/2");
+    assert_eq!(g.players[0].life, life + 2, "gained X life");
+}
+
+/// Chainweb Aracnir pings a flyer for its power on enter.
+#[test]
+fn chainweb_aracnir_pings_a_flyer() {
+    let mut g = two_player_game();
+    let hawk = g.add_card_to_battlefield(1, catalog::suntail_hawk()); // 1/1 flyer
+    let aracnir = g.add_card_to_hand(0, catalog::chainweb_aracnir());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(hawk)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: aracnir, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Chainweb Aracnir");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hawk).is_none(), "1 damage kills the 1/1 flyer");
+}
+
+/// Archon of Sun's Grace mints a Pegasus on constellation.
+#[test]
+fn archon_of_suns_grace_constellation_pegasus() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archon_of_suns_grace());
+    let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Pegasus"), "minted a Pegasus");
+}
+
+/// Archon of Falling Stars returns an enchantment from your graveyard on death.
+#[test]
+fn archon_of_falling_stars_returns_enchantment() {
+    let mut g = two_player_game();
+    let archon = g.add_card_to_battlefield(0, catalog::archon_of_falling_stars());
+    let ench = g.add_card_to_graveyard(0, catalog::escape_protocol());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(ench)),
+    ]));
+    g.battlefield_find_mut(archon).unwrap().damage = 4;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_some(), "enchantment returned to the battlefield");
+}
+
+/// Elspeth's Nightmare chapter I destroys a small opposing creature.
+#[test]
+fn elspeths_nightmare_chapter_one_destroys() {
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::elspeths_nightmare());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.saga_advance(saga); // chapter I
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "power-2 creature destroyed");
+}
+
+/// Alirios enters tapped and makes a 3/2 Reflection.
+#[test]
+fn alirios_enters_tapped_with_reflection() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::alirios_enraptured());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Alirios");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "enters tapped");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Reflection"), "made a Reflection");
+}

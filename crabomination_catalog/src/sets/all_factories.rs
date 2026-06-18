@@ -7925,6 +7925,12 @@ static THB: &[Factory] = &[
     super::thb::blood_aspirant,
     super::thb::slaughter_priest_of_mogis,
     super::thb::underworld_sentinel,
+    super::thb::erebos_s_intervention,
+    super::thb::chainweb_aracnir,
+    super::thb::archon_of_suns_grace,
+    super::thb::archon_of_falling_stars,
+    super::thb::elspeths_nightmare,
+    super::thb::alirios_enraptured,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

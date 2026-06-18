@@ -149,6 +149,8 @@ pub enum CreatureType {
     Zubera,
     // THB Nadir Kraken's Tentacle token.
     Tentacle,
+    // THB Alirios, Enraptured's Reflection token.
+    Reflection,
 }
 
 /// Land subtypes (basic land types + others).
