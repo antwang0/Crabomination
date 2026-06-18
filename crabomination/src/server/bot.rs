@@ -1926,7 +1926,49 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 })
         })
         .collect();
-    let total_incoming: i32 = attacker_info.iter().map(|(_, p, _, _, _)| *p).sum();
+    // Only attackers aimed at the *player* threaten our life total — damage
+    // to a planeswalker we control hits its loyalty, not our face. Summing
+    // every attacker here would over-state the life threat and trigger
+    // needless chump-blocks.
+    let total_incoming: i32 = state
+        .attacking()
+        .iter()
+        .filter(|atk| atk.target == AttackTarget::Player(seat))
+        .filter_map(|atk| state.battlefield.iter().find(|c| c.id == atk.attacker))
+        .map(|a| a.power())
+        .sum();
+    // Planeswalker defense (CR 306.7): for each planeswalker we control that
+    // is being attacked, if the attackers aimed at it would deal lethal
+    // (total power ≥ its loyalty), mark those attackers so the chump-block
+    // pass will trade idle blockers to save the walker.
+    let defend_attackers: std::collections::HashSet<CardId> = {
+        use crate::card::CounterType;
+        let mut pw_attackers: std::collections::HashMap<CardId, (u32, Vec<CardId>)> =
+            std::collections::HashMap::new();
+        for atk in state.attacking() {
+            if let AttackTarget::Planeswalker(pw) = atk.target
+                && state.battlefield_find(pw).map(|c| c.controller) == Some(seat)
+                && let Some(a) = state.battlefield.iter().find(|c| c.id == atk.attacker)
+            {
+                let e = pw_attackers.entry(pw).or_default();
+                e.0 += a.power().max(0) as u32;
+                e.1.push(atk.attacker);
+            }
+        }
+        let mut set = std::collections::HashSet::new();
+        for (pw, (incoming, atkrs)) in pw_attackers {
+            let loyalty = state
+                .battlefield_find(pw)
+                .and_then(|c| c.counters.iter().find_map(|(k, v)| {
+                    matches!(k, CounterType::Loyalty).then_some(*v)
+                }))
+                .unwrap_or(0);
+            if loyalty > 0 && incoming >= loyalty {
+                set.extend(atkrs);
+            }
+        }
+        set
+    };
     // Infect (CR 702.90) / Toxic (CR 702.180) make poison the lethal clock,
     // not life: a player with 10+ poison counters loses (CR 104.3d). The bot
     // must chump an infect/toxic attacker to avoid a poison-out even at a
@@ -2057,12 +2099,13 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     continue;
                 }
                 500 + delta
-            } else if life_threatened {
-                // Chump-block to stop lethal damage. A trampler tramples
-                // over a chump (CR 702.19e), so a lone chump only stops
-                // `blocker_toughness` of its damage — score by the actual
-                // damage saved so the bot prefers fully blocking a
-                // non-trampler over partially blocking a trampler.
+            } else if life_threatened || defend_attackers.contains(a_id) {
+                // Chump-block to stop lethal damage (or to save a doomed
+                // planeswalker). A trampler tramples over a chump
+                // (CR 702.19e), so a lone chump only stops `blocker_toughness`
+                // of its damage — score by the actual damage saved so the bot
+                // prefers fully blocking a non-trampler over partially
+                // blocking a trampler.
                 let a_trample = state
                     .battlefield
                     .iter()
@@ -3269,6 +3312,65 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(wall, vanilla)],
             "chump the non-trampler (saves 4) over the trampler (saves only 3)");
+    }
+
+    /// CR 306.7 — the bot chump-blocks to save a planeswalker it controls
+    /// when the attackers aimed at it are lethal to its loyalty, even at a
+    /// healthy life total. (Push claude/modern_decks.)
+    #[test]
+    fn bot_chumps_to_save_a_doomed_planeswalker() {
+        use crate::card::{CardDefinition, CardType, CounterType};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Raider", card_types: vec![CardType::Creature], power: 3, toughness: 3,
+            ..Default::default()
+        });
+        // The bot (seat 1) controls a low-loyalty planeswalker and a 0/3 wall.
+        let pw = g.add_card_to_battlefield(1, CardDefinition {
+            name: "Walker", card_types: vec![CardType::Planeswalker], base_loyalty: 2,
+            ..Default::default()
+        });
+        if let Some(c) = g.battlefield_find_mut(pw) {
+            c.counters.insert(CounterType::Loyalty, 2);
+        }
+        let wall = g.add_card_to_battlefield(1, CardDefinition {
+            name: "Wall", card_types: vec![CardType::Creature], power: 0, toughness: 3,
+            ..Default::default()
+        });
+        g.players[1].life = 20; // NOT life-threatened — only the walker is at risk.
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Planeswalker(pw) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(wall, atk)],
+            "the wall chumps to keep the 3-power attacker off the 2-loyalty walker");
+    }
+
+    /// The flip side of the above: when the planeswalker would survive the
+    /// swing (loyalty > incoming), the bot doesn't waste a blocker on it.
+    #[test]
+    fn bot_does_not_chump_for_a_safe_planeswalker() {
+        use crate::card::{CardDefinition, CardType, CounterType};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Raider", card_types: vec![CardType::Creature], power: 3, toughness: 3,
+            ..Default::default()
+        });
+        let pw = g.add_card_to_battlefield(1, CardDefinition {
+            name: "Walker", card_types: vec![CardType::Planeswalker], base_loyalty: 5,
+            ..Default::default()
+        });
+        if let Some(c) = g.battlefield_find_mut(pw) {
+            c.counters.insert(CounterType::Loyalty, 5);
+        }
+        g.add_card_to_battlefield(1, CardDefinition {
+            name: "Wall", card_types: vec![CardType::Creature], power: 0, toughness: 3,
+            ..Default::default()
+        });
+        g.players[1].life = 20;
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Planeswalker(pw) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.is_empty(), "3 damage to a 5-loyalty walker isn't worth a chump");
     }
 
     /// CR 702.147 — a Decayed creature can't block, so the bot must never
