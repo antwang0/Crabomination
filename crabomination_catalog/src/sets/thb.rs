@@ -5823,3 +5823,57 @@ pub fn ashiok_sculptor_of_fears() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ichthyomorphosis — {2}{U} Aura. Enchant creature. Enchanted creature loses
+/// all abilities and is a blue Fish with base power and toughness 0/1.
+pub fn ichthyomorphosis() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Ichthyomorphosis",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_base_pt: Some((0, 1)),
+            set_creature_types: Some(vec![CreatureType::Fish]),
+            set_colors: Some(vec![Color::Blue]),
+            remove_abilities: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// One with the Stars — {3}{U} Aura. Enchant creature or enchantment.
+/// Enchanted permanent is an enchantment and loses all other card types. (It
+/// keeps its abilities, so it's no longer a creature.)
+pub fn one_with_the_stars() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "One with the Stars",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+            ),
+        },
+        equipped_bonus: Some(EquipBonus {
+            set_card_types: Some(vec![CardType::Enchantment]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

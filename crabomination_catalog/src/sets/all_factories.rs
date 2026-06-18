@@ -7976,6 +7976,8 @@ static THB: &[Factory] = &[
     super::thb::ashioks_forerunner,
     super::thb::enemy_of_enlightenment,
     super::thb::ashiok_sculptor_of_fears,
+    super::thb::ichthyomorphosis,
+    super::thb::one_with_the_stars,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

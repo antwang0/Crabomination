@@ -1819,6 +1819,22 @@ pub struct EquipBonus {
     /// Steel of the Godhead).
     #[serde(default)]
     pub conditional: Vec<ConditionalEquipBonus>,
+    /// Continuous characteristic overrides applied to the host while attached
+    /// (the "becomes a 0/1 Fish with no abilities" auras — Ichthyomorphosis,
+    /// One with the Stars). Each `Some`/`true` installs the matching layer
+    /// modification on the host. `None`/`false` leaves that characteristic
+    /// untouched (the common stat-bonus Equipment/Aura case).
+    #[serde(default)]
+    pub set_base_pt: Option<(i32, i32)>,
+    #[serde(default)]
+    pub set_card_types: Option<Vec<CardType>>,
+    #[serde(default)]
+    pub set_creature_types: Option<Vec<CreatureType>>,
+    #[serde(default)]
+    pub set_colors: Option<Vec<crate::mana::Color>>,
+    /// When true the host loses all abilities (layer 6 — CR 613.1f).
+    #[serde(default)]
+    pub remove_abilities: bool,
 }
 
 /// One "as long as enchanted creature is [filter]" rider of an

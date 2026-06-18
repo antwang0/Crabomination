@@ -3313,6 +3313,40 @@ impl GameState {
                     modification: Modification::AddKeyword(kw.clone()),
                 });
             }
+            // Characteristic-overriding Auras (Ichthyomorphosis,
+            // One with the Stars): set base P/T (7b), card/creature types,
+            // colors, and ability loss (6) on the host while attached.
+            let push_mod = |effects: &mut Vec<ContinuousEffect>, layer, sublayer, m| {
+                effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(vec![target]),
+                    layer,
+                    sublayer,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: m,
+                });
+            };
+            if let Some((p, t)) = bonus.set_base_pt {
+                push_mod(&mut all_effects, Layer::L7PowerTough, Some(PtSublayer::SetValue),
+                    Modification::SetPowerToughness(p, t));
+            }
+            if let Some(types) = &bonus.set_card_types {
+                push_mod(&mut all_effects, Layer::L4Type, None,
+                    Modification::SetCardTypes(types.clone()));
+            }
+            if let Some(types) = &bonus.set_creature_types {
+                push_mod(&mut all_effects, Layer::L4Type, None,
+                    Modification::SetCreatureTypes(types.clone()));
+            }
+            if let Some(colors) = &bonus.set_colors {
+                push_mod(&mut all_effects, Layer::L5Color, None,
+                    Modification::SetColors(colors.clone()));
+            }
+            if bonus.remove_abilities {
+                push_mod(&mut all_effects, Layer::L6Ability, None,
+                    Modification::RemoveAllAbilities);
+            }
             // Host-conditional riders ("as long as enchanted creature is
             // green, …" — Shield of the Oversoul). Evaluated against the
             // host's pre-layer state, like `EquipScale` above.

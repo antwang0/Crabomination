@@ -3481,3 +3481,41 @@ fn ashiok_sculptor_reanimates() {
     let bear = g.battlefield_find(corpse).expect("reanimated");
     assert_eq!(bear.controller, 0, "under your control");
 }
+
+/// Ichthyomorphosis turns the enchanted creature into a 0/1 blue Fish with no
+/// abilities.
+#[test]
+fn ichthyomorphosis_makes_a_fish() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer/vigilance
+    let aura = g.add_card_to_hand(0, catalog::ichthyomorphosis());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ichthyomorphosis");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 1), "base 0/1");
+    assert!(cp.keywords.is_empty(), "lost flying and vigilance");
+    assert!(cp.subtypes.creature_types.contains(&crate::card::CreatureType::Fish), "is a Fish");
+}
+
+/// One with the Stars turns a creature into a noncreature enchantment.
+#[test]
+fn one_with_the_stars_makes_an_enchantment() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::one_with_the_stars());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast One with the Stars");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.card_types.contains(&CardType::Enchantment), "now an enchantment");
+    assert!(!cp.card_types.contains(&CardType::Creature), "no longer a creature");
+}
