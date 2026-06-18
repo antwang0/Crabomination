@@ -7916,6 +7916,15 @@ static THB: &[Factory] = &[
     super::thb::temple_thief,
     super::thb::serpent_of_yawning_depths,
     super::thb::eidolon_of_obstruction,
+    super::thb::hero_of_the_winds,
+    super::thb::hero_of_the_nyxborn,
+    super::thb::heroes_of_the_revel,
+    super::thb::irreverent_revelers,
+    super::thb::stampede_rider,
+    super::thb::treeshaker_chimera,
+    super::thb::blood_aspirant,
+    super::thb::slaughter_priest_of_mogis,
+    super::thb::underworld_sentinel,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

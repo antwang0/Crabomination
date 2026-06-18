@@ -84,6 +84,12 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Banding => "Bnd",
         // Generalized menace — "can't be blocked except by N or more."
         CantBeBlockedExceptByN(_) => "Men+",
+        // Evasion by blocker quality: "can only be blocked by [filter]"
+        // (Serpent of Yawning Depths) or "can't be blocked by [filter]"
+        // (Temple Thief) — both read as evasion at a glance.
+        CantBeBlockedExceptBy(_) | CantBeBlockedBy(_) => "Eva",
+        // "Can't be blocked by more than one creature" (anti-gang-block).
+        CantBeBlockedByMoreThanOne => "1Blk",
         MustBeBlocked => "Lure",
         _ => return None,
     })
@@ -238,6 +244,20 @@ mod tests {
     fn strip_surfaces_generalized_menace_and_lure() {
         assert_eq!(keyword_strip(&[Keyword::CantBeBlockedExceptByN(3)]), "Men+");
         assert_eq!(keyword_strip(&[Keyword::MustBeBlocked]), "Lure");
+    }
+
+    #[test]
+    fn strip_surfaces_block_quality_evasion() {
+        use crabomination::card::SelectionRequirement;
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(SelectionRequirement::Flying))]),
+            "Eva"
+        );
+        assert_eq!(
+            keyword_strip(&[Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::Enchantment))]),
+            "Eva"
+        );
+        assert_eq!(keyword_strip(&[Keyword::CantBeBlockedByMoreThanOne]), "1Blk");
     }
 
     #[test]

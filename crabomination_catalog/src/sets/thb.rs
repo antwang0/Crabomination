@@ -3719,3 +3719,293 @@ pub fn eidolon_of_obstruction() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── THB heroic / sacrifice-matters / aristocrat bodies ───────────────────────
+
+fn satyr_cant_block_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Satyr".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        keywords: vec![Keyword::CantBlock],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Satyr], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Heroic team-pump: "Whenever you cast a spell that targets this creature,
+/// creatures you control get +1/+0 until end of turn." (the THB Hero cycle).
+fn heroic_team_pump() -> TriggeredAbility {
+    crate::effect::shortcut::heroic(Effect::PumpPT {
+        what: Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        power: Value::ONE,
+        toughness: Value::Const(0),
+        duration: Duration::EndOfTurn,
+    })
+}
+
+/// Hero of the Winds — {3}{W} 1/4 Human Soldier. Flying. Heroic: team +1/+0.
+pub fn hero_of_the_winds() -> CardDefinition {
+    CardDefinition {
+        name: "Hero of the Winds",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![heroic_team_pump()],
+        ..Default::default()
+    }
+}
+
+/// Hero of the Nyxborn — {1}{R}{W} 2/2 Enchantment Creature — Human Soldier.
+/// ETB: make a 1/1 Human Soldier. Heroic: team +1/+0.
+pub fn hero_of_the_nyxborn() -> CardDefinition {
+    CardDefinition {
+        name: "Hero of the Nyxborn",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: human_soldier_token(),
+            }),
+            heroic_team_pump(),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Heroes of the Revel — {4}{R} 4/4 Satyr Soldier. ETB: make a 1/1 Satyr that
+/// can't block. Heroic: team +1/+0.
+pub fn heroes_of_the_revel() -> CardDefinition {
+    CardDefinition {
+        name: "Heroes of the Revel",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Satyr, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: satyr_cant_block_token(),
+            }),
+            heroic_team_pump(),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Irreverent Revelers — {2}{R} 2/2 Satyr. ETB: choose — destroy target
+/// artifact; or this creature gains haste until end of turn.
+pub fn irreverent_revelers() -> CardDefinition {
+    CardDefinition {
+        name: "Irreverent Revelers",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Satyr], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Stampede Rider — {2}{R} 2/3 Satyr. Trample. At the beginning of each
+/// combat, if you control a creature with power 4+, it gets +1/+1 until EOT.
+pub fn stampede_rider() -> CardDefinition {
+    CardDefinition {
+        name: "Stampede Rider",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Satyr], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::PowerAtLeast(4)),
+            ))),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Treeshaker Chimera — {5}{G}{G} 8/5 Chimera. All creatures able to block it
+/// do so (Lure). When it dies, draw three cards.
+pub fn treeshaker_chimera() -> CardDefinition {
+    CardDefinition {
+        name: "Treeshaker Chimera",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Chimera], ..Default::default() },
+        power: 8,
+        toughness: 5,
+        keywords: vec![Keyword::AllMustBlock],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blood Aspirant — {1}{R} 1/1 Satyr Berserker. Sacrifice a permanent →
+/// +1/+1 counter. {1}{R}, {T}, Sacrifice a creature or enchantment: deal 1 to
+/// target creature; it can't block this turn.
+pub fn blood_aspirant() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Aspirant",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Satyr, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            tap_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::ONE,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::CantBlock,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Slaughter-Priest of Mogis — {B}{R} 2/2 Minotaur Shaman. Sacrifice a
+/// permanent → +2/+0 until end of turn. {2}, Sacrifice another creature or an
+/// enchantment: first strike until end of turn.
+pub fn slaughter_priest_of_mogis() -> CardDefinition {
+    CardDefinition {
+        name: "Slaughter-Priest of Mogis",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                1,
+            )),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Underworld Sentinel — {3}{B}{B} 4/5 Skeleton Soldier. Attacks → exile a
+/// creature card from your graveyard (linked). When it dies, put all cards
+/// exiled with it onto the battlefield.
+pub fn underworld_sentinel() -> CardDefinition {
+    CardDefinition {
+        name: "Underworld Sentinel",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::ExileWithSource {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::CardExiledWithSource,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -264,6 +264,19 @@ impl Bot for RandomBot {
                             if lethal_swing {
                                 return true;
                             }
+                            // Unblockable by the current board: if the
+                            // opponent has creatures but none can legally
+                            // block this attacker (Unblockable, "can't be
+                            // blocked by/except by" restrictions the board
+                            // can't satisfy), it's a free swing. Generalizes
+                            // the Flying/Menace evasion checks below.
+                            if !opp_blockers.is_empty()
+                                && opp_blockers
+                                    .iter()
+                                    .all(|b| !state.blocker_can_block_attacker(b.id, c.id))
+                            {
+                                return true;
+                            }
                             let flying = c.has_keyword(&Keyword::Flying);
                             // Evasive attackers (flying) — only block-
                             // worried if there's a flying opp blocker.
@@ -4360,5 +4373,35 @@ mod stack_response_tests {
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(6);
         assert_eq!(max_affordable_x(&g, 0, &card), 6, "Banefire keeps the full X");
+    }
+
+    /// An Unblockable attacker swings even into a bigger blocker — no opposing
+    /// creature can legally block it, so the suicide filter doesn't hold it
+    /// back (generalized evasion check).
+    #[test]
+    fn bot_attacks_with_unblockable_into_bigger_blocker() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let mut ghost = catalog::grizzly_bears();
+        ghost.name = "Ghost";
+        ghost.power = 1;
+        ghost.toughness = 1;
+        ghost.keywords.push(crate::card::Keyword::Unblockable);
+        let atk = g.add_card_to_battlefield(0, ghost);
+        g.clear_sickness(atk);
+        // A lone 5/5 that would trade up against a naive ground attacker.
+        let mut big = catalog::grizzly_bears();
+        big.name = "Wall"; big.power = 5; big.toughness = 5;
+        g.add_card_to_battlefield(1, big);
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.iter().any(|d| d.attacker == atk),
+                    "unblockable attacker swings past a bigger blocker");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
     }
 }

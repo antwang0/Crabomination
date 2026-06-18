@@ -2495,3 +2495,109 @@ fn mantle_of_the_wolf_makes_wolves_on_death() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Wolf").count(),
         wolves_before + 2, "two Wolves on aura death");
 }
+
+// ── THB heroic / sacrifice / lure batch tests ─────────────────────────────────
+
+/// Hero of the Winds' heroic pumps your team when you target it with a spell.
+#[test]
+fn hero_of_the_winds_heroic_pumps_team() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::hero_of_the_winds());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pump = g.add_card_to_hand(0, catalog::infuriate()); // +3/+2 target creature
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump, target: Some(Target::Permanent(hero)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Infuriate at the Hero");
+    drain_stack(&mut g);
+    // Bear got the heroic +1/+0 (Infuriate only buffed the hero).
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "team +1/+0 from heroic");
+}
+
+/// Heroes of the Revel makes a Satyr token on enter.
+#[test]
+fn heroes_of_the_revel_makes_satyr() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::heroes_of_the_revel());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Heroes of the Revel");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Satyr"), "made a Satyr token");
+}
+
+/// Irreverent Revelers mode 0 destroys an artifact on enter.
+#[test]
+fn irreverent_revelers_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::irreverent_revelers());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Mode(0),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(art)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Irreverent Revelers");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Treeshaker Chimera draws three when it dies.
+#[test]
+fn treeshaker_chimera_draws_on_death() {
+    let mut g = two_player_game();
+    let chimera = g.add_card_to_battlefield(0, catalog::treeshaker_chimera());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let hand = g.players[0].hand.len();
+    // Lethal damage → dies SBA fires the draw trigger.
+    g.battlefield_find_mut(chimera).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three on death");
+}
+
+/// Blood Aspirant grows when you sacrifice a permanent.
+#[test]
+fn blood_aspirant_grows_on_sacrifice() {
+    let mut g = two_player_game();
+    let aspirant = g.add_card_to_battlefield(0, catalog::blood_aspirant());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentSacrificed { card_id: fodder, who: 0 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aspirant).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Underworld Sentinel exiles a creature from your graveyard on attack and
+/// returns it when it dies.
+#[test]
+fn underworld_sentinel_exiles_then_returns() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let sentinel = g.add_card_to_battlefield(0, catalog::underworld_sentinel());
+    g.clear_sickness(sentinel);
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Permanent(dead)),
+    ]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sentinel, target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dead), "creature exiled with the Sentinel");
+    // Sentinel dies (lethal damage SBA) → the exiled creature enters play.
+    g.battlefield_find_mut(sentinel).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(), "exiled card returned to play");
+}
