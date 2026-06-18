@@ -2235,6 +2235,25 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Soratami Mirror-Mage bounces a creature by returning three of your lands.
+#[test]
+fn soratami_mirror_mage_bounces_creature_for_three_lands() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::soratami_mirror_mage());
+    g.clear_sickness(mage);
+    let lands: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::island())).collect();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Mirror-Mage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "target creature returned to hand");
+    let lands_left = lands.iter().filter(|id| g.battlefield_find(**id).is_some()).count();
+    assert_eq!(lands_left, 0, "three lands returned as the cost");
+}
+
 /// Gutwrencher Oni makes you discard at upkeep unless you control an Ogre.
 #[test]
 fn gutwrencher_oni_upkeep_discard_unless_ogre() {

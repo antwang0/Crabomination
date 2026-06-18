@@ -1062,6 +1062,32 @@ pub fn soratami_cloudskater() -> CardDefinition {
     }
 }
 
+/// Soratami Mirror-Mage — {3}{U} Moonfolk Wizard 2/1. Flying; {3}, Return three
+/// lands you control to their owner's hand: Return target creature to its
+/// owner's hand.
+pub fn soratami_mirror_mage() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Soratami Mirror-Mage",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Moonfolk, CreatureType::Wizard]),
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            bounce_other_filter: Some((SelectionRequirement::Land, 3)),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hana Kami — {G} Spirit 1/1. {1}{G}, Sacrifice this creature: Return target
 /// Arcane card from your graveyard to your hand.
 pub fn hana_kami() -> CardDefinition {
