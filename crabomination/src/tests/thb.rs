@@ -3447,3 +3447,37 @@ fn enemy_of_enlightenment_upkeep_discard() {
     assert_eq!(g.players[0].hand.len(), 0, "you discarded");
     assert_eq!(g.players[1].hand.len(), 0, "opponent discarded");
 }
+
+/// Ashiok, Sculptor of Fears +2 draws and mills each player two.
+#[test]
+fn ashiok_sculptor_plus_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::ashiok_sculptor_of_fears());
+    g.battlefield_find_mut(a).unwrap().counters.insert(CounterType::Loyalty, 4);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    for _ in 0..3 { g.add_card_to_library(1, catalog::forest()); }
+    let h = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: a, ability_index: 0, target: None, x_value: None,
+    }).expect("+2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h + 1, "drew a card");
+    assert_eq!(g.players[0].graveyard.len(), 2, "you milled two");
+    assert_eq!(g.players[1].graveyard.len(), 2, "opponent milled two");
+}
+
+/// Ashiok, Sculptor of Fears −5 reanimates a graveyard creature under your
+/// control.
+#[test]
+fn ashiok_sculptor_reanimates() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::ashiok_sculptor_of_fears());
+    g.battlefield_find_mut(a).unwrap().counters.insert(CounterType::Loyalty, 5);
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: a, ability_index: 1, target: Some(Target::Permanent(corpse)), x_value: None,
+    }).expect("-5");
+    drain_stack(&mut g);
+    let bear = g.battlefield_find(corpse).expect("reanimated");
+    assert_eq!(bear.controller, 0, "under your control");
+}

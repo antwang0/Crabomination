@@ -5768,3 +5768,58 @@ pub fn enemy_of_enlightenment() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ashiok, Sculptor of Fears — {4}{U}{B} Ashiok planeswalker, 4 loyalty.
+/// +2: draw a card; each player mills two. −5: reanimate a creature card from
+/// a graveyard under your control. −11: gain control of all creatures your
+/// opponents control. (Single-target-opponent clause widened to all opponents
+/// — identical in two-player.)
+pub fn ashiok_sculptor_of_fears() -> CardDefinition {
+    CardDefinition {
+        name: "Ashiok, Sculptor of Fears",
+        cost: cost(&[generic(4), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ashiok],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Mill {
+                        who: Selector::Player(PlayerRef::EachPlayer),
+                        amount: Value::Const(2),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -11,
+                effect: Effect::GainControl {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    to: Some(PlayerRef::You),
+                    duration: Duration::Permanent,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
