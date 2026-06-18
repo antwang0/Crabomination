@@ -7984,6 +7984,7 @@ static THB: &[Factory] = &[
     super::thb::callaphe_beloved_of_the_sea,
     super::thb::siona_captain_of_the_pyleas,
     super::thb::flummoxed_cyclops,
+    super::thb::altar_of_the_pantheon,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

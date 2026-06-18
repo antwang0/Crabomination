@@ -6031,3 +6031,40 @@ pub fn flummoxed_cyclops() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Altar of the Pantheon — {3} Artifact. Your devotion to each color (and
+/// combination) is increased by one. {T}: Add one mana of any color; if you
+/// control a God, Demigod, or legendary enchantment, gain 1 life.
+pub fn altar_of_the_pantheon() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{ManaPayload, StaticEffect};
+    let payoff = SelectionRequirement::HasCreatureType(CreatureType::God)
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Demigod))
+        .or(SelectionRequirement::HasSupertype(Supertype::Legendary)
+            .and(SelectionRequirement::Enchantment));
+    CardDefinition {
+        name: "Altar of the Pantheon",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Your devotion to each color and each combination of colors is increased by one.",
+            effect: StaticEffect::DevotionBonus,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                Effect::If {
+                    cond: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(payoff),
+                        n: Value::Const(1),
+                    },
+                    then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

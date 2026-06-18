@@ -695,6 +695,10 @@ pub enum StaticEffect {
         colors: Vec<crate::mana::Color>,
         threshold: u32,
     },
+    /// CR 700.5 — "Your devotion to each color and each combination of colors
+    /// is increased by one." Altar of the Pantheon. Each permanent the player
+    /// controls carrying this static adds 1 to every non-empty devotion query.
+    DevotionBonus,
     /// CR 615 — "Prevent all damage that would be dealt to attacking
     /// creatures you control." Iroas, God of Victory. Consulted at both the
     /// combat strike-back and the shared non-combat damage funnel.

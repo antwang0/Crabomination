@@ -17,8 +17,9 @@ impl GameState {
     /// permanents they control. A hybrid / Phyrexian / mono-hybrid pip
     /// counts once if it contains any of the colors.
     pub(crate) fn devotion_to(&self, player: usize, colors: &[crate::mana::Color]) -> i32 {
-                let matches = |c: &crate::mana::Color| colors.contains(c);
-        self.battlefield
+        let matches = |c: &crate::mana::Color| colors.contains(c);
+        let pips = self
+            .battlefield
             .iter()
             .filter(|card| card.controller == player)
             .flat_map(|card| card.definition.cost.symbols.iter())
@@ -29,7 +30,23 @@ impl GameState {
                 ManaSymbol::Hybrid(a, b) => matches(a) || matches(b),
                 _ => false,
             })
-            .count() as i32
+            .count() as i32;
+        // CR 700.5 — Altar of the Pantheon adds 1 to every non-empty devotion
+        // query (to each color and combination).
+        let bonus = if colors.is_empty() {
+            0
+        } else {
+            self.battlefield
+                .iter()
+                .filter(|card| card.controller == player)
+                .filter(|card| {
+                    card.definition.static_abilities.iter().any(|s| {
+                        matches!(s.effect, crate::effect::StaticEffect::DevotionBonus)
+                    })
+                })
+                .count() as i32
+        };
+        pips + bonus
     }
 
     pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {

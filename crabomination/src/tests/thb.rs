@@ -3655,3 +3655,35 @@ fn flummoxed_cyclops_cant_block_a_swarm() {
     assert!(!cant_block(1), "one attacker: can block");
     assert!(cant_block(2), "two attackers: can't block");
 }
+
+/// Altar of the Pantheon raises devotion to every color by one (CR 700.5),
+/// and its mana ability gains 1 life only while you control a God/Demigod/
+/// legendary enchantment.
+#[test]
+fn altar_of_the_pantheon_devotion_and_conditional_life() {
+    let mut g = two_player_game();
+    let altar = g.add_card_to_battlefield(0, catalog::altar_of_the_pantheon());
+    // +1 to each color, even with no colored pips on the battlefield.
+    assert_eq!(g.devotion_to(0, &[Color::White]), 1, "altar adds 1 white devotion");
+    assert_eq!(g.devotion_to(0, &[Color::Black]), 1, "altar adds 1 to each color");
+
+    // No God/legendary enchantment yet: tapping for mana gains no life
+    // (AutoDecider resolves the any-color choice; it stays a mana ability).
+    let life = g.players[0].life;
+    let mana_before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate mana ability");
+    assert_eq!(g.players[0].mana_pool.total(), mana_before + 1, "added one mana");
+    assert_eq!(g.players[0].life, life, "no payoff permanent: no life");
+
+    // Add a God; now the rider gains a life.
+    g.battlefield_find_mut(altar).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    })
+    .expect("activate again");
+    assert_eq!(g.players[0].life, life + 1, "God controlled → gain 1 life");
+}

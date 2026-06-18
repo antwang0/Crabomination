@@ -24,15 +24,32 @@ fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
 /// Returns true if the given effect is purely a mana ability — only adds
 /// mana and uses no targets. Mana abilities resolve immediately without the stack.
 fn is_mana_ability(effect: &Effect) -> bool {
-    match effect {
-        Effect::AddMana { .. } => true,
-        Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
-        // A board-state-conditional that only ever adds mana on both branches
-        // is still a mana ability (CR 605.1a — Ilysian Caryatid's "add one of
-        // any color; add two instead if you control a power-4+ creature").
-        Effect::If { then, else_, .. } => is_mana_ability(then) && is_mana_ability(else_),
-        _ => false,
+    // CR 605.1a — a mana ability could add mana, isn't a loyalty ability,
+    // doesn't target, and doesn't have an illegal trigger. It may still carry
+    // incidental non-stack riders (Altar of the Pantheon's "gain 1 life").
+    fn produces_mana(e: &Effect) -> bool {
+        match e {
+            Effect::AddMana { .. } => true,
+            Effect::Seq(steps) => steps.iter().any(produces_mana),
+            Effect::If { then, else_, .. } => produces_mana(then) || produces_mana(else_),
+            _ => false,
+        }
     }
+    fn mana_compatible(e: &Effect) -> bool {
+        match e {
+            Effect::AddMana { .. } | Effect::Noop => true,
+            // Incidental you-only life gain (Altar of the Pantheon).
+            Effect::GainLife { who: crate::effect::Selector::You, .. } => true,
+            Effect::Seq(steps) => steps.iter().all(mana_compatible),
+            // A board-state-conditional that only ever adds mana on both
+            // branches is still a mana ability (Ilysian Caryatid's "add one
+            // of any color; add two instead if you control a power-4+
+            // creature").
+            Effect::If { then, else_, .. } => mana_compatible(then) && mana_compatible(else_),
+            _ => false,
+        }
+    }
+    produces_mana(effect) && mana_compatible(effect)
 }
 
 /// The set of colours `card`'s untapped mana abilities can produce, in
