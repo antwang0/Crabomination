@@ -7992,6 +7992,8 @@ static THB: &[Factory] = &[
     super::thb::ironscale_hydra,
     super::thb::dreamshaper_shaman,
     super::thb::athreos_shroud_veiled,
+    super::thb::ashioks_erasure,
+    super::thb::entrancing_lyre,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

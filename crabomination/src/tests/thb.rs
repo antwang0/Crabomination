@@ -3838,3 +3838,86 @@ fn athreos_reclaims_coin_countered_creature() {
     assert!(back.is_some(), "the coin-countered creature returned to the battlefield");
     assert_eq!(back.unwrap().controller, 0, "returned under Athreos's controller's control");
 }
+
+/// Ashiok's Erasure: counter+exile a spell, lock opponents off that name while
+/// it's on the battlefield, then return the card to its owner's hand on leave.
+#[test]
+fn ashioks_erasure_exiles_locks_and_returns() {
+    let mut g = two_player_game();
+    // P1 casts a Lightning Bolt; P0 flashes in Ashiok's Erasure to exile it.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt on stack");
+    let erasure = g.add_card_to_hand(0, catalog::ashioks_erasure());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: erasure, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Erasure on stack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the bolt is exiled, not in any graveyard");
+    assert_eq!(g.players[0].life, 20, "the exiled bolt never resolved");
+
+    // P1 can't cast another Lightning Bolt while the Erasure stays in play.
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(res.is_err(), "opponent is locked out of casting the named spell");
+
+    // Erasure leaves → the exiled card returns to its owner's hand.
+    let erasure_id = g.battlefield.iter().find(|c| c.definition.name == "Ashiok's Erasure").unwrap().id;
+    g.remove_from_battlefield_to_graveyard_raw(erasure_id);
+    g.check_state_based_actions();
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "exiled card returns to owner's hand on leave");
+}
+
+/// Entrancing Lyre taps a creature with power ≤ X and locks it from untapping
+/// while the Lyre stays tapped; the lock releases once the Lyre leaves.
+#[test]
+fn entrancing_lyre_taps_and_locks() {
+    let mut g = two_player_game();
+    let lyre = g.add_card_to_battlefield(0, catalog::entrancing_lyre());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lyre, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: Some(2),
+    }).expect("tap a power-2 creature with X=2");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped, "the bear is tapped");
+    assert_eq!(b.untap_locked_by, Some(lyre), "locked by the Lyre");
+    // Opponent's untap step: the lock holds while the Lyre stays tapped.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "stays tapped while the Lyre is tapped");
+    // The Lyre leaves → the lock releases on the next untap step.
+    g.remove_from_battlefield_to_graveyard_raw(lyre);
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untaps once the Lyre is gone");
+}
+
+/// Entrancing Lyre's "{X}: power X or less" target filter rejects a creature
+/// whose power exceeds the X paid.
+#[test]
+fn entrancing_lyre_respects_power_filter() {
+    let mut g = two_player_game();
+    let lyre = g.add_card_to_battlefield(0, catalog::entrancing_lyre());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[0].mana_pool.add_colorless(1);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: lyre, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: Some(1),
+    });
+    assert!(res.is_err(), "power 2 > X=1 is an illegal target");
+}

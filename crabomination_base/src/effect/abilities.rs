@@ -744,6 +744,10 @@ pub enum StaticEffect {
     NamedSpellTax { amount: u32 },
     /// Meddling Mage — spells with the source's `named_card` can't be cast.
     NamedSpellCantBeCast,
+    /// Ashiok's Erasure — the controller's *opponents* can't cast spells with
+    /// the source's `named_card` (the exiled card's name). Unlike
+    /// `NamedSpellCantBeCast` (which locks everyone), this is controller-scoped.
+    OpponentsCantCastNamed,
     /// Dress Down / Humility-lite — all creatures lose all abilities
     /// (layer 6 `RemoveAllAbilities`).
     CreaturesLoseAllAbilities,

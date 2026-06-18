@@ -9210,6 +9210,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // NamedSpellCantBeCast — consulted in cast_spell_with_convoke
             // (Meddling Mage); no layer effect.
             | StaticEffect::NamedSpellCantBeCast
+            // OpponentsCantCastNamed (Ashiok's Erasure) — cast-legality gate,
+            // no layer effect.
+            | StaticEffect::OpponentsCantCastNamed
             // SpellsYouCastHaveDelve (Teval) — read at cast time by
             // `controller_grants_spells_delve`; no layer effect.
             | StaticEffect::SpellsYouCastHaveDelve

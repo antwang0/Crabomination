@@ -11,6 +11,50 @@ use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
+/// Ashiok's Erasure — {2}{U}{U} Flash Enchantment. ETB exile target spell;
+/// your opponents can't cast spells with its name; the card returns to its
+/// owner's hand when this leaves.
+pub fn ashioks_erasure() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Ashiok's Erasure",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't cast spells with the same name as the exiled card.",
+            effect: StaticEffect::OpponentsCantCastNamed,
+        }],
+        triggered_abilities: vec![etb(Effect::CounterSpellExileNameLock {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Entrancing Lyre — {3} Artifact. {X},{T}: Tap target creature with power X
+/// or less; it doesn't untap while the Lyre stays tapped.
+pub fn entrancing_lyre() -> CardDefinition {
+    CardDefinition {
+        name: "Entrancing Lyre",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            effect: Effect::TapAndUntapLock {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::PowerAtMostXFromCost),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Heliod's Intervention — {X}{W}{W} Instant. Choose one — destroy X target
 /// artifacts and/or enchantments; or target player gains twice X life.
 pub fn heliods_intervention() -> CardDefinition {

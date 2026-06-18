@@ -2947,6 +2947,21 @@ impl GameState {
         {
             return Err(GameError::SpellNameLocked);
         }
+        // Ashiok's Erasure — an opponent of the caster controls a permanent
+        // whose `OpponentsCantCastNamed` static locks this spell's name (the
+        // card exiled by the Erasure). The lock lives as long as that
+        // permanent stays on the battlefield.
+        if let Some(name) = spell_name
+            && self.battlefield.iter().any(|c| {
+                c.named_card.as_deref() == Some(name)
+                    && !self.same_team(c.controller, p)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantCastNamed)
+                    })
+            })
+        {
+            return Err(GameError::SpellNameLocked);
+        }
         // Academic Probation mode 0 — an opponent of the caster named this
         // spell ("Opponents can't cast spells with the chosen name until your
         // next turn"); the lock lives on the naming player until their turn.

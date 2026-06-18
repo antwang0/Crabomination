@@ -370,11 +370,13 @@ impl Effect {
             | Effect::ExileReturnNextEndStep { what }
             | Effect::PhaseOut { what }
             | Effect::Tap { what }
+            | Effect::TapAndUntapLock { what }
             | Effect::RemoveFromCombat { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
+            | Effect::CounterSpellExileNameLock { what }
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
@@ -613,6 +615,7 @@ impl Effect {
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
+            | Effect::CounterSpellExileNameLock { what }
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
@@ -624,7 +627,10 @@ impl Effect {
             | Effect::GainControlWhileSourceRemains { what } => sel_filter(what),
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.
-            Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
+            Effect::PhaseOut { what }
+            | Effect::Tap { what }
+            | Effect::TapAndUntapLock { what }
+            | Effect::Untap { what, .. } => {
                 sel_filter(what).or_else(|| implicit_player_if_controlled_by_target(what))
             }
             Effect::UnlessPlayerPays { then, .. } => then.primary_target_filter(),
@@ -944,12 +950,12 @@ impl Effect {
                     _ => format!("pump {t} until end of turn"),
                 }
             }
-            Effect::Tap { .. } => format!("tap {}", self.target_phrase()),
+            Effect::Tap { .. } | Effect::TapAndUntapLock { .. } => format!("tap {}", self.target_phrase()),
             Effect::PhaseOut { .. } => format!("phase out {}", self.target_phrase()),
             Effect::Untap { .. } => format!("untap {}", self.target_phrase()),
-            Effect::CounterSpell { .. } | Effect::CounterSpellToZone { .. } => {
-                "counter target spell".into()
-            }
+            Effect::CounterSpell { .. }
+            | Effect::CounterSpellToZone { .. }
+            | Effect::CounterSpellExileNameLock { .. } => "counter target spell".into(),
             Effect::Fight { .. } => "fight".into(),
             Effect::ExchangeControl { .. } | Effect::ExchangeControlChoosing { .. } => {
                 "exchange control".into()
@@ -1154,6 +1160,7 @@ impl Effect {
             // target is a stack item, not a player. Reject player target.
             Effect::CounterSpell { .. }
             | Effect::CounterSpellToZone { .. }
+            | Effect::CounterSpellExileNameLock { .. }
             | Effect::CounterAbility { .. }
             | Effect::CounterUnlessPaid { .. }
             | Effect::CounterUnless { .. }
@@ -1169,7 +1176,10 @@ impl Effect {
             Effect::CastWithoutPayingImmediate { .. } => false,
             // "Tap all lands target player controls" takes a player
             // (Mistbind Clique); the plain selector forms don't.
-            Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
+            Effect::PhaseOut { what }
+            | Effect::Tap { what }
+            | Effect::TapAndUntapLock { what }
+            | Effect::Untap { what, .. } => {
                 matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
             }
             // Permanent-targeting effects: skip Player.
@@ -1447,6 +1457,7 @@ impl Effect {
                 | Effect::Exile { what }
                 | Effect::CounterSpell { what }
                 | Effect::CounterSpellToZone { what, .. }
+                | Effect::CounterSpellExileNameLock { what }
                 | Effect::CounterAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
@@ -1458,7 +1469,10 @@ impl Effect {
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }
                 | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
-                Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
+                Effect::PhaseOut { what }
+                | Effect::Tap { what }
+                | Effect::TapAndUntapLock { what }
+                | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }
                 Effect::PumpPT { what, .. }

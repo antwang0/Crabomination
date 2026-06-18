@@ -1424,6 +1424,15 @@ impl GameState {
             }
             blocked
         };
+        // Entrancing Lyre tap-lock: gather the ids referenced as a lock source
+        // and the set of currently-tapped permanents. A lock source keeps
+        // itself tapped (the "you may choose not to untap this artifact"
+        // clause, modeled as: stay tapped while it still locks a creature); a
+        // locked permanent skips its untap while its source remains tapped.
+        let lock_sources: std::collections::HashSet<crate::card::CardId> =
+            self.battlefield.iter().filter_map(|c| c.untap_locked_by).collect();
+        let tapped_now_set: std::collections::HashSet<crate::card::CardId> =
+            self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
@@ -1452,6 +1461,25 @@ impl GameState {
                         card.summoning_sick = false;
                     }
                     continue;
+                }
+                // Entrancing Lyre — a lock source keeps itself tapped while it
+                // still locks a creature.
+                if card.tapped && lock_sources.contains(&card.id) {
+                    if active {
+                        card.summoning_sick = false;
+                    }
+                    continue;
+                }
+                // A locked permanent skips its untap while its source is still
+                // tapped on the battlefield; otherwise the lock releases.
+                if let Some(src) = card.untap_locked_by {
+                    if tapped_now_set.contains(&src) {
+                        if active {
+                            card.summoning_sick = false;
+                        }
+                        continue;
+                    }
+                    card.untap_locked_by = None;
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);

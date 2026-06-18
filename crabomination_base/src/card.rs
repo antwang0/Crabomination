@@ -1014,6 +1014,10 @@ pub enum SelectionRequirement {
     /// Kami's "destroy target artifact with mana value X"); unresolved
     /// instances evaluate false.
     ManaValueExactlyXFromCost,
+    /// Power ≤ the X paid into the resolving spell/ability's cost. Resolved to
+    /// a concrete `PowerAtMost(x)` by `resolve_x` (Entrancing Lyre's "tap
+    /// target creature with power X or less"); unresolved instances eval false.
+    PowerAtMostXFromCost,
     /// Mana value ≤ the resolving spell's converge count (distinct colors of
     /// mana spent — CR 702.86). Resolved to a concrete `ManaValueAtMost(n)`
     /// by `resolve_converge` at search-resolution time (Bring to Light);
@@ -1177,6 +1181,7 @@ impl SelectionRequirement {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
             Self::ManaValueExactlyXFromCost => Self::ManaValueExactly(x),
+            Self::PowerAtMostXFromCost => Self::PowerAtMost(x as i32),
             Self::And(a, b) => Self::And(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Or(a, b) => Self::Or(Box::new(a.resolve_x(x)), Box::new(b.resolve_x(x))),
             Self::Not(inner) => Self::Not(Box::new(inner.resolve_x(x))),
@@ -2656,6 +2661,10 @@ pub struct CardInstance {
     /// time; consumed (and the untap skipped) by `do_untap`. Transient —
     /// not serialized (defaults to false on snapshot reload).
     pub skip_next_untap: bool,
+    /// Entrancing Lyre — this permanent doesn't untap during its controller's
+    /// untap step for as long as the linked source permanent stays tapped (and
+    /// on the battlefield). Cleared once the source untaps or leaves.
+    pub untap_locked_by: Option<CardId>,
     /// CR 702.142 — set when this creature is declared as an attacker;
     /// gates Boast activated abilities ("activate only if this attacked
     /// this turn"). Cleared in per-turn cleanup. Transient — not
@@ -2835,6 +2844,7 @@ impl CardInstance {
             damaged_by_this_turn: Vec::new(),
             regeneration_shields: 0,
             skip_next_untap: false,
+            untap_locked_by: None,
             attacked_this_turn: false,
             must_block: None,
             exiled_by: None,
@@ -3328,6 +3338,10 @@ struct CardInstanceWire {
     /// snapshots load as empty.
     #[serde(default)]
     meld_parts: Vec<CardInstance>,
+    /// Entrancing Lyre tap-lock: this permanent doesn't untap while the
+    /// linked source stays tapped. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    untap_locked_by: Option<CardId>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -3413,6 +3427,7 @@ impl serde::Serialize for CardInstance {
             battlefield_timestamp: self.battlefield_timestamp,
             detained_by: self.detained_by,
             meld_parts: self.meld_parts.clone(),
+            untap_locked_by: self.untap_locked_by,
         };
         wire.serialize(ser)
     }
@@ -3515,6 +3530,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.battlefield_timestamp = wire.battlefield_timestamp;
         c.detained_by = wire.detained_by;
         c.meld_parts = wire.meld_parts;
+        c.untap_locked_by = wire.untap_locked_by;
         Ok(c)
     }
 }

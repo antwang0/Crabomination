@@ -3494,6 +3494,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TapAndUntapLock { what } => {
+                // Entrancing Lyre — tap the target and lock it from untapping
+                // while the source stays tapped (cleared in the untap step once
+                // the source untaps or leaves).
+                let source = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            if !c.tapped {
+                                c.tapped = true;
+                                events.push(GameEvent::PermanentTapped { card_id: cid });
+                            }
+                            c.untap_locked_by = source;
+                        }
+                }
+                Ok(())
+            }
+
             Effect::PhaseOut { what } => {
                 // CR 702.26 — collect the targeted permanents (and anything
                 // attached to them) and move them to the phased-out zone.
@@ -5090,6 +5108,35 @@ impl GameState {
                                 self.exile.push(*card);
                             }
                         }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CounterSpellExileNameLock { what } => {
+                // Ashiok's Erasure: lift target spell off the stack, exile the
+                // card linked to the source (return to owner's hand on leave),
+                // and stamp the source's `named_card` so its
+                // `OpponentsCantCastNamed` static locks that name.
+                let Some(source) = ctx.source else { return Ok(()); };
+                let targets = self.resolve_selector(what, ctx);
+                let target_id = targets.iter().find_map(|t| t.as_card_id());
+                let Some(cid) = target_id else { return Ok(()); };
+                let Some(pos) = self.stack.iter().position(|si| matches!(
+                    si,
+                    StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
+                )) else { return Ok(()); };
+                if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                    let name = card.definition.name.to_string();
+                    let mut card = *card;
+                    card.exiled_by = Some(crate::card::ExileLink {
+                        source,
+                        return_to: crate::card::ExileReturnZone::Hand,
+                    });
+                    events.push(GameEvent::PermanentExiled { card_id: card.id });
+                    self.exile.push(card);
+                    if let Some(src) = self.battlefield_find_mut(source) {
+                        src.named_card = Some(name);
                     }
                 }
                 Ok(())

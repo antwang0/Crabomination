@@ -2210,6 +2210,9 @@ pub enum Effect {
     /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
     ExileReturnNextEndStep { what: Selector },
     Tap     { what: Selector },
+    /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
+    /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
+    TapAndUntapLock { what: Selector },
     /// CR 506.4 — remove every targeted creature from combat: an attacker is
     /// pulled from the attack (its blocks released), a blocker is unassigned.
     /// It stops being an attacking/blocking creature but stays on the
@@ -2560,6 +2563,11 @@ pub enum Effect {
         what: Selector,
         zone: CounteredSpellZone,
     },
+    /// Ashiok's Erasure — counter target spell, exile it linked to the source
+    /// (returns to its owner's hand when the source leaves), and stamp the
+    /// source's `named_card` so its `OpponentsCantCastNamed` static locks that
+    /// name while the source stays on the battlefield.
+    CounterSpellExileNameLock { what: Selector },
     /// Counter target activated/triggered ability. The selector resolves
     /// to a permanent (the ability's source), and the engine removes the
     /// topmost `StackItem::Trigger` whose `source` matches. Used by
