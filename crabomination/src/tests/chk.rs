@@ -2235,6 +2235,84 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Marrow-Gnawer makes all Rats fear and mints Rats by sacrificing one.
+#[test]
+fn marrow_gnawer_lords_rats_and_mints_tokens() {
+    let mut g = two_player_game();
+    let marrow = g.add_card_to_battlefield(0, catalog::marrow_gnawer());
+    g.clear_sickness(marrow);
+    let rat = g.add_card_to_battlefield(0, catalog::nezumi_cutthroat()); // a Rat
+    assert!(g.computed_permanent(rat).unwrap().keywords.contains(&Keyword::Fear),
+        "all Rats gain fear");
+    // {T}, Sacrifice a Rat: after sac, Marrow is the only Rat → 1 token.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: marrow, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate the mint");
+    drain_stack(&mut g);
+    let rats = g.battlefield.iter()
+        .filter(|c| c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Rat))
+        .count();
+    // Marrow + 1 minted token (the sacrificed Rat is gone).
+    assert_eq!(rats, 2, "minted X=1 Rat token (Marrow was the only Rat left at resolution)");
+}
+
+/// Kuro sacrifices itself at upkeep when its keeper declines the {B}{B}{B}{B},
+/// and its pay-life ability shrinks a creature.
+#[test]
+fn kuro_pitlord_upkeep_sacrifice_and_pay_life_shrink() {
+    let mut g = two_player_game();
+    let kuro = g.add_card_to_battlefield(0, catalog::kuro_pitlord());
+    g.clear_sickness(kuro);
+    // Pay 1 life: target creature gets -1/-1 → kills a 1/1.
+    let x1 = g.add_card_to_battlefield(1, catalog::lantern_kami()); // 1/1
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kuro, ability_index: 0, target: Some(Target::Permanent(x1)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("pay 1 life to shrink");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(x1).is_none(), "-1/-1 kills the 1/1");
+    // Upkeep: no mana floated, AutoDecider declines → Kuro is sacrificed.
+    let trig = catalog::kuro_pitlord().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(kuro, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(kuro).is_none(), "sacrificed when the upkeep cost goes unpaid");
+}
+
+/// Strange Inversion swaps a creature's power and toughness.
+#[test]
+fn strange_inversion_swaps_pt() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(1, catalog::lantern_kami()); // 1/1 — pick a lopsided body
+    let bigp = g.add_card_to_battlefield(1, catalog::kami_of_lunacy()); // 4/1
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let inv = g.add_card_to_hand(0, catalog::strange_inversion());
+    cast_at(&mut g, inv, Target::Permanent(bigp));
+    let cp = g.computed_permanent(bigp).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 4), "4/1 becomes 1/4");
+    let _ = kami;
+}
+
+/// Sift Through Sands nets a card (draw two, discard one).
+#[test]
+fn sift_through_sands_draws_two_discards_one() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let sift = g.add_card_to_hand(0, catalog::sift_through_sands());
+    let before = g.players[0].hand.len(); // includes Sift itself
+    g.perform_action(GameAction::CastSpell {
+        card_id: sift, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sift Through Sands");
+    drain_stack(&mut g);
+    // -1 (Sift leaves hand) +2 draw -1 discard = net 0 from `before`.
+    assert_eq!(g.players[0].hand.len(), before, "draw two, discard one nets +1 over the spell itself");
+}
+
 /// Wicked Akuba can only drain a player it dealt damage to this turn.
 #[test]
 fn wicked_akuba_drains_a_player_it_damaged() {

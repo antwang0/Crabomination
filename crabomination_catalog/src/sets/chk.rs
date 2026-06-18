@@ -4277,6 +4277,121 @@ pub fn uncontrollable_anger() -> CardDefinition {
     }
 }
 
+/// Marrow-Gnawer — {3}{B}{B} Legendary Rat Rogue 2/3. All Rats have fear.
+/// {T}, Sacrifice a Rat: Create X 1/1 black Rat tokens, X = Rats you control.
+pub fn marrow_gnawer() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Marrow-Gnawer",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Rat, CreatureType::Rogue]),
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "All Rats have fear.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(SelectionRequirement::HasCreatureType(
+                    CreatureType::Rat,
+                )),
+                keyword: Keyword::Fear,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Rat), 1)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountOf(Box::new(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Rat),
+                })),
+                definition: TokenDefinition {
+                    name: "Rat".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    subtypes: spirit(vec![CreatureType::Rat]),
+                    colors: vec![crate::mana::Color::Black],
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kuro, Pitlord — {6}{B}{B}{B} Legendary Demon Spirit 9/9. At the beginning of
+/// your upkeep, sacrifice Kuro unless you pay {B}{B}{B}{B}. Pay 1 life: Target
+/// creature gets -1/-1 until end of turn.
+pub fn kuro_pitlord() -> CardDefinition {
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "Kuro, Pitlord",
+        cost: cost(&[generic(6), b(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: spirit(vec![CreatureType::Demon, CreatureType::Spirit]),
+        power: 9,
+        toughness: 9,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {B}{B}{B}{B} or sacrifice Kuro?".into(),
+                mana_cost: cost(&[b(), b(), b(), b()]),
+                body: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::SacrificeSource)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 1,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Strange Inversion — {2}{R} Instant — Arcane. Switch target creature's power
+/// and toughness until end of turn. Splice onto Arcane {1}{R}.
+pub fn strange_inversion() -> CardDefinition {
+    CardDefinition {
+        name: "Strange Inversion",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[generic(1), r()]), SpellSubtype::Arcane)],
+        effect: Effect::SwitchPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Sift Through Sands — {1}{U}{U} Instant — Arcane. Draw two cards, then
+/// discard a card. (The "Unspeakable" search rider is omitted.)
+pub fn sift_through_sands() -> CardDefinition {
+    CardDefinition {
+        name: "Sift Through Sands",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Wicked Akuba — {B}{B} Spirit 2/2. {B}: Target player dealt damage by this
 /// creature this turn loses 1 life.
 pub fn wicked_akuba() -> CardDefinition {
