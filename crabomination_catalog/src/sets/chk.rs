@@ -4145,12 +4145,11 @@ pub fn kitsune_mystic() -> CardDefinition {
 }
 
 /// Helper: a Kamigawa legendary land's mana-tap plus a `{color},{T}` ability
-/// targeting a legendary creature.
+/// (the targeting filter lives inside `effect`).
 fn legendary_land(
     name: &'static str,
     color: crate::mana::Color,
     pip: crate::mana::ManaSymbol,
-    target_req: SelectionRequirement,
     effect: Effect,
 ) -> CardDefinition {
     CardDefinition {
@@ -4172,7 +4171,6 @@ pub fn shizo_deaths_storehouse() -> CardDefinition {
         "Shizo, Death's Storehouse",
         crate::mana::Color::Black,
         b(),
-        SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
         Effect::GrantKeyword {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -4191,7 +4189,6 @@ pub fn shinka_the_bloodsoaked_keep() -> CardDefinition {
         "Shinka, the Bloodsoaked Keep",
         crate::mana::Color::Red,
         r(),
-        SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
         Effect::GrantKeyword {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -4210,7 +4207,6 @@ pub fn okina_temple_to_the_grandfathers() -> CardDefinition {
         "Okina, Temple to the Grandfathers",
         crate::mana::Color::Green,
         g(),
-        SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
         Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -4230,7 +4226,6 @@ pub fn minamo_school_at_waters_edge() -> CardDefinition {
         "Minamo, School at Water's Edge",
         crate::mana::Color::Blue,
         u(),
-        SelectionRequirement::HasSupertype(Supertype::Legendary),
         Effect::Untap {
             what: target_filtered(SelectionRequirement::HasSupertype(Supertype::Legendary)),
             up_to: None,
@@ -4298,21 +4293,6 @@ pub fn masako_the_humorless() -> CardDefinition {
             description: "Tapped creatures you control can block as though they were untapped.",
             effect: StaticEffect::TappedCreaturesCanBlock,
         }],
-        ..Default::default()
-    }
-}
-
-/// Hundred-Talon Kami — {4}{W} Spirit 2/3. Flying, Soulshift 4.
-pub fn hundred_talon_kami() -> CardDefinition {
-    CardDefinition {
-        name: "Hundred-Talon Kami",
-        cost: cost(&[generic(4), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: spirit(vec![CreatureType::Spirit]),
-        power: 2,
-        toughness: 3,
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
         ..Default::default()
     }
 }

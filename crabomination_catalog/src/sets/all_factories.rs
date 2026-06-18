@@ -255,7 +255,6 @@ static CHK: &[Factory] = &[
     super::chk::minamo_school_at_waters_edge,
     super::chk::unnatural_speed,
     super::chk::uncontrollable_anger,
-    super::chk::hundred_talon_kami,
     super::chk::guardian_of_solitude,
     super::chk::jukai_messenger,
     super::chk::orbweaver_kumo,
