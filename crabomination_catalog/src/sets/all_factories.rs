@@ -7935,6 +7935,12 @@ static THB: &[Factory] = &[
     super::thb::dreamstalker_manticore,
     super::thb::mischievous_chimera,
     super::thb::stinging_lionfish,
+    super::thb::terror_of_mount_velus,
+    super::thb::thundering_chariot,
+    super::thb::wolfwillow_haven,
+    super::thb::mirror_shield,
+    super::thb::shimmerwing_chimera,
+    super::thb::thryx_the_sudden_storm,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

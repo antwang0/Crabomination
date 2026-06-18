@@ -3508,21 +3508,13 @@ were stale). See git history for the per-card details.
 ## New TODO suggestions (push modern_decks)
 
 ### Content — Theros Beyond Death (THB) is the active set being filled
-~50 THB cards remain unimplemented (regenerate the list with the
-`set:thb` Scryfall diff against the live catalog name dump — most of the gods,
-demigods, gold legends, and intervention cycle now ship). Next tractable
-batches: the mono-color "Intervention" X-modal cycle (Erebos's/Nylea's/
-Purphoros's/Thassa's Intervention), remaining sagas (The First Iroan Games, The
-Akroan War, The Binding of the Titans, Kiora Bests the Sea God, Medomai's
-Prophecy), and the Archon/Lamia enchantment-recursion package. Cards needing new
-primitives, deferred: Hero of the Pride ("spell that targets this" trigger is
-fine; uses heroic), Mischievous Chimera / Stinging Lionfish / Arena Trickster /
-Dreamstalker Manticore ("your first spell each opponent's turn" event — needs a
-new per-opponent-turn first-spell counter), Bronzehide Lion (dies → return as an
-Aura granting indestructible), Heliod's Punishment (task-counter removal Aura),
-Entrancing Lyre (tap-lock keyed to the source staying tapped), Ironscale Hydra
-(prevent-combat-damage-to-self-and-grow replacement), Haktos (protection from
-each mana value other than a chosen one).
+Regenerate the remaining list with `cargo run -p crabomination_catalog
+--example dump_thb` diffed against a `set:thb` Scryfall name dump. Cards needing
+new primitives, deferred: Bronzehide Lion (dies → return as an Aura granting
+indestructible), Hateful Eidolon (die-with-attached-Aura LKI count), Haktos
+(protection from each mana value other than a chosen one), Athreos /
+coin-counter return-from-exile-or-graveyard, Ashiok Nightmare Muse / Sculptor
+−ultimate cast-from-opponents'-exile, Skophos Maze-Warden land-target fight.
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 

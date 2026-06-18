@@ -2741,3 +2741,96 @@ fn stinging_lionfish_taps_on_first_off_turn_spell() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).unwrap().tapped, "Lionfish tapped the target");
 }
+
+// ── THB modern_decks batch ────────────────────────────────────────────────────
+
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
+/// Terror of Mount Velus grants your team double strike on ETB.
+#[test]
+fn terror_of_mount_velus_grants_team_double_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let terror = g.add_card_to_battlefield(0, catalog::terror_of_mount_velus());
+    let trig = catalog::terror_of_mount_velus().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(terror, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&crate::card::Keyword::DoubleStrike), "bear gains double strike");
+}
+
+/// Thundering Chariot becomes a creature once crewed.
+#[test]
+fn thundering_chariot_crews_into_a_creature() {
+    let mut g = two_player_game();
+    let chariot = g.add_card_to_battlefield(0, catalog::thundering_chariot());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(chariot).unwrap().card_types.contains(&crate::card::CardType::Creature), "vehicle is not a creature uncrewed");
+    g.perform_action(GameAction::Crew { vehicle: chariot, crew_creatures: vec![bear] })
+        .expect("crew 1 with a 2-power bear");
+    assert!(g.computed_permanent(chariot).unwrap().card_types.contains(&crate::card::CardType::Creature), "crewed vehicle is a creature");
+}
+
+/// Wolfwillow Haven's enchanted land taps for an extra {G}.
+#[test]
+fn wolfwillow_haven_adds_extra_green() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let haven = g.add_card_to_hand(0, catalog::wolfwillow_haven());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: haven, target: Some(Target::Permanent(forest)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant the forest");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility { card_id: forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap enchanted forest");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "base green plus extra green");
+}
+
+/// Mirror Shield grants +0/+2 and hexproof to the equipped creature.
+#[test]
+fn mirror_shield_grants_toughness_and_hexproof() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let shield = g.add_card_to_battlefield(0, catalog::mirror_shield());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: shield, target: bear }).expect("equip {2}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.toughness, 4, "2/2 + 0/2");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Hexproof), "gains hexproof");
+}
+
+/// Shimmerwing Chimera bounces another enchantment you control at upkeep.
+#[test]
+fn shimmerwing_chimera_bounces_own_enchantment_at_upkeep() {
+    let mut g = two_player_game();
+    let chimera = g.add_card_to_battlefield(0, catalog::shimmerwing_chimera());
+    let other = g.add_card_to_battlefield(0, catalog::nyxborn_brute());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let trig = catalog::shimmerwing_chimera().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(chimera, 0, Some(Target::Permanent(other)), 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert!(g.battlefield_find(other).is_none(), "Nyxborn Brute returned to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Nyxborn Brute"));
+}
+
+/// Thryx makes your mana-value-5+ spells cost {1} less.
+#[test]
+fn thryx_reduces_big_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thryx_the_sudden_storm());
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon()); // {4}{R}{R} → {3}{R}{R}
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dragon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Shivan Dragon for {3}{R}{R} thanks to Thryx");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Shivan Dragon"));
+}

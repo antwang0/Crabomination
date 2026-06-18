@@ -4314,3 +4314,191 @@ pub fn stinging_lionfish() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// THB modern_decks batch — creatures, auras, artifacts on existing primitives.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Terror of Mount Velus — {5}{R}{R} 5/5 Dragon. Flying, double strike; ETB →
+/// creatures you control gain double strike until end of turn.
+pub fn terror_of_mount_velus() -> CardDefinition {
+    CardDefinition {
+        name: "Terror of Mount Velus",
+        cost: cost(&[generic(5), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::DoubleStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thundering Chariot — {4} Artifact — Vehicle 3/3. First strike, trample,
+/// haste; Crew 1.
+pub fn thundering_chariot() -> CardDefinition {
+    CardDefinition {
+        name: "Thundering Chariot",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Trample, Keyword::Haste, Keyword::Crew(1)],
+        ..Default::default()
+    }
+}
+
+/// Wolfwillow Haven — {1}{G} Aura. Enchant land; enchanted land tapped for mana
+/// adds an additional {G}. {4}{G}, Sacrifice this Aura: make a 2/2 Wolf (only
+/// during your turn).
+pub fn wolfwillow_haven() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{ExtraManaKind, StaticEffect};
+    CardDefinition {
+        name: "Wolfwillow Haven",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Land },
+        },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted land tapped for mana adds an additional {G}.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: true,
+                filter: SelectionRequirement::Any,
+                extra: ExtraManaKind::Fixed(Color::Green),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g()]),
+            sac_cost: true,
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Wolf".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Wolf],
+                        ..Default::default()
+                    },
+                    power: 2,
+                    toughness: 2,
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mirror Shield — {2} Equipment. Equipped creature gets +0/+2 and has
+/// hexproof. Equip {2}. (The deathtouch-blocker destroy clause is omitted.)
+pub fn mirror_shield() -> CardDefinition {
+    CardDefinition {
+        name: "Mirror Shield",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 0,
+            toughness: 2,
+            keywords: vec![Keyword::Hexproof],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Shimmerwing Chimera — {3}{U} 3/2 Enchantment Creature — Chimera. Flying; at
+/// the beginning of your upkeep, return up to one other target enchantment you
+/// control to its owner's hand.
+pub fn shimmerwing_chimera() -> CardDefinition {
+    CardDefinition {
+        name: "Shimmerwing Chimera",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Chimera], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Return another enchantment you control to hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Enchantment
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thryx, the Sudden Storm — {3}{U}{U} 4/5 Elemental Giant. Flash, flying;
+/// spells you cast with mana value 5+ cost {1} less and can't be countered.
+pub fn thryx_the_sudden_storm() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Thryx, the Sudden Storm",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spells you cast with mana value 5 or greater cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::ManaValueAtLeast(5),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Spells you cast with mana value 5 or greater can't be countered.",
+                effect: StaticEffect::SpellsUncounterable {
+                    filter: SelectionRequirement::ManaValueAtLeast(5),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
