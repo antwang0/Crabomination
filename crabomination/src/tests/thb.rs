@@ -3723,3 +3723,20 @@ fn dawn_evangel_reanimates_on_aura_wearer_death() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == buried), "small creature returned to hand");
 }
+
+/// Minion's Return reanimates the enchanted creature under your control when
+/// it dies (CR 603.6d leaves-battlefield trigger off the Aura's LKI).
+#[test]
+fn minions_return_steals_on_death() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::minions_return());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
+    g.battlefield_find_mut(victim).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears");
+    assert!(back.is_some(), "creature returned to the battlefield");
+    assert_eq!(back.unwrap().controller, 0, "returned under the Aura controller's control");
+}

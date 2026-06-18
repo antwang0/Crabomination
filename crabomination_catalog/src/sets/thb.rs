@@ -6121,3 +6121,31 @@ pub fn dawn_evangel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Minion's Return — {2}{B} Enchantment — Aura. Flash. Enchant creature.
+/// When enchanted creature dies, return that card to the battlefield under
+/// your control.
+pub fn minions_return() -> CardDefinition {
+    CardDefinition {
+        name: "Minion's Return",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..Default::default()
+    }
+}

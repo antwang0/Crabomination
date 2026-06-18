@@ -395,7 +395,8 @@ impl GameState {
             EventScope::AnotherOfYours => false,
             EventScope::FromYourGraveyard => false, // walked separately below
             EventScope::YourPermanentTargetedByOpponent
-            | EventScope::YourCreatureTargeted => false, // event-based
+            | EventScope::YourCreatureTargeted
+            | EventScope::EnchantedBySource => false, // event-based
             EventScope::ControllerAttackedByOpponent => false, // combat-based
         };
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
@@ -2375,6 +2376,10 @@ impl GameState {
                 && !self.battlefield.iter().any(|b| b.id == host)
             {
                 self.auras_at_death.entry(host).or_default().push((id, aura.controller));
+                // Snapshot the leaving Aura so its "when enchanted creature
+                // dies" trigger (EnchantedBySource) can fire via LKI even
+                // though the Aura itself is gone (Minion's Return).
+                self.died_card_snapshots.insert(id, aura.clone());
             }
             // Fire any leaves-the-battlefield triggers on the Aura itself
             // (CR 603.6d) — e.g. Rancor's "return it to its owner's hand".

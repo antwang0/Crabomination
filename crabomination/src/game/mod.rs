@@ -6389,8 +6389,13 @@ impl GameState {
                     ta.event.kind,
                     crate::effect::EventKind::DealtDamage
                         | crate::effect::EventKind::PermanentSacrificed
-                );
-                if !lki_self || ta.event.scope != crate::effect::EventScope::SelfSource {
+                ) && ta.event.scope == crate::effect::EventScope::SelfSource;
+                // "When enchanted creature dies" on a leaving Aura (Minion's
+                // Return) — the snapshot is the orphaned Aura, scope keys on
+                // the dead host being recorded in `auras_at_death`.
+                let lki_enchanted = ta.event.kind == crate::effect::EventKind::CreatureDied
+                    && ta.event.scope == crate::effect::EventScope::EnchantedBySource;
+                if !(lki_self || lki_enchanted) {
                     continue;
                 }
                 for ev in events {

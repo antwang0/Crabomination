@@ -1320,6 +1320,11 @@ pub enum EventScope {
     /// trigger's target slot (so "that creature's controller gains control"
     /// resolves via `PlayerRef::Target(0)` — Coveted Jewel).
     ControllerAttackedByOpponent,
+    /// The creature the source Aura was attached to has died (left the
+    /// battlefield). Matches a `CreatureDied` event whose subject is recorded
+    /// in `GameState.auras_at_death` as having carried the source Aura.
+    /// Powers "when enchanted creature dies" Aura triggers (Minion's Return).
+    EnchantedBySource,
 }
 
 /// A structural filter over the unified `GameEvent` stream. The trigger fires
