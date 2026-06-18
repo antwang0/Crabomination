@@ -993,6 +993,11 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub detained: bool,
+    /// True when this permanent is locked from untapping by another permanent
+    /// (Entrancing Lyre) — a UI hint so the client can badge "won't untap."
+    /// Populated by `project_permanent`.
+    #[serde(default)]
+    pub untap_locked: bool,
     /// `Some(n)` when this is an Impending permanent (CR 702.183) that still
     /// has `n` time counters — i.e. it isn't a creature yet and becomes one in
     /// `n` of its controller's end steps. Lets the client badge the countdown

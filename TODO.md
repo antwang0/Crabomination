@@ -1580,9 +1580,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `cr_704_5e_countered_spell_copy_ceases_to_exist`); Role uniqueness ✅
   (704.5y). Illegally-attached Aura ✅ (704.5n / 303.4f — an Aura whose live
   host fails its printed `aura_enchant_filter`, e.g. a "you control" Aura on a
-  stolen creature, goes to the owner's graveyard; tests `cr_704_5n_*`). Battle /
-  Dungeon / Speed SBAs remain; multi-SBA "collapse into one replacement"
-  (704.7).
+  stolen creature, goes to the owner's graveyard; tests `cr_704_5n_*`).
+  Zero-toughness → graveyard ✅ (704.5g, test
+  `cr_704_5g_zero_toughness_creature_dies`). Battle / Dungeon / Speed SBAs
+  remain; multi-SBA "collapse into one replacement" (704.7).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed.)
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel.)
@@ -1598,7 +1599,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `StaticEffect::PreventUntap` honors `Selector::This` (Basalt/Grim Monolith)
   and `Selector::AttachedTo(This)` (Claustrophobia/Dehydration).
 - ✅ **CR 510 — Combat Damage Step** — remains-blocked ✅ (`blocked_attackers`, 510.1c); excess non-trample damage assigned to the last blocker ✅ (510.1d); lethal accounts for marked damage ✅ (510.1c, double-strike tramplers); blocker strike-back per-source ✅ (702.90 / 615.6 — infect/deathtouch/scaling/shields/lifelink apply per blocker event, tests `cr_702_90_*`).
-- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas). The bot's block planner now satisfies the minimum-blocker count for Menace **and** `CantBeBlockedExceptByN(n)` (tops up or drops the block), so it never submits an illegal under-filled multi-block.
+- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas). The bot's block planner now satisfies the minimum-blocker count for Menace **and** `CantBeBlockedExceptByN(n)` (tops up or drops the block), so it never submits an illegal under-filled multi-block. Protection-by-mana-value block restriction ✅ (`Keyword::ProtectionFromManaValueExcept` — Haktos can't be blocked by a creature whose MV isn't the chosen number; test `cr_509_1b_protection_from_mv_restricts_blockers`).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); full ability removal (113.10b); "can't have" anti-grant (113.11). Counter-target-ability (113.9) ✅ — `Effect::CounterAbility` (Consign to Memory, Stifle) with precise targeting via `SelectionRequirement::HasAbilityOnStack`.
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.
@@ -3546,21 +3547,17 @@ primitive noted):
 - **Storm Herald** — mass aura-reanimate from gy attached to creatures +
   delayed exile (`Effect::Attach` exists; needs the multi-aura picker + the
   "if would leave, exile instead" rider).
-- **Entrancing Lyre** — `{X},{T}: tap a creature; it doesn't untap while the
-  Lyre stays tapped` (tap-lock linked to the source's tapped state).
-- **Haktos the Unscarred** — random choice of 2/3/4 on ETB + protection from
-  each mana value other than the chosen number (protection-by-MV-parity).
 - **Medomai's Prophecy** — chosen-name Saga (II names a card, III is a delayed
-  "first time you cast a spell with that name, draw two").
-- **Ashiok's Erasure** — counter+exile a spell + *permanent* (not turn-scoped)
-  opponents-can't-cast-that-name lock + return on leave. The turn-scoped
-  `opponents_cant_cast_named` lock (Academic Probation) needs a
-  permanent-bound variant.
-Shipped this run: Altar of the Pantheon, Hateful Eidolon, Dawn Evangel,
-Minion's Return, Inspire Awe, Ironscale Hydra, Dreamshaper Shaman, Athreos
-Shroud-Veiled (death half) (+ `auras_at_death` capture,
-`EventScope::EnchantedBySource`, fog-with-exception,
-`PreventCombatDamageToSelfAndGrow`, `CounterType::Coin`).
+  "first time you cast a spell with that name this turn, draw two"). Chapters
+  I/II/IV are tractable today (Scry + `Effect::NameCard` + look-at-tops); III
+  needs a *name-gated, first-time-this-turn* delayed cast trigger keyed to the
+  saga's `named_card` (no such `DelayedKind` yet).
+Shipped this run: Ashiok's Erasure (`StaticEffect::OpponentsCantCastNamed` +
+`Effect::CounterSpellExileNameLock`, linked counter-exile returning to hand on
+leave), Entrancing Lyre (`CardInstance.untap_locked_by` tap-lock +
+`SelectionRequirement::PowerAtMostXFromCost`), Haktos the Unscarred
+(`Keyword::ProtectionFromManaValueExcept` wired into targeting/damage/blocking,
+random ETB via d3).
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 

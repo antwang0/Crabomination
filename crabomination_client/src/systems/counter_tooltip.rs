@@ -476,6 +476,10 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.detained {
         lines.push(String::from("(detained — can't attack/block/activate)"));
     }
+    // Entrancing Lyre — locked from untapping while the source stays tapped.
+    if p.untap_locked {
+        lines.push(String::from("(won't untap)"));
+    }
 
     // CR 714 — Saga chapter progress. The current chapter is the Lore counter
     // count; `saga_final_chapter` is the highest chapter number (sacrificed
@@ -874,6 +878,7 @@ mod tests {
             monstrous: false,
             suspected: false,
             detained: false,
+            untap_locked: false,
             pt_modified: false,
             mana_cost_display: String::new(),
             creature_types: vec![],

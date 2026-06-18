@@ -704,6 +704,7 @@ fn project_permanent(
         monstrous: card.monstrous,
         suspected: card.suspected,
         detained: card.detained_by.is_some(),
+        untap_locked: card.untap_locked_by.is_some(),
         impending_counters: {
             let n = card.counter_count(crate::card::CounterType::Time);
             let is_impending = card
