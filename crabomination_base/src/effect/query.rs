@@ -233,6 +233,7 @@ impl Effect {
             Effect::SearchSplitWithOpponent { .. } => false,
             Effect::FactOrFiction { .. } => false,
             Effect::ReanimateAurasExileEot => false,
+            Effect::AllureOfTheUnknown => false,
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),

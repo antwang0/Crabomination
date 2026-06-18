@@ -4013,3 +4013,28 @@ fn storm_herald_returns_auras_then_exiles_eot() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == aura), "the returned Aura is exiled at the next end step");
 }
+
+/// Allure of the Unknown: reveals the top six, the opponent exiles the best
+/// nonland (with a free may-play of its own), the rest go to your hand.
+#[test]
+fn allure_of_the_unknown_exiles_nonland_rest_to_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV2 nonland → exiled
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_library(0, catalog::shock());          // MV1 nonland
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::allure_of_the_unknown());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len(); // includes the Allure spell
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Allure of the Unknown");
+    drain_stack(&mut g);
+    let bear = g.exile.iter().find(|c| c.definition.name == "Grizzly Bears")
+        .expect("the best nonland was exiled");
+    assert_eq!(bear.may_play_until.as_ref().unwrap().player, 1, "the opponent may cast the exiled card");
+    // Allure left hand on cast (-1); the other five revealed cards entered hand (+5).
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 5, "the rest went to your hand");
+}

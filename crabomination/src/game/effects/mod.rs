@@ -7999,6 +7999,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AllureOfTheUnknown => {
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = 6.min(self.players[p].library.len());
+                if n == 0 {
+                    return Ok(());
+                }
+                let opp = (0..self.players.len()).find(|s| !self.same_team(*s, p));
+                let top: Vec<(CardId, bool, u32)> = self.players[p].library[..n]
+                    .iter()
+                    .map(|c| (c.id, c.definition.is_land(), c.definition.cost.cmc()))
+                    .collect();
+                // The opponent exiles a nonland — heuristic: deny the highest-MV
+                // nonland card. If there's no nonland, nothing is exiled.
+                let candidate = top
+                    .iter()
+                    .filter(|(_, is_land, _)| !is_land)
+                    .max_by_key(|(_, _, mv)| *mv)
+                    .map(|(id, _, _)| *id);
+                let mut removed: Option<CardId> = None;
+                if let (Some(eid), Some(opp)) = (candidate, opp)
+                    && let Some(pos) = self.players[p].library.iter().position(|c| c.id == eid)
+                {
+                    let mut card = self.players[p].library.remove(pos);
+                    card.exiled_with = ctx.source;
+                    // "That opponent may cast it without paying its mana cost" —
+                    // a free may-play for the opponent while it stays exiled.
+                    card.may_play_until = Some(crate::card::MayPlayPermission {
+                        player: opp,
+                        granted_turn: self.turn_number,
+                        duration: crate::card::MayPlayDuration::WhileExiled,
+                        exile_after: false,
+                    });
+                    card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: eid });
+                    removed = Some(eid);
+                }
+                // The rest of the revealed cards go to your hand.
+                for (cid, _, _) in top {
+                    if Some(cid) == removed {
+                        continue;
+                    }
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ReanimateAurasExileEot => {
                 use crate::effect::ZoneDest;
                 use crate::game::types::Target;

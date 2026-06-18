@@ -33,6 +33,19 @@ pub fn ashioks_erasure() -> CardDefinition {
     }
 }
 
+/// Allure of the Unknown — {3}{B}{R} Sorcery. Reveal the top six cards of your
+/// library; an opponent exiles a nonland from among them; the rest go to your
+/// hand; that opponent may cast the exiled card for free.
+pub fn allure_of_the_unknown() -> CardDefinition {
+    CardDefinition {
+        name: "Allure of the Unknown",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::AllureOfTheUnknown,
+        ..Default::default()
+    }
+}
+
 /// Storm Herald — {2}{R} 3/2 Human Shaman, Haste. ETB returns Aura cards from
 /// your graveyard to the battlefield attached to creatures you control, then
 /// exiles them at your next end step (`Effect::ReanimateAurasExileEot`).

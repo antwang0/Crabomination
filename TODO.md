@@ -3536,9 +3536,10 @@ primitive noted):
   highest-MV card, you keep the higher-value pile). A genuinely interactive
   `Decision::SplitPiles` (opponent chooses the partition, you choose the pile)
   remains a refinement — would need a two-step inline decision shape.
-- **Allure of the Unknown** — reveal top 6, an opponent exiles a nonland, rest
-  to your hand, that opponent may cast the exiled card free. Needs the reveal /
-  opponent-exile-one / opponent-may-cast-from-exile pipeline.
+- **Allure of the Unknown** ✅ — `Effect::AllureOfTheUnknown` reveals the top
+  six, the opponent exiles the highest-MV nonland (heuristic) with a free
+  `may_play_until`, the rest go to your hand. Remaining nicety: an interactive
+  opponent pick rather than the value heuristic.
 - **Bronzehide Lion** — dies → returns as an Aura granting indestructible
   (creature→Aura transform on return). Unique; no primitive yet.
 - **Athreos, Shroud-Veiled** — death-reanimate ships; the "or is put into

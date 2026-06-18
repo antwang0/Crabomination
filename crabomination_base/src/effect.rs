@@ -3188,6 +3188,10 @@ pub enum Effect {
     /// battlefield, each attached to a legal creature (auras with no legal
     /// creature stay in the graveyard); exile them at the next end step.
     ReanimateAurasExileEot,
+    /// Allure of the Unknown — reveal the top six cards of your library; an
+    /// opponent exiles a nonland card from among them; the rest go to your
+    /// hand; you may cast the exiled card without paying its mana cost.
+    AllureOfTheUnknown,
 
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller
