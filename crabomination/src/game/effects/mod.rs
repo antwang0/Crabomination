@@ -8632,6 +8632,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventCombatDamageExceptDealtBy { except } => {
+                // CR 615.1 fog with a per-dealer exception (Inspire Awe).
+                self.prevent_combat_damage_this_turn = true;
+                self.prevent_combat_damage_except = Some(except.clone());
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageInvolving { target } => {
                 // CR 614.9 — Maze of Ith: prevent all combat damage to and by
                 // the target creature for the rest of the turn.

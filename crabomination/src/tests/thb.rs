@@ -3740,3 +3740,34 @@ fn minions_return_steals_on_death() {
     assert!(back.is_some(), "creature returned to the battlefield");
     assert_eq!(back.unwrap().controller, 0, "returned under the Aura controller's control");
 }
+
+/// Inspire Awe fogs vanilla attackers but lets enchanted / enchantment
+/// creatures still deal combat damage.
+#[test]
+fn inspire_awe_fogs_all_but_enchanted() {
+    let mut g = two_player_game();
+    let vanilla = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let enchcreature = g.add_card_to_battlefield(0, catalog::dawn_evangel()); // 2/3 enchantment creature
+    g.clear_sickness(vanilla);
+    g.clear_sickness(enchcreature);
+    let spell = g.add_card_to_hand(0, catalog::inspire_awe());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Inspire Awe");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: vanilla, target: AttackTarget::Player(1) },
+        Attack { attacker: enchcreature, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    // Only the enchantment creature (2/3) connects; the vanilla bear is fogged.
+    assert_eq!(g.players[1].life, life - 2, "only the enchantment creature dealt damage");
+}

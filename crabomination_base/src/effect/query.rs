@@ -529,6 +529,7 @@ impl Effect {
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
+            Effect::PreventCombatDamageExceptDealtBy { .. } => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
             Effect::CantBlockSourceThisTurn { target } => sel_has_target(target),
             Effect::PreventNextDamage { target, amount }

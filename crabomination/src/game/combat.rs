@@ -1242,7 +1242,7 @@ impl GameState {
 
             // 2) Damage assignment across the ordered blockers (CR 510.1d).
             if !self.combat_damage_assignment.contains_key(&atk.id) {
-                let total_power = if self.prevent_combat_damage_this_turn {
+                let total_power = if self.combat_damage_prevented_for_dealer(atk.id) {
                     0
                 } else {
                     atk.power.max(0) as u32
@@ -1337,7 +1337,7 @@ impl GameState {
                 let deathtouch = atk_cp
                     .is_some_and(|c| c.keywords.contains(&Keyword::Deathtouch));
                 let power = atk_cp.map(|c| c.power).unwrap_or(0);
-                let total_power = if self.prevent_combat_damage_this_turn {
+                let total_power = if self.combat_damage_prevented_for_dealer(attacker) {
                     0
                 } else {
                     power.max(0) as u32
@@ -1422,8 +1422,9 @@ impl GameState {
         // set, every combat damage assignment yields 0; lifelink scales
         // off actual damage dealt (CR 702.15a), so prevention zeros
         // lifelink life-gain as well. Triggers that would fire off
-        // "deals combat damage to a player" never see a damage event.
-        let prevent_combat_damage = self.prevent_combat_damage_this_turn;
+        // "deals combat damage to a player" never see a damage event. With
+        // an exception filter (Inspire Awe) the prevention is per-dealer, so
+        // it's recomputed inside the per-attacker loop below.
 
         // CR 614.2 / 614.5 — global combat-damage doubling (Furnace of Rath)
         // and halving (Ghosts of the Innocent). Scaling applies to the amount
@@ -1441,6 +1442,7 @@ impl GameState {
             if !atk.should_deal {
                 continue;
             }
+            let prevent_combat_damage = self.combat_damage_prevented_for_dealer(atk.id);
 
             // CR 510.1c: the attacking player chose the order in which an
             // attacker assigns combat damage to its multiple blockers; that
@@ -1634,14 +1636,16 @@ impl GameState {
                     .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
                     // CR 615.7 — chosen-source prevention (Forge-Tender).
                     .filter(|bid| !self.damage_prevented_sources.contains(bid))
+                    // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
+                    .filter(|&bid| !self.combat_damage_prevented_for_dealer(bid))
                     // CR 702.16e — a blocker whose color the attacker has
                     // protection from deals no combat damage to it.
                     .filter(|&bid| !self.damage_prevented_by_protection(bid, atk.id))
                     .collect();
 
-                let attacker_takes_strike_back = !prevent_combat_damage
+                let attacker_takes_strike_back =
                     // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
-                    && !self.combat_damage_prevented_creatures.contains(&atk.id)
+                    !self.combat_damage_prevented_creatures.contains(&atk.id)
                     // CR 615 — Iroas shields attacking creatures you control.
                     && !self.damage_to_attacker_prevented(atk.id);
 
@@ -1764,6 +1768,24 @@ impl GameState {
     /// Target-aware scaling for a combat-damage event aimed at a player or
     /// planeswalker attack target (CR 614.2 / 614.5). `source` is the
     /// attacking creature (Torbran's source-scoped bonus).
+    /// CR 615.1 — is `dealer`'s combat damage prevented this turn? True when
+    /// the global fog flag is set, unless an exception filter (Inspire Awe)
+    /// is in play and `dealer` matches it (enchanted / enchantment creatures
+    /// still deal damage).
+    pub(crate) fn combat_damage_prevented_for_dealer(&self, dealer: CardId) -> bool {
+        if !self.prevent_combat_damage_this_turn {
+            return false;
+        }
+        match &self.prevent_combat_damage_except {
+            None => true,
+            Some(filter) => {
+                let controller =
+                    self.battlefield_find(dealer).map(|c| c.controller).unwrap_or(0);
+                !self.evaluate_requirement(filter, &Target::Permanent(dealer), controller)
+            }
+        }
+    }
+
     fn scale_combat_damage(
         &self,
         source: Option<crate::card::CardId>,

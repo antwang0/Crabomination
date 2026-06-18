@@ -1741,6 +1741,7 @@ impl GameState {
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
+        self.prevent_combat_damage_except = None;
         self.combat_damage_prevented_creatures.clear();
         self.auras_at_death.clear();
         self.creature_etb_steal_this_turn.clear();

@@ -658,6 +658,11 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
+    /// CR 615.1 fog with an exception (Inspire Awe). When `Some(filter)` and
+    /// `prevent_combat_damage_this_turn` is set, a creature's combat damage is
+    /// prevented unless the *dealer* matches `filter`. `None` = prevent all.
+    #[serde(default)]
+    pub(crate) prevent_combat_damage_except: Option<crate::card::SelectionRequirement>,
     /// CR 701.10f / 614.5 — transient mana-production multiplier for the
     /// mana ability currently resolving (Mana Reflection ×2, Nyxbloom
     /// Ancient ×3, composed). Set before a tapped-for-mana ability resolves
@@ -1041,6 +1046,7 @@ impl Clone for GameState {
             resolution_answer_log: self.resolution_answer_log.clone(),
             pending_cost_events: self.pending_cost_events.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
+            prevent_combat_damage_except: self.prevent_combat_damage_except.clone(),
             mana_production_multiplier: self.mana_production_multiplier,
             resolving_source: self.resolving_source.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
@@ -1170,6 +1176,7 @@ impl GameState {
             resolution_answer_log: Vec::new(),
             pending_cost_events: Vec::new(),
             prevent_combat_damage_this_turn: false,
+            prevent_combat_damage_except: None,
             mana_production_multiplier: 1,
             resolving_source: None,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),

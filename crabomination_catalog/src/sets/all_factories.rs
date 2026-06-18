@@ -7988,6 +7988,7 @@ static THB: &[Factory] = &[
     super::thb::hateful_eidolon,
     super::thb::dawn_evangel,
     super::thb::minions_return,
+    super::thb::inspire_awe,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

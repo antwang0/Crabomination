@@ -6149,3 +6149,22 @@ pub fn minions_return() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Inspire Awe — {3}{G} Instant. Prevent all combat damage this turn except
+/// damage dealt by enchanted creatures and enchantment creatures. Scry 2.
+pub fn inspire_awe() -> CardDefinition {
+    CardDefinition {
+        name: "Inspire Awe",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PreventCombatDamageExceptDealtBy {
+                except: SelectionRequirement::Creature.and(
+                    SelectionRequirement::IsEnchanted.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}

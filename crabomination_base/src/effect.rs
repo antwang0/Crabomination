@@ -3362,6 +3362,12 @@ pub enum Effect {
     /// family of effects.
     PreventAllCombatDamageThisTurn,
 
+    /// CR 615.1 fog with an exception — "Prevent all combat damage this turn
+    /// except combat damage dealt by [filter] creatures." Inspire Awe ("by
+    /// enchanted creatures and enchantment creatures"). Sets the global fog
+    /// flag plus the per-dealer exception filter.
+    PreventCombatDamageExceptDealtBy { except: SelectionRequirement },
+
     /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
     /// by `target` this turn." Adds the target creature to
     /// `GameState.combat_damage_prevented_creatures`; the combat resolver
