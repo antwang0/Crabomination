@@ -123,10 +123,10 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     grant + tap-and-skip-untap-on-combat-damage); Sokenzan Renegade / Kiyomaro
     (hand-size-gated keyword grants + "player with most cards" predicate);
     Takeno, Samurai General (anthem scaled by each Samurai's bushido total);
-    Kuro, Pitlord (upkeep "sacrifice unless pay {B}{B}{B}{B}" + repeatable
-    pay-1-life −1/−1); Marrow-Gnawer (Rat fear lord + sac-a-Rat X-token mint);
-    Soratami Mirror-Mage / Soratami Seer (return-N-lands additional activation
-    cost; Seer's "discard hand, draw that many" body).
+    Sachi, Daughter of Seshiro (granting "Shamans you control have {T}: Add
+    {G}{G}" — group-granted mana ability); Soratami Mirror-Mage / Soratami Seer
+    (return-N-lands additional activation cost; Seer's "discard hand, draw that
+    many" body).
   - Generalize "target player discards" auto-targeting so an ETB
     `Discard { who: Player(Target(0)) }` picks an opponent (Kemuri-Onna is
     modeled as `EachOpponent` to sidestep this).
