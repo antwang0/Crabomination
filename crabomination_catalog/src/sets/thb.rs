@@ -5741,3 +5741,30 @@ pub fn ashioks_forerunner() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Enemy of Enlightenment — {5}{B} 5/5 Demon with Flying. Gets -1/-1 for each
+/// card in your opponents' hands. At your upkeep, each player discards a card.
+pub fn enemy_of_enlightenment() -> CardDefinition {
+    CardDefinition {
+        name: "Enemy of Enlightenment",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        dynamic_pt: Some(DynamicPt::BaseMinusOpponentsHandTotal { base_p: 5, base_t: 5 }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::ONE,
+                random: false,
+            },
+        }],
+        ..Default::default()
+    }
+}

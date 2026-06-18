@@ -7974,6 +7974,7 @@ static THB: &[Factory] = &[
     super::thb::elspeth_undaunted_hero,
     super::thb::elspeths_devotee,
     super::thb::ashioks_forerunner,
+    super::thb::enemy_of_enlightenment,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

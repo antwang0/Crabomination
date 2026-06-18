@@ -3421,3 +3421,29 @@ fn elspeths_devotee_tutors_elspeth() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == walker), "Elspeth tutored to hand");
 }
+
+/// Enemy of Enlightenment shrinks by the opponent's hand size.
+#[test]
+fn enemy_of_enlightenment_shrinks_with_opponent_hand() {
+    let mut g = two_player_game();
+    let demon = g.add_card_to_battlefield(0, catalog::enemy_of_enlightenment());
+    // Opponent holds 3 cards → 5/5 becomes 2/2.
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let cp = g.computed_permanent(demon).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "5/5 - 3 cards");
+}
+
+/// Enemy of Enlightenment's upkeep makes each player discard a card.
+#[test]
+fn enemy_of_enlightenment_upkeep_discard() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::enemy_of_enlightenment());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "you discarded");
+    assert_eq!(g.players[1].hand.len(), 0, "opponent discarded");
+}

@@ -3939,6 +3939,16 @@ impl GameState {
                         .unwrap_or(0) as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::BaseMinusOpponentsHandTotal { base_p, base_t } => {
+                    let n = self
+                        .players
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| *i != card.controller && !self.same_team(*i, card.controller))
+                        .map(|(_, p)| p.hand.len() as i32)
+                        .sum::<i32>();
+                    (base_p - n, base_t - n)
+                }
                 crate::card::DynamicPt::ArtifactsControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_artifact()

@@ -1925,6 +1925,10 @@ pub enum DynamicPt {
     /// Power = toughness = the size of the largest hand among the controller's
     /// opponents. Adamaro, First to Desire.
     MaxOpponentHandSize,
+    /// Base `base_p`/`base_t`, then −1/−1 for each card in opponents' hands
+    /// (Enemy of Enlightenment — "gets -1/-1 for each card in your
+    /// opponents' hands").
+    BaseMinusOpponentsHandTotal { base_p: i32, base_t: i32 },
     /// Power = toughness = `base` + the number of artifacts the controller
     /// controls (counting the source). Broodstar (base 0/0, CR 604.3 CDA).
     ArtifactsControlled { base: i32 },
