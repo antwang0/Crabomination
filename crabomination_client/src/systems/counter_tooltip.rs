@@ -906,6 +906,8 @@ mod tests {
             prepare_spell_name: None,
             prepare_cost_label: String::new(),
             prepare_needs_target: false,
+            creature_subtypes: vec![],
+            lost_all_abilities: false,
         }
     }
 
