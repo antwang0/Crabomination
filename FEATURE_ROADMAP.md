@@ -59,7 +59,18 @@ exercising each) was elided in a compaction pass; recover it from
   counter-to-exile, blink-return-EOT, "when enchanted creature dies" Aura LKI
   triggers (`EventScope::EnchantedBySource` — Minion's Return) and
   auras-on-dying-creature payoffs (`auras_at_death` +
-  `Value::AurasYouControlledOnDyingSubject` — Hateful Eidolon, Dawn Evangel).
+  `Value::AurasYouControlledOnDyingSubject` — Hateful Eidolon, Dawn Evangel);
+  name-gated first-cast-this-turn delayed trigger
+  (`DelayedKind::YourNextNamedSpellThisTurn` — Medomai's Prophecy).
+- **Protection / locks / piles (THB batch):** protection from each mana value
+  other than N (`Keyword::ProtectionFromManaValueExcept`, all DEBT facets —
+  Haktos); permanent opponents-can't-cast-named lock + linked counter-exile
+  (`StaticEffect::OpponentsCantCastNamed` + `Effect::CounterSpellExileNameLock`
+  — Ashiok's Erasure); source-tapped untap-lock (`CardInstance.untap_locked_by`
+  + `SelectionRequirement::PowerAtMostXFromCost` — Entrancing Lyre); heuristic
+  pile-split (`Effect::FactOrFiction` — Fact or Fiction, Atris); gy aura
+  mass-reanimate + delayed exile (`Effect::ReanimateAurasExileEot` — Storm
+  Herald); reveal-6 / opponent-exile / free may-play (`Effect::AllureOfTheUnknown`).
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant; vs-bot,
   networked TCP multiplayer, draft + cube, Learn/Lessons sideboard, full-state
   serde snapshots (save/restore + replay foundation).
