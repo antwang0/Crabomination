@@ -359,19 +359,11 @@ pub fn reconstruct_history() -> CardDefinition {
 /// card was exiled this way, create an X/X red and white Spirit
 /// creature token with flying, where X is that card's power."
 ///
-/// Wired as a Lorehold dual land: two `{T}: Add {R/W}` mana abilities
-/// (one per color) + a `{2}{R}{W}, {T}` activated ability that exiles
-/// a target card from any graveyard. The "if creature → X/X Spirit
-/// token with flying where X is its power" rider is collapsed: when
-/// the targeted card is a creature card the engine mints a 2/2 R/W
-/// flying Spirit token (the typical play pattern — most Lorehold
-/// targets are 2-power Spirits / creatures). The exact power-of-
-/// exiled-card scaling needs a `Value::PowerOfTarget` primitive that
-/// reads the just-exiled card's stats; tracked in TODO.md.
-///
-/// The two `Add` activations use the engine's standard tap-add
-/// shortcut; the gy-exile activation gates on a creature-card filter
-/// for the bonus token mint.
+/// Two `{T}: Add {R/W}` mana abilities + a `{2}{R}{W}, {T}` ability that
+/// exiles a target graveyard card; if it was a creature, mint a 0/0 R/W
+/// flying Spirit and stack +1/+1 counters equal to the exiled card's
+/// power (`Value::PowerOf(Target)`, read from the graveyard before the
+/// exile-Move resolves) — X/X where X is that creature's power.
 pub fn lorehold_excavation() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     use super::super::tap_add;

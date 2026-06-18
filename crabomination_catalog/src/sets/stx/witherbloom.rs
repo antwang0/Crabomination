@@ -310,11 +310,10 @@ pub fn culling_ritual() -> CardDefinition {
 // ── Rushed Rebirth ─────────────────────────────────────────────────────────
 
 /// Rushed Rebirth — {B}{G} Instant. "Choose target creature. When that
-/// creature dies this turn, search your library for a creature card, put it
-/// onto the battlefield tapped, then shuffle." Wired via the event-keyed
-/// `WhenTargetDiesThisTurn` death watch. (The printed "lesser mana value"
-/// constraint on the fetch is approximated as any creature — no source-
-/// relative MV filter yet; tracked in TODO.md.)
+/// creature dies this turn, search your library for a creature card with
+/// lesser mana value, put it onto the battlefield tapped, then shuffle."
+/// The "lesser mana value" fetch reads the dead creature's MV through the
+/// death-watch's event amount (`ManaValueLessThanEventAmount`).
 pub fn rushed_rebirth() -> CardDefinition {
     CardDefinition {
         name: "Rushed Rebirth",
@@ -323,7 +322,10 @@ pub fn rushed_rebirth() -> CardDefinition {
         effect: Effect::WhenTargetDiesThisTurn {
             body: Box::new(Effect::Search {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::Creature,
+                filter: SelectionRequirement::And(
+                    Box::new(SelectionRequirement::Creature),
+                    Box::new(SelectionRequirement::ManaValueLessThanEventAmount),
+                ),
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
             }),
             slot: 0,

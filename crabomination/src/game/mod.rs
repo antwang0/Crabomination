@@ -6062,10 +6062,19 @@ impl GameState {
                 // Expose the dead creature as the trigger's source so bodies
                 // can reference it (e.g. "exile it") via `Selector::This` /
                 // `TriggerSource`; `target` still carries its controller.
+                // Carry the dead creature's mana value as the event amount so
+                // `ManaValueLessThanEventAmount` filters (Rushed Rebirth's
+                // "creature card with lesser mana value") read it at
+                // resolution.
+                let mv = self
+                    .find_card_anywhere(cid)
+                    .map(|c| c.definition.cost.cmc())
+                    .unwrap_or(0);
                 self.stack.push(
                     TriggerPush::new(dt.source, dt.controller, dt.effect)
                         .target(dt.target)
                         .trigger_source(Some(crate::game::effects::EntityRef::Card(cid)))
+                        .event_amount(mv)
                         .build(),
                 );
             }

@@ -27103,6 +27103,33 @@ fn rushed_rebirth_fetches_creature_to_battlefield_when_target_dies() {
 }
 
 #[test]
+fn rushed_rebirth_lesser_mana_value_filter_blocks_costlier_creature() {
+    let mut g = two_player_game();
+    // Only fetch candidate is Grizzly Bears (MV 2); the watched creature is
+    // a 1-drop, so "lesser mana value" leaves nothing to fetch.
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+    let id = g.add_card_to_hand(0, catalog::rushed_rebirth());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(elf)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rushed Rebirth castable");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(elf)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "MV-2 Grizzly Bears can't be fetched when the MV-1 watched creature dies");
+}
+
+#[test]
 fn callous_bloodmage_etb_makes_a_pest_token() {
     let mut g = two_player_game();
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));

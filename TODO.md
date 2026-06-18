@@ -1354,9 +1354,6 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   threaded into resolution: same-name exile (Crumble to Dust), reveal-until-
   find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy). The
   client picker UI (free text over the catalog) is also still TODO.
-- **Source-relative MV filter** — Rushed Rebirth's "lesser mana value" fetch
-  (and similar) needs a `SelectionRequirement::ManaValueLessThan(Value)` that
-  the `Search` resolver evaluates against a captured value.
 - **Stale "two-target prompt ⏳" notes** — several catalog doc-comments still
   claim multi-target sorcery prompts are unavailable; the slot-1+ picker
   (`auto_targets_for_effect_all_slots`) is wired and the bot uses it. Sweep
@@ -2125,19 +2122,6 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   validation" pass). Two ⏳ cards exercise this gap; deferring until
   a third card stacks on or the cast pipeline is otherwise touched.
 
-- ⏳ **`Effect::ClearAbilities` / `StaticEffect::LoseAbilities`** —
-  the printed Mercurial Transformation says "and loses all abilities
-  until end of turn." Today we wire the base-P/T half via
-  `Effect::SetBasePT` but the loses-abilities half is omitted. The
-  layer system has `Modification::RemoveAllAbilities` but it only
-  clears the keyword list — the triggered/static/activated abilities
-  live on the `CardDefinition` and aren't touched by the layer pass.
-  Wiring would need either (a) a per-permanent override on the
-  computed-permanent struct that masks the definition's ability
-  fields, or (b) a fully-layered ability list (significant refactor).
-  Pongify, Beast Within's 3/3 token, and Mercurial Transformation
-  all need this.
-
 - ⏳ **Augusta, Dean of Order — same-power attackers trigger** (push
   modern_decks STX Silverquill 🟡) — the printed "Whenever you attack
   with three or more creatures with the same power, each of those
@@ -2580,13 +2564,6 @@ without it. (Native Infect/Wither on the non-combat funnel shipped —
 Mutagenic Growth ({G/P}), Gut Shot, Dismember, etc. — a mana symbol payable
 with 2 life. Mutagenic Growth ships at the {G} cost (the life-pay alt is
 omitted).
-
-### Source-relative mana-value search filter
-`Effect::Search`/`SelectionRequirement::ManaValueAtMost(u32)` only take a
-constant. Rushed Rebirth ("search for a creature with *lesser* MV than the one
-that died") drops the relative constraint — it fetches any creature. A
-`ManaValueLessThanSource`-style filter (paired with the `WhenTargetDiesThisTurn`
-captured-source MV) would make it faithful.
 
 ### "Look At Top X, Pick One, Put Rest in Graveyard" Primitive
 Stirring Honormancer ("look at top X cards where X is creatures you
@@ -3617,21 +3594,6 @@ already tracked in Commander phase) — `ReplacementEffect` registry
 keyed on `ZoneChange { from: Battlefield, to: Graveyard, card_filter }`.
 Returns an `(Exile, DelayedTriggerOnExile)` 2-tuple instead of the
 default zone change.
-
-### Engine — `Modification::RemoveAllAbilities` only clears keywords
-
-The layer-6 `RemoveAllAbilities` modification at
-`game/layers.rs:284` does `keywords.clear()` only — activated and
-triggered abilities still run from the original `CardDefinition`.
-Cards printed "loses all abilities" (Mercurial Transformation,
-Kasmina's Transmutation, Imprisoned in the Moon, Lignify) need the
-ability sets to be cleared too.
-
-**Fix**: extend `ComputedPermanent` with `cleared_abilities: bool`
-(or `effective_activated_abilities: Vec<ActivatedAbility>` /
-`effective_triggered_abilities: Vec<TriggeredAbility>`), then route
-`activate_ability` / `fire_step_triggers` / the dispatcher through
-the computed view. Unblocks the two STX 🟡 cards above.
 
 ### Engine — Skip-turn primitive (CR 716)
 

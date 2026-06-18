@@ -2693,34 +2693,55 @@ fn selfless_glyphweaver_sac_grants_indestructible_to_friendlies() {
     );
 }
 
-/// Mercurial Transformation overrides the target creature's base P/T to
-/// 3/3 until end of turn via `Effect::SetBasePT`. Reads through the
-/// layered P/T via `computed_permanent` (the same approach Square Up's
-/// test uses).
+/// Mercurial Transformation, mode 0: target becomes a blue Frog 1/1 with
+/// no abilities until end of turn (`ResetCreature` + `BecomeColor`).
 #[test]
-fn mercurial_transformation_sets_target_to_three_three_eot() {
+fn mercurial_transformation_frog_mode_makes_blue_one_one() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // Pick a creature with non-3/3 base P/T to verify the rewrite.
-    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5 flier
     g.clear_sickness(dragon);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
     let id = g.add_card_to_hand(0, catalog::mercurial_transformation());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(dragon)),
         additional_targets: vec![],
-        mode: None,
+        mode: Some(0),
         x_value: None,
     })
     .expect("Mercurial Transformation castable for {2}{U}");
     drain_stack(&mut g);
-
-    // SetBasePT applies via layer 7b; consult the computed permanent.
     let computed = g.computed_permanent(dragon).expect("Dragon still on bf");
-    assert_eq!(computed.power, 3, "Dragon should be reduced to base power 3");
-    assert_eq!(computed.toughness, 3, "Dragon should be reduced to base toughness 3");
+    assert_eq!((computed.power, computed.toughness), (1, 1), "becomes a 1/1 Frog");
+    assert!(!computed.keywords.contains(&Keyword::Flying), "loses all abilities");
+    assert!(computed.colors.contains(&Color::Blue) && computed.colors.len() == 1,
+        "becomes mono-blue");
+}
+
+/// Mode 1: target becomes a blue Octopus 4/4.
+#[test]
+fn mercurial_transformation_octopus_mode_makes_four_four() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let id = g.add_card_to_hand(0, catalog::mercurial_transformation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("Mercurial Transformation castable");
+    drain_stack(&mut g);
+    let computed = g.computed_permanent(bear).expect("Bear still on bf");
+    assert_eq!((computed.power, computed.toughness), (4, 4), "becomes a 4/4 Octopus");
 }
 
 /// Crux of Fate: mode 0 destroys Dragons (sparing non-Dragons); mode 1 destroys non-Dragons.
