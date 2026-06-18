@@ -2840,3 +2840,78 @@ fn cr_510_1c_grasping_giant_stays_blocked_after_exiling_blocker() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life_before, "blocked attacker deals no damage to the player");
 }
+
+// ── CR 613.3 / 613.7 — characteristic-overriding Aura layers ──────────────────
+/// Ichthyomorphosis sets the host's base P/T to 0/1 (layer 7b); a +1/+1
+/// counter then applies in layer 7c on top → 1/2. The host also loses its
+/// printed abilities (layer 6) but the engine reports the new Fish subtype
+/// (layer 4).
+#[test]
+fn cr_613_aura_set_base_pt_then_counter() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flier
+    g.battlefield_find_mut(host).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let aura = g.add_card_to_hand(0, catalog::ichthyomorphosis());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(host)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(host).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 2), "base 0/1 (7b) + counter (7c)");
+    assert!(cp.keywords.is_empty(), "abilities removed (layer 6)");
+}
+
+// ── CR 605.1a — board-conditional mana ability stays a mana ability ───────────
+/// Ilysian Caryatid's "{T}: add one of any color; two instead if you control a
+/// power-4+ creature" resolves without using the stack — its mana is available
+/// to pay for a spell in the same action sequence.
+#[test]
+fn cr_605_conditional_mana_ability_pays_a_spell() {
+    let mut g = two_player_game();
+    let dork = g.add_card_to_battlefield(0, catalog::ilysian_caryatid());
+    g.clear_sickness(dork);
+    g.add_card_to_battlefield(0, catalog::craw_wurm()); // power-4+ → makes two
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Color(Color::Green),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("mana ability (no stack)");
+    assert!(g.stack.is_empty(), "mana abilities don't use the stack (CR 605.3a)");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "two mana floated");
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("the floated mana pays {1}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_some(), "bear cast off the dork's mana");
+}
+
+// ── CR 701.19 — Searching (multi-card) ────────────────────────────────────────
+/// Deathbellow War Cry searches for up to four Minotaurs; the count-search
+/// chains single picks, and a non-matching card is never offered.
+#[test]
+fn cr_701_19_search_up_to_n_picks_matches_only() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_library(0, catalog::rage_scarred_berserker());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::deathbellow_war_cry());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(m)),
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+        crate::decision::DecisionAnswer::Search(None),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(m).is_some(), "Minotaur tutored to battlefield");
+    assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the non-Minotaur stays in the library");
+}
