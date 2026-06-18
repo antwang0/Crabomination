@@ -3547,17 +3547,15 @@ primitive noted):
 - **Storm Herald** — mass aura-reanimate from gy attached to creatures +
   delayed exile (`Effect::Attach` exists; needs the multi-aura picker + the
   "if would leave, exile instead" rider).
-- **Medomai's Prophecy** — chosen-name Saga (II names a card, III is a delayed
-  "first time you cast a spell with that name this turn, draw two"). Chapters
-  I/II/IV are tractable today (Scry + `Effect::NameCard` + look-at-tops); III
-  needs a *name-gated, first-time-this-turn* delayed cast trigger keyed to the
-  saga's `named_card` (no such `DelayedKind` yet).
 Shipped this run: Ashiok's Erasure (`StaticEffect::OpponentsCantCastNamed` +
 `Effect::CounterSpellExileNameLock`, linked counter-exile returning to hand on
 leave), Entrancing Lyre (`CardInstance.untap_locked_by` tap-lock +
 `SelectionRequirement::PowerAtMostXFromCost`), Haktos the Unscarred
 (`Keyword::ProtectionFromManaValueExcept` wired into targeting/damage/blocking,
-random ETB via d3).
+random ETB via d3), Medomai's Prophecy (chosen-name Saga;
+`DelayedKind::YourNextNamedSpellThisTurn` + `Effect::OnYourNextNamedSpellThisTurn`
+for the name-gated chapter-III draw; chapter IV's look-at-each-top is
+informational and modeled as `Noop`).
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 

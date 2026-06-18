@@ -33,6 +33,33 @@ pub fn ashioks_erasure() -> CardDefinition {
     }
 }
 
+/// Medomai's Prophecy — {1}{U} Saga. I: Scry 2. II: choose a card name.
+/// III: when you next cast a spell with that name this turn, draw two. IV:
+/// look at the top card of each player's library (informational — no effect).
+pub fn medomais_prophecy() -> CardDefinition {
+    CardDefinition {
+        name: "Medomai's Prophecy",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            ..Default::default()
+        },
+        saga_chapters: vec![
+            (1, Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            (2, Effect::NameCard { what: Selector::This }),
+            (
+                3,
+                Effect::OnYourNextNamedSpellThisTurn {
+                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                },
+            ),
+            (4, Effect::Noop),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Haktos the Unscarred — {R}{R}{W}{W} 6/1 Human Warrior. Attacks each combat;
 /// as it enters, choose 2/3/4 at random (modeled as a d3) and gain protection
 /// from each mana value other than that number.

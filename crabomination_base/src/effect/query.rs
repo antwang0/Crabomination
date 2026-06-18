@@ -228,7 +228,8 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
-            Effect::OnYourNextSpellCastThisTurn { body } => body.requires_target(),
+            Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::OnYourNextNamedSpellThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
@@ -726,6 +727,7 @@ impl Effect {
             }
             Effect::WithSacrificedPt { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body }
+            | Effect::OnYourNextNamedSpellThisTurn { body }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.primary_target_filter(),
             Effect::Endure { target, .. } => sel_filter(target),
@@ -1558,6 +1560,7 @@ impl Effect {
                 }
                 Effect::WithSacrificedPt { body, .. }
                 | Effect::OnYourNextSpellCastThisTurn { body }
+                | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::PayEnergy { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::PayEnergyOrElse { otherwise, .. }

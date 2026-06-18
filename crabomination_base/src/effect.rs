@@ -3163,6 +3163,13 @@ pub enum Effect {
     OnYourNextSpellCastThisTurn {
         body: Box<Effect>,
     },
+    /// "When you cast a spell with the chosen name for the first time this
+    /// turn, [body]." Like `OnYourNextSpellCastThisTurn` but only fires for a
+    /// cast whose name matches the source's `named_card`; other casts don't
+    /// consume it. One-shot, expires at cleanup. Medomai's Prophecy III.
+    OnYourNextNamedSpellThisTurn {
+        body: Box<Effect>,
+    },
 
     /// Ecological Appreciation: search your library and graveyard for up to
     /// `count` creature cards with different names and mana value ≤ X

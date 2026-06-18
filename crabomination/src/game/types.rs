@@ -578,6 +578,11 @@ pub enum DelayedKind {
     /// on the controller's next spell cast, with the cast spell bound as the
     /// trigger source; expires at cleanup if no spell was cast. Codie.
     YourNextSpellCastThisTurn,
+    /// "When you cast a spell with the chosen name for the first time this
+    /// turn, …" (CR 603.7e, name-gated). Fires once on the controller's next
+    /// cast whose name matches the source's `named_card`; non-matching casts
+    /// don't consume it. Expires at cleanup. Medomai's Prophecy III.
+    YourNextNamedSpellThisTurn,
     /// "Until your next turn, whenever a creature attacks you or a
     /// planeswalker you control, [body]" (Tamiyo, Seasoned Scholar's +2).
     /// Fires per qualifying attacker (the attacker is the trigger source);

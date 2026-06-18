@@ -3942,3 +3942,32 @@ fn haktos_protection_from_each_mv_except_chosen() {
     assert!(!g.damage_prevented_by_protection(mv2, haktos), "MV-2 source connects");
     assert!(g.damage_prevented_by_protection(mv3, haktos), "MV-3 source is prevented by protection");
 }
+
+/// Medomai's Prophecy III: after naming a card (II), the first time you cast a
+/// spell with that name this turn you draw two.
+#[test]
+fn medomais_prophecy_chapter_iii_draws_on_named_cast() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::medomais_prophecy());
+    // Chapter II — name "Lightning Bolt".
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Lightning Bolt".into())]));
+    let ch2 = catalog::medomais_prophecy().saga_chapters[1].1.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(saga, 0, None, 0);
+    g.resolve_effect(&ch2, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(saga).unwrap().named_card.as_deref(), Some("Lightning Bolt"));
+    // Chapter III — arm the "first named cast this turn → draw two" trigger.
+    let ch3 = catalog::medomais_prophecy().saga_chapters[2].1.clone();
+    g.resolve_effect(&ch3, &ctx).unwrap();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lightning Bolt");
+    drain_stack(&mut g);
+    // Bolt leaves hand (-1) and the chapter-III trigger draws two (+2).
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "casting the named spell drew two");
+}

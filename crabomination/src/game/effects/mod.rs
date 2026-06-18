@@ -7960,6 +7960,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OnYourNextNamedSpellThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextNamedSpellThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::PayOrLoseGame { mana_cost, life_cost } => {
                 let p = ctx.controller;
                 // Try to pay mana via auto-tap, then deduct life. If any of

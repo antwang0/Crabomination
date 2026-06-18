@@ -5884,6 +5884,31 @@ impl GameState {
                 self.delayed_triggers.push(dt);
             }
         }
+        // CR 603.7e (name-gated) — "when you cast a spell with the chosen name
+        // for the first time this turn" (Medomai's Prophecy III). Only a cast
+        // whose name matches the watching source's `named_card` consumes the
+        // one-shot; other casts leave it armed.
+        let cast_name = self
+            .find_card_anywhere(cast_card)
+            .map(|c| c.definition.name.to_string());
+        let (named_fire, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
+            .into_iter()
+            .partition(|dt| {
+                dt.controller == controller
+                    && matches!(dt.kind, crate::game::types::DelayedKind::YourNextNamedSpellThisTurn)
+                    && self
+                        .battlefield_find(dt.source)
+                        .and_then(|s| s.named_card.clone())
+                        == cast_name
+            });
+        self.delayed_triggers = rest;
+        for dt in named_fire {
+            self.stack.push(
+                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                    .build(),
+            );
+        }
         // CR 113.10b — permanents under a "loses all abilities" continuous
         // effect (Mercurial Transformation / Turn to Frog) don't fire
         // printed Magecraft / spell-cast triggers. Pre-compute the stripped
