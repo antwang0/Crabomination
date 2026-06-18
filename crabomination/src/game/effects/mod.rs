@@ -7386,6 +7386,53 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BottomChosenFromHandAndDraw { from, count, filter } => {
+                // Same caster-picks-from-hand shape as `DiscardChosen`
+                // (Vendilion Clique), but the apply step bottoms the chosen
+                // card and draws a replacement for the chosen card's owner.
+                use crate::decision::Decision;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let picker = ctx.controller;
+                let seats: Vec<usize> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for (i, target_player) in seats.iter().copied().enumerate() {
+                    let candidates: Vec<(crate::card::CardId, String)> = self
+                        .players[target_player]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, picker))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() { continue; }
+                    let decision = Decision::Discard {
+                        player: picker,
+                        count: n as u32,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::BottomChosenFromHandAndDrawPending { target_player };
+                    if self.players[picker].wants_ui {
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::BottomChosenFromHandAndDraw {
+                            from: Selector::Player(crate::effect::PlayerRef::Seat(q)),
+                            count: crate::effect::Value::Const(n as i32),
+                            filter: filter.clone(),
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
             Effect::ExileChosenUntilSourceLeaves { from, count, filter, return_to } => {
                 // CR 603.6e — same caster-picks-from-hand shape as
                 // DiscardChosen, but the chosen card is exiled and linked to

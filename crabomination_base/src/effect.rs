@@ -3073,6 +3073,23 @@ pub enum Effect {
         count: Value,
         filter: SelectionRequirement,
     },
+    /// "Look at `from`'s hand; you may choose `count` card(s) matching
+    /// `filter`. That player puts the chosen card(s) on the bottom of their
+    /// library, then draws that many cards." Vendilion Clique. Same
+    /// caster-picks-from-hand shape as [`Effect::DiscardChosen`], but the
+    /// chosen card is bottomed and replaced rather than discarded.
+    ///
+    /// Approximations: (1) the printed "may" is modeled as forced-if-able —
+    /// the caster auto-picks the first matching card (declining is rarely
+    /// desired), same as `DiscardChosen`; (2) `from` follows the engine's
+    /// ETB-trigger convention of `EachOpponent` (player-targeting on triggers
+    /// is an engine-wide gap, see Archon of Cruelty) — faithful in 1v1, so
+    /// the printed "target player" self-cast mode is not yet available.
+    BottomChosenFromHandAndDraw {
+        from: Selector,
+        count: Value,
+        filter: SelectionRequirement,
+    },
     /// "Look at `from`'s hand. Exile a card matching `filter`; its owner may
     /// play it, and it costs `extra_cost` more for as long as it remains
     /// exiled." Elite Spellbinder. The owner keeps a may-play grant (with an

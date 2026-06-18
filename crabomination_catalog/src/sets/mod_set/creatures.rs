@@ -3848,8 +3848,15 @@ pub fn blade_splicer() -> CardDefinition {
 // ── Vendilion Clique ───────────────────────────────────────────────────────
 
 /// Vendilion Clique — {1}{U}{U}, 3/1 Legendary Faerie Wizard with Flash
-/// and Flying. Body only — the ETB hand-disruption ability is complex and
-/// omitted for now.
+/// and Flying. "When this enters, look at target player's hand. You may
+/// choose a nonland card from it. If you do, that player reveals the chosen
+/// card, puts it on the bottom of their library, then draws a card."
+///
+/// Wired via `Effect::BottomChosenFromHandAndDraw` (a sibling of
+/// `DiscardChosen`): the caster auto-picks a nonland card from the target's
+/// hand, it's bottomed, and they draw a replacement. Per the engine's
+/// ETB-trigger convention the target is `EachOpponent` (faithful in 1v1; the
+/// self-cast hand-fix mode awaits player-targeting on triggers).
 pub fn vendilion_clique() -> CardDefinition {
     CardDefinition {
         name: "Vendilion Clique",
@@ -3863,6 +3870,14 @@ pub fn vendilion_clique() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::BottomChosenFromHandAndDraw {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+        }],
         ..Default::default()
     }
 }
@@ -3870,9 +3885,17 @@ pub fn vendilion_clique() -> CardDefinition {
 // ── Torrential Gearhulk ────────────────────────────────────────────────────
 
 /// Torrential Gearhulk — {4}{U}{U}, 5/6 Artifact Creature — Construct
-/// with Flash. Body only — the ETB "cast instant from graveyard" ability
-/// is complex and omitted.
+/// with Flash. "When this enters, you may cast target instant card from
+/// your graveyard without paying its mana cost. If that spell would be put
+/// into your graveyard this turn, exile it instead."
+///
+/// The ETB free-cast-from-graveyard rider rides
+/// `Effect::CastWithoutPayingImmediate { source_zone: Graveyard,
+/// exile_after: true }` — the same primitive The Dawning Archaic uses on
+/// its attack trigger — restricted to instants via the target filter. The
+/// "you may" is the primitive's built-in `OptionalTrigger` prompt.
 pub fn torrential_gearhulk() -> CardDefinition {
+    use crate::card::Zone;
     CardDefinition {
         name: "Torrential Gearhulk",
         cost: cost(&[generic(4), u(), u()]),
@@ -3884,6 +3907,14 @@ pub fn torrential_gearhulk() -> CardDefinition {
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: target_filtered(SelectionRequirement::HasCardType(CardType::Instant)),
+                source_zone: Zone::Graveyard,
+                exile_after: true,
+            },
+        }],
         ..Default::default()
     }
 }

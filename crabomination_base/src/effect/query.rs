@@ -513,6 +513,7 @@ impl Effect {
                     || value_has_target(cap)
             }
             Effect::DiscardChosen { from, count, .. }
+            | Effect::BottomChosenFromHandAndDraw { from, count, .. }
             | Effect::ExileChosenUntilSourceLeaves { from, count, .. }
             | Effect::ExileChosenFromHand { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
@@ -678,6 +679,7 @@ impl Effect {
             Effect::Drain { to, .. } => sel_filter(to),
             Effect::AddPoison { who, .. } => sel_filter(who),
             Effect::DiscardChosen { from, .. } => sel_filter(from),
+            Effect::BottomChosenFromHandAndDraw { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
             Effect::ManaClash { opponent } => sel_filter(opponent),
@@ -1448,6 +1450,7 @@ impl Effect {
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
                 Effect::DiscardChosen { from, .. } => sel_find(from, slot),
+                Effect::BottomChosenFromHandAndDraw { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),

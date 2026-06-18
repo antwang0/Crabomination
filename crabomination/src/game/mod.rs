@@ -7934,6 +7934,25 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::BottomChosenFromHandAndDrawPending { target_player } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::new();
+                for cid in card_ids {
+                    // Move the chosen card from hand to the bottom of its
+                    // owner's library, then draw a replacement (Vendilion
+                    // Clique). Library index 0 = top, so `push` = bottom.
+                    if let Some(pos) =
+                        self.players[target_player].hand.iter().position(|c| c.id == *cid)
+                    {
+                        let card = self.players[target_player].hand.remove(pos);
+                        self.players[target_player].library.push(card);
+                        self.draw_one(target_player, &mut events);
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::ExileChosenUntilSourceLeavesPending {
                 target_player,
                 source,

@@ -19869,6 +19869,68 @@ fn vendilion_clique_is_3_1_legendary_flash_flying() {
     assert!(card.keywords.contains(&Keyword::Flash));
     assert!(card.keywords.contains(&Keyword::Flying));
     assert!(card.supertypes.iter().any(|s| matches!(s, crate::card::Supertype::Legendary)));
+
+    // ETB hand-disruption: a SelfSource EntersBattlefield trigger carrying
+    // the look-choose-bottom-and-draw primitive.
+    use crate::card::{EventKind, EventScope};
+    use crate::effect::Effect;
+    let etb_disrupt = card.triggered_abilities.iter().any(|ta| {
+        ta.event.kind == EventKind::EntersBattlefield
+            && ta.event.scope == EventScope::SelfSource
+            && matches!(ta.effect, Effect::BottomChosenFromHandAndDraw { .. })
+    });
+    assert!(etb_disrupt, "Vendilion Clique should have its ETB bottom-and-draw trigger");
+}
+
+#[test]
+fn vendilion_clique_etb_bottoms_chosen_card_and_target_draws() {
+    // P0 ETBs Vendilion; the caster picks a nonland card from the opponent's
+    // hand. That card goes to the bottom of the opponent's library and the
+    // opponent draws a replacement off the top.
+    let mut g = two_player_game();
+    // Opponent (P1) hand: a nonland card we'll bottom.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    // P1 library top = the replacement they'll draw. add_card_to_library
+    // appends to the bottom; with an otherwise-empty library it's also the
+    // top, so it's drawn before the freshly-bottomed bear.
+    let replacement = g.add_card_to_library(1, catalog::lightning_bolt());
+
+    let id = g.add_card_to_hand(0, catalog::vendilion_clique());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    // Force the caster's choice (the bear) deterministically.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![bear])]));
+
+    let p1_hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Vendilion Clique castable for {1}{U}{U}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.players[1].hand.iter().any(|c| c.id == bear),
+        "the chosen bear should have left the opponent's hand",
+    );
+    assert_eq!(
+        g.players[1].library.last().map(|c| c.id),
+        Some(bear),
+        "the chosen bear should be on the bottom of the opponent's library",
+    );
+    assert!(
+        g.players[1].hand.iter().any(|c| c.id == replacement),
+        "the opponent should have drawn a replacement off the top",
+    );
+    assert_eq!(
+        g.players[1].hand.len(),
+        p1_hand_before,
+        "net opponent hand size is unchanged (-1 bottomed, +1 drawn)",
+    );
 }
 
 #[test]
@@ -19881,6 +19943,69 @@ fn torrential_gearhulk_is_5_6_artifact_flash() {
     assert!(card.keywords.contains(&Keyword::Flash));
     assert!(card.card_types.contains(&CardType::Artifact));
     assert!(card.card_types.contains(&CardType::Creature));
+
+    // ETB "cast target instant from your graveyard without paying" rider:
+    // a SelfSource EntersBattlefield trigger carrying the free-cast-from-
+    // graveyard primitive with `exile_after`.
+    use crate::card::{EventKind, EventScope};
+    use crate::effect::Effect;
+    let etb_free_cast = card.triggered_abilities.iter().any(|ta| {
+        ta.event.kind == EventKind::EntersBattlefield
+            && ta.event.scope == EventScope::SelfSource
+            && matches!(
+                ta.effect,
+                Effect::CastWithoutPayingImmediate {
+                    source_zone: crate::card::Zone::Graveyard,
+                    exile_after: true,
+                    ..
+                }
+            )
+    });
+    assert!(
+        etb_free_cast,
+        "Torrential Gearhulk should have an ETB free-cast-from-graveyard (exile_after) trigger",
+    );
+}
+
+#[test]
+fn torrential_gearhulk_etb_casts_instant_from_graveyard_and_exiles_it() {
+    // Seed a Lightning Bolt in P0's graveyard, ETB Gearhulk, accept the
+    // "cast without paying?" prompt: the Bolt is cast for free (auto-
+    // targeted) and, per the printed exile rider, ends up in exile rather
+    // than back in the graveyard.
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // A legal auto-target for the free Bolt (opponent's creature).
+    let _opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::torrential_gearhulk());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+
+    // Accept the OptionalTrigger ("Cast without paying?").
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Torrential Gearhulk castable for {4}{U}{U}");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == id),
+        "Gearhulk should resolve onto the battlefield",
+    );
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "Bolt should have left the graveyard when cast",
+    );
+    assert!(
+        g.exile.iter().any(|c| c.id == bolt),
+        "Bolt should be exiled after resolving (the printed exile rider)",
+    );
 }
 
 #[test]

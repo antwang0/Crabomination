@@ -1041,6 +1041,11 @@ pub enum PendingEffectState {
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.
     DiscardChosenPending { target_player: usize },
+    /// Suspended on a `BottomChosenFromHandAndDraw` decision (Vendilion
+    /// Clique). The caster picks cards from `target_player`'s hand; the apply
+    /// step bottoms each chosen card and has `target_player` draw a
+    /// replacement.
+    BottomChosenFromHandAndDrawPending { target_player: usize },
     /// CR 701.16 — suspended on a `ChooseTarget` decision for a forced
     /// single-permanent sacrifice (Edicts, Annihilator with N=1, "sacrifice a
     /// creature" riders). `player` is the one doing the sacrificing (the
