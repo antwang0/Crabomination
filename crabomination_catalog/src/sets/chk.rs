@@ -4144,6 +4144,39 @@ pub fn kitsune_mystic() -> CardDefinition {
     }
 }
 
+/// Threads of Disloyalty — {1}{U}{U} Aura. "Enchant creature with mana value 2
+/// or less. You control enchanted creature." (CR 711-era control Aura — the
+/// steal lasts while the Aura stays attached, via `temporary_control`.)
+pub fn threads_of_disloyalty() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Threads of Disloyalty",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        // The top-level effect carries the cast-time enchant filter; the Aura
+        // auto-attaches to its target on resolution (stack.rs).
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            },
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainControlWhileSourceRemains {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Kitsune Riftwalker — {1}{W}{W} Fox Wizard 2/1. "Protection from Spirits
 /// and from Arcane." (CR 702.16e — creature-type + spell-subtype protection.)
 pub fn kitsune_riftwalker() -> CardDefinition {

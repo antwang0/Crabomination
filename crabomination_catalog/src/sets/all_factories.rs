@@ -245,6 +245,7 @@ static CHK: &[Factory] = &[
     super::chk::student_of_elements,
     super::chk::kitsune_mystic,
     super::chk::kitsune_riftwalker,
+    super::chk::threads_of_disloyalty,
     super::chk::bushi_tenderfoot,
     super::chk::nezumi_graverobber,
     super::chk::initiate_of_blood,

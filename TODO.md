@@ -3723,10 +3723,6 @@ in the topical sections above, are:
   Tarmogoyf-specific CDA formula (Wight of the Reliquary, Nighthowler, Master
   of Etherium).
 
-### Kamigawa cards — remaining primitives (push modern_decks)
-- **Threads of Disloyalty** — control Aura (MV≤2). No aura-grants-control path
-  yet; `GainControlWhileSourceRemains` is only wired as a creature ETB.
-
 ### Content / pools
 - **Deck-construction archetype weighting** — tribal subpools (Silverquill
   Inkling, Witherbloom Pest, Lorehold Spirit) and a per-school sealed-pool

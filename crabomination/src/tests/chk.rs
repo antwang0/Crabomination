@@ -2852,6 +2852,40 @@ fn kitsune_riftwalker_cant_be_targeted_by_arcane() {
     assert!(err.is_err(), "an Arcane spell can't target protection-from-Arcane");
 }
 
+/// Threads of Disloyalty steals a creature with mana value 2 or less; control
+/// reverts when the Aura leaves the battlefield.
+#[test]
+fn threads_of_disloyalty_steals_and_reverts() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // {1}{G}, MV 2
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let threads = g.add_card_to_hand(0, catalog::threads_of_disloyalty());
+    cast_at(&mut g, threads, Target::Permanent(bear));
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen by Threads' controller");
+    // Destroy the Aura → control reverts.
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let disenchant = g.add_card_to_hand(0, catalog::disenchant());
+    cast_at(&mut g, disenchant, Target::Permanent(threads));
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "control reverts when the Aura leaves");
+}
+
+/// Threads of Disloyalty can't enchant a creature with mana value 3 or more.
+#[test]
+fn threads_of_disloyalty_rejects_expensive_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::moss_kami()); // {3}{G}{G}, MV 5
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let threads = g.add_card_to_hand(0, catalog::threads_of_disloyalty());
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: threads, target: Some(Target::Permanent(big)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "can't enchant a mana-value-3-or-more creature");
+}
+
 /// "Target creature that was dealt damage this turn" rejects an undamaged
 /// creature (CR 120.x targeting filter).
 #[test]
