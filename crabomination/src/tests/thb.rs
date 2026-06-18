@@ -3582,3 +3582,30 @@ fn nyleas_intervention_burns_flyers() {
     assert!(g.battlefield_find(flyer).is_none(), "4/4 flyer took 4 and died");
     assert!(g.battlefield_find(ground).is_some(), "ground creature untouched");
 }
+
+/// Callaphe's power tracks your devotion to blue.
+#[test]
+fn callaphe_power_is_devotion_to_blue() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::callaphe_beloved_of_the_sea());
+    // Callaphe's own {U}{U} gives devotion 2 → 2/3.
+    assert_eq!(g.computed_permanent(c).unwrap().power, 2, "devotion to blue = 2");
+    // Add a {U} creature → devotion 3 → 3/3.
+    g.add_card_to_battlefield(0, catalog::towering_wave_mystic()); // {1}{U}
+    assert_eq!(g.computed_permanent(c).unwrap().power, 3, "devotion to blue = 3");
+}
+
+/// Siona digs seven for an Aura to hand.
+#[test]
+fn siona_finds_an_aura() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_library(0, catalog::mires_grasp()); // an Aura
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let siona = g.add_card_to_battlefield(0, catalog::siona_captain_of_the_pyleas());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(aura)),
+    ]));
+    g.fire_self_etb_triggers(siona, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "Aura put into hand");
+}

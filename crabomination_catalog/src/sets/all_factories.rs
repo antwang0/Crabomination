@@ -7981,6 +7981,8 @@ static THB: &[Factory] = &[
     super::thb::heliods_punishment,
     super::thb::nyleas_intervention,
     super::thb::deathbellow_war_cry,
+    super::thb::callaphe_beloved_of_the_sea,
+    super::thb::siona_captain_of_the_pyleas,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

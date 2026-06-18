@@ -5950,3 +5950,49 @@ pub fn deathbellow_war_cry() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Callaphe, Beloved of the Sea — {1}{U}{U} Legendary Enchantment Creature —
+/// Demigod, */3. Power equals your devotion to blue. (The "your permanents
+/// tax opponents' targeted spells {1} more" static is dropped — `extra_cost_
+/// for_spell` can't yet read a cast's chosen target; tracked in TODO.md.)
+pub fn callaphe_beloved_of_the_sea() -> CardDefinition {
+    CardDefinition {
+        name: "Callaphe, Beloved of the Sea",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demigod], ..Default::default() },
+        power: 0,
+        toughness: 3,
+        dynamic_pt: Some(DynamicPt::DevotionTo { color: Color::Blue, base_t: 3 }),
+        ..Default::default()
+    }
+}
+
+/// Siona, Captain of the Pyleas — {1}{G}{W} Legendary 2/2 Human Soldier. ETB:
+/// look at the top seven cards, you may put an Aura into your hand, the rest
+/// on the bottom. (The "Aura attaches → make a Soldier" static is dropped —
+/// the engine has no aura-attach event yet; tracked in TODO.md.)
+pub fn siona_captain_of_the_pyleas() -> CardDefinition {
+    CardDefinition {
+        name: "Siona, Captain of the Pyleas",
+        cost: cost(&[generic(1), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(7),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
