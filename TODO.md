@@ -120,15 +120,18 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     Deceiver / Brutal Deceiver / Callous Deceiver (reveal-top-then-conditional
     self-pump — needs a "reveal top, branch on its type" effect);
     Matsu-Tribe Decoy / Matsu-Tribe Sniper (a "target creature must block this"
-    grant + tap-and-skip-untap-on-combat-damage); Masumaro / Adamaro (CDA on
-    *twice* / *opponent's-max* hand size — extend `DynamicPt::ControllerHandSize`
-    with a multiplier and an opponent-max variant); Sokenzan Renegade / Kiyomaro
-    (hand-size-gated keyword grants + "player with most cards" predicate).
+    grant + tap-and-skip-untap-on-combat-damage); Sokenzan Renegade / Kiyomaro
+    (hand-size-gated keyword grants + "player with most cards" predicate);
+    Takeno, Samurai General (anthem scaled by each Samurai's bushido total);
+    Kuro, Pitlord (upkeep "sacrifice unless pay {B}{B}{B}{B}" + repeatable
+    pay-1-life −1/−1); Marrow-Gnawer (Rat fear lord + sac-a-Rat X-token mint);
+    Soratami Mirror-Mage / Soratami Seer (return-N-lands additional activation
+    cost; Seer's "discard hand, draw that many" body).
   - Generalize "target player discards" auto-targeting so an ETB
     `Discard { who: Player(Target(0)) }` picks an opponent (Kemuri-Onna is
     modeled as `EachOpponent` to sidestep this).
   - Cranial Extraction (name a card → exile all copies from gy/hand/library);
-    Soratami Seer (discard hand, draw that many); Cut the Tethers (per-Spirit
+    Cut the Tethers (per-Spirit
     "return unless pay {3}"); Petals of Insight (look-3, bottom-or-draw with
     conditional self-return); Devouring Greed / Devouring Rage (additional-cost
     "sacrifice any number of Spirits" that scales the spell — needs cast-time
