@@ -3092,3 +3092,54 @@ fn nightmare_shepherd_copies_the_dead() {
     assert_eq!((copy.definition.power, copy.definition.toughness), (1, 1), "copy is 1/1");
     assert!(copy.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare));
 }
+
+/// Rise to Glory reanimates a creature from your graveyard.
+#[test]
+fn rise_to_glory_reanimates_creature() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::rise_to_glory());
+    let dragon = g.add_card_to_graveyard(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(dragon)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Rise to Glory mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_some(), "dragon reanimated");
+}
+
+/// Lagonna-Band Storyteller recurs an enchantment and gains its mana value.
+#[test]
+fn lagonna_band_storyteller_recurs_enchantment() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_graveyard(0, catalog::commanding_presence()); // MV 4
+    let teller = g.add_card_to_battlefield(0, catalog::lagonna_band_storyteller());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+        crate::decision::DecisionAnswer::Target(Target::Permanent(aura)),
+    ]));
+    let life_before = g.players[0].life;
+    let eff = catalog::lagonna_band_storyteller().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(teller, 0, Some(Target::Permanent(aura)), 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].life, life_before + 4, "gained MV 4");
+    assert_eq!(g.players[0].library.first().map(|c| c.definition.name), Some("Commanding Presence"),
+        "enchantment on top of library");
+}
+
+/// Purphoros's Intervention mode 1 deals twice X to a creature.
+#[test]
+fn purphoross_intervention_burns() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::purphoross_intervention());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(1), x_value: Some(2),
+    }).expect("cast {X=2}{R} mode 1");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "2/2 took 4 and died");
+}

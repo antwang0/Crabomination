@@ -5044,3 +5044,103 @@ pub fn nightmare_shepherd() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rise to Glory — {3}{W}{B} Sorcery. Choose one or both — return target
+/// creature card from your graveyard to the battlefield; and/or return target
+/// Aura card from your graveyard to the battlefield.
+pub fn rise_to_glory() -> CardDefinition {
+    CardDefinition {
+        name: "Rise to Glory",
+        cost: cost(&[generic(3), w(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Lagonna-Band Storyteller — {3}{W} 3/4 Centaur Advisor. ETB: you may put a
+/// target enchantment card from your graveyard on top of your library; if you
+/// do, gain life equal to its mana value.
+pub fn lagonna_band_storyteller() -> CardDefinition {
+    CardDefinition {
+        name: "Lagonna-Band Storyteller",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Put an enchantment from your graveyard on top, gain its mana value?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Enchantment.and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Purphoros's Intervention — {X}{R} Sorcery. Choose one — create an X/1 red
+/// Elemental with trample and haste, sacrificed at the next end step; or deal
+/// twice X damage to target creature or planeswalker.
+pub fn purphoross_intervention() -> CardDefinition {
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        dynamic_pt: Some((Value::XFromCost, Value::ONE)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::SacrificeSource,
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Purphoros's Intervention",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elemental },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
