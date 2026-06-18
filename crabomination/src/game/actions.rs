@@ -5684,6 +5684,34 @@ impl GameState {
         })
     }
 
+    /// CR 702.16c — a permanent with protection from a quality can't be the
+    /// target of an *ability* from a source with that quality. `source` is the
+    /// ability's source permanent. Mirrors the cast-time spell gate but reads
+    /// the source's qualities (color / creature-ness / creature type) rather
+    /// than a spell's colors.
+    pub(crate) fn ability_target_has_protection(&self, target: &Target, source: CardId) -> bool {
+        let Target::Permanent(tid) = target else { return false };
+        let Some(tgt) = self.computed_permanent(*tid) else { return false };
+        if !tgt.keywords.iter().any(|kw| {
+            matches!(
+                kw,
+                Keyword::Protection(_)
+                    | Keyword::ProtectionFromCreatures
+                    | Keyword::ProtectionFromCreatureType(_)
+            )
+        }) {
+            return false;
+        }
+        let Some(src) = self.computed_permanent(source) else { return false };
+        let src_is_creature = src.card_types.contains(&CardType::Creature);
+        tgt.keywords.iter().any(|kw| match kw {
+            Keyword::Protection(color) => src.colors.contains(color),
+            Keyword::ProtectionFromCreatures => src_is_creature,
+            Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
+            _ => false,
+        })
+    }
+
     /// True if `player` controls any permanent granting "you have hexproof"
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
@@ -7126,6 +7154,9 @@ impl GameState {
         // and self-targeting abilities don't pass a target so they bypass.
         if let Some(tgt) = &target {
             self.check_target_legality(tgt, p)?;
+            if self.ability_target_has_protection(tgt, card_id) {
+                return Err(GameError::TargetHasProtection(card_id));
+            }
             // Ward enforcement happens via push_ward_triggers_for_cast
             // after finalize_cast, not as a synchronous cost payment.
             let _ = tgt; let _ = p;
@@ -7150,6 +7181,9 @@ impl GameState {
         // same way — legality (hexproof/shroud/…) plus the per-slot filter.
         for (i, tgt) in additional_targets.iter().enumerate() {
             self.check_target_legality(tgt, p)?;
+            if self.ability_target_has_protection(tgt, card_id) {
+                return Err(GameError::TargetHasProtection(card_id));
+            }
             if let Some(filter) = ability
                 .effect
                 .target_filter_for_slot((i + 1) as u8)

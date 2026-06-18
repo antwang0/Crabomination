@@ -2633,3 +2633,24 @@ fn cr_711_flipped_legendary_obeys_legend_rule() {
         .filter(|c| c.definition.name == "Azamuki, Treachery Incarnate").count();
     assert_eq!(azamuki, 1, "two flipped Azamuki collapse to one under the legend rule");
 }
+
+/// CR 702.16c — a permanent with protection from red can't be targeted by an
+/// activated ability whose source is red (Cunning Sparkmage's tap-ping).
+#[test]
+fn cr_702_16c_ability_cant_target_protection_from_source_color() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::cunning_sparkmage()); // red
+    g.clear_sickness(mage);
+    let priest = g.add_card_to_battlefield(1, catalog::soltari_priest()); // pro-red
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(priest)),
+        additional_targets: Vec::new(), x_value: None,
+    });
+    assert!(err.is_err(), "a red source's ability can't target protection from red");
+    // A non-protected creature is a fine target.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("can ping an unprotected creature");
+}
