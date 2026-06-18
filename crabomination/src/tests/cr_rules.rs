@@ -2981,3 +2981,62 @@ fn cr_702_3b_defender_cannot_be_declared_attacker() {
     ]));
     assert!(err.is_err(), "a Defender creature can't be declared as an attacker (CR 702.3b)");
 }
+
+// ── CR 702.16 — Protection (from each mana value other than N) ───────────────
+
+#[test]
+fn cr_702_16_protection_from_mana_value_blocks_targeting() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1)])); // d3=1 → chosen 2
+    let haktos = g.add_card_to_battlefield(0, catalog::haktos_the_unscarred());
+    let eff = catalog::haktos_the_unscarred().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(haktos, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    // Opponent's Lightning Bolt is mana value 1 (≠ 2) → can't target Haktos.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(haktos)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "a MV-1 spell can't target protection-from-each-MV-other-than-2 (CR 702.16)");
+}
+
+// ── CR 509.1b — block restriction from protection-by-mana-value ──────────────
+
+#[test]
+fn cr_509_1b_protection_from_mv_restricts_blockers() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(1)])); // d3=1 → chosen 2
+    let haktos = g.add_card_to_battlefield(0, catalog::haktos_the_unscarred());
+    let eff = catalog::haktos_the_unscarred().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(haktos, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    g.clear_sickness(haktos);
+    let mv3 = g.add_card_to_battlefield(1, catalog::gray_ogre());     // MV 3
+    let mv2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.clear_sickness(mv3);
+    g.clear_sickness(mv2);
+    g.step = TurnStep::DeclareBlockers;
+    g.attacking.push(Attack { attacker: haktos, target: AttackTarget::Player(1) });
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(mv3, haktos)]));
+    assert!(err.is_err(), "MV-3 creature can't block Haktos (protection from each MV other than 2)");
+    g.block_map.clear();
+    let ok = g.perform_action(GameAction::DeclareBlockers(vec![(mv2, haktos)]));
+    assert!(ok.is_ok(), "MV-2 creature may block Haktos");
+}
+
+// ── CR 704.5g — a creature with toughness 0 is put into its graveyard ────────
+
+#[test]
+fn cr_704_5g_zero_toughness_creature_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::MinusOneMinusOne, 2);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "the 0-toughness creature left the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "put into its owner's graveyard (CR 704.5g)");
+}

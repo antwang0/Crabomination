@@ -3290,6 +3290,15 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16 — protection from each mana value other than N
+                // (Haktos): can't be targeted by a spell whose mana value
+                // isn't N.
+                if let Keyword::ProtectionFromManaValueExcept(n) = kw
+                    && card.definition.cost.cmc() != *n
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
             }
         }
 
