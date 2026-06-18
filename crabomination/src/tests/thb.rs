@@ -3796,3 +3796,23 @@ fn ironscale_hydra_prevents_and_grows() {
     // The 2/2 attacker took the Hydra's 5 and died.
     assert!(g.battlefield_find(attacker).is_none(), "attacker took the Hydra's damage and died");
 }
+
+/// Dreamshaper Shaman: paying {2}{R} + sacrificing a nonland permanent digs
+/// to a nonland permanent card and puts it onto the battlefield.
+#[test]
+fn dreamshaper_shaman_digs_to_a_permanent() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let shaman = g.add_card_to_battlefield(0, catalog::dreamshaper_shaman());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // top of library — a nonland permanent
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let eff = g.battlefield_find(shaman).unwrap().definition.triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(shaman, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(shaman).is_none(), "the Shaman was sacrificed to its own cost");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the revealed nonland permanent entered the battlefield");
+}

@@ -3544,9 +3544,6 @@ primitive noted):
 - **Storm Herald** — mass aura-reanimate from gy attached to creatures +
   delayed exile (`Effect::Attach` exists; needs the multi-aura picker + the
   "if would leave, exile instead" rider).
-- **Dreamshaper Shaman** — end-step pay-{2}{R}+sac → reveal-until-nonland-
-  permanent onto battlefield (`RevealUntilFind` exists; needs the optional
-  pay+sac end-step cost).
 - **Entrancing Lyre** — `{X},{T}: tap a creature; it doesn't untap while the
   Lyre stays tapped` (tap-lock linked to the source's tapped state).
 - **Haktos the Unscarred** — random choice of 2/3/4 on ETB + protection from
@@ -3558,8 +3555,9 @@ primitive noted):
   `opponents_cant_cast_named` lock (Academic Probation) needs a
   permanent-bound variant.
 Shipped this run: Altar of the Pantheon, Hateful Eidolon, Dawn Evangel,
-Minion's Return, Inspire Awe (+ `auras_at_death` capture,
-`EventScope::EnchantedBySource`, fog-with-exception).
+Minion's Return, Inspire Awe, Ironscale Hydra, Dreamshaper Shaman
+(+ `auras_at_death` capture, `EventScope::EnchantedBySource`,
+fog-with-exception, `PreventCombatDamageToSelfAndGrow`).
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
 

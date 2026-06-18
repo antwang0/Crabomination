@@ -6188,3 +6188,50 @@ pub fn ironscale_hydra() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dreamshaper Shaman — {5}{R} 5/4 Enchantment Creature — Minotaur Shaman. At
+/// the beginning of your end step, you may pay {2}{R} and sacrifice a nonland
+/// permanent. If you do, reveal cards from the top of your library until you
+/// reveal a nonland permanent card, put it onto the battlefield, and put the
+/// rest on the bottom of your library in a random order.
+pub fn dreamshaper_shaman() -> CardDefinition {
+    use crate::effect::RevealMissDest;
+    CardDefinition {
+        name: "Dreamshaper Shaman",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {2}{R} and sacrifice a nonland permanent?".to_string(),
+                mana_cost: cost(&[generic(2), r()]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: SelectionRequirement::Nonland,
+                    },
+                    Effect::RevealUntilFind {
+                        who: PlayerRef::You,
+                        find: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        cap: Value::Const(200),
+                        life_per_revealed: 0,
+                        miss_dest: RevealMissDest::BottomRandom,
+                    },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
