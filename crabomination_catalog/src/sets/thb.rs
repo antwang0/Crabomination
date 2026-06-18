@@ -5144,3 +5144,51 @@ pub fn purphoross_intervention() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dalakos, Crafter of Wonders — {1}{U}{R} 2/4 legendary Merfolk Artificer.
+/// {T}: Add {C}{C}, spend only on artifacts. Equipped creatures you control
+/// have flying and haste.
+pub fn dalakos_crafter_of_wonders() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{ManaPayload, StaticEffect};
+    CardDefinition {
+        name: "Dalakos, Crafter of Wonders",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::Const(2))),
+                    crate::mana::SpendRestriction::ArtifactOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        // Per-creature `GrantPumpSelfIf` so the IsEquipped condition is judged
+        // with each creature's own battlefield context (a bare `GrantKeyword`
+        // selector evaluates IsEquipped without attachment state and misses).
+        static_abilities: vec![StaticAbility {
+            description: "Equipped creatures you control have flying and haste.",
+            effect: StaticEffect::GrantPumpSelfIf {
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsEquipped,
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Flying, Keyword::Haste],
+            },
+        }],
+        ..Default::default()
+    }
+}

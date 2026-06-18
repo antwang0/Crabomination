@@ -3143,3 +3143,17 @@ fn purphoross_intervention_burns() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(bear).is_none(), "2/2 took 4 and died");
 }
+
+/// Dalakos grants flying and haste to your equipped creatures.
+#[test]
+fn dalakos_equips_grant_flying_haste() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dalakos_crafter_of_wonders());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boots = g.add_card_to_battlefield(0, catalog::lavaspur_boots());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: boots, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&crate::card::Keyword::Flying), "equipped creature flies");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Haste), "equipped creature has haste");
+}

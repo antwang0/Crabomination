@@ -91,6 +91,11 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Can't be blocked by more than one creature" (anti-gang-block).
         CantBeBlockedByMoreThanOne => "1Blk",
         MustBeBlocked => "Lure",
+        // "Attacks each combat if able" (Impending Doom, The Akroan War II) —
+        // a board-relevant combat compulsion.
+        MustAttack => "Atk!",
+        // Crew N on a Vehicle — a glanceable reminder it can be animated.
+        Crew(_) => "Crew",
         _ => return None,
     })
 }
@@ -250,7 +255,9 @@ mod tests {
     fn strip_surfaces_block_quality_evasion() {
         use crabomination::card::SelectionRequirement;
         assert_eq!(
-            keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(SelectionRequirement::Flying))]),
+            keyword_strip(&[Keyword::CantBeBlockedExceptBy(Box::new(
+                SelectionRequirement::HasKeyword(Keyword::Flying),
+            ))]),
             "Eva"
         );
         assert_eq!(
@@ -274,5 +281,11 @@ mod tests {
         assert_eq!(keyword_strip(&[Keyword::Bushido(2)]), "Bsd");
         assert_eq!(keyword_strip(&[Keyword::Rampage(1)]), "Rmp");
         assert_eq!(keyword_strip(&[Keyword::Banding]), "Bnd");
+    }
+
+    #[test]
+    fn strip_surfaces_must_attack_and_crew() {
+        assert_eq!(keyword_strip(&[Keyword::MustAttack]), "Atk!");
+        assert_eq!(keyword_strip(&[Keyword::Crew(2)]), "Crew");
     }
 }

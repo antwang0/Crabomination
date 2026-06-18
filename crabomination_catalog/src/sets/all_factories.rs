@@ -7960,6 +7960,7 @@ static THB: &[Factory] = &[
     super::thb::rise_to_glory,
     super::thb::lagonna_band_storyteller,
     super::thb::purphoross_intervention,
+    super::thb::dalakos_crafter_of_wonders,
 ];
 static THS: &[Factory] = &[
     super::ths::sedge_scorpion,

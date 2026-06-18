@@ -294,6 +294,7 @@ mod tests {
             mana_spent: 0,
             event_amount: 0,
             intervening_if: None,
+            additional_targets: Vec::new(),
         });
 
         let cv = empty_view();
