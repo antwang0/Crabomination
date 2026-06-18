@@ -2235,6 +2235,60 @@ fn heartbeat_of_spring_doubles_land_mana() {
     assert_eq!(g.players[1].mana_pool.amount(crate::mana::Color::Green), 2, "opponent's {{G}} doubles too");
 }
 
+/// Jade Idol animates into a 4/4 on a Spirit/Arcane cast.
+#[test]
+fn jade_idol_spiritcraft_animates() {
+    let mut g = two_player_game();
+    let idol = g.add_card_to_battlefield(0, catalog::jade_idol());
+    assert!(!g.computed_permanent(idol).unwrap().card_types.contains(&crate::card::CardType::Creature),
+        "starts as a non-creature artifact");
+    let arcane = g.add_card_to_hand(0, catalog::reach_through_mists());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: arcane, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Arcane spell");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(idol).unwrap();
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature), "now a creature");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "4/4");
+}
+
+/// Long-Forgotten Gohei anthems your Spirits and cheapens Arcane spells.
+#[test]
+fn long_forgotten_gohei_anthems_and_reduces_arcane_cost() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::long_forgotten_gohei());
+    let kami = g.add_card_to_battlefield(0, catalog::lantern_kami()); // 1/1 Spirit
+    let cp = g.computed_permanent(kami).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "Spirit gets +1/+1");
+    // Reach Through Mists ({U} Arcane) is reduced to {0} colored-only → still
+    // needs the {U}; the {1}-generic discount applies to a generic pip. Use
+    // Glacial Ray ({1}{R} Arcane): {R} after the {1} reduction.
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1); // only {R}, no generic
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: ray, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Arcane spell castable for {R} after the {1} discount");
+}
+
+/// Nine-Ringed Bo pings a Spirit and exiles it if it dies.
+#[test]
+fn nine_ringed_bo_pings_and_exiles_a_spirit() {
+    let mut g = two_player_game();
+    let bo = g.add_card_to_battlefield(0, catalog::nine_ringed_bo());
+    let spirit = g.add_card_to_battlefield(1, catalog::lantern_kami()); // 1/1 Spirit
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bo, ability_index: 0, target: Some(Target::Permanent(spirit)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("ping the Spirit");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(spirit).is_none(), "1/1 dies to the ping");
+    assert!(g.exile.iter().any(|c| c.id == spirit), "exiled instead of going to the graveyard");
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != spirit), "not in the graveyard");
+}
+
 /// Marrow-Gnawer makes all Rats fear and mints Rats by sacrificing one.
 #[test]
 fn marrow_gnawer_lords_rats_and_mints_tokens() {

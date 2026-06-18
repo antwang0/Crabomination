@@ -4277,6 +4277,81 @@ pub fn uncontrollable_anger() -> CardDefinition {
     }
 }
 
+/// Jade Idol — {4} Artifact. Spiritcraft: whenever you cast a Spirit or Arcane
+/// spell, this becomes a 4/4 Spirit artifact creature until end of turn.
+pub fn jade_idol() -> CardDefinition {
+    CardDefinition {
+        name: "Jade Idol",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(4),
+            toughness: Value::Const(4),
+            creature_types: vec![CreatureType::Spirit],
+            keywords: vec![],
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Long-Forgotten Gohei — {3} Artifact. Arcane spells you cast cost {1} less.
+/// Spirit creatures you control get +1/+1.
+pub fn long_forgotten_gohei() -> CardDefinition {
+    CardDefinition {
+        name: "Long-Forgotten Gohei",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Arcane spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Arcane),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Spirit creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nine-Ringed Bo — {3} Artifact. {T}: This deals 1 damage to target Spirit
+/// creature. If that creature would die this turn, exile it instead.
+pub fn nine_ringed_bo() -> CardDefinition {
+    CardDefinition {
+        name: "Nine-Ringed Bo",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit)),
+                    ),
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Marrow-Gnawer — {3}{B}{B} Legendary Rat Rogue 2/3. All Rats have fear.
 /// {T}, Sacrifice a Rat: Create X 1/1 black Rat tokens, X = Rats you control.
 pub fn marrow_gnawer() -> CardDefinition {
