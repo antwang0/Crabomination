@@ -33699,6 +33699,23 @@ fn modal_modes_render_nonempty_short_text() {
     }
 }
 
+/// Mercurial Transformation and Academic Probation are modal — their picker
+/// labels must render readable text (ResetCreature / BecomeColor /
+/// NameOpponentCastLock previously rendered blank in the client modal).
+#[test]
+fn new_modal_cards_render_nonempty_mode_text() {
+    use crate::effect::Effect;
+    for card in [catalog::mercurial_transformation(), catalog::academic_probation()] {
+        let Effect::ChooseMode(modes) = &card.effect else {
+            panic!("{} should be a ChooseMode", card.name);
+        };
+        for m in modes {
+            assert!(!m.effect_short_text().is_empty(),
+                "{} mode rendered empty: {m:?}", card.name);
+        }
+    }
+}
+
 #[test]
 fn beacon_of_immortality_doubles_life_and_reshuffles() {
     let mut g = two_player_game();

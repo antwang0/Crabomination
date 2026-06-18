@@ -1042,6 +1042,38 @@ impl Effect {
             // CreateToken, GrantKeyword]) returned the GrantKeyword text
             // alone (CreateToken had no arm), dropping the headline create
             // action.
+            Effect::NameOpponentCastLock => {
+                "opponents can't cast the named card until your next turn".into()
+            }
+            Effect::ResetCreature { power, toughness, creature_types, .. } => {
+                let ty = creature_types
+                    .first()
+                    .map(|t| format!("{t:?}").to_lowercase())
+                    .unwrap_or_else(|| "creature".into());
+                match (power, toughness) {
+                    (Value::Const(p), Value::Const(tn)) => {
+                        format!("{} becomes a {p}/{tn} {ty}", self.target_phrase())
+                    }
+                    _ => format!("{} becomes a {ty}", self.target_phrase()),
+                }
+            }
+            Effect::BecomeColor { colors, .. } => {
+                let words: Vec<String> =
+                    colors.iter().map(|c| format!("{c:?}").to_lowercase()).collect();
+                format!("{} becomes {}", self.target_phrase(), words.join(" and "))
+            }
+            Effect::LoseAllAbilities { .. } => {
+                format!("{} loses all abilities", self.target_phrase())
+            }
+            Effect::SetBasePT { power, toughness, .. } => {
+                let t = self.target_phrase();
+                match (power, toughness) {
+                    (Value::Const(p), Value::Const(tn)) => {
+                        format!("{t} has base power and toughness {p}/{tn}")
+                    }
+                    _ => format!("{t} has a new base power and toughness"),
+                }
+            }
             Effect::Seq(v) => {
                 let parts: Vec<String> = v
                     .iter()
