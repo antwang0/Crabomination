@@ -39097,6 +39097,103 @@ pub fn drannith_magistrate() -> CardDefinition {
     }
 }
 
+/// Wilt — {1}{G} Instant. Destroy target artifact or enchantment. Cycling {2}.
+pub fn wilt() -> CardDefinition {
+    CardDefinition {
+        name: "Wilt",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Wall of Runes — {U} 0/4 Wall with defender. ETB: scry 1.
+pub fn wall_of_runes() -> CardDefinition {
+    CardDefinition {
+        name: "Wall of Runes",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Sonorous Howlbonder — {1}{B/R}{B/R} 2/2 Human Warrior. Menace; each creature
+/// you control with menace can't be blocked except by three or more creatures.
+pub fn sonorous_howlbonder() -> CardDefinition {
+    CardDefinition {
+        name: "Sonorous Howlbonder",
+        cost: cost(&[generic(1), hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "Each creature you control with menace can't be blocked except by three or more creatures.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasKeyword(Keyword::Menace)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::CantBeBlockedExceptByN(3),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Frillscare Mentor — {2}{R} 3/2 Human Warrior. ETB: put a menace counter on
+/// target non-Human creature you control. {2}{R}, {T}: put a +1/+1 counter on
+/// each creature you control with menace.
+pub fn frillscare_mentor() -> CardDefinition {
+    CardDefinition {
+        name: "Frillscare Mentor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasCreatureType(CreatureType::Human)))),
+            ),
+            keyword: Keyword::Menace,
+            amount: Value::Const(1),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasKeyword(Keyword::Menace)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Crystacean — {3}{U} 1/6 Crab with flash.
 pub fn crystacean() -> CardDefinition {
     CardDefinition {

@@ -57866,3 +57866,71 @@ fn aerial_assault_destroys_tapped_and_gains_per_flyer() {
     assert!(g.battlefield_find(victim).is_none(), "tapped creature destroyed");
     assert_eq!(g.players[0].life, life + 1, "gained 1 per flyer (the Hawk)");
 }
+
+#[test]
+fn wilt_destroys_an_artifact_and_can_cycle() {
+    use crate::card::Keyword;
+    let d = catalog::wilt();
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::pacification_array());
+    let id = g.add_card_to_hand(0, catalog::wilt());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(rock)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wilt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "artifact destroyed");
+}
+
+#[test]
+fn wall_of_runes_scries_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wall_of_runes());
+    let top = g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![top], bottom: vec![] }]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wall of Runes castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Wall entered");
+}
+
+#[test]
+fn sonorous_howlbonder_locks_menace_creatures_to_three_blockers() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sonorous_howlbonder());
+    // Another menace creature we control inherits the three-blocker clause.
+    let mut menacer = catalog::grizzly_bears();
+    menacer.keywords.push(Keyword::Menace);
+    let other = g.add_card_to_battlefield(0, menacer);
+    let cp = g.computed_permanent(other).expect("alive");
+    assert!(cp.keywords.contains(&Keyword::CantBeBlockedExceptByN(3)),
+        "menace creature gains the 3-blocker restriction");
+}
+
+#[test]
+fn frillscare_mentor_grants_menace_then_pumps_menace_team() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let mentor = g.add_card_to_battlefield(0, catalog::frillscare_mentor());
+    let beast = g.add_card_to_battlefield(0, catalog::garruks_companion()); // non-Human Beast
+    g.clear_sickness(mentor);
+    g.fire_self_etb_triggers(mentor, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(beast))]));
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Menace),
+        "ETB granted a menace counter");
+    // Activate: +1/+1 counter on each menace creature we control.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mentor, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate {2}{R},T");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(beast).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1, "menace beast got a +1/+1 counter");
+}
