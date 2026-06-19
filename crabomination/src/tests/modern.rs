@@ -17980,6 +17980,8 @@ fn heroic_intervention_grants_indestructible_to_your_perms() {
     let bear_card = g.battlefield_find(bear).expect("Bear alive");
     assert!(bear_card.has_keyword(&crate::card::Keyword::Indestructible),
         "Bear gained indestructible");
+    assert!(bear_card.has_keyword(&crate::card::Keyword::Hexproof),
+        "Bear gained hexproof");
 }
 
 #[test]

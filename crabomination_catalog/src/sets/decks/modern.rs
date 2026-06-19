@@ -13709,15 +13709,24 @@ pub fn heroic_intervention() -> CardDefinition {
         name: "Heroic Intervention",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
+        // "Permanents you control gain hexproof and indestructible until
+        // end of turn."
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::ControlledByYou,
             ),
-            body: Box::new(Effect::GrantKeyword {
-                what: Selector::TriggerSource,
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            }),
+            body: Box::new(Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Hexproof,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
         },
         ..Default::default()
     }
