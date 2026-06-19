@@ -657,14 +657,11 @@ pub fn krosan_grip() -> CardDefinition {
 ///
 /// ✅ Wired as `Effect::ChooseN { picks: [2, 4], modes }` — auto-decider
 /// picks bounce a nonland permanent + draw a card (the two modes that
-/// share a single target slot most naturally). Counter target spell
-/// (mode 0), counter target ability (mode 1), and copy target creature
-/// (mode 3) sit in `modes` for future mode-pick UI: the engine has no
-/// ability-counter primitive (mode 1) and no permanent-copy primitive
-/// (mode 3); both fall back to Noop in their slots. Mode 0 (counter
-/// spell) is selectable via the mode-pick UI but uses an incompatible
-/// target filter (spell on stack vs. nonland permanent), so the
-/// default auto-pick avoids it.
+/// share a single target slot most naturally). All five modes are real:
+/// counter spell (`CounterSpell`), counter ability (`CounterAbility`),
+/// bounce (`Move`), copy a creature you control (`CreateTokenCopyOf`),
+/// and draw. Mode 0/1 use stack-object target filters, so the default
+/// auto-pick avoids them (no compatible bounce/copy target slot).
 pub fn sublime_epiphany() -> CardDefinition {
     CardDefinition {
         name: "Sublime Epiphany",
@@ -678,9 +675,9 @@ pub fn sublime_epiphany() -> CardDefinition {
                     what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 },
                 // Mode 1: Counter target activated or triggered ability.
-                // Engine doesn't model ability counters yet; placeholder
-                // Noop preserves the printed mode count.
-                Effect::Noop,
+                Effect::CounterAbility {
+                    what: target_filtered(SelectionRequirement::HasAbilityOnStack),
+                },
                 // Mode 2: Return target nonland permanent to its owner's hand.
                 Effect::Move {
                     what: target_filtered(
@@ -688,9 +685,18 @@ pub fn sublime_epiphany() -> CardDefinition {
                     ),
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 },
-                // Mode 3: Copy target creature you control — permanent-
-                // copy primitive ⏳, falls back to Noop.
-                Effect::Noop,
+                // Mode 3: Create a token that's a copy of target creature you control.
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                    non_legendary: false,
+                },
                 // Mode 4: Target player draws a card.
                 Effect::Draw {
                     who: Selector::You,

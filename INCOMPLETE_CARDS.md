@@ -55,7 +55,7 @@ is also the idiom for a deliberate "you may … (or decline)" option.
 
 | Card | Location | Verdict |
 |---|---|---|
-| Sublime Epiphany ✓ | stx/extras_02.rs:668 | **Real gap.** Mode 1 (counter target ability) and Mode 3 (copy creature) are `Noop` placeholders — no ability-counter / permanent-copy primitive. |
+| Sublime Epiphany ✓ | stx/extras_02.rs:668 | **Fixed.** All five modes now real: mode 1 → `Effect::CounterAbility`, mode 3 → `Effect::CreateTokenCopyOf`. |
 | Elite Interceptor ✓ | sos/mdfcs.rs:181 | **Not a gap.** Arm #2 (`Noop`) is the deliberate "decline" half of "you may tap or untap"; the draw is unconditional. |
 
 > Notes: (1) an earlier manual pass mislabeled the Sublime Epiphany finding as a

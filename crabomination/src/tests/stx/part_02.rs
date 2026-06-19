@@ -1199,6 +1199,59 @@ fn sublime_epiphany_resolves_counter_bounce_draw() {
     );
 }
 
+#[test]
+fn sublime_epiphany_mode_three_copies_a_creature_you_control() {
+    // CR 700.2d override → mode 3 only: create a token copy of target
+    // creature you control.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sublime_epiphany());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![3])]));
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(after, before + 1, "a token copy of the bear was created");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0
+            && c.definition.name == "Grizzly Bears").count(),
+        2,
+        "the token shares the bear's name"
+    );
+}
+
+#[test]
+fn sublime_epiphany_mode_one_counters_an_ability() {
+    // CR 700.2d override → mode 1 only: counter target activated/triggered
+    // ability. Devourer of Destiny's on-cast Scry trigger is the target.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    g.priority.player_with_priority = 1;
+    let id = g.add_card_to_hand(1, catalog::sublime_epiphany());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.players[1].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(dev)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable targeting the trigger source");
+    drain_stack(&mut g);
+    assert!(!g.stack.iter().any(|si| matches!(
+        si, crate::game::StackItem::Trigger { source, .. } if *source == dev
+    )), "the Scry trigger was countered");
+}
+
 // ── Persist (STA reprint) ──────────────────────────────────────────────────
 
 #[test]
