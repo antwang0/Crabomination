@@ -3143,3 +3143,37 @@ fn cr_702_140b_illegal_host_enters_as_normal_creature() {
     assert_eq!((r.power(), r.toughness()), (2, 3));
     assert!(r.mutate_stack.is_empty(), "no merge happened");
 }
+
+// ── CR 702.31 — Horsemanship ─────────────────────────────────────────────────
+
+/// CR 702.31b — a creature with horsemanship can't be blocked by creatures
+/// without horsemanship (one-directional, like flying).
+#[test]
+fn cr_702_31_horsemanship_only_blocked_by_horsemanship() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::guan_yu_sainted_warrior()); // Horsemanship
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no horsemanship
+    let acomp = g.computed_permanent(atk).unwrap();
+    let binst = g.battlefield_find(blk).unwrap();
+    let bcomp = g.computed_permanent(blk).unwrap();
+    assert!(!crate::game::can_block_attacker_computed(
+        binst, &bcomp, &acomp.keywords, &acomp.colors, acomp.power),
+        "a non-horsemanship creature can't block a horsemanship attacker");
+}
+
+// ── CR 702.28 — Shadow (reverse direction) ───────────────────────────────────
+
+/// CR 702.28b — a creature *without* shadow can't be blocked by a creature
+/// *with* shadow either.
+#[test]
+fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // no shadow
+    let blk = g.add_card_to_battlefield(1, catalog::soltari_priest()); // Shadow
+    let acomp = g.computed_permanent(atk).unwrap();
+    let binst = g.battlefield_find(blk).unwrap();
+    let bcomp = g.computed_permanent(blk).unwrap();
+    assert!(!crate::game::can_block_attacker_computed(
+        binst, &bcomp, &acomp.keywords, &acomp.colors, acomp.power),
+        "a shadow creature can't block a non-shadow attacker");
+}
