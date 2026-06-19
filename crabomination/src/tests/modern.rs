@@ -58111,6 +58111,97 @@ fn mutate_onto_fresh_host(g: &mut GameState, card: CardId) -> CardId {
     host
 }
 
+/// Blood Curdle kills a creature and hands one of yours a menace counter.
+#[test]
+fn blood_curdle_destroys_and_grants_menace() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::blood_curdle());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blood Curdle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature destroyed");
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Menace));
+}
+
+/// Helica Glider enters with a chosen flying counter.
+#[test]
+fn helica_glider_enters_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)])); // flying
+    let id = g.add_card_to_hand(0, catalog::helica_glider());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Helica Glider");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Maraleaf Pixie taps for green or blue.
+#[test]
+fn maraleaf_pixie_makes_mana() {
+    let mut g = two_player_game();
+    let pix = g.add_card_to_battlefield(0, catalog::maraleaf_pixie());
+    g.clear_sickness(pix);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pix, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    let pool = g.players[0].mana_pool.total();
+    assert_eq!(pool, 1, "produced one mana");
+}
+
+/// Skull Prophet's second ability self-mills two.
+#[test]
+fn skull_prophet_mills() {
+    let mut g = two_player_game();
+    let sp = g.add_card_to_battlefield(0, catalog::skull_prophet());
+    g.clear_sickness(sp);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let before = g.players[0].graveyard.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sp, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("mill ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), before + 2, "milled two cards");
+}
+
+/// Dreamtail Heron draws on mutate and flies.
+#[test]
+fn dreamtail_heron_draws_on_mutate() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let heron = g.add_card_to_hand(0, catalog::dreamtail_heron());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let host = mutate_onto_fresh_host(&mut g, heron);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(host).unwrap().definition.keywords.contains(&Keyword::Flying));
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"), "drew on mutate");
+}
+
+/// Barrier Breach exiles up to three enchantments.
+#[test]
+fn barrier_breach_exiles_enchantments() {
+    let mut g = two_player_game();
+    let e1 = g.add_card_to_battlefield(1, catalog::whirlwind_of_thought());
+    let id = g.add_card_to_hand(0, catalog::barrier_breach());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(e1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Barrier Breach");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(e1).is_none(), "enchantment exiled");
+}
+
 /// Porcuparrot pings for X = number of times it has mutated.
 #[test]
 fn porcuparrot_pings_by_mutate_count() {

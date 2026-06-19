@@ -53114,6 +53114,152 @@ pub fn boneyard_lurker() -> CardDefinition {
     }
 }
 
+/// Blood Curdle — {3}{B} Instant. Destroy target creature; put a menace
+/// counter on a creature you control.
+pub fn blood_curdle() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Curdle",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::AddKeywordCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Menace,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Helica Glider — {2}{W} 2/2 Nightmare Squirrel. Enters with your choice of a
+/// flying counter or a first strike counter on it.
+pub fn helica_glider() -> CardDefinition {
+    CardDefinition {
+        name: "Helica Glider",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Squirrel],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::FirstStrike,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Maraleaf Pixie — {G}{U} 2/2 Faerie. Flying. {T}: Add {G} or {U}.
+pub fn maraleaf_pixie() -> CardDefinition {
+    CardDefinition {
+        name: "Maraleaf Pixie",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(vec![Color::Green, Color::Blue], Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skull Prophet — {B}{G} 3/1 Human Druid. {T}: Add {B} or {G}. {T}: Mill two.
+pub fn skull_prophet() -> CardDefinition {
+    CardDefinition {
+        name: "Skull Prophet",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColors(vec![Color::Black, Color::Green], Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dreamtail Heron — {4}{U} 3/4 Elemental Bird. Flying. Mutate {3}{U}. On
+/// mutate, draw a card.
+pub fn dreamtail_heron() -> CardDefinition {
+    CardDefinition {
+        name: "Dreamtail Heron",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        mutate: Some(cost(&[generic(3), u()])),
+        triggered_abilities: vec![on_mutate(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Barrier Breach — {2}{G} Instant. Exile up to three target enchantments.
+/// Cycling {2}.
+pub fn barrier_breach() -> CardDefinition {
+    CardDefinition {
+        name: "Barrier Breach",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::ApplyToTargets {
+            max_targets: 3,
+            filter: SelectionRequirement::Enchantment,
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Exile,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Porcuparrot — {3}{R} 3/4 Bird Beast. Mutate {2}{R}. {T}: deals X damage to
 /// any target, where X is the number of times it has mutated.
 pub fn porcuparrot() -> CardDefinition {
