@@ -15,6 +15,7 @@
 //!        - **Dead abilities**: a triggered / activated / loyalty ability
 //!          whose `effect` is entirely empty. The ability exists but does
 //!          nothing when it fires.
+//!
 //!      These need no knowledge of the printed card — an empty arm/ability is
 //!      a bug by construction.
 //!
@@ -125,10 +126,10 @@ fn scan_card(def: &CardDefinition) -> Vec<StructuralFinding> {
     ] {
         if let Some(arr) = v.get(key).and_then(Value::as_array) {
             for (i, ab) in arr.iter().enumerate() {
-                if let Some(eff) = ab.get("effect") {
-                    if effect_is_empty(eff) {
-                        out.push(StructuralFinding::DeadAbility { kind, index: i });
-                    }
+                if let Some(eff) = ab.get("effect")
+                    && effect_is_empty(eff)
+                {
+                    out.push(StructuralFinding::DeadAbility { kind, index: i });
                 }
             }
         }

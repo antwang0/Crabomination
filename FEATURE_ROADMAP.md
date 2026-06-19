@@ -128,10 +128,11 @@ Each unblocks a large swath of cards.
   target filters (Hearth Kami's "artifact with mana value X" via
   `ManaValueExactlyXFromCost`). "Up to N targets" ships via
   `Effect::ApplyToTargets` (Sea God's Scorn bounce-3, Wrap in Flames
-  1-to-each-of-3). Protection now gates spells *and* abilities (CR 702.16c —
-  `ability_target_has_protection`) across color / creatures / creature-type
-  (Kitsune Riftwalker) / spell-subtype. Remaining: "target each",
-  protection-from-color combat re-check.
+  1-to-each-of-3, Elemental Expressionism bounce-2). Protection now gates spells
+  *and* abilities (CR 702.16c — `ability_target_has_protection`) across color /
+  creatures / creature-type (Kitsune Riftwalker, Yawgmoth, Baneslayer) /
+  spell-subtype / **multicolored** (`ProtectionFromMulticolored` — Stonecoil
+  Serpent). Remaining: "target each", protection-from-color combat re-check.
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
   land-type statics ✅ (Blood Moon, Urborg). Remaining: CDA corners, full
   text-box swaps, "becomes a copy of" layer interaction.
@@ -146,8 +147,9 @@ Each unblocks a large swath of cards.
 - ⏳ **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
   CR 120/704. (Wither/Infect damage-as-counters already ships; this is the
   marking-interplay audit.)
-- ⏳ **Loyalty fidelity:** loyalty-set effects, "any time" riders, proliferate on
-  loyalty, attacking-planeswalker redirect.
+- 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
+  (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`).
+  Remaining: "any time" activation riders, attacking-planeswalker redirect.
 - 🟡 **State-based action coverage:** ±1/±1 annihilation ✅, counter caps ✅,
   legend rule ✅, saga sacrifice ✅, world rule ✅, illegally-attached Aura ✅
   (704.5n — host fails the printed enchant filter). Remaining: Battle/Dungeon

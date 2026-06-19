@@ -99,6 +99,18 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Cast-time modal choice (CR 601.2b) for "choose two of four" cards.**
+  `Effect::ChooseN` resolves the mode pick at *resolution* via the decider, so
+  per-mode targets for an arbitrary pick can't be supplied at cast. The five STX
+  guild Commands (Silverquill/Lorehold/Witherbloom/Quandrix/Prismari) therefore
+  still resolve two fixed default modes. Real fix: choose modes during casting
+  and gather each chosen mode's targets then (also unblocks Sublime Epiphany's
+  mode-pick UI for arbitrary combinations). Oracle modes captured 2026-06-19.
+- ⏳ **Veil of Summer's hexproof-from-blue/black rider** — the only dropped half;
+  needs a turn-scoped "you and your permanents gain hexproof from {color}".
+- ⏳ **Conditional-keyword statics beyond P/T** — `PumpSelfIf.keywords` covers the
+  self case (Bloodghast's opp-≤10 haste). A team/granted conditional-keyword
+  static (e.g. "creatures you control gain X while …") would generalize it.
 - ⏳ **CHK cards/primitives deferred:**
   - `Effect::ApplyToTargets` now does "do X to each of up to N targets" — Yosei's
     "tap up to five target permanents that player controls" could be remodeled

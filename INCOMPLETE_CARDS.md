@@ -70,15 +70,19 @@ is also the idiom for a deliberate "you may … (or decline)" option.
 Fix the primitive → fix the whole cluster.
 
 ### 1. No multi-target / "up to N targets" / "divided as you choose" prompt
-Collapses to a single target or a fixed split.
-Fireball · Return to Dust · Wear // Tear · Aether Helix · Elemental Expressionism ·
-Sigardian Savior · Embrose · Tymaret · Yosei (taps all) · Rag Dealer · Skullsnatcher ·
-Prismari Charm · Daring Diversion · Aether Helix · Pull from the Grave · Rabid Attack.
+Mostly **solved** via `Effect::ApplyToTargets` (up to N) and
+`Effect::DealDamageDivided` (divide). Done: Elemental Expressionism (bounce ≤2),
+Daring Diversion (4 divided). Remaining: Fireball (any-number split) · Return to
+Dust (conditional 2nd target) · Yosei (taps all → up-to-5) · Rag Dealer ·
+Skullsnatcher · Pull from the Grave · Rabid Attack.
 
 ### 2. No "choose two of four" modal selection (player can't pick modes)
-All five STX guild Commands (Silverquill / Lorehold / Witherbloom / Quandrix /
-Prismari) · Moment of Reckoning · Vanquish the Horde · Silverquill Command ·
-Lorehold Pledge of Unity · **Sublime Epiphany** (and its two `Noop` modes above).
+**Sublime Epiphany** now has all five modes real (CounterAbility +
+CreateTokenCopyOf). The five STX guild Commands still resolve two fixed default
+modes: real fix needs **cast-time** mode choice (CR 601.2b) — the engine resolves
+`ChooseN` at resolution, so per-mode targets for arbitrary picks can't be supplied
+at cast. Tracked: Silverquill / Lorehold / Witherbloom / Quandrix / Prismari
+Commands · Moment of Reckoning · Vanquish the Horde.
 
 ### 3. No MDFC / transform-and-cast-from-graveyard back faces (whole face unreachable)
 Pestilent Cauldron // Restorative Burst · Wandering Archaic // Explore the Vastlands ·
@@ -117,7 +121,10 @@ Kasmina's Transmutation · Fractalize · Lorehold Reclamation (Spirit-typing) ·
 Fractal-token color/type riders.
 
 ### 10. "Rest on bottom of library" approximated as "leave on top" / "to graveyard"
-Augur of Bolas · Sea Gate Oracle · Geometer's Arthropod · Paradox Surveyor · Conjurer's Bauble.
+**Stale** — `LookPickToHand { rest_to_graveyard: false }` already bottoms the
+rest. Augur of Bolas ✅ (also got its instant/sorcery filter) and Sea Gate Oracle
+✅ verified + de-stale-commented. Remaining to spot-check: Geometer's Arthropod ·
+Paradox Surveyor · Conjurer's Bauble.
 
 ---
 
@@ -138,8 +145,12 @@ Augur of Bolas · Sea Gate Oracle · Geometer's Arthropod · Paradox Surveyor ·
 | Silverquill Wordweaver | silverquill.rs:14650 | "each opponent discards" → Drain 1 |
 | Witherbloom Necromancer | witherbloom.rs:10709 | graveyard reanimation → Drain 1 |
 | Channel | modern.rs:11313 | "pay 1 life instead of {1} EOT" → one-shot lose-1-add-{C} |
-| Echocasting Symposium | sos/sorceries.rs:2126 | "copy of target creature" → fixed vanilla 3/3 token |
-| Rush of Knowledge | sos/mono.rs:584 | "draw = highest MV you control" → hardcoded draw 4 |
+| ~~Echocasting Symposium~~ ✅ | sos/sorceries.rs | already on `CreateTokenCopyOf` (doc was stale) |
+| ~~Rush of Knowledge~~ ✅ | stx/mono.rs | `Value::HighestManaValueAmong` (was hardcoded draw 4) |
+
+Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
+**synthesized** fabricated-name cards (only `_b###` factories exist), so the
+"substitution" is moot — there's no real oracle to match.
 
 ### Dropped static abilities on legendaries (whole side absent)
 | Card | Location | Missing |
@@ -155,9 +166,22 @@ Augur of Bolas · Sea Gate Oracle · Geometer's Arthropod · Paradox Surveyor ·
 | Generous Gift ✓ | modern.rs:8226 | victim gets no 3/3 Elephant (strictly stronger) |
 
 ### Other notable HIGH (doc-derived — confirm)
-Veil of Summer (gate/uncounterable/hexproof all dropped → Draw 1) ·
-Approach of the Second Sun (no win condition) · Heroic Intervention (hexproof half dropped) ·
-Fractal Tender (both triggers omitted) · Pestilent Cauldron / Wandering Archaic (back faces).
+Veil of Summer (✅ now wires the draw gate + uncounterable + lifegain-lock;
+only the hexproof-from-blue/black rider remains) · Approach of the Second Sun
+(✅ wins via `WinGame` — doc was stale) · ~~Heroic Intervention~~ ✅ (now grants
+hexproof + indestructible) · Fractal Tender (both triggers omitted) ·
+Pestilent Cauldron / Wandering Archaic (back faces).
+
+### Fixed this run (protection / keyword / copy primitives)
+Sublime Epiphany (CounterAbility + CreateTokenCopyOf modes) · Qasali Pridemage
+(Exalted) · Goblin King (mountainwalk) · Yawgmoth (protection from Humans) ·
+Baneslayer Angel (protection from Demons/Dragons) · Stonecoil Serpent
+(`ProtectionFromMulticolored`, new) · Gingerbrute (haste-only evasion) ·
+Built to Smash (+2/+2 + artifact trample) · Mirror Image (`non_legendary` copy) ·
+Bloodghast (can't-block + conditional haste) · Augur of Bolas (instant/sorcery
+filter) · Pestermite (SkipNextUntap) · Elemental Expressionism (bounce up to 2) ·
+Daring Diversion (DealDamageDivided) · Desperate Ritual / Magmatic Sinkhole /
+Tasigur (Splice / Delve).
 
 ---
 
