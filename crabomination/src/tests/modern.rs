@@ -26276,6 +26276,32 @@ fn augur_of_bolas_digs_into_hand() {
     assert_eq!(g.players[0].hand.len(), hand, "ETB pulled a card (cast -1, dig +1)");
 }
 
+/// Augur only grabs an instant/sorcery; the rest go to the bottom of the library.
+#[test]
+fn augur_of_bolas_filters_to_spells_and_bottoms_rest() {
+    let mut g = two_player_game();
+    // Top of library: a creature (not grabbable), then an instant, then a land.
+    g.add_card_to_library(0, catalog::forest());          // ends up bottom-most pushed last
+    g.add_card_to_library(0, catalog::lightning_bolt());  // the only eligible pick
+    g.add_card_to_library(0, catalog::grizzly_bears());   // top, not eligible
+    let id = g.add_card_to_hand(0, catalog::augur_of_bolas());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "grabbed the instant");
+    assert!(!g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the creature was not eligible to grab");
+    // The two non-picked cards are now at the bottom of the library.
+    let bottom2: Vec<&str> = g.players[0].library.iter().rev().take(2)
+        .map(|c| c.definition.name).collect();
+    assert!(bottom2.contains(&"Grizzly Bears") && bottom2.contains(&"Forest"),
+        "the rest went to the bottom, got {bottom2:?}");
+}
+
 #[test]
 fn pestermite_taps_a_permanent_on_etb() {
     let mut g = two_player_game();

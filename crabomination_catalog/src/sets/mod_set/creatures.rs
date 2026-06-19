@@ -1935,8 +1935,8 @@ pub fn llanowar_visionary() -> CardDefinition {
 }
 
 /// Augur of Bolas — {1}{U}, 1/3 Merfolk Wizard. ETB: look at the top three
-/// cards; put an instant or sorcery from among them into your hand (rest to
-/// the bottom — approximated by leaving them on top).
+/// cards; you may reveal an instant or sorcery from among them and put it
+/// into your hand, then put the rest on the bottom of your library.
 pub fn augur_of_bolas() -> CardDefinition {
     CardDefinition {
         name: "Augur of Bolas",
@@ -1954,8 +1954,10 @@ pub fn augur_of_bolas() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
-                pick_filter: None,
-            
+                pick_filter: Some(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
                 take: None,
                 to_battlefield: false,
             },
