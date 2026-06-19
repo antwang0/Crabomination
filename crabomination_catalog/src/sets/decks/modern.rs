@@ -39074,6 +39074,106 @@ pub fn jegantha_the_wellspring() -> CardDefinition {
     }
 }
 
+// ── Ikoria (IKO) batch — cycling, lifelink counters, tutors ───────────────
+
+/// Honey Mammoth — {4}{G}{G} 6/6 Elephant. ETB: gain 4 life.
+pub fn honey_mammoth() -> CardDefinition {
+    CardDefinition {
+        name: "Honey Mammoth",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(4) })],
+        ..Default::default()
+    }
+}
+
+/// Splendor Mare — {2}{W} 3/3 Elk Unicorn. Lifelink, Cycling {1}{W}. When you
+/// cycle this, put a lifelink counter on target creature you control.
+pub fn splendor_mare() -> CardDefinition {
+    CardDefinition {
+        name: "Splendor Mare",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elk, CreatureType::Unicorn],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink, Keyword::Cycling(cost(&[generic(1), w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                keyword: Keyword::Lifelink,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Boon of the Wish-Giver — {4}{U}{U} Sorcery. Draw four cards. Cycling {1}.
+pub fn boon_of_the_wish_giver() -> CardDefinition {
+    CardDefinition {
+        name: "Boon of the Wish-Giver",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Frostveil Ambush — {3}{U}{U} Instant. Tap up to two target creatures; they
+/// don't untap during their controller's next untap step. Cycling {1}.
+pub fn frostveil_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Frostveil Ambush",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::Seq(vec![
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Whisper Squad — {B} 1/1 Human Soldier. {1}{B}: Search your library for a
+/// card named Whisper Squad, put it onto the battlefield tapped, then shuffle.
+pub fn whisper_squad() -> CardDefinition {
+    CardDefinition {
+        name: "Whisper Squad",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasName("Whisper Squad".to_string()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Faerie Vandal — {1}{U} 1/2 Faerie Rogue, flash, flying. Second draw
 /// each turn: +1/+1 counter.
 pub fn faerie_vandal() -> CardDefinition {

@@ -57500,3 +57500,83 @@ fn kaheera_anthems_matching_creatures() {
     let bp = g.computed_permanent(bear).expect("bear alive");
     assert_eq!((bp.power, bp.toughness), (2, 2), "non-kindred Bear unaffected");
 }
+
+#[test]
+fn honey_mammoth_etb_gains_four_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::honey_mammoth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Honey Mammoth castable for {4}{G}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "gained 4 on ETB");
+}
+
+#[test]
+fn boon_of_the_wish_giver_draws_four() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::boon_of_the_wish_giver());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {4}{U}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 4, "drew four, spell left hand");
+}
+
+#[test]
+fn splendor_mare_cycle_adds_lifelink_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest()); // card to draw on cycle
+    let id = g.add_card_to_hand(0, catalog::splendor_mare());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle {1}{W}");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().keyword_counters.get(&Keyword::Lifelink).copied().unwrap_or(0),
+        1, "cycle trigger put a lifelink counter on our creature");
+}
+
+#[test]
+fn frostveil_ambush_taps_two_and_locks_untap() {
+    let mut g = two_player_game();
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::frostveil_ambush());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast Frostveil Ambush");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped, "both tapped");
+    assert!(g.battlefield_find(a).unwrap().skip_next_untap, "a skips its next untap");
+}
+
+#[test]
+fn whisper_squad_tutors_a_copy_onto_the_battlefield() {
+    let mut g = two_player_game();
+    let ws = g.add_card_to_battlefield(0, catalog::whisper_squad());
+    let copy = g.add_card_to_library(0, catalog::whisper_squad());
+    g.clear_sickness(ws);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(copy))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ws, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate {1}{B} tutor");
+    drain_stack(&mut g);
+    let on_bf = g.battlefield_find(copy).expect("copy entered the battlefield");
+    assert!(on_bf.tapped, "enters tapped");
+}
