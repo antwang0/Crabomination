@@ -58111,6 +58111,67 @@ fn mutate_onto_fresh_host(g: &mut GameState, card: CardId) -> CardId {
     host
 }
 
+/// Forbidden Friendship makes a Dinosaur and a Human Soldier.
+#[test]
+fn forbidden_friendship_makes_two_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::forbidden_friendship());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Forbidden Friendship");
+    drain_stack(&mut g);
+    let mine: Vec<&str> = g.battlefield.iter().filter(|c| c.controller == 0).map(|c| c.definition.name).collect();
+    assert!(mine.contains(&"Dinosaur") && mine.contains(&"Human Soldier"), "{mine:?}");
+}
+
+/// Easy Prey kills a small creature.
+#[test]
+fn easy_prey_destroys_small_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_hand(0, catalog::easy_prey());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Easy Prey");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "MV-2 creature destroyed");
+}
+
+/// Necropanther reanimates a small creature on mutate.
+#[test]
+fn necropanther_reanimates_on_mutate() {
+    let mut g = two_player_game();
+    let dead = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0); // MV 2
+    let dead_id = dead.id;
+    g.players[0].graveyard.push(dead);
+    let np = g.add_card_to_hand(0, catalog::necropanther());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(dead_id))]));
+    mutate_onto_fresh_host(&mut g, np);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead_id).is_some(), "creature reanimated to battlefield");
+}
+
+/// Cliffhaven Kitesail auto-equips and grants flying.
+#[test]
+fn cliffhaven_kitesail_grants_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::cliffhaven_kitesail());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cliffhaven Kitesail");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        "equipped creature has flying");
+}
+
 /// Blood Curdle kills a creature and hands one of yours a menace counter.
 #[test]
 fn blood_curdle_destroys_and_grants_menace() {

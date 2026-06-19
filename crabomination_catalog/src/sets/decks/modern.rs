@@ -53114,6 +53114,127 @@ pub fn boneyard_lurker() -> CardDefinition {
     }
 }
 
+/// Forbidden Friendship — {1}{R} Sorcery. Create a 1/1 red Dinosaur with haste
+/// and a 1/1 white Human Soldier.
+pub fn forbidden_friendship() -> CardDefinition {
+    CardDefinition {
+        name: "Forbidden Friendship",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Dinosaur".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    keywords: vec![Keyword::Haste],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Dinosaur],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Human Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Easy Prey — {1}{B} Instant. Destroy target creature with mana value 2 or
+/// less. Cycling {2}.
+pub fn easy_prey() -> CardDefinition {
+    CardDefinition {
+        name: "Easy Prey",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Necropanther — {1}{W}{B} 3/3 Cat Nightmare. Mutate {2}{W/B}{W/B}. On mutate,
+/// return target creature card with mana value 3 or less from your graveyard to
+/// the battlefield.
+pub fn necropanther() -> CardDefinition {
+    CardDefinition {
+        name: "Necropanther",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Nightmare],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        mutate: Some(cost(&[
+            generic(2),
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+        ])),
+        triggered_abilities: vec![on_mutate(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::InYourGraveyard)
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cliffhaven Kitesail — {1} Equipment. On entry attach to a creature you
+/// control; equipped creature has flying. Equip {2}.
+pub fn cliffhaven_kitesail() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Cliffhaven Kitesail",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        })],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Blood Curdle — {3}{B} Instant. Destroy target creature; put a menace
 /// counter on a creature you control.
 pub fn blood_curdle() -> CardDefinition {
