@@ -1888,7 +1888,6 @@ static DECKS: &[Factory] = &[
     super::decks::indatha_crystal,
     super::decks::raugrin_crystal,
     super::decks::zagoth_crystal,
-    super::decks::suntail_hawk,
     super::decks::excavation_mole,
     super::decks::bushmeat_poacher,
     super::decks::honey_mammoth,

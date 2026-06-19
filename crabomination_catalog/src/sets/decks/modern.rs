@@ -39151,20 +39151,6 @@ pub fn zagoth_crystal() -> CardDefinition {
     tri_crystal("Zagoth Crystal", vec![Color::Black, Color::Green, Color::Blue])
 }
 
-/// Suntail Hawk — {W} 1/1 Bird with flying.
-pub fn suntail_hawk() -> CardDefinition {
-    CardDefinition {
-        name: "Suntail Hawk",
-        cost: cost(&[w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        ..Default::default()
-    }
-}
-
 /// Excavation Mole — {2}{G} 3/3 Mole with trample. ETB: mill three cards.
 pub fn excavation_mole() -> CardDefinition {
     CardDefinition {

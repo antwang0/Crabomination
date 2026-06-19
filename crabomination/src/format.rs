@@ -362,8 +362,8 @@ fn card_meets_companion(rule: &CompanionRule, c: &CardDefinition) -> bool {
     match rule {
         CompanionRule::PermanentsManaValueAtMost(n) => !c.is_permanent() || mv <= *n,
         CompanionRule::NonlandManaValueAtLeast(n) => c.is_land() || mv >= *n,
-        CompanionRule::NonlandEvenManaValue => c.is_land() || mv % 2 == 0,
-        CompanionRule::NonlandOddManaValue => c.is_land() || mv % 2 == 1,
+        CompanionRule::NonlandEvenManaValue => c.is_land() || mv.is_multiple_of(2),
+        CompanionRule::NonlandOddManaValue => c.is_land() || !mv.is_multiple_of(2),
         CompanionRule::NoDuplicateManaSymbols => !cost_has_duplicate_symbol(c),
         CompanionRule::Singleton => true, // handled deck-wide below
         CompanionRule::CreatureTypesAmong(types) => {
@@ -453,13 +453,11 @@ pub fn companion_restriction_met(
             let shared = candidates
                 .iter()
                 .any(|t| nonland.iter().all(|c| c.card_types.contains(t)));
-            if !nonland.is_empty() && !shared {
-                if let Some(c) = nonland.last() {
-                    return Err(DeckError::CompanionRestriction {
-                        companion: companion.name,
-                        card_name: c.name,
-                    });
-                }
+            if !shared && let Some(c) = nonland.last() {
+                return Err(DeckError::CompanionRestriction {
+                    companion: companion.name,
+                    card_name: c.name,
+                });
             }
         }
         _ => {}

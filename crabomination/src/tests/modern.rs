@@ -57672,9 +57672,3 @@ fn bushmeat_poacher_sac_gains_life_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
 
-#[test]
-fn suntail_hawk_is_a_one_mana_flyer() {
-    let d = catalog::suntail_hawk();
-    assert_eq!((d.power, d.toughness), (1, 1));
-    assert!(d.keywords.contains(&crate::card::Keyword::Flying));
-}

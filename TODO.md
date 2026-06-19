@@ -1717,6 +1717,17 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
+- ⏳ **Mutate (CR 702.140) — high-leverage, unblocks the whole Ikoria cycle.**
+  Cubwarden, Pollywog Symbiote, Boneyard Lurker, Dirge Bat, Migratory
+  Greathorn, Trumpeting Gnarr, Glowstone Recluse, Archipelagore, Cavern
+  Whisperer are all blocked on it. Model on the existing **meld** machinery
+  (`CardInstance.meld_parts` + leave-the-battlefield routing): a mutate pile is
+  a host permanent storing the over/under cards, sharing the topmost card's
+  characteristics with all abilities unioned, and the whole pile changes zones
+  together. Add `CardDefinition.mutate: Option<ManaCost>`, `GameAction::CastMutate
+  { card_id, target, on_top }`, an `EventKind::Mutated` for "whenever this
+  creature mutates" triggers, and a client cast-mutate UI.
+
 - ✅ **Catalog-wide stat sweep (2026-06-16) — same problem beyond STX.** The
   modern supplement (`decks/`, `mod_set/`) and small older sets carried the same
   synthesized-stat drift. New tooling `scripts/audit_catalog_stats.py` (cost +
