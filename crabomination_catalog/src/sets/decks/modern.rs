@@ -1898,12 +1898,8 @@ pub fn stoneforge_mystic() -> CardDefinition {
     }
 }
 
-/// Qasali Pridemage — {G}{W} 2/2 Cat Wizard. Exalted (omitted; no
-/// per-attack-power-pump primitive yet). {1}, Sacrifice this: Destroy
-/// target artifact or enchantment.
-///
-/// `sac_cost: true` matches Cankerbloom's shape (sac-self, destroy non-
-/// permanent type) — a useful piece of utility removal stapled to a body.
+/// Qasali Pridemage — {G}{W} 2/2 Cat Wizard with Exalted. {1}, Sacrifice
+/// this: Destroy target artifact or enchantment.
 pub fn qasali_pridemage() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -1916,6 +1912,7 @@ pub fn qasali_pridemage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::exalted()],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

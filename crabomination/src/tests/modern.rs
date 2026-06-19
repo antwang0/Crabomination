@@ -7268,6 +7268,23 @@ fn qasali_pridemage_sacs_to_destroy_artifact() {
         "Pridemage is sacrificed");
 }
 
+/// Qasali Pridemage's Exalted: attacking alone pumps it +1/+1.
+#[test]
+fn qasali_pridemage_exalted_pumps_lone_attacker() {
+    let mut g = two_player_game();
+    let pride = g.add_card_to_battlefield(0, catalog::qasali_pridemage());
+    g.clear_sickness(pride);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: pride, target: AttackTarget::Player(1),
+    }])).expect("Pridemage attacks alone");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(pride).expect("alive");
+    assert_eq!((cp.power, cp.toughness), (3, 3),
+        "Exalted pumps the lone attacker to 3/3");
+}
+
 /// Greater Good: sac creature, draw P, discard 3.
 #[test]
 fn greater_good_sacrifices_creature_and_draws_power() {
