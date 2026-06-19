@@ -784,6 +784,11 @@ fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
             None => lines.push((label, true)),
         }
     }
+    // CR 702.139c — surface the companion's deck-construction restriction.
+    if let Some(rule) = &def.companion {
+        let text = crate::systems::counter_tooltip::companion_restriction_text(rule);
+        lines.push((format!("Companion — {text}"), true));
+    }
     // Oracle-ish ability text (roadmap Tier 8): statics carry printed
     // descriptions; triggered/activated/loyalty abilities are phrased from
     // their event + effect shapes. Empty phrasings are skipped.

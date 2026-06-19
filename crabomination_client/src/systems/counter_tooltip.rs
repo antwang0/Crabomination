@@ -531,6 +531,24 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
 }
 
 
+/// Printed deck-construction restriction for a companion (CR 702.139c),
+/// for the card-info panel. Mirrors `format::companion_restriction_met`.
+pub(crate) fn companion_restriction_text(rule: &crabomination::card::CompanionRule) -> &'static str {
+    use crabomination::card::CompanionRule as C;
+    match rule {
+        C::PermanentsManaValueAtMost(_) => "Each permanent card in your starting deck has a low enough mana value.",
+        C::NonlandManaValueAtLeast(_) => "Your starting deck contains only high-mana-value cards and lands.",
+        C::NonlandEvenManaValue => "Your starting deck contains only cards with even mana values and lands.",
+        C::NonlandOddManaValue => "Your starting deck contains only cards with odd mana values and lands.",
+        C::NoDuplicateManaSymbols => "No card in your starting deck has more than one of the same mana symbol in its cost.",
+        C::Singleton => "Each nonland card in your starting deck has a different name.",
+        C::CreatureTypesAmong(_) => "Each creature card in your starting deck is one of the named types.",
+        C::NonlandShareACardType => "Each nonland card in your starting deck shares a card type.",
+        C::DeckSizeAtLeastOverMinimum(_) => "Your starting deck is well above the minimum size.",
+        C::PermanentsHaveActivatedAbility => "Each permanent card in your starting deck has an activated ability.",
+    }
+}
+
 /// Render a `Keyword` as a short human string for the tooltip. Keeps
 /// the labels short ("Lifelink", "First Strike") so a card with several
 /// granted keywords doesn't blow out the tooltip line.
@@ -845,7 +863,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_tooltip_body, keyword_label, keyword_reminder};
+    use super::{build_tooltip_body, companion_restriction_text, keyword_label, keyword_reminder};
     use crabomination::card::{CardId, CardType, CounterType};
     use crabomination::net::PermanentView;
 
@@ -1174,6 +1192,19 @@ mod tests {
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(regen ×3: absorbs 3 destructions this turn)"),
             "expected plural regen badge: {body}");
+    }
+
+    #[test]
+    fn companion_rules_render_restriction_text() {
+        use crabomination::card::CompanionRule as C;
+        for rule in [
+            C::PermanentsManaValueAtMost(2), C::NonlandManaValueAtLeast(3),
+            C::NonlandEvenManaValue, C::NonlandOddManaValue, C::NoDuplicateManaSymbols,
+            C::Singleton, C::CreatureTypesAmong(vec![]), C::NonlandShareACardType,
+            C::DeckSizeAtLeastOverMinimum(20), C::PermanentsHaveActivatedAbility,
+        ] {
+            assert!(!companion_restriction_text(&rule).is_empty(), "text for {rule:?}");
+        }
     }
 
     #[test]
