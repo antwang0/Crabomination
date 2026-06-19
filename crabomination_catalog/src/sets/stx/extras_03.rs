@@ -1770,15 +1770,9 @@ pub fn mind_drain() -> CardDefinition {
 
 // ── Hindering Light (Lorwyn reprint, STX flavor) ───────────────────────────
 
-/// Hindering Light — {W}{U} Instant (Lorwyn reprint, STX Silverquill /
-/// Quandrix hybrid flavor). "Counter target spell that targets you or
-/// a permanent you control. Draw a card."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Two-mana counter-cantrip.
-/// The printed "spell that targets you or permanent you control"
-/// target-restriction is engine-wide ⏳ (no "spell targeting X" filter);
-/// we collapse to "counter target spell" so the card ships a vanilla
-/// counter+cantrip. Tests:
+/// Hindering Light — {W}{U} Instant. "Counter target spell that targets you or
+/// a permanent you control. Draw a card." The target restriction rides
+/// `SelectionRequirement::SpellTargetsControllerOrControlled`. Tests:
 /// `hindering_light_counters_target_spell_and_draws`,
 /// `hindering_light_is_a_two_mana_wu_instant`.
 pub fn hindering_light() -> CardDefinition {
@@ -1788,7 +1782,7 @@ pub fn hindering_light() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                what: target_filtered(SelectionRequirement::SpellTargetsControllerOrControlled),
             },
             Effect::Draw {
                 who: Selector::You,

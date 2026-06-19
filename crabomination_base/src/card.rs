@@ -1008,6 +1008,11 @@ pub enum SelectionRequirement {
     /// `block_map.keys()` AND `block_map.len() == 1`.
     IsBlockingAlone,
     IsSpellOnStack,
+    /// A stack spell at least one of whose chosen targets is the choosing
+    /// player or a permanent they control (Hindering Light's "counter target
+    /// spell that targets you or a permanent you control"). Only meaningful
+    /// against a `StackItem::Spell`.
+    SpellTargetsControllerOrControlled,
     /// A stack spell that was NOT cast from its owner's hand (Wash Away's
     /// bracketed base mode — flashback/graveyard/exile casts qualify).
     SpellNotCastFromHand,

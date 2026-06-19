@@ -115,12 +115,21 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
         std::process::exit(1);
     }
     let defs: Vec<_> = parsed.main.iter().map(|f| f()).collect();
-    if let Err(errs) = crabomination::format::validate_deck(&defs, crabomination::format::Format::Modern) {
+    let format = crabomination::format::Format::Modern;
+    if let Err(errs) = crabomination::format::validate_deck(&defs, format) {
         eprintln!("{key}: deck is not Modern-legal:");
         for e in &errs {
             eprintln!("  - {e}");
         }
         std::process::exit(1);
+    }
+    // CR 702.139c — a sideboard companion must legalise the main deck.
+    let side: Vec<_> = parsed.sideboard.iter().map(|f| f()).collect();
+    for c in side.iter().filter(|c| c.companion.is_some()) {
+        if let Err(e) = crabomination::format::companion_restriction_met(c, &defs, format.rules().min_deck_size) {
+            eprintln!("{key}: {e}");
+            std::process::exit(1);
+        }
     }
     eprintln!("{key}: loaded {} cards from {path}", parsed.main.len());
     Some(parsed.main)

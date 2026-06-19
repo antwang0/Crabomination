@@ -1312,6 +1312,19 @@ impl GameState {
                         self.block_map.len() == 1 && self.block_map.contains_key(&card.id)
                     }
                     R::IsSpellOnStack => self.stack.iter().any(|si| matches!(si, StackItem::Spell { card: c, .. } if c.id == card.id)),
+                    // CR 115 — a stack spell that targets the chooser or a
+                    // permanent they control (Hindering Light).
+                    R::SpellTargetsControllerOrControlled => self.stack.iter().any(|si| {
+                        let StackItem::Spell { card: c, target, additional_targets, .. } = si else { return false };
+                        if c.id != card.id { return false; }
+                        target.iter().chain(additional_targets.iter()).any(|t| match t {
+                            crate::game::types::Target::Player(p) => *p == controller,
+                            crate::game::types::Target::Permanent(id) => self
+                                .battlefield
+                                .iter()
+                                .any(|o| o.id == *id && o.controller == controller),
+                        })
+                    }),
                     // Wash Away's base mode: a stack spell cast from
                     // anywhere but its owner's hand (CR 702.148 bracket).
                     R::SpellNotCastFromHand => self.stack.iter().any(|si| matches!(
@@ -1642,6 +1655,7 @@ impl GameState {
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
             | R::AttackedThisTurn | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
+            | R::SpellTargetsControllerOrControlled
             | R::DealtDamageToControllerThisTurn | R::IsEnchanted
             | R::IsEquipped | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,

@@ -210,7 +210,7 @@ fn mage_hunter_defender_drains_on_instant_cast() {
 // ── Detention Sphere ───────────────────────────────────────────────────────
 
 #[test]
-fn detention_sphere_exiles_target_nonland_permanent() {
+fn detention_sphere_exiles_until_it_leaves() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::detention_sphere());
@@ -225,7 +225,12 @@ fn detention_sphere_exiles_target_nonland_permanent() {
         x_value: None,
     }).expect("Detention Sphere castable");
     drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == bear), "bear in exile");
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear exiled on ETB");
+    // The Sphere leaves — the linked exile returns to the battlefield.
+    g.remove_from_battlefield_to_graveyard_raw(id);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear returns when the Sphere leaves");
 }
 
 // ── Mascot Trainer ─────────────────────────────────────────────────────────

@@ -376,27 +376,24 @@ pub fn mage_hunter_defender() -> CardDefinition {
 
 // ── Detention Sphere (synthesised STX-flavor enchantment) ─────────────────
 
-/// Detention Sphere — {1}{W}{U} Enchantment (synthesised STX
-/// Silverquill-aligned hybrid removal). "When this enchantment
-/// enters, exile target nonland permanent."
-///
-/// Push (modern_decks, NEW, `stx::extras`): A 3-mana hybrid exile-on-
-/// ETB. The printed "until this leaves" return rider is omitted (no
-/// exile-until-leaves replacement primitive — same gap as Banisher
-/// Priest / Tidehollow Sculler). Tests:
-/// `detention_sphere_exiles_target_nonland_permanent`,
+/// Detention Sphere — {1}{W}{U} Enchantment. "When this enters, exile target
+/// nonland permanent until this leaves the battlefield." (The "all other
+/// permanents with the same name" multi-exile rider is approximated to the
+/// single target.) Tests: `detention_sphere_exiles_until_it_leaves`,
 /// `detention_sphere_is_a_three_mana_white_blue_enchantment`.
 pub fn detention_sphere() -> CardDefinition {
+    use crate::card::ExileReturnZone;
     CardDefinition {
         name: "Detention Sphere",
         cost: cost(&[generic(1), w(), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Exile {
+            effect: Effect::ExileUntilSourceLeaves {
                 what: target_filtered(
                     SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                 ),
+                return_to: ExileReturnZone::Battlefield,
             },
         }],
         ..Default::default()

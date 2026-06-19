@@ -4030,6 +4030,33 @@ fn hindering_light_counters_target_spell_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
 }
 
+/// Hindering Light can't counter a spell that doesn't target the caster or
+/// one of their permanents (CR 115 — `SpellTargetsControllerOrControlled`).
+#[test]
+fn hindering_light_cant_counter_spell_aimed_elsewhere() {
+    let mut g = two_player_game();
+    // Seat 0 casts a Bolt at its *own* creature — nothing seat 1 owns.
+    let own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Permanent(own_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    // Seat 1's Hindering Light has no legal target (the Bolt targets seat 1's
+    // opponent, not seat 1 or its permanents), so it can't be cast on the Bolt.
+    let id = g.add_card_to_hand(1, catalog::hindering_light());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Bolt aimed at the caster's opponent is not a legal target");
+}
+
 // ── Soul Shatter ───────────────────────────────────────────────────────────
 
 #[test]

@@ -106,7 +106,11 @@ impl GameState {
         // magecraft "exile a card from your graveyard" with an `Any` /
         // `Nonland` filter) must not grab the just-cast spell sitting on
         // the stack.
-        if matches!(req, crate::card::SelectionRequirement::IsSpellOnStack) {
+        if matches!(
+            req,
+            crate::card::SelectionRequirement::IsSpellOnStack
+                | crate::card::SelectionRequirement::SpellTargetsControllerOrControlled
+        ) {
             use crate::game::types::StackItem;
             // Topmost first: iterate the stack in reverse.
             let mut hostile: Option<Target> = None;
