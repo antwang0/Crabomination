@@ -358,6 +358,17 @@ impl GameState {
                     EntityRef::Player(_) => None,
                 })
                 .unwrap_or(0),
+            Value::HighestManaValueAmong(s) => self
+                .resolve_selector(s, ctx)
+                .into_iter()
+                .filter_map(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.battlefield_find(cid).map(|c| c.definition.cost.cmc() as i32)
+                    }
+                    EntityRef::Player(_) => None,
+                })
+                .max()
+                .unwrap_or(0),
             Value::DistinctTypesInTopOfLibrary { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;

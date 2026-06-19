@@ -414,6 +414,10 @@ pub enum Value {
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
     /// value X) and similar "filter by mana value" effects.
     ManaValueOf(Box<Selector>),
+    /// Highest mana value among the (battlefield) permanents the selector
+    /// resolves to; 0 if none. Rush of Knowledge ("draw cards equal to the
+    /// highest mana value among permanents you control").
+    HighestManaValueAmong(Box<Selector>),
     /// Converge value: the number of distinct colors of mana spent on the
     /// spell's cost. Stashed on `StackItem::Spell` at cast time and read
     /// from `EffectContext.converged_value` here. Used by Prismatic

@@ -2121,17 +2121,10 @@ pub fn follow_the_lumarets() -> CardDefinition {
 
 /// Echocasting Symposium — {4}{U}{U} Sorcery — Lesson.
 /// "Target player creates a token that's a copy of target creature you
-/// control. / Paradigm — ..."
+/// control." Paradigm offers a free repeat each pre-combat main.
 ///
-/// Body: approximated as you-create-a-copy of your own chosen creature
-/// via `Effect::CreateToken` over a "vanilla mirror" 3/3 Wizard
-/// placeholder (no permanent-copy primitive yet — same gap as Applied
-/// Geometry). The printed "target player creates the copy" slot
-/// collapses to "you" (no multi-target prompt yet).
-///
-/// Push (modern_decks): **Paradigm rider** now wired via
-/// `Effect::RegisterParadigm` + `exile_on_resolve: true`. Each of the
-/// controller's pre-combat main phases offers a free copy.
+/// `CreateTokenCopyOf` of the targeted creature; the "target player
+/// creates" slot collapses to "you" (no two-typed-target-slot primitive).
 pub fn echocasting_symposium() -> CardDefinition {
     use crate::card::SpellSubtype;
     use crate::effect::shortcut::target_filtered;
@@ -2144,15 +2137,6 @@ pub fn echocasting_symposium() -> CardDefinition {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        // Push (modern_decks, batch 81): "Target player creates a token
-        // that's a copy of target creature you control." Wired via
-        // `Effect::CreateTokenCopyOf { who: You, source: target Creature
-        // ∧ ControlledByYou, no P/T override }`. The printed
-        // "target player creates" is approximated as "you create" — the
-        // engine has no two-target-slots-with-different-types primitive
-        // to thread the player target through; in practice the caster
-        // wouldn't gift the token to an opp. Paradigm still wired via
-        // `RegisterParadigm` + `exile_on_resolve: true`.
         effect: Effect::Seq(vec![
             Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,

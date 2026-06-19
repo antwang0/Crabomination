@@ -1242,11 +1242,14 @@ fn elemental_expressionism_bounces_and_creates() {
 }
 
 #[test]
-fn rush_of_knowledge_draws_four() {
+fn rush_of_knowledge_draws_highest_mv_you_control() {
     let mut g = two_player_game();
-    for _ in 0..5 {
+    for _ in 0..8 {
         g.add_card_to_library(0, catalog::grizzly_bears());
     }
+    // Highest-MV permanent we control is Colossal Dreadmaw (CMC 6).
+    g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // CMC 2, ignored
     let id = g.add_card_to_hand(0, catalog::rush_of_knowledge());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
@@ -1255,8 +1258,8 @@ fn rush_of_knowledge_draws_four() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
-    // Cast (removed 1) + draw 4 = +3 net.
-    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    // Cast (removed 1) + draw 6 = +5 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 5);
 }
 
 #[test]

@@ -580,15 +580,18 @@ pub fn elemental_expressionism() -> CardDefinition {
 
 /// Rush of Knowledge — {4}{U} Sorcery.
 /// "Draw cards equal to the highest mana value among permanents you control."
-///
-/// Approximation: draw 4 (typical high-MV permanent on board).
 pub fn rush_of_knowledge() -> CardDefinition {
-    use crate::effect::shortcut::draw;
     CardDefinition {
         name: "Rush of Knowledge",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: draw(4),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::HighestManaValueAmong(Box::new(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Permanent,
+            })),
+        },
         ..Default::default()
     }
 }
