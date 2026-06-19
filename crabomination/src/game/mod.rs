@@ -9842,6 +9842,7 @@ fn blocker_matches_block_filter(
         R::HasColor(c) => computed.colors.contains(c),
         R::Colorless => computed.colors.is_empty(),
         R::HasKeyword(k) => computed.keywords.contains(k),
+        R::HasMutate => blocker.definition.mutate.is_some(),
         R::HasCreatureType(t) => blocker.definition.subtypes.creature_types.contains(t)
             || computed.keywords.contains(&Keyword::Changeling),
         R::HasArtifactSubtype(a) => blocker.definition.subtypes.artifact_subtypes.contains(a),

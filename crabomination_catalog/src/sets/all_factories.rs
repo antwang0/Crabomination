@@ -2400,6 +2400,7 @@ static DECKS: &[Factory] = &[
     super::decks::dirge_bat,
     super::decks::migratory_greathorn,
     super::decks::boneyard_lurker,
+    super::decks::pollywog_symbiote,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

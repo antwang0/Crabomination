@@ -58075,6 +58075,27 @@ fn mutate_boneyard_lurker_regrows() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bears_id), "permanent card returned to hand");
 }
 
+/// Pollywog Symbiote makes a mutate spell cost {1} less and loots when you
+/// cast one. Glowstone Recluse's mutate cost {3}{G} drops to {2}{G}.
+#[test]
+fn pollywog_symbiote_discounts_and_loots_mutate() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pollywog_symbiote());
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // the looted draw
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2); // only {2}{G} — proves the discount
+    g.perform_action(GameAction::CastMutate {
+        card_id: recluse, target: host, on_top: true, x_value: None,
+    }).expect("mutate at the discounted {2}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(host).unwrap().definition.name, "Glowstone Recluse");
+    // Loot: drew the Grizzly Bears, then discarded it (sole hand card).
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "Pollywog looted a card into the graveyard");
+}
+
 #[test]
 fn frillscare_mentor_grants_menace_then_pumps_menace_team() {
     use crate::card::{CounterType, Keyword};

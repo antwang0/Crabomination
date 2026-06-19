@@ -53113,3 +53113,37 @@ pub fn boneyard_lurker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Pollywog Symbiote — {1}{U} 1/3 Frog. Creature spells with mutate you cast
+/// cost {1} less. Whenever you cast a creature spell with mutate, loot
+/// (draw then discard).
+pub fn pollywog_symbiote() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Pollywog Symbiote",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Frog], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Creature spells you cast cost {1} less if they have mutate.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::HasMutate),
+                amount: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(
+                    SelectionRequirement::Creature.and(SelectionRequirement::HasMutate),
+                ),
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

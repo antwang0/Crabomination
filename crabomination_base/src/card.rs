@@ -898,6 +898,9 @@ pub enum SelectionRequirement {
     PlayerDamagedBySourceThisTurn,
     HasColor(Color),
     HasKeyword(Keyword),
+    /// CR 702.140 — the card has a mutate cost (Pollywog Symbiote's
+    /// "creature spell you cast … if it has mutate").
+    HasMutate,
     /// The card has any cycling ability (Cycling / CyclingLife /
     /// Landcycling — CR 702.29). Zenith Flare's graveyard count.
     HasCyclingAbility,

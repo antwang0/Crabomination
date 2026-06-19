@@ -1218,6 +1218,7 @@ impl GameState {
                     // `ManaCost::colors()` (bare `Colored` scan missed them).
                     R::HasColor(c) => card.definition.cost.colors().contains(c),
                     R::HasKeyword(kw) => card.has_keyword(kw),
+                    R::HasMutate => card.definition.mutate.is_some(),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
                         crate::card::Keyword::Cycling(_)
@@ -1508,6 +1509,7 @@ impl GameState {
             // colorless in hidden zones.
             R::HasColor(c) => card.definition.cost.colors().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
+            R::HasMutate => card.definition.mutate.is_some(),
             R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                 k,
                 crate::card::Keyword::Cycling(_)

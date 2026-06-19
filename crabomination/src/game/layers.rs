@@ -641,7 +641,7 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::Tapped | R::Untapped => true,
         R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
-        | R::HasKeyword(_) => true,
+        | R::HasKeyword(_) | R::HasMutate => true,
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
         R::OtherThanSource => true,
@@ -702,6 +702,7 @@ pub(crate) fn requirement_matches_card(
         R::HasArtifactSubtype(a) => def.subtypes.artifact_subtypes.contains(a),
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
         R::HasKeyword(k) => def.keywords.contains(k),
+        R::HasMutate => def.mutate.is_some(),
         R::HasColor(c) => def
             .cost
             .symbols
