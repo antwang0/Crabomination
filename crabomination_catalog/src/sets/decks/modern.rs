@@ -8502,9 +8502,14 @@ pub fn pilgrims_eye() -> CardDefinition {
 }
 
 /// Goblin King — {1}{R}{R} Creature — Goblin, 2/2. Other Goblins you
-/// control get +1/+1. (Mountainwalk granted clause omitted.)
+/// control get +1/+1 and have mountainwalk.
 pub fn goblin_king() -> CardDefinition {
-    use crate::card::{StaticAbility, StaticEffect};
+    use crate::card::{LandType, StaticAbility, StaticEffect};
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
     CardDefinition {
         name: "Goblin King",
         cost: cost(&[generic(1), r(), r()]),
@@ -8515,17 +8520,19 @@ pub fn goblin_king() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        static_abilities: vec![StaticAbility {
-            description: "Other Goblins you control get +1/+1.",
-            effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::HasCreatureType(CreatureType::Goblin)
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                power: 1,
-                toughness: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Goblins you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
             },
-        }],
+            StaticAbility {
+                description: "Other Goblins you control have mountainwalk.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(),
+                    keyword: Keyword::Landwalk(LandType::Mountain),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

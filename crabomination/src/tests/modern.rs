@@ -12066,11 +12066,17 @@ fn pilgrims_eye_fetches_a_basic_to_hand() {
 
 #[test]
 fn goblin_king_anthems_goblins() {
+    use crate::card::{Keyword, LandType};
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::goblin_king());
+    let king = g.add_card_to_battlefield(0, catalog::goblin_king());
     let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // 1/1 Goblin
     let cp = g.computed_permanent(raider).expect("raider alive");
     assert_eq!((cp.power, cp.toughness), (2, 2), "Goblin King anthems other Goblins +1/+1");
+    assert!(cp.keywords.contains(&Keyword::Landwalk(LandType::Mountain)),
+        "other Goblins gain mountainwalk");
+    // "Other" — the King doesn't buff itself.
+    let kcp = g.computed_permanent(king).expect("king alive");
+    assert_eq!((kcp.power, kcp.toughness), (2, 2), "King doesn't anthem itself");
 }
 
 #[test]
