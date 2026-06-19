@@ -26314,7 +26314,9 @@ fn pestermite_taps_a_permanent_on_etb() {
         mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
-    assert!(g.battlefield.iter().find(|c| c.id == land).unwrap().tapped, "Pestermite tapped it");
+    let tgt = g.battlefield.iter().find(|c| c.id == land).unwrap();
+    assert!(tgt.tapped, "Pestermite tapped it");
+    assert!(tgt.skip_next_untap, "the tapped permanent won't untap next untap step");
 }
 
 #[test]

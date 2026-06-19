@@ -1966,8 +1966,8 @@ pub fn augur_of_bolas() -> CardDefinition {
     }
 }
 
-/// Pestermite — {2}{U}, 2/1 Faerie with Flash and Flying. ETB: tap target
-/// permanent. (The "it doesn't untap" rider is omitted.)
+/// Pestermite — {2}{U}, 2/1 Faerie with Flash and Flying. ETB: you may tap
+/// target permanent. It doesn't untap during its controller's next untap step.
 pub fn pestermite() -> CardDefinition {
     CardDefinition {
         name: "Pestermite",
@@ -1982,7 +1982,10 @@ pub fn pestermite() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+            effect: Effect::Seq(vec![
+                Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
+            ]),
         }],
         ..Default::default()
     }
