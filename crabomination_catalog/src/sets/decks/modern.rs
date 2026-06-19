@@ -32408,9 +32408,8 @@ pub fn lyra_dawnbringer() -> CardDefinition {
     }
 }
 
-/// Baneslayer Angel — {3}{W}{W} 5/5 Angel with Flying, First Strike, Lifelink.
-/// (Protection from Demons and from Dragons is dropped — protection is by color
-/// only in the engine.)
+/// Baneslayer Angel — {3}{W}{W} 5/5 Angel with Flying, First Strike, Lifelink,
+/// and protection from Demons and from Dragons.
 pub fn baneslayer_angel() -> CardDefinition {
     CardDefinition {
         name: "Baneslayer Angel",
@@ -32419,7 +32418,13 @@ pub fn baneslayer_angel() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
         power: 5,
         toughness: 5,
-        keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::FirstStrike,
+            Keyword::Lifelink,
+            Keyword::ProtectionFromCreatureType(CreatureType::Demon),
+            Keyword::ProtectionFromCreatureType(CreatureType::Dragon),
+        ],
         ..Default::default()
     }
 }

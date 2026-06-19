@@ -45254,6 +45254,23 @@ fn yawgmoth_sacrifices_for_counter_and_card() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear sacrificed");
 }
 
+/// Baneslayer Angel's protection from Dragons: a Dragon can't block her.
+#[test]
+fn baneslayer_protection_from_dragons_blocks_dragon_blocker() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::baneslayer_angel());
+    g.clear_sickness(angel);
+    let dragon = g.add_card_to_battlefield(1, catalog::balefire_dragon());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: angel, target: AttackTarget::Player(1),
+    }])).expect("Baneslayer attacks");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(dragon, angel)])).is_err(),
+        "a Dragon can't block a creature with protection from Dragons");
+}
+
 /// Yawgmoth's protection from Humans: a Human can't block him.
 #[test]
 fn yawgmoth_protection_from_humans_blocks_human_blocker() {
