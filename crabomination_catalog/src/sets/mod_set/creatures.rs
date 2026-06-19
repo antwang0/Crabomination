@@ -2083,6 +2083,7 @@ pub fn spark_double() -> CardDefinition {
             extra_creature_types: vec![],
             extra_keywords: vec![],
             keep_name: false,
+            non_legendary: false,
             extra_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::AddCounter {
@@ -2394,6 +2395,7 @@ pub fn clone_card() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![],
             keep_name: false,
+            non_legendary: false,
             extra_card_types: vec![],
         }),
         ..Default::default()
@@ -2420,6 +2422,7 @@ pub fn phyrexian_metamorph() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![],
             keep_name: false,
+            non_legendary: false,
             extra_card_types: vec![CardType::Artifact],
         }),
         ..Default::default()
@@ -2427,9 +2430,8 @@ pub fn phyrexian_metamorph() -> CardDefinition {
 }
 
 /// Mirror Image — {1}{U}, 0/0 Shapeshifter. "You may have Mirror Image
-/// enter the battlefield as a copy of a creature you control." (The
-/// "except it's not legendary" rider is omitted — no copy-supertype
-/// override yet.)
+/// enter the battlefield as a copy of a creature you control, except it's
+/// not legendary."
 pub fn mirror_image() -> CardDefinition {
     use crate::card::EntersAsCopy;
     CardDefinition {
@@ -2442,11 +2444,8 @@ pub fn mirror_image() -> CardDefinition {
         },
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            extra_creature_types: vec![],
-            extra_triggered: vec![],
-            extra_keywords: vec![],
-            keep_name: false,
-            extra_card_types: vec![],
+            non_legendary: true,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -2473,6 +2472,7 @@ pub fn stunt_double() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![Keyword::Flash],
             keep_name: false,
+            non_legendary: false,
             extra_card_types: vec![],
         }),
         ..Default::default()
@@ -2505,6 +2505,7 @@ pub fn phantasmal_image() -> CardDefinition {
             }],
             extra_keywords: vec![],
             keep_name: false,
+            non_legendary: false,
             extra_card_types: vec![],
         }),
         ..Default::default()
@@ -2532,6 +2533,7 @@ pub fn mockingbird() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![],
             keep_name: true,
+            non_legendary: false,
             extra_card_types: vec![],
         }),
         ..Default::default()

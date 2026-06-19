@@ -27204,6 +27204,29 @@ fn mirror_image_copies_only_your_own_creature() {
     assert_eq!(img.definition.name, "Grizzly Bears");
 }
 
+/// CR 707.2e — Mirror Image's copy is not legendary, so it dodges the legend
+/// rule and both it and the original survive.
+#[test]
+fn mirror_image_copy_is_not_legendary() {
+    use crate::card::Supertype;
+    let mut g = two_player_game();
+    // A legendary creature to copy — without the "not legendary" rider the
+    // copy would trigger the legend rule and one of them would die.
+    let legend = g.add_card_to_battlefield(0, catalog::thalia_guardian_of_thraben());
+    let id = g.add_card_to_hand(0, catalog::mirror_image());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let img = g.battlefield_find(id).expect("copy survives the legend rule");
+    assert_eq!(img.definition.name, "Thalia, Guardian of Thraben", "copied the legend");
+    assert!(!img.definition.supertypes.contains(&Supertype::Legendary),
+        "the copy is not legendary (CR 707.2e)");
+    assert!(g.battlefield_find(legend).is_some(), "the original legend also survives");
+}
+
 #[test]
 fn stunt_double_keeps_flash_after_copying() {
     use crate::card::Keyword;

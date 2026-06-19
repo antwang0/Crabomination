@@ -1733,6 +1733,10 @@ pub struct EntersAsCopy {
     /// copiable characteristics are stamped, so they survive the rewrite.
     #[serde(default)]
     pub extra_card_types: Vec<CardType>,
+    /// CR 707.2e — "except it's not legendary." When true the copy strips the
+    /// Legendary supertype so it doesn't trigger the legend rule (Mirror Image).
+    #[serde(default)]
+    pub non_legendary: bool,
 }
 
 fn one_u32() -> u32 { 1 }

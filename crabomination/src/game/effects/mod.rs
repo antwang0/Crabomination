@@ -559,7 +559,8 @@ impl GameState {
         if (!spec.extra_triggered.is_empty()
             || !spec.extra_keywords.is_empty()
             || !spec.extra_card_types.is_empty()
-            || spec.keep_name)
+            || spec.keep_name
+            || spec.non_legendary)
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
             let def = std::sync::Arc::make_mut(&mut c.definition);
@@ -577,6 +578,10 @@ impl GameState {
             }
             if spec.keep_name {
                 def.name = original_name;
+            }
+            // CR 707.2e — strip Legendary so the copy dodges the legend rule.
+            if spec.non_legendary {
+                def.supertypes.retain(|s| *s != crate::card::Supertype::Legendary);
             }
         }
         true
