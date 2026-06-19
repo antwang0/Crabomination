@@ -39097,6 +39097,123 @@ pub fn drannith_magistrate() -> CardDefinition {
     }
 }
 
+/// Mosscoat Goriak — {2}{G} 2/4 Beast with vigilance.
+pub fn mosscoat_goriak() -> CardDefinition {
+    CardDefinition {
+        name: "Mosscoat Goriak",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Lava Serpent — {5}{R} 5/5 Elemental Serpent with haste. Cycling {2}.
+pub fn lava_serpent() -> CardDefinition {
+    CardDefinition {
+        name: "Lava Serpent",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Serpent],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Haste, Keyword::Cycling(cost(&[generic(2)]))],
+        ..Default::default()
+    }
+}
+
+/// Glint — {1}{U} Instant. Target creature you control gets +0/+3 and gains
+/// hexproof until end of turn.
+pub fn glint() -> CardDefinition {
+    CardDefinition {
+        name: "Glint",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                power: Value::Const(0),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Springjaw Trap — {1} Artifact. Flash. {4}, {T}, Sacrifice this: it deals 3
+/// damage to any target.
+pub fn springjaw_trap() -> CardDefinition {
+    CardDefinition {
+        name: "Springjaw Trap",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Flash],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pacification Array — {1} Artifact. {2}, {T}: Tap target artifact or creature.
+pub fn pacification_array() -> CardDefinition {
+    CardDefinition {
+        name: "Pacification Array",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wretched Throng — {1}{U} 2/1 Zombie Horror. When it dies, you may search
+/// your library for a card named Wretched Throng and put it into your hand.
+pub fn wretched_throng() -> CardDefinition {
+    CardDefinition {
+        name: "Wretched Throng",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::MayDo {
+            description: "search for a Wretched Throng".to_string(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasName("Wretched Throng".to_string()),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Cackling Flames — {3}{R} Instant. Deal 3 damage to any target — 5 instead
 /// if you have no cards in hand (Hellbent).
 pub fn cackling_flames() -> CardDefinition {

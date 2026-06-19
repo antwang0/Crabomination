@@ -57672,3 +57672,75 @@ fn bushmeat_poacher_sac_gains_life_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
 
+
+#[test]
+fn mosscoat_goriak_and_lava_serpent_stats() {
+    use crate::card::Keyword;
+    let g1 = catalog::mosscoat_goriak();
+    assert_eq!((g1.power, g1.toughness), (2, 4));
+    assert!(g1.keywords.contains(&Keyword::Vigilance));
+    let s = catalog::lava_serpent();
+    assert_eq!((s.power, s.toughness), (5, 5));
+    assert!(s.keywords.contains(&Keyword::Haste));
+    assert!(s.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
+}
+
+#[test]
+fn glint_buffs_toughness_and_grants_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::glint());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Glint castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).expect("bear alive");
+    assert_eq!((cp.power, cp.toughness), (2, 5), "+0/+3");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "gains hexproof");
+}
+
+#[test]
+fn springjaw_trap_sacrifices_for_three_damage() {
+    let mut g = two_player_game();
+    let trap = g.add_card_to_battlefield(0, catalog::springjaw_trap());
+    g.clear_sickness(trap);
+    g.players[0].mana_pool.add_colorless(4);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trap, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+    }).expect("activate {4},T,Sac");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(trap).is_none(), "trap sacrificed");
+    assert_eq!(g.players[1].life, life - 3, "dealt 3");
+}
+
+#[test]
+fn pacification_array_taps_a_creature() {
+    let mut g = two_player_game();
+    let array = g.add_card_to_battlefield(0, catalog::pacification_array());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(array);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: array, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).expect("activate {2},T");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target creature tapped");
+}
+
+#[test]
+fn wretched_throng_death_tutors_a_copy() {
+    let mut g = two_player_game();
+    let throng = g.add_card_to_battlefield(0, catalog::wretched_throng());
+    let copy = g.add_card_to_library(0, catalog::wretched_throng());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(copy)),
+    ]));
+    kill_with_bolt(&mut g, throng);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == copy), "tutored a copy to hand");
+}
