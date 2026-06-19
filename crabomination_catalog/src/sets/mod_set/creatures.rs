@@ -3531,17 +3531,13 @@ pub fn marauding_mako() -> CardDefinition {
     }
 }
 
-/// Bloodghast — {B}{B}, 2/1 Vampire Spirit. "Landfall — Whenever a land
-/// enters under your control, you may return Bloodghast from your
-/// graveyard to the battlefield."
-///
-/// Wired via a `LandPlayed` + `YourControl` triggered ability whose
-/// effect returns every Bloodghast (modeled as "creature card") in
-/// your graveyard to the battlefield. Multiple Bloodghasts in
-/// graveyard all return at once, faithful to landfall's per-copy
-/// trigger. The "haste while opp ≤ 10 life" rider is omitted (no
-/// conditional-keyword static yet).
+/// Bloodghast — {B}{B}, 2/1 Vampire Spirit. "Bloodghast can't block. It has
+/// haste as long as an opponent has 10 or less life. Landfall — Whenever a
+/// land enters under your control, you may return it from your graveyard to
+/// the battlefield." Conditional haste rides `PumpSelfIf.keywords`.
 pub fn bloodghast() -> CardDefinition {
+    use crate::card::{Predicate, StaticAbility};
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Bloodghast",
         cost: cost(&[b(), b()]),
@@ -3552,6 +3548,16 @@ pub fn bloodghast() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        static_abilities: vec![StaticAbility {
+            description: "Has haste as long as an opponent has 10 or less life.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::PlayerLifeAtMost { who: PlayerRef::EachOpponent, life: 10 },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Haste],
+            },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::FromYourGraveyard),
             effect: Effect::Move {

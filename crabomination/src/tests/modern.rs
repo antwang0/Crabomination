@@ -8772,6 +8772,22 @@ fn bloodghast_returns_from_graveyard_when_you_play_a_land() {
         "Bloodghast should no longer be in the graveyard");
 }
 
+/// Bloodghast can't block and gains haste only while an opponent is at ≤10 life.
+#[test]
+fn bloodghast_conditional_haste_and_cant_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bg = g.add_card_to_battlefield(0, catalog::bloodghast());
+    assert!(g.computed_permanent(bg).unwrap().keywords.contains(&Keyword::CantBlock),
+        "Bloodghast can't block");
+    // Opponent at full life → no haste.
+    assert!(!g.computed_permanent(bg).unwrap().keywords.contains(&Keyword::Haste),
+        "no haste while opponent is above 10 life");
+    g.players[1].life = 9;
+    assert!(g.computed_permanent(bg).unwrap().keywords.contains(&Keyword::Haste),
+        "gains haste once an opponent is at 10 or less life");
+}
+
 #[test]
 fn ichorid_returns_at_upkeep_then_sacrifices_at_end_step() {
     // Real Oracle: at your upkeep, if Ichorid is in your graveyard, you
