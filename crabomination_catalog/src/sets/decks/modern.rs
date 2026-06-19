@@ -38061,10 +38061,10 @@ pub fn tourach_dread_cantor() -> CardDefinition {
     }
 }
 
-/// Yawgmoth, Thran Physician — {2}{B}{B} 2/4 Legendary Human Cleric.
-/// Pay 1 life, sacrifice another creature: -1/-1 counter on up to one target
-/// creature, draw a card. {B}{B}, discard a card: proliferate.
-/// (Protection from Humans is dropped — no creature-type protection yet.)
+/// Yawgmoth, Thran Physician — {2}{B}{B} 2/4 Legendary Human Cleric with
+/// protection from Humans. Pay 1 life, sacrifice another creature: -1/-1
+/// counter on up to one target creature, draw a card. {B}{B}, discard a
+/// card: proliferate.
 pub fn yawgmoth_thran_physician() -> CardDefinition {
     CardDefinition {
         name: "Yawgmoth, Thran Physician",
@@ -38077,6 +38077,7 @@ pub fn yawgmoth_thran_physician() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
+        keywords: vec![Keyword::ProtectionFromCreatureType(CreatureType::Human)],
         activated_abilities: vec![
             ActivatedAbility {
                 life_cost: 1,

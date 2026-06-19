@@ -45254,6 +45254,23 @@ fn yawgmoth_sacrifices_for_counter_and_card() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear sacrificed");
 }
 
+/// Yawgmoth's protection from Humans: a Human can't block him.
+#[test]
+fn yawgmoth_protection_from_humans_blocks_human_blocker() {
+    let mut g = two_player_game();
+    let yawg = g.add_card_to_battlefield(0, catalog::yawgmoth_thran_physician());
+    g.clear_sickness(yawg);
+    let human = g.add_card_to_battlefield(1, catalog::champion_of_the_parish()); // Human Soldier
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: yawg, target: AttackTarget::Player(1),
+    }])).expect("Yawgmoth attacks");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(human, yawg)])).is_err(),
+        "a Human can't block a creature with protection from Humans");
+}
+
 /// Archfiend of Ifnir withers opposing creatures when you cycle.
 #[test]
 fn archfiend_of_ifnir_withers_on_cycle() {
