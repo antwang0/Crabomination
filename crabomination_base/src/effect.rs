@@ -685,6 +685,12 @@ pub enum Predicate {
     /// 702.139). Backed by `CardInstance.cast_from_escape`; gates the
     /// "sacrifice it unless it escaped" ETB rider on Kroxa / Uro.
     SourceCastFromEscape,
+    /// True if the source permanent reached the battlefield by being cast as
+    /// a spell (any cast path), as opposed to being a token, conjured, or put
+    /// onto the battlefield by another effect. Gates "if you cast it" ETB
+    /// riders (Skitterbeam Battalion) — token copies and reanimated bodies
+    /// don't re-fire. Backed by the persistent `CardInstance` cast flags.
+    SourceWasCast,
     /// CR 702.77 — true if a card in exile is champion-linked to the
     /// effect's source (`exiled_by` points at it). Gates "when a [type] is
     /// championed with this creature" riders (Mistbind Clique).

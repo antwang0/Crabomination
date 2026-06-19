@@ -1357,6 +1357,25 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Prototype (CR 702.160): for any hand card with a prototype face, offer
+    // a `CastPrototype` candidate. The smaller colored cost is often the only
+    // affordable line early; the body's ETB auto-targets through the cast path.
+    for c in state.players[seat].hand.iter() {
+        if c.definition.has_prototype().is_none() {
+            continue;
+        }
+        let action = GameAction::CastPrototype {
+            card_id: c.id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Split cards (CR 709): for any hand card with a non-aftermath split,
     // offer a `CastSplitRight` candidate (the left half is already covered by
     // the plain `CastSpell` path). Auto-target the right half's effect.

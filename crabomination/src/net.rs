@@ -373,6 +373,12 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventurable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with a Prototype face they could cast
+    /// for the prototype cost right now (CR 702.160). Lets the client offer
+    /// "cast for prototype" distinct from the full-cost cast. Empty
+    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub prototypable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand that are split cards whose **right** half
     /// they could cast right now (CR 709). Lets the client offer the right
     /// half distinct from the default (left) cast. Empty off-priority.

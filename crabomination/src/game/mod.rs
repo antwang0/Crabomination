@@ -75,6 +75,9 @@ mod tests_thb;
 #[cfg(test)]
 #[path = "../tests/chk.rs"]
 mod tests_chk;
+#[cfg(test)]
+#[path = "../tests/bro.rs"]
+mod tests_bro;
 pub mod types;
 
 #[cfg(test)]
@@ -280,6 +283,9 @@ pub struct HandAffordances {
     /// probes the front face) so back-affordable MDFCs still highlight
     /// and hold open priority windows.
     pub back_castable: Vec<CardId>,
+    /// CR 702.160 — hand cards with Prototype castable for the prototype
+    /// cost right now, so the client can offer "cast for prototype".
+    pub prototypable: Vec<CardId>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -5086,6 +5092,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastPrototype {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_prototype(card_id, target, additional_targets, mode, x_value),
             GameAction::CastPrepareSpell {
                 creature_id,
                 target,

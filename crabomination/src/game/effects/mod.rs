@@ -5336,6 +5336,20 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::LifeSourcePower => {
+                        // Ward—Pay life equal to this creature's power.
+                        let n = ctx
+                            .source
+                            .and_then(|sid| self.computed_permanent(sid))
+                            .map(|c| c.power.max(0))
+                            .unwrap_or(0);
+                        if self.effective_life(affected_controller) >= n {
+                            self.pay_life_cost(affected_controller, n as u32);
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     // Not a printed ward cost (UnlessPlayerPays-only).
                     WardCost::GenericSourcePower => false,
                 };

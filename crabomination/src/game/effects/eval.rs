@@ -648,6 +648,18 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.cast_from_escape)
                 .unwrap_or(false),
+            Predicate::SourceWasCast => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .map(|c| {
+                    !c.is_token
+                        && (c.cast_from_hand
+                            || c.cast_from_exile
+                            || c.cast_via_flashback
+                            || c.cast_from_suspend
+                            || c.cast_from_escape)
+                })
+                .unwrap_or(false),
             Predicate::SourceChampionedSomething => ctx.source.is_some_and(|cid| {
                 self.exile.iter().any(|c| c.exiled_by.as_ref().is_some_and(|l| l.source == cid))
             }),

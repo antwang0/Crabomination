@@ -17,7 +17,7 @@ fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::SacrificeCreature => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
-        WardCost::GenericSourcePower => false,
+        WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
     }
 }
 
@@ -1391,6 +1391,52 @@ impl GameState {
             && let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
         {
             c.definition = front_def;
+        }
+        result
+    }
+
+    /// CR 702.160 — cast a Prototype artifact creature for its prototype
+    /// cost. Models the alternative cast like the MDFC back face: swap the
+    /// in-hand definition to the prototype-applied one (smaller cost, color,
+    /// and size; same abilities/types) and flag the instance so it persists
+    /// through the stack onto the battlefield and round-trips a snapshot.
+    /// The regular cast pipeline then handles payment, timing, and triggers.
+    pub(crate) fn cast_prototype(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.players[p].has_in_hand(card_id) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let (front_def, proto_def) = {
+            let card = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .expect("has_in_hand verified");
+            match card.definition.with_prototype_applied() {
+                Some(d) => (card.definition.clone(), d),
+                None => return Err(GameError::InvalidTarget),
+            }
+        };
+        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            c.definition = std::sync::Arc::new(proto_def);
+            c.cast_as_prototype = true;
+        }
+        let result = self.cast_spell(card_id, target, additional_targets, mode, x_value);
+        // On rejection the inner cast returned the card to hand with the
+        // prototype definition; restore the printed front face so the player
+        // can still cast either face on retry.
+        if result.is_err()
+            && let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
+        {
+            c.definition = front_def;
+            c.cast_as_prototype = false;
         }
         result
     }

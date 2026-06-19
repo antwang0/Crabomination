@@ -177,8 +177,12 @@ Each unblocks a large swath of cards.
   (711.6); `damaged_by_this_turn` source tracking; `flip_when_has_keyword`
   CR 603.8 state-triggered flip (Student of Elements). Whole CHK flip cycle
   ships (Cunning Bandit … Bushi Tenderfoot, Kitsune Mystic + Autumn-Tail's
-  two-target aura-move, Nezumi Graverobber, Student of Elements). **Prototype**,
-  **Omen** (other in-place-modify mechanics) still ⏳.
+  two-target aura-move, Nezumi Graverobber, Student of Elements).
+  **Prototype** (CR 702.160) ✅ — `CardDefinition.prototype` +
+  `GameAction::CastPrototype`: cast a colorless artifact creature for its
+  smaller, colored prototype cost/size, keeping abilities/types (the BRO
+  cycle: Goring Warplow, Steel Seraph, Phyrexian Fleshgorger, …).
+  **Omen** still ⏳.
 - 🟡 **Face-down permanents** (708) — `face_up_def` stashes the real card; Manifest
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
   Disguise/Cloak edge cases (both core paths ship — see Tier 4).

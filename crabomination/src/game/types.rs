@@ -157,6 +157,17 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.160 — cast a Prototype artifact creature for its prototype
+    /// cost. It enters with the prototype's mana cost, color, and size,
+    /// keeping its abilities and types.
+    CastPrototype {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 709 — cast the **right** half of a split card from hand, paying the
     /// right half's cost. Resolves the right half's effect and goes to the
     /// graveyard like any spell.
@@ -920,6 +931,7 @@ impl GameAction {
                 | A::CastForetold { .. }
                 | A::CastAdventure { .. }
                 | A::CastAdventureCreature { .. }
+                | A::CastPrototype { .. }
                 | A::CastSplitRight { .. }
                 | A::CastSplitFused { .. }
                 | A::CastAftermath { .. }

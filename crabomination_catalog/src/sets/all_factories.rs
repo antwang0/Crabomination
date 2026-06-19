@@ -53,6 +53,22 @@ static AP: &[Factory] = &[
 static ARN: &[Factory] = &[
     super::arn::juzam_djinn,
 ];
+static BRO: &[Factory] = &[
+    super::bro::goring_warplow,
+    super::bro::blitz_automaton,
+    super::bro::rust_goliath,
+    super::bro::combat_thresher,
+    super::bro::boulderbranch_golem,
+    super::bro::spotter_thopter,
+    super::bro::cradle_clearcutter,
+    super::bro::fallaji_dragon_engine,
+    super::bro::autonomous_assembler,
+    super::bro::iron_craw_crusher,
+    super::bro::skitterbeam_battalion,
+    super::bro::phyrexian_fleshgorger,
+    super::bro::steel_seraph,
+    super::bro::frogmyr_enforcer,
+];
 static CHK: &[Factory] = &[
     super::chk::glacial_ray,
     super::chk::reach_through_mists,
@@ -8102,6 +8118,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("all", ALL),
     ("ap", AP),
     ("arn", ARN),
+    ("bro", BRO),
     ("chk", CHK),
     ("decks", DECKS),
     ("dis", DIS),

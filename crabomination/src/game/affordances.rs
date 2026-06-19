@@ -971,7 +971,30 @@ impl GameState {
             room_unlockable: self.room_unlockable_on(&template, seat),
             prepare_castable: self.prepare_castable_on(&template, seat),
             back_castable: self.back_castable_hand_cards_on(&template, seat),
+            prototypable: self.prototypable_hand_cards_on(&template, seat),
         }
+    }
+
+    /// CR 702.160 — hand cards with a Prototype face castable for the
+    /// prototype cost right now. Auto-targets the body's effect (ETB
+    /// triggers, not a cast target — prototype creatures don't target on
+    /// cast), so cost payability and timing are what gate the report.
+    fn prototypable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| c.definition.has_prototype().is_some())
+            .map(|c| c.id)
+            .filter(|&id| {
+                Self::would_accept_on(template, GameAction::CastPrototype {
+                    card_id: id,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .collect()
     }
 
     /// SOS Prepare — prepared creatures `seat` controls whose prepare spell

@@ -346,6 +346,9 @@ pub enum WardCost {
     /// off the source's computed power at payment time (Esper Sentinel's
     /// rhystic tax).
     GenericSourcePower,
+    /// "Pay life equal to this creature's power" — a dynamic life cost read
+    /// off the source's computed power at payment time (Phyrexian Fleshgorger).
+    LifeSourcePower,
 }
 
 impl WardCost {
@@ -1589,6 +1592,12 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventure: Option<Box<Adventure>>,
+    /// CR 702.160 — Prototype. When `Some`, this colorless artifact creature
+    /// may instead be cast for the prototype cost (`GameAction::CastPrototype`),
+    /// entering with the prototype's mana cost, color, and size; it keeps its
+    /// abilities and types. Defaults to `None` via `#[serde(default)]`.
+    #[serde(default)]
+    pub prototype: Option<Box<Prototype>>,
     /// CR 702.170 — Plot. `Some(cost)` marks the card as plottable: during
     /// your main phase with an empty stack, pay this cost to exile it
     /// face-up (`GameAction::Plot`); on a later turn cast it from exile
@@ -1700,6 +1709,16 @@ impl Adventure {
     pub fn is_instant_speed(&self) -> bool {
         self.card_types.contains(&CardType::Instant)
     }
+}
+
+/// CR 702.160 — the Prototype alternative cast of a Brothers' War artifact
+/// creature. The printed (full) cost/color/size live on the parent
+/// [`CardDefinition`]; this holds the smaller, colored prototype face.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Prototype {
+    pub cost: ManaCost,
+    pub power: i32,
+    pub toughness: i32,
 }
 
 /// CR 707 — "enters as a copy of [filter] permanent" spec, stored on
@@ -2292,6 +2311,21 @@ impl CardDefinition {
     pub fn has_adventure(&self) -> Option<&Adventure> {
         self.adventure.as_deref()
     }
+    /// CR 702.160 — the Prototype face, if this card has Prototype.
+    pub fn has_prototype(&self) -> Option<&Prototype> {
+        self.prototype.as_deref()
+    }
+    /// CR 702.160c — a clone of this definition with the prototype cost,
+    /// color, and size applied (color follows the cost; the `prototype`
+    /// field is retained so a snapshot round-trip can re-apply it).
+    pub fn with_prototype_applied(&self) -> Option<CardDefinition> {
+        let proto = self.has_prototype()?;
+        let mut def = self.clone();
+        def.cost = proto.cost.clone();
+        def.power = proto.power;
+        def.toughness = proto.toughness;
+        Some(def)
+    }
     /// CR 709 — the split definition, if this is a split card.
     pub fn has_split(&self) -> Option<&SplitCard> {
         self.split.as_deref()
@@ -2755,6 +2789,11 @@ pub struct CardInstance {
     /// (`GameAction::CastAdventureCreature`). Cleared once the creature is
     /// cast (or the card otherwise changes zones).
     pub on_adventure: bool,
+    /// CR 702.160 — true when this card was cast for its Prototype cost, so it
+    /// entered with the prototype's mana cost, color, and size. The live
+    /// `definition` already carries the applied values; this flag lets a
+    /// snapshot round-trip re-apply them (`with_prototype_applied`).
+    pub cast_as_prototype: bool,
     /// CR 702.171 — true while this permanent is saddled (a marker set by a
     /// Saddle activation, until end of turn). Read by `Predicate::SourceSaddled`
     /// to gate "whenever this attacks while saddled" triggers. Cleared by
@@ -2871,6 +2910,7 @@ impl CardInstance {
             suspected: false,
             adventuring: false,
             on_adventure: false,
+            cast_as_prototype: false,
             saddled: false,
             split_cast: None,
             entered_turn: None,
@@ -3317,6 +3357,10 @@ struct CardInstanceWire {
     adventuring: bool,
     #[serde(default)]
     on_adventure: bool,
+    /// CR 702.160 prototype marker. `#[serde(default)]` so older snapshots
+    /// load as `false`.
+    #[serde(default)]
+    cast_as_prototype: bool,
     /// CR 702.171 saddled marker. `#[serde(default)]` so older snapshots
     /// load as `false`.
     #[serde(default)]
@@ -3431,6 +3475,7 @@ impl serde::Serialize for CardInstance {
             suspected: self.suspected,
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
+            cast_as_prototype: self.cast_as_prototype,
             saddled: self.saddled,
             split_cast: self.split_cast,
             exiled_by: self.exiled_by,
@@ -3534,6 +3579,15 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.suspected = wire.suspected;
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;
+        // CR 702.160 — restore a prototype-cast permanent: the name→factory
+        // definition is the full (colorless, big) card, so re-apply the
+        // prototype cost/color/size that it entered with.
+        if wire.cast_as_prototype
+            && let Some(proto_def) = c.definition.with_prototype_applied()
+        {
+            c.definition = Arc::new(proto_def);
+            c.cast_as_prototype = true;
+        }
         c.saddled = wire.saddled;
         c.split_cast = wire.split_cast;
         c.exiled_by = wire.exiled_by;
