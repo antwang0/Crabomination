@@ -478,7 +478,9 @@ impl Bot for RandomBot {
                 Some(main_phase_action(state, seat))
             }
             _ => Some(
-                pick_stack_response(state, seat).unwrap_or(GameAction::PassPriority),
+                pick_stack_response(state, seat)
+                    .or_else(|| pick_ability_counter_response(state, seat))
+                    .unwrap_or(GameAction::PassPriority),
             ),
         }
     }
@@ -535,6 +537,41 @@ fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
     None
 }
 
+/// React to a threatening opponent ability on the stack with a dedicated
+/// ability-counter card (Stifle / Disallow). The ability's source is the
+/// target slot. Held separate from `pick_stack_response`'s spell logic so a
+/// counter that can only hit abilities still gets used.
+fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::game::types::StackItem;
+    // Topmost opponent ability on the stack — counter the most recent one.
+    let source = state.stack.iter().rev().find_map(|si| match si {
+        StackItem::Trigger { source, controller, .. } if *controller != seat => Some(*source),
+        _ => None,
+    })?;
+    let mut counters: Vec<&crate::card::CardInstance> = state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| {
+            c.definition.card_types.contains(&crate::card::CardType::Instant)
+                && effect_counters_abilities(&c.definition.effect)
+        })
+        .collect();
+    counters.sort_by_key(|c| c.definition.cost.cmc());
+    for c in counters {
+        let action = GameAction::CastSpell {
+            card_id: c.id,
+            target: Some(crate::game::Target::Permanent(source)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
 /// True when the effect tree's primary action counters a spell (the shapes
 /// a dedicated counterspell card uses — not buried `MayDo` riders).
 fn effect_counters_spells(eff: &Effect) -> bool {
@@ -544,6 +581,19 @@ fn effect_counters_spells(eff: &Effect) -> bool {
         | Effect::CounterUnlessPaid { .. }
         | Effect::CounterUnless { .. } => true,
         Effect::Seq(v) => v.first().is_some_and(effect_counters_spells),
+        _ => false,
+    }
+}
+
+/// True when the effect can counter an activated/triggered ability (Stifle's
+/// `CounterAbility`, or a modal counter like Disallow whose `ChooseN`/
+/// `ChooseMode` carries a `CounterAbility` arm).
+fn effect_counters_abilities(eff: &Effect) -> bool {
+    match eff {
+        Effect::CounterAbility { .. } => true,
+        Effect::Seq(v) => v.first().is_some_and(effect_counters_abilities),
+        Effect::ChooseMode(modes) => modes.iter().any(effect_counters_abilities),
+        Effect::ChooseN { modes, .. } => modes.iter().any(effect_counters_abilities),
         _ => false,
     }
 }

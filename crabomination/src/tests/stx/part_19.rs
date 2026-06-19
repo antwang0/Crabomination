@@ -1788,6 +1788,32 @@ fn bot_attacks_finishable_planeswalker_with_proper_power() {
 }
 
 #[test]
+fn bot_stifles_a_threatening_opponent_ability() {
+    // Server/bot: react to an opponent ability on the stack with Stifle.
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    // P0 casts Devourer of Destiny — its on-cast Scry trigger lands on the stack.
+    let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    // Seat 1 holds Stifle and gets priority with the ability on the stack.
+    let stifle = g.add_card_to_hand(1, catalog::stifle());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    let mut bot = RandomBot::new();
+    match bot.next_action(&g, 1) {
+        Some(GameAction::CastSpell { card_id, target, .. }) => {
+            assert_eq!(card_id, stifle, "bot casts Stifle");
+            assert_eq!(target, Some(Target::Permanent(dev)),
+                "Stifle targets the ability's source");
+        }
+        other => panic!("expected the bot to Stifle the trigger, got {other:?}"),
+    }
+}
+
+#[test]
 fn bot_does_not_aim_at_walker_too_tough_to_finish() {
     // Symmetric lock-in: when the bot's attacking power is below the
     // walker's loyalty, the bot should NOT throw attackers at the
