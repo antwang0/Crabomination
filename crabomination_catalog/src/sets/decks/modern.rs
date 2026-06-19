@@ -21835,22 +21835,36 @@ pub fn uncaged_fury() -> CardDefinition {
     }
 }
 
-/// Built to Smash — {R} Instant. "Target attacking creature gets +3/+3 until
-/// end of turn." (The artifact-creature trample rider is dropped.)
+/// Built to Smash — {R} Instant. "Target attacking creature gets +2/+2 until
+/// end of turn. If it's an artifact creature, it gains trample until end of turn."
 pub fn built_to_smash() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Built to Smash",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::PumpPT {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
-            ),
-            power: Value::Const(3),
-            toughness: Value::Const(3),
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::Artifact,
+                },
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

@@ -43519,6 +43519,30 @@ fn gingerbrute_evasion_only_haste_can_block() {
         "a non-haste creature can't block Gingerbrute after its evasion ability");
 }
 
+/// Built to Smash: +2/+2 to an attacker; an artifact creature also gains trample.
+#[test]
+fn built_to_smash_pumps_and_grants_trample_to_artifact() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter()); // 0/2 artifact creature
+    g.clear_sickness(thopter);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: thopter, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    let bts = g.add_card_to_hand(0, catalog::built_to_smash());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bts, target: Some(Target::Permanent(thopter)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(thopter).expect("alive");
+    assert_eq!((cp.power, cp.toughness), (2, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Trample), "artifact creature gains trample");
+}
+
 // ── Channel lands (Kamigawa legendary lands) ─────────────────────────────────
 
 /// Boseiju, Who Endures channels from hand ({1}{G}, discard it) to destroy a
