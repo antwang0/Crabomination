@@ -1724,11 +1724,16 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `GameEvent::Mutated`, leave-the-battlefield scatter (all three meld sites), and
   snapshot round-trip (union rebuilt on load). Cycle: Glowstone Recluse,
   Trumpeting Gnarr, Cubwarden, Cavern Whisperer, Dirge Bat, Migratory Greathorn,
-  Boneyard Lurker (tests in `tests/modern.rs`). Follow-ups:
-  - ⏳ **Pollywog Symbiote** — mutate-spell cost reduction + "cast a creature
-    spell with mutate → loot" (needs a "spell has mutate" predicate).
-  - ⏳ **Archipelagore** — "tap up to X, X = times this has mutated" needs a
-    per-host mutate-count (store on the host, bump in `apply_mutate`).
+  Boneyard Lurker, Pollywog Symbiote (`HasMutate` filter), Vulpikeet, Majestic
+  Auricorn, Sawtusk Demolisher, Gemrazer, Insatiable Hemophage, Chittering
+  Harvester, Regal Leosaur, Cloudpiercer, Sea-Dasher Octopus, Essence Symbiote,
+  Porcuparrot (`Value::MutateCount`). Tests in `tests/modern.rs`. Follow-ups:
+  - ⏳ **Archipelagore** — "tap **up to X** target creatures, X = times this has
+    mutated, they don't untap next turn". Blocked only on a dynamic-count
+    "up to X targets" prompt (`Effect::ApplyToTargets` takes a fixed `u8`;
+    `Value::MutateCount` already exists). Add an `ApplyToTargets`-style effect
+    whose `max_targets` is a `Value`, with the resolution-time multi-target
+    picker.
   - ⏳ **Client cast-mutate UI + `mutatable` affordance** (host picker). Engine
     path is fully wired and tested; only the UI is missing.
 

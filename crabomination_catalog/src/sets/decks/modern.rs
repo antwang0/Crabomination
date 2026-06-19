@@ -53114,6 +53114,263 @@ pub fn boneyard_lurker() -> CardDefinition {
     }
 }
 
+/// Porcuparrot — {3}{R} 3/4 Bird Beast. Mutate {2}{R}. {T}: deals X damage to
+/// any target, where X is the number of times it has mutated.
+pub fn porcuparrot() -> CardDefinition {
+    CardDefinition {
+        name: "Porcuparrot",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        mutate: Some(cost(&[generic(2), r()])),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::MutateCount,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vulpikeet — {3}{W} 2/3 Fox Bird. Flying. Mutate {2}{W}. On mutate, put a
+/// +1/+1 counter on it.
+pub fn vulpikeet() -> CardDefinition {
+    CardDefinition {
+        name: "Vulpikeet",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fox, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        mutate: Some(cost(&[generic(2), w()])),
+        triggered_abilities: vec![on_mutate(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Majestic Auricorn — {4}{W} 4/4 Unicorn. Vigilance. Mutate {3}{W}. On
+/// mutate, you gain 4 life.
+pub fn majestic_auricorn() -> CardDefinition {
+    CardDefinition {
+        name: "Majestic Auricorn",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        mutate: Some(cost(&[generic(3), w()])),
+        triggered_abilities: vec![on_mutate(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(4),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sawtusk Demolisher — {4}{G}{G} 6/6 Beast. Trample. Mutate {3}{G}. On
+/// mutate, destroy target noncreature permanent; its controller makes a 3/3
+/// green Beast token.
+pub fn sawtusk_demolisher() -> CardDefinition {
+    CardDefinition {
+        name: "Sawtusk Demolisher",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        mutate: Some(cost(&[generic(3), g()])),
+        triggered_abilities: vec![on_mutate(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Beast".into(),
+                    power: 3,
+                    toughness: 3,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Beast],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Noncreature) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Gemrazer — {3}{G} 4/4 Beast. Reach, trample. Mutate {1}{G}{G}. On mutate,
+/// destroy target artifact or enchantment an opponent controls.
+pub fn gemrazer() -> CardDefinition {
+    CardDefinition {
+        name: "Gemrazer",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        mutate: Some(cost(&[generic(1), g(), g()])),
+        triggered_abilities: vec![on_mutate(Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Insatiable Hemophage — {3}{B} 3/3 Nightmare. Deathtouch. Mutate {2}{B}. On
+/// mutate, each opponent loses X life and you gain X, X = times it has mutated.
+pub fn insatiable_hemophage() -> CardDefinition {
+    CardDefinition {
+        name: "Insatiable Hemophage",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        mutate: Some(cost(&[generic(2), b()])),
+        triggered_abilities: vec![on_mutate(Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::MutateCount,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::MutateCount },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Chittering Harvester — {5}{B} 4/6 Nightmare. Mutate {4}{B}. On mutate, each
+/// opponent sacrifices a creature of their choice.
+pub fn chittering_harvester() -> CardDefinition {
+    CardDefinition {
+        name: "Chittering Harvester",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 4,
+        toughness: 6,
+        mutate: Some(cost(&[generic(4), b()])),
+        triggered_abilities: vec![on_mutate(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Regal Leosaur — {R}{W} 2/2 Dinosaur Cat. Mutate {1}{R/W}{R/W}. On mutate,
+/// other creatures you control get +2/+1 until end of turn.
+pub fn regal_leosaur() -> CardDefinition {
+    CardDefinition {
+        name: "Regal Leosaur",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        mutate: Some(cost(&[
+            generic(1),
+            hybrid(Color::Red, Color::White),
+            hybrid(Color::Red, Color::White),
+        ])),
+        triggered_abilities: vec![on_mutate(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            power: Value::Const(2),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Void Beckoner — {6}{B}{B} 8/8 Nightmare Horror. Deathtouch. Cycling {2}{B}.
+/// When you cycle it, put a deathtouch counter on target creature you control.
+pub fn void_beckoner() -> CardDefinition {
+    CardDefinition {
+        name: "Void Beckoner",
+        cost: cost(&[generic(6), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Deathtouch, Keyword::Cycling(cost(&[generic(2), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::AddKeywordCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Deathtouch,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Almighty Brushwagg — {G} 1/1 Brushwagg. Trample. {3}{G}: +3/+3 until end of
+/// turn.
+pub fn almighty_brushwagg() -> CardDefinition {
+    CardDefinition {
+        name: "Almighty Brushwagg",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Brushwagg], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Essence Symbiote — {1}{G} 2/2 Beast. Whenever a creature you control
 /// mutates, put a +1/+1 counter on that creature and you gain 2 life.
 pub fn essence_symbiote() -> CardDefinition {

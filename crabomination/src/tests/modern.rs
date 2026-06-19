@@ -58096,6 +58096,159 @@ fn pollywog_symbiote_discounts_and_loots_mutate() {
         "Pollywog looted a card into the graveyard");
 }
 
+/// Helper: cast `card` (in hand) for its mutate cost onto a fresh non-Human
+/// host, paying a fat mana pool. Returns the host id (the merged pile).
+#[cfg(test)]
+fn mutate_onto_fresh_host(g: &mut GameState, card: CardId) -> CardId {
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 10);
+    }
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastMutate {
+        card_id: card, target: host, on_top: true, x_value: None,
+    }).expect("cast for mutate");
+    host
+}
+
+/// Porcuparrot pings for X = number of times it has mutated.
+#[test]
+fn porcuparrot_pings_by_mutate_count() {
+    let mut g = two_player_game();
+    let p = g.add_card_to_hand(0, catalog::porcuparrot());
+    let host = mutate_onto_fresh_host(&mut g, p); // mutated once → X = 1
+    drain_stack(&mut g);
+    g.clear_sickness(host);
+    let opp = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: host, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("tap to ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "dealt X=1 damage");
+}
+
+/// Vulpikeet grows itself on mutate and flies.
+#[test]
+fn vulpikeet_grows_and_flies() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let v = g.add_card_to_hand(0, catalog::vulpikeet());
+    let host = mutate_onto_fresh_host(&mut g, v);
+    drain_stack(&mut g);
+    let p = g.battlefield_find(host).unwrap();
+    assert!(p.definition.keywords.contains(&Keyword::Flying));
+    assert_eq!(p.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
+}
+
+/// Majestic Auricorn gains 4 life on mutate.
+#[test]
+fn majestic_auricorn_gains_life() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_hand(0, catalog::majestic_auricorn());
+    let life = g.players[0].life;
+    mutate_onto_fresh_host(&mut g, a);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Insatiable Hemophage drains X = number of times it has mutated (1 here).
+#[test]
+fn insatiable_hemophage_drains_by_mutate_count() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_hand(0, catalog::insatiable_hemophage());
+    let my_life = g.players[0].life;
+    let opp_life = g.players[1].life;
+    mutate_onto_fresh_host(&mut g, h);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 1, "opponent lost X=1");
+    assert_eq!(g.players[0].life, my_life + 1, "you gained X=1");
+}
+
+/// Sawtusk Demolisher blows up a noncreature permanent and gifts a 3/3 Beast.
+#[test]
+fn sawtusk_demolisher_destroys_noncreature() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::pacification_array()); // artifact
+    let s = g.add_card_to_hand(0, catalog::sawtusk_demolisher());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(rock))]));
+    mutate_onto_fresh_host(&mut g, s);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "noncreature destroyed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Beast" && c.controller == 1).count(),
+        1, "its controller got a 3/3 Beast");
+}
+
+/// Gemrazer destroys an opponent's artifact on mutate.
+#[test]
+fn gemrazer_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::pacification_array());
+    let gem = g.add_card_to_hand(0, catalog::gemrazer());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(art))]));
+    mutate_onto_fresh_host(&mut g, gem);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "opponent artifact destroyed");
+}
+
+/// Chittering Harvester edicts each opponent on mutate.
+#[test]
+fn chittering_harvester_edicts() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ch = g.add_card_to_hand(0, catalog::chittering_harvester());
+    mutate_onto_fresh_host(&mut g, ch);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their only creature");
+}
+
+/// Regal Leosaur pumps the rest of your team on mutate, but not itself.
+#[test]
+fn regal_leosaur_pumps_team() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let leo = g.add_card_to_hand(0, catalog::regal_leosaur());
+    let host = mutate_onto_fresh_host(&mut g, leo);
+    drain_stack(&mut g);
+    let o = g.computed_permanent(other).unwrap();
+    assert_eq!((o.power, o.toughness), (4, 3), "other creature got +2/+1");
+    // The host itself is excluded by OtherThanSource (base Leosaur 2/2).
+    assert_eq!(g.computed_permanent(host).map(|c| (c.power, c.toughness)), Some((2, 2)));
+}
+
+/// Void Beckoner drops a deathtouch counter when cycled.
+#[test]
+fn void_beckoner_cycle_grants_deathtouch() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let vb = g.add_card_to_hand(0, catalog::void_beckoner());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2); // Cycling {2}{B}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(mine))]));
+    g.perform_action(GameAction::Cycle { card_id: vb, x_value: None }).expect("cycle Void Beckoner");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Almighty Brushwagg pumps itself with its activated ability.
+#[test]
+fn almighty_brushwagg_pumps() {
+    let mut g = two_player_game();
+    let bw = g.add_card_to_battlefield(0, catalog::almighty_brushwagg());
+    g.clear_sickness(bw);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate {3}{G}");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bw).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 4), "1/1 pumped to 4/4");
+}
+
 /// Essence Symbiote rewards any creature you control mutating with a +1/+1
 /// counter on it and 2 life.
 #[test]

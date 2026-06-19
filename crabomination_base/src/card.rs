@@ -151,6 +151,8 @@ pub enum CreatureType {
     Tentacle,
     // THB Alirios, Enraptured's Reflection token.
     Reflection,
+    // Ikoria Brushwagg (Almighty Brushwagg).
+    Brushwagg,
 }
 
 /// Land subtypes (basic land types + others).

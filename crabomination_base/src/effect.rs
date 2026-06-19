@@ -348,6 +348,10 @@ pub enum Value {
     XFromCost,
     /// Number of spells cast this turn by controller (Storm).
     StormCount,
+    /// CR 702.140 — the number of times the trigger source has mutated (the
+    /// count of mutate cards merged onto it). Archipelagore / Insatiable
+    /// Hemophage's "X is the number of times this creature has mutated".
+    MutateCount,
     /// CR 700.5 — controller's devotion to the given color(s): the number
     /// of mana symbols matching any listed color among the mana costs of
     /// permanents they control. Hybrid / Phyrexian pips count for each

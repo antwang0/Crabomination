@@ -197,6 +197,13 @@ impl GameState {
             Value::TriggerEventAmount => ctx.event_amount as i32,
             Value::LastDieRoll => self.last_die_roll as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
+            Value::MutateCount => ctx
+                .trigger_source
+                .and_then(|e| e.as_card_id())
+                .or(ctx.source)
+                .and_then(|id| self.battlefield_find(id))
+                .map(|c| c.mutate_stack.len().saturating_sub(1) as i32)
+                .unwrap_or(0),
             Value::DevotionTo(colors) => self.devotion_to(ctx.controller, colors),
             Value::AurasYouControlledOnDyingSubject => ctx
                 .trigger_source
