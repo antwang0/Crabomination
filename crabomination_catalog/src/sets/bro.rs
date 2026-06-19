@@ -462,6 +462,113 @@ pub fn tocasias_welcome() -> CardDefinition {
     }
 }
 
+/// Aeronaut Cavalry — {4}{W} 3/4 Human Soldier. Flying. "When this enters,
+/// put a +1/+1 counter on another target Soldier you control."
+pub fn aeronaut_cavalry() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Aeronaut Cavalry",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: construct(vec![CreatureType::Human, CreatureType::Soldier]),
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::HasCreatureType(CreatureType::Soldier)
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Penregon Strongbull — {2}{R} 2/3 Minotaur. "{1}, Sacrifice an artifact:
+/// This creature gets +1/+1 until end of turn and deals 1 damage to each
+/// opponent."
+pub fn penregon_strongbull() -> CardDefinition {
+    use crate::effect::shortcut::each_opponent;
+    CardDefinition {
+        name: "Penregon Strongbull",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: construct(vec![CreatureType::Minotaur]),
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Warhorse — {3}{B} 3/3 Phyrexian Horse. Kicker {W}; if kicked,
+/// ETB creates a 1/1 white Soldier. "{1}, Sacrifice another creature: This
+/// creature gets +2/+1 until end of turn."
+pub fn phyrexian_warhorse() -> CardDefinition {
+    use crate::card::{TokenDefinition, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Phyrexian Warhorse",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: construct(vec![CreatureType::Phyrexian, CreatureType::Horse]),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Kicker(cost(&[w()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Soldier".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: construct(vec![CreatureType::Soldier]),
+                        ..Default::default()
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Frogmyr Enforcer — {7} 4/4 Frog Myr. Prototype {3}{R} — 2/2.
 /// Affinity for artifacts (CR 702.41 — this spell costs {1} less per artifact
 /// you control).

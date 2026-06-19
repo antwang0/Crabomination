@@ -74,6 +74,9 @@ static BRO: &[Factory] = &[
     super::bro::bitter_reunion,
     super::bro::powerstone_shard,
     super::bro::tocasias_welcome,
+    super::bro::aeronaut_cavalry,
+    super::bro::penregon_strongbull,
+    super::bro::phyrexian_warhorse,
 ];
 static CHK: &[Factory] = &[
     super::chk::glacial_ray,

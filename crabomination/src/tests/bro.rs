@@ -384,6 +384,72 @@ fn tocasias_welcome_draws_once_per_turn() {
     assert_eq!(g.players[0].hand.len(), 1, "only once each turn (no extra draw)");
 }
 
+/// Aeronaut Cavalry's ETB puts a +1/+1 counter on another Soldier you control.
+#[test]
+fn aeronaut_cavalry_counters_another_soldier() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::aeronaut_cavalry());
+    let cav = g.add_card_to_hand(0, catalog::aeronaut_cavalry());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4); // {4}{W}
+    g.perform_action(GameAction::CastSpell {
+        card_id: cav, target: Some(Target::Permanent(other)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Aeronaut Cavalry");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Penregon Strongbull sacs an artifact to pump itself and ping each opponent.
+#[test]
+fn penregon_strongbull_sacs_artifact_for_pump_and_ping() {
+    let mut g = two_player_game();
+    let bull = g.add_card_to_battlefield(0, catalog::penregon_strongbull());
+    let art = g.add_card_to_battlefield(0, catalog::powerstone_shard());
+    g.clear_sickness(bull);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bull, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact sacrificed");
+    assert_eq!(g.computed_permanent(bull).unwrap().power, 3, "+1/+1");
+    assert_eq!(g.players[1].life, opp_life - 1, "1 damage to each opponent");
+}
+
+/// Phyrexian Warhorse makes a Soldier only when kicked.
+#[test]
+fn phyrexian_warhorse_kicked_makes_a_soldier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::phyrexian_warhorse());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::White, 1); // kicker {W}
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Soldier" && c.controller == 0).count();
+    assert_eq!(soldiers, 1, "kicked → one Soldier token");
+}
+
+/// Phyrexian Warhorse makes no token when cast unkicked.
+#[test]
+fn phyrexian_warhorse_unkicked_makes_no_soldier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::phyrexian_warhorse());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3); // {3}{B}, no kicker
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast unkicked");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count();
+    assert_eq!(soldiers, 0, "unkicked → no token");
+}
+
 /// The affordance probe surfaces a payable prototype cast.
 #[test]
 fn prototype_affordance_surfaced() {
