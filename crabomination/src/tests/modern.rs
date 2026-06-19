@@ -23090,6 +23090,34 @@ fn stonecoil_serpent_enters_with_x_counters() {
     assert_eq!((c.power, c.toughness), (3, 3), "X=3 → three +1/+1 counters");
     assert!(c.keywords.contains(&crate::card::Keyword::Trample));
     assert!(c.keywords.contains(&crate::card::Keyword::Reach));
+    assert!(c.keywords.contains(&crate::card::Keyword::ProtectionFromMulticolored));
+}
+
+/// CR 702.16 — protection from multicolored: a two-color spell can't target
+/// Stonecoil Serpent, but a mono-color spell can.
+#[test]
+fn stonecoil_serpent_protection_from_multicolored() {
+    let mut g = two_player_game();
+    // X=3 body so it survives long enough to be a target.
+    let snake = g.add_card_to_battlefield(0, catalog::stonecoil_serpent());
+    g.battlefield_find_mut(snake).unwrap()
+        .add_counters(crate::card::CounterType::PlusOnePlusOne, 3);
+    // Terminate ({B}{R}) is multicolored → illegal target.
+    let term = g.add_card_to_hand(1, catalog::terminate());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: term, target: Some(Target::Permanent(snake)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "a multicolored spell can't target protection-from-multicolored");
+    // A mono-color spell (Doom Blade-style — use Dark Banishing? use Terror) can.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(snake)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_ok(), "a mono-color spell may target it");
 }
 
 #[test]

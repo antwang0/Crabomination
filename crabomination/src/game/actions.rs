@@ -3299,6 +3299,14 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16 — protection from multicolored: can't be targeted
+                // by a spell that is two or more colors.
+                if matches!(kw, Keyword::ProtectionFromMulticolored)
+                    && spell_colors.len() >= 2
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
             }
         }
 
@@ -5782,6 +5790,7 @@ impl GameState {
                     | Keyword::ProtectionFromCreatures
                     | Keyword::ProtectionFromCreatureType(_)
                     | Keyword::ProtectionFromManaValueExcept(_)
+                    | Keyword::ProtectionFromMulticolored
             )
         }) {
             return false;
@@ -5797,6 +5806,7 @@ impl GameState {
             Keyword::ProtectionFromCreatures => src_is_creature,
             Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
+            Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
             _ => false,
         })
     }

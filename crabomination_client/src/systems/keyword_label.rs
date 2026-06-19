@@ -69,6 +69,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Landwalk(_) => "Wlk",
         Protection(_) => "Pro",
         ProtectionFromManaValueExcept(_) => "ProMV",
+        ProtectionFromMulticolored => "ProMC",
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
         // Combat-relevant statuses worth a glance on the board.

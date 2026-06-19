@@ -4330,6 +4330,7 @@ impl GameState {
             Keyword::Protection(color) => src_colors.contains(color),
             Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
+            Keyword::ProtectionFromMulticolored => src_colors.len() >= 2,
             _ => false,
         })
     }
@@ -9743,6 +9744,13 @@ pub(crate) fn can_block_attacker_computed(
         // can't be blocked by a creature whose mana value isn't N.
         if let Keyword::ProtectionFromManaValueExcept(n) = kw
             && blocker.definition.cost.cmc() != *n
+        {
+            return false;
+        }
+        // CR 702.16 — protection from multicolored: can't be blocked by a
+        // creature that is two or more colors.
+        if matches!(kw, Keyword::ProtectionFromMulticolored)
+            && blocker_computed.colors.len() >= 2
         {
             return false;
         }

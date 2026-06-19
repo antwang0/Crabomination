@@ -18193,10 +18193,6 @@ pub fn doomsday_excruciator() -> CardDefinition {
 /// Stonecoil Serpent — {X} Artifact Creature 0/0 Snake.
 /// Trample, reach, protection from multicolored.
 /// Enters the battlefield with X +1/+1 counters on it.
-///
-/// Protection from multicolored is omitted (no
-/// `Keyword::ProtectionFromMulticolored` primitive). The ETB counter
-/// placement uses `Value::XFromCost`.
 pub fn stonecoil_serpent() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::x;
@@ -18213,7 +18209,7 @@ pub fn stonecoil_serpent() -> CardDefinition {
             creature_types: vec![CreatureType::Snake],
             ..Default::default()
         },
-        keywords: vec![Keyword::Trample, Keyword::Reach],
+        keywords: vec![Keyword::Trample, Keyword::Reach, Keyword::ProtectionFromMulticolored],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         ..Default::default()
     }
