@@ -541,16 +541,20 @@ pub fn academic_probation() -> CardDefinition {
 /// Elemental Expressionism — {3}{U}{R} Sorcery.
 /// "Return up to two target creatures to their owners' hands. Create
 /// two 4/4 blue and red Elemental creature tokens."
-///
-/// Approximation: bounce one creature + create two 4/4 Elemental tokens.
 pub fn elemental_expressionism() -> CardDefinition {
-    use crate::effect::shortcut::return_target_to_hand;
     CardDefinition {
         name: "Elemental Expressionism",
         cost: cost(&[generic(3), u(), crate::mana::r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            return_target_to_hand(),
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),

@@ -1242,6 +1242,24 @@ fn elemental_expressionism_bounces_and_creates() {
 }
 
 #[test]
+fn elemental_expressionism_bounces_up_to_two() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::elemental_expressionism());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![Target::Permanent(b2)], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == b1 || c.id == b2),
+        "both targeted creatures were bounced");
+}
+
+#[test]
 fn rush_of_knowledge_draws_highest_mv_you_control() {
     let mut g = two_player_game();
     for _ in 0..8 {
