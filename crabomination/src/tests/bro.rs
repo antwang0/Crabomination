@@ -266,6 +266,27 @@ fn steel_seraph_grants_flying_at_combat() {
     assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::Flying));
 }
 
+/// CR 702.160c — a prototype permanent reverts to its printed (full,
+/// colorless) characteristics when it leaves the battlefield.
+#[test]
+fn prototype_reverts_to_printed_when_it_dies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::goring_warplow());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1); // {1}{B} prototype
+    g.perform_action(GameAction::CastPrototype {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast prototype");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().definition.cost.cmc(), 2, "prototype MV on battlefield");
+    // Send it to the graveyard; there it has its full printed cost/size.
+    g.remove_to_graveyard_with_triggers(id);
+    let dead = g.players[0].graveyard.iter().find(|c| c.id == id).expect("in graveyard");
+    assert_eq!(dead.definition.cost.cmc(), 6, "full printed MV off the battlefield");
+    assert_eq!((dead.definition.power, dead.definition.toughness), (5, 4));
+    assert!(!dead.cast_as_prototype);
+}
+
 // ── BRO non-prototype cards ──────────────────────────────────────────────────
 
 /// Diabolic Intent sacrifices a creature and tutors a chosen card to hand.

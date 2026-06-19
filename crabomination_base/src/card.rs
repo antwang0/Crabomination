@@ -2560,6 +2560,11 @@ pub struct CardInstance {
     /// permanent can flip back. In-memory only (not serialized): the serde
     /// wire stores the front name and rebuilds this on load.
     pub front_face: Option<Arc<CardDefinition>>,
+    /// CR 702.160 — the printed (full, colorless) definition, kept while
+    /// `cast_as_prototype` so the permanent reverts to its full mana cost,
+    /// color, and size when it leaves the battlefield. In-memory only: the
+    /// wire keeps the name + `cast_as_prototype` and rebuilds this on load.
+    pub prototype_printed: Option<Arc<CardDefinition>>,
     /// CR 711 — true while this flip card is showing its flipped (bottom) face.
     /// `definition` is swapped to the flip face; `unflipped_def` stashes the
     /// top so it can be restored on zone change. Reconstructed on snapshot load
@@ -2865,6 +2870,7 @@ impl CardInstance {
             face_down: false,
             transformed: false,
             front_face: None,
+            prototype_printed: None,
             flipped: false,
             unflipped_def: None,
             unlocked_doors: 0,
@@ -3102,6 +3108,16 @@ impl CardInstance {
         if let Some(front) = self.front_face.take() {
             self.definition = front;
             self.transformed = false;
+        }
+    }
+
+    /// CR 702.160c — a permanent cast for its prototype cost has only its
+    /// printed (full, colorless) characteristics once it leaves the
+    /// battlefield. Restore the printed definition as the card changes zones.
+    pub fn revert_prototype(&mut self) {
+        if let Some(printed) = self.prototype_printed.take() {
+            self.definition = printed;
+            self.cast_as_prototype = false;
         }
     }
 
@@ -3585,6 +3601,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         if wire.cast_as_prototype
             && let Some(proto_def) = c.definition.with_prototype_applied()
         {
+            c.prototype_printed = Some(c.definition.clone());
             c.definition = Arc::new(proto_def);
             c.cast_as_prototype = true;
         }

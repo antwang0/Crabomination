@@ -1425,6 +1425,7 @@ impl GameState {
             }
         };
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            c.prototype_printed = Some(front_def.clone());
             c.definition = std::sync::Arc::new(proto_def);
             c.cast_as_prototype = true;
         }

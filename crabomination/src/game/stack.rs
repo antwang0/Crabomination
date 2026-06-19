@@ -2770,6 +2770,9 @@ impl GameState {
         // unflipped / front face off the battlefield.
         card.revert_flip();
         card.revert_transform();
+        // CR 702.160c — a prototype permanent has only its printed
+        // (full, colorless) characteristics off the battlefield.
+        card.revert_prototype();
         // CR 709.5c — Room unlocked designations are battlefield-only.
         card.reset_room_doors();
         // CR 707 — a temporary copy reverts as it leaves.
