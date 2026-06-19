@@ -3119,3 +3119,27 @@ fn cr_603_3d_trigger_fires_at_most_once_per_turn() {
     cast_small(&mut g);
     assert_eq!(g.players[0].hand.len(), 1, "the once-each-turn trigger drew only once");
 }
+
+// ── CR 702.140 — Mutate ──────────────────────────────────────────────────────
+
+/// CR 702.140b — a mutating creature spell whose target is illegal as it
+/// begins resolving ceases to be a mutating creature spell and resolves as a
+/// normal creature spell, entering the battlefield on its own.
+#[test]
+fn cr_702_140b_illegal_host_enters_as_normal_creature() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastMutate {
+        card_id: recluse, target: host, on_top: true, x_value: None,
+    }).expect("cast for mutate");
+    // Host leaves before the mutate spell resolves — its target is now illegal.
+    g.remove_to_graveyard_with_triggers(host);
+    drain_stack(&mut g);
+    // The spell entered as its own 2/3 Spider rather than merging.
+    let r = g.battlefield_find(recluse).expect("Glowstone Recluse entered on its own");
+    assert_eq!((r.power(), r.toughness()), (2, 3));
+    assert!(r.mutate_stack.is_empty(), "no merge happened");
+}

@@ -53114,6 +53114,152 @@ pub fn boneyard_lurker() -> CardDefinition {
     }
 }
 
+/// Essence Symbiote — {1}{G} 2/2 Beast. Whenever a creature you control
+/// mutates, put a +1/+1 counter on that creature and you gain 2 life.
+pub fn essence_symbiote() -> CardDefinition {
+    CardDefinition {
+        name: "Essence Symbiote",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Mutated, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cloudpiercer — {4}{R} 5/4 Dinosaur. Reach. Mutate {3}{R}. On mutate, you
+/// may discard a card; if you do, draw a card.
+pub fn cloudpiercer() -> CardDefinition {
+    CardDefinition {
+        name: "Cloudpiercer",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        mutate: Some(cost(&[generic(3), r()])),
+        triggered_abilities: vec![on_mutate(Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Sea-Dasher Octopus — {1}{U}{U} 2/2 Octopus. Flash. Mutate {1}{U}. Whenever
+/// it deals combat damage to a player, draw a card.
+pub fn sea_dasher_octopus() -> CardDefinition {
+    CardDefinition {
+        name: "Sea-Dasher Octopus",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        mutate: Some(cost(&[generic(1), u()])),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Snare Tactician — {2}{W} 2/3 Human Soldier. Whenever you cycle a card, tap
+/// target creature an opponent controls.
+pub fn snare_tactician() -> CardDefinition {
+    CardDefinition {
+        name: "Snare Tactician",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Capture Sphere — {3}{U} Aura with flash. Enchant creature; tap it on entry
+/// and it doesn't untap during its controller's untap step.
+pub fn capture_sphere() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, StaticAbility};
+    CardDefinition {
+        name: "Capture Sphere",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Boot Nipper — {1}{B} 2/1 Beast. Enters with your choice of a deathtouch
+/// counter or a lifelink counter on it.
+pub fn boot_nipper() -> CardDefinition {
+    CardDefinition {
+        name: "Boot Nipper",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Deathtouch,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Lifelink,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Pollywog Symbiote — {1}{U} 1/3 Frog. Creature spells with mutate you cast
 /// cost {1} less. Whenever you cast a creature spell with mutate, loot
 /// (draw then discard).

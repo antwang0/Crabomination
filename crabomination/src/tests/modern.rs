@@ -58096,6 +58096,116 @@ fn pollywog_symbiote_discounts_and_loots_mutate() {
         "Pollywog looted a card into the graveyard");
 }
 
+/// Essence Symbiote rewards any creature you control mutating with a +1/+1
+/// counter on it and 2 life.
+#[test]
+fn essence_symbiote_rewards_mutation() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::essence_symbiote());
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse());
+    let life = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastMutate {
+        card_id: recluse, target: host, on_top: true, x_value: None,
+    }).expect("mutate");
+    drain_stack(&mut g);
+    // Recluse's own +2 counters plus Essence Symbiote's +1 = 3.
+    assert_eq!(g.battlefield_find(host).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 3);
+    assert_eq!(g.players[0].life, life + 2, "gained 2 from Essence Symbiote");
+}
+
+/// Cloudpiercer rummages (discard then draw) when it mutates.
+#[test]
+fn cloudpiercer_rummages_on_mutate() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let piercer = g.add_card_to_hand(0, catalog::cloudpiercer());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // the discard
+    g.add_card_to_library(0, catalog::lightning_bolt()); // the draw
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3); // {3}{R}
+    g.perform_action(GameAction::CastMutate {
+        card_id: piercer, target: host, on_top: true, x_value: None,
+    }).expect("mutate Cloudpiercer");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"), "drew the bolt");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"), "discarded the bear");
+}
+
+/// Sea-Dasher Octopus draws when it connects in combat.
+#[test]
+fn sea_dasher_octopus_draws_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let octo = g.add_card_to_battlefield(0, catalog::sea_dasher_octopus());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.clear_sickness(octo);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: octo, target: AttackTarget::Player(1),
+    }])).expect("octopus attacks");
+    g.step = TurnStep::CombatDamage;
+    let _ = g.resolve_combat();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"), "drew on combat damage");
+}
+
+/// Snare Tactician taps an opponent's creature whenever you cycle a card.
+#[test]
+fn snare_tactician_taps_on_cycle() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::snare_tactician());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cycler = g.add_card_to_hand(0, catalog::migration_path()); // has Cycling {2}
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.perform_action(GameAction::Cycle { card_id: cycler, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "Snare Tactician tapped the opponent's creature");
+}
+
+/// Capture Sphere taps the enchanted creature and locks it down.
+#[test]
+fn capture_sphere_locks_a_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::capture_sphere());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Capture Sphere");
+    drain_stack(&mut g);
+    let v = g.battlefield_find(victim).unwrap();
+    assert!(v.tapped, "enchanted creature tapped on entry");
+    // Untap step skips the locked creature.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(victim).unwrap().tapped, "Capture Sphere keeps it tapped through untap");
+}
+
+/// Boot Nipper enters with a chosen keyword counter (deathtouch here).
+#[test]
+fn boot_nipper_enters_with_chosen_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)])); // deathtouch
+    let id = g.add_card_to_hand(0, catalog::boot_nipper());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Boot Nipper");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "chose the deathtouch counter");
+}
+
 #[test]
 fn frillscare_mentor_grants_menace_then_pumps_menace_team() {
     use crate::card::{CounterType, Keyword};

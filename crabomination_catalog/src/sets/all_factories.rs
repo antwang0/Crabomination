@@ -2401,6 +2401,12 @@ static DECKS: &[Factory] = &[
     super::decks::migratory_greathorn,
     super::decks::boneyard_lurker,
     super::decks::pollywog_symbiote,
+    super::decks::essence_symbiote,
+    super::decks::cloudpiercer,
+    super::decks::sea_dasher_octopus,
+    super::decks::snare_tactician,
+    super::decks::capture_sphere,
+    super::decks::boot_nipper,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
