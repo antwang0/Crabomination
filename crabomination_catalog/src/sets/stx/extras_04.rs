@@ -195,31 +195,18 @@ pub fn quandrix_cryptomancer() -> CardDefinition {
 /// "Daring Diversion deals 2 damage to each of two target creatures."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A 2-damage divided burn
-/// spell that hits two creatures. The "divided as you choose" rider
-/// is collapsed to "2 damage to each" (slot 0 + slot 1 multi-target,
-/// each getting 2 damage). The full "divided" semantics need the
-/// engine-wide DealDamageDivided primitive. Tests:
-/// `daring_diversion_burns_one_creature`,
-/// `daring_diversion_burns_two_creatures_via_multi_target`,
-/// `daring_diversion_is_a_four_mana_red_sorcery`.
+/// Daring Diversion — {3}{R} Sorcery. Deals 4 damage divided as you choose
+/// among one or two target creatures (`Effect::DealDamageDivided`).
 pub fn daring_diversion() -> CardDefinition {
     CardDefinition {
         name: "Daring Diversion",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(2),
-            },
-            Effect::DealDamage {
-                to: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature,
-                },
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(4),
+            filter: SelectionRequirement::Creature,
+            max_targets: 2,
+        },
         ..Default::default()
     }
 }

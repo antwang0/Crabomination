@@ -103,8 +103,28 @@ fn daring_diversion_burns_one_creature() {
         x_value: None,
     }).expect("Daring Diversion castable");
     drain_stack(&mut g);
-    // 2/2 bear takes 2 damage and dies (slot 1 unfilled).
+    // All 4 damage lands on the lone target (divided over one creature).
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear killed");
+}
+
+#[test]
+fn daring_diversion_deals_four_to_a_single_target() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // A 5/5 (Colossal Dreadmaw is 6/6) — give it a -1/-1 to make it 4-tough?
+    // Simpler: a 4-toughness creature dies to the full 4.
+    let big = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(big).unwrap().add_counters(CounterType::PlusOnePlusOne, 2); // 4/4
+    let id = g.add_card_to_hand(0, catalog::daring_diversion());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "all 4 damage hit the single target and killed the 4/4");
 }
 
 // ── Possibility Storm ──────────────────────────────────────────────────────
