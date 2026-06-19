@@ -1528,7 +1528,7 @@ impl GameState {
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
             && !self.players[p].graveyard.iter().any(|c| {
                 c.id == card_id
-                    && self.cast_from_zone_blocked(&c.definition, crate::card::Zone::Graveyard)
+                    && self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Graveyard)
             })
             && let Some(used_type) = self.graveyard_cast_type_available(p, card_id)
         {
@@ -1559,7 +1559,7 @@ impl GameState {
         // the normal cast pipeline; restore it to the top on failure.
         if !self.players[p].hand.iter().any(|c| c.id == card_id)
             && !self.players[p].library.first().is_some_and(|c| {
-                self.cast_from_zone_blocked(&c.definition, crate::card::Zone::Library)
+                self.cast_from_zone_blocked(p, &c.definition, crate::card::Zone::Library)
             })
             && self.library_top_playable(p, card_id)
         {
@@ -4344,7 +4344,7 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
-        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
         }
         let disturb_cost = card
@@ -4418,7 +4418,7 @@ impl GameState {
 
         let card = self.players[p].graveyard[graveyard_pos].clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
-        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
         }
 
@@ -4618,7 +4618,7 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         let card = self.players[p].graveyard[graveyard_pos].clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
-        if self.cast_from_zone_blocked(&card.definition, crate::card::Zone::Graveyard) {
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
         }
         if !self.effective_retrace(&card, p) {
@@ -4914,7 +4914,7 @@ impl GameState {
                         .find(|c| c.id == card_id)
                 }),
             }
-            .is_some_and(|c| self.cast_from_zone_blocked(&c.definition, source_zone));
+            .is_some_and(|c| self.cast_from_zone_blocked(p, &c.definition, source_zone));
             if blocked {
                 return Err(GameError::CardNotInHand(card_id));
             }

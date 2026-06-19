@@ -57580,3 +57580,28 @@ fn whisper_squad_tutors_a_copy_onto_the_battlefield() {
     let on_bf = g.battlefield_find(copy).expect("copy entered the battlefield");
     assert!(on_bf.tapped, "enters tapped");
 }
+
+#[test]
+fn drannith_magistrate_blocks_opponent_nonhand_casts() {
+    // CR 601 — opponents of the Magistrate's controller can't flashback.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drannith_magistrate());
+    // Seat 1 has Faithless Looting in its graveyard and tries to flashback.
+    let id = g.add_card_to_graveyard(1, catalog::faithless_looting());
+    g.players[1].mana_pool.add(Color::Red, 2);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Drannith blocks the opponent's graveyard cast");
+
+    // The Magistrate's controller is unaffected.
+    let own = g.add_card_to_graveyard(0, catalog::faithless_looting());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: own, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_ok(), "the Magistrate's own controller can still flashback");
+}

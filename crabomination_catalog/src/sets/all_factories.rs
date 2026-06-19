@@ -1883,6 +1883,7 @@ static DECKS: &[Factory] = &[
     super::decks::umori_the_collector,
     super::decks::yorion_sky_nomad,
     super::decks::jegantha_the_wellspring,
+    super::decks::drannith_magistrate,
     super::decks::honey_mammoth,
     super::decks::splendor_mare,
     super::decks::boon_of_the_wish_giver,

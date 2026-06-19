@@ -872,6 +872,10 @@ pub enum StaticEffect {
     /// "Your opponents can't cast spells during your turn." Voice of
     /// Victory. Gated at the cast-action dispatch.
     OpponentsCantCastDuringYourTurn,
+    /// CR 601 — "Your opponents can't cast spells from anywhere other than
+    /// their hands." Drannith Magistrate. Checked in `cast_from_zone_blocked`
+    /// for every non-hand cast path (flashback / escape / retrace / free-cast).
+    OpponentsCantCastFromAnywhereButHand,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

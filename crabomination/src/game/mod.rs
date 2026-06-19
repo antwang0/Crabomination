@@ -2743,6 +2743,7 @@ impl GameState {
     /// graveyards or exile).
     pub(crate) fn cast_from_zone_blocked(
         &self,
+        caster: usize,
         def: &crate::card::CardDefinition,
         zone: crate::card::Zone,
     ) -> bool {
@@ -2752,6 +2753,18 @@ impl GameState {
             || (!def.is_creature()
                 && matches!(zone, Zone::Graveyard | Zone::Exile)
                 && self.graveyard_exile_locked())
+            // CR 601 — Drannith Magistrate: an opponent's permanent forbids
+            // casting from any zone but the hand.
+            || (!matches!(zone, Zone::Hand)
+                && self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, caster)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantCastFromAnywhereButHand
+                            )
+                        })
+                }))
     }
 
     /// CR 614 (Gather Specimens): if a creature would enter the battlefield
@@ -9448,7 +9461,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ExtraManaOnLandTap { .. }
             // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
             | StaticEffect::TypeEntersWithCounter { .. }
-            | StaticEffect::OpponentsCantCastDuringYourTurn => vec![],
+            | StaticEffect::OpponentsCantCastDuringYourTurn
+            // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
+            | StaticEffect::OpponentsCantCastFromAnywhereButHand => vec![],
         })
         .collect()
 }

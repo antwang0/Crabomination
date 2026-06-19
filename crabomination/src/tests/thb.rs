@@ -848,11 +848,13 @@ fn kunoros_locks_graveyards_only() {
     assert!(g.battlefield_find(bear).is_none(), "reanimation locked");
     // Flashback (cast from graveyard) is locked too.
     assert!(g.cast_from_zone_blocked(
+        0,
         &catalog::lightning_bolt(),
         crate::card::Zone::Graveyard
     ));
     // Library casts are NOT locked (unlike Grafdigger's Cage).
     assert!(!g.cast_from_zone_blocked(
+        0,
         &catalog::lightning_bolt(),
         crate::card::Zone::Library
     ));

@@ -1684,7 +1684,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — see git for detail.
-- 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git.
+- 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git. "Opponents can't cast from anywhere but their hands" ✅ via `StaticEffect::OpponentsCantCastFromAnywhereButHand`, checked in `cast_from_zone_blocked` for every non-hand cast path (Drannith Magistrate). Remaining ⏳: adventure/foretell/plot exile casts route through their own gates, not yet covered.
 - 🟡 **CR 702.29 — Cycling** — plain Cycling ✅. Typecycling/Landcycling
   (702.29e) ✅ via `Keyword::Landcycling(cost, LandType)` and the general
   `Keyword::Typecycling(cost, filter)` ("Basic landcycling" — Ash Barrens),

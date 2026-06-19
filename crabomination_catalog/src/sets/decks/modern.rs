@@ -39076,6 +39076,27 @@ pub fn jegantha_the_wellspring() -> CardDefinition {
 
 // ── Ikoria (IKO) batch — cycling, lifelink counters, tutors ───────────────
 
+/// Drannith Magistrate — {1}{W} 1/3 Human Wizard. Your opponents can't cast
+/// spells from anywhere other than their hands (CR 601).
+pub fn drannith_magistrate() -> CardDefinition {
+    CardDefinition {
+        name: "Drannith Magistrate",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't cast spells from anywhere other than their hands.",
+            effect: StaticEffect::OpponentsCantCastFromAnywhereButHand,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Honey Mammoth — {4}{G}{G} 6/6 Elephant. ETB: gain 4 life.
 pub fn honey_mammoth() -> CardDefinition {
     CardDefinition {
