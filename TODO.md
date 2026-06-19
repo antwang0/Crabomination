@@ -99,6 +99,16 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Prototype (CR 702.160) follow-ups.** The mechanic + 15 BRO cards ship
+  (`CardDefinition.prototype` + `GameAction::CastPrototype`). Client click casts
+  the prototype face only when the full cost is unaffordable; a modifier
+  (Shift-click) to choose the prototype face when *both* are affordable is a
+  follow-up. Deferred BRO prototype cards need primitives the engine still
+  lacks: Hulking Metamorph (enter-as-copy with prototype P/T), Arcane Proxy
+  (exile-and-cast I/S with MV ≤ power from gy), Woodcaller Automaton (untap +
+  animate a land), Rootwire Amalgam (X/X token = 3× power), Forgefire/Warzone
+  (perpetual). The bot always prefers the cheapest legal line; no value-eval of
+  full-vs-prototype.
 - ⏳ **Cast-time modal choice (CR 601.2b) for "choose two of four" cards.**
   `Effect::ChooseN` resolves the mode pick at *resolution* via the decider, so
   per-mode targets for an arbitrary pick can't be supplied at cast. The five STX

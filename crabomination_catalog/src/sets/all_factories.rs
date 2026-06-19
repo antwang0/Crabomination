@@ -68,6 +68,12 @@ static BRO: &[Factory] = &[
     super::bro::phyrexian_fleshgorger,
     super::bro::steel_seraph,
     super::bro::frogmyr_enforcer,
+    super::bro::diabolic_intent,
+    super::bro::recommission,
+    super::bro::depth_charge_colossus,
+    super::bro::bitter_reunion,
+    super::bro::powerstone_shard,
+    super::bro::tocasias_welcome,
 ];
 static CHK: &[Factory] = &[
     super::chk::glacial_ray,

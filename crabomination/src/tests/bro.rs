@@ -1,10 +1,11 @@
 //! Functionality tests for The Brothers' War (BRO) — the Prototype mechanic
 //! (CR 702.160) and the prototype artifact creatures.
 
-use crate::card::{Keyword, WardCost};
+use crate::card::{CounterType, Keyword, WardCost};
 use crate::catalog;
 use crate::game::*;
 use crate::mana::Color;
+use crate::TurnStep;
 
 /// Helper: flood a seat with plenty of every color + colorless mana.
 fn flood_mana(g: &mut GameState, seat: usize) {
@@ -187,6 +188,200 @@ fn skitterbeam_battalion_prototype_mints_two_copies() {
         .filter(|c| c.definition.name == "Skitterbeam Battalion" && c.controller == 0)
         .count();
     assert_eq!(battalions, 3, "original + two token copies");
+}
+
+/// Spotter Thopter's ETB scries X = its power; prototype 2/3 face flies.
+#[test]
+fn spotter_thopter_prototype_flies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spotter_thopter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3); // {3}{U}
+    g.perform_action(GameAction::CastPrototype {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast prototype");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// Fallaji Dragon Engine pumps itself +1/+0 for {2}.
+#[test]
+fn fallaji_dragon_engine_firebreathes() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::fallaji_dragon_engine());
+    let base = g.computed_permanent(id).unwrap().power;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, base + 1);
+}
+
+/// Autonomous Assembler puts a +1/+1 counter on a target Assembly-Worker.
+#[test]
+fn autonomous_assembler_counters_an_assembly_worker() {
+    let mut g = two_player_game();
+    let src = g.add_card_to_battlefield(0, catalog::autonomous_assembler());
+    let tgt = g.add_card_to_battlefield(0, catalog::autonomous_assembler());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == src) { c.summoning_sick = false; }
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: src, ability_index: 0,
+        target: Some(Target::Permanent(tgt)), additional_targets: vec![], x_value: None,
+    }).expect("counter ability");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tgt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Iron-Craw Crusher's attack trigger pumps a target attacker by its power
+/// (it auto-targets itself: full body 4/6 → +4 → 8/6).
+#[test]
+fn iron_craw_crusher_pumps_an_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let crusher = g.add_card_to_battlefield(0, catalog::iron_craw_crusher());
+    g.clear_sickness(crusher);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: crusher, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(crusher).unwrap().power, 8, "pumped by its own power");
+}
+
+/// Steel Seraph grants a creature you control flying at the start of combat
+/// (the ground creature is first in battlefield order, so it's auto-targeted).
+#[test]
+fn steel_seraph_grants_flying_at_combat() {
+    let mut g = two_player_game();
+    let ground = g.add_card_to_battlefield(0, catalog::goring_warplow());
+    g.add_card_to_battlefield(0, catalog::steel_seraph());
+    for c in g.battlefield.iter_mut() { c.summoning_sick = false; }
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+// ── BRO non-prototype cards ──────────────────────────────────────────────────
+
+/// Diabolic Intent sacrifices a creature and tutors a chosen card to hand.
+#[test]
+fn diabolic_intent_sacrifices_and_tutors() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::goring_warplow());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bolt))]));
+    let id = g.add_card_to_hand(0, catalog::diabolic_intent());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Diabolic Intent");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "tutored card in hand");
+}
+
+/// Recommission reanimates a small creature with a +1/+1 counter.
+#[test]
+fn recommission_reanimates_with_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2/2, MV 2
+    let id = g.add_card_to_hand(0, catalog::recommission());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Recommission");
+    drain_stack(&mut g);
+    let r = g.battlefield_find(bear).expect("reanimated");
+    assert_eq!(r.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!((r.power(), r.toughness()), (3, 3), "2/2 + counter");
+}
+
+/// Depth Charge Colossus prototype is a 6/6 that doesn't untap but can be
+/// untapped for {3}.
+#[test]
+fn depth_charge_colossus_doesnt_untap_then_untaps_for_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::depth_charge_colossus());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4); // {4}{U}{U}
+    g.perform_action(GameAction::CastPrototype {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast prototype");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).map(|c| (c.power, c.toughness)), Some((6, 6)));
+    // Tap it, run an untap step: it stays tapped.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) { c.tapped = true; }
+    g.do_untap();
+    assert!(g.battlefield_find(id).unwrap().tapped, "doesn't untap during untap step");
+    // Pay {3} to untap.
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("untap ability");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(id).unwrap().tapped, "untapped for {{3}}");
+}
+
+/// Powerstone Shard taps for {C} per Powerstone Shard you control.
+#[test]
+fn powerstone_shard_scales_with_copies() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::powerstone_shard());
+    g.add_card_to_battlefield(0, catalog::powerstone_shard());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: a, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "one colorless per Shard controlled");
+}
+
+/// Bitter Reunion's sac ability grants your creatures haste.
+#[test]
+fn bitter_reunion_sac_grants_haste() {
+    let mut g = two_player_game();
+    let reunion = g.add_card_to_battlefield(0, catalog::bitter_reunion());
+    let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: reunion, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for haste");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(reunion).is_none(), "sacrificed");
+    assert!(g.computed_permanent(beater).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Tocasia's Welcome draws once for a small creature entering, but only once
+/// per turn.
+#[test]
+fn tocasias_welcome_draws_once_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tocasias_welcome());
+    let nid = g.next_id();
+    g.players[0].library.push(crate::card::CardInstance::new(nid, catalog::lightning_bolt(), 0));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let cast_bear = |g: &mut GameState| {
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2 ≤ 3
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast bear");
+        drain_stack(g);
+    };
+    cast_bear(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "first small creature draws the bolt");
+    cast_bear(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "only once each turn (no extra draw)");
 }
 
 /// The affordance probe surfaces a payable prototype cast.

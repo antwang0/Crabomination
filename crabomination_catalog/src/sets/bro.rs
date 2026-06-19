@@ -307,6 +307,161 @@ pub fn steel_seraph() -> CardDefinition {
     }
 }
 
+// ── BRO non-prototype cards ──────────────────────────────────────────────────
+
+/// Diabolic Intent — {1}{B} Sorcery. Additional cost: sacrifice a creature.
+/// Search your library for a card, put it into your hand, then shuffle.
+pub fn diabolic_intent() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Diabolic Intent",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
+        }],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Any,
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Recommission — {1}{W} Sorcery. Return target artifact or creature card with
+/// mana value 3 or less from your graveyard to the battlefield; if a creature
+/// enters this way it gets an additional +1/+1 counter. (The counter is placed
+/// on whatever returns; it's inert on a noncreature artifact.)
+pub fn recommission() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Recommission",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Artifact)
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter {
+                what: Selector::LastMoved,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Depth Charge Colossus — {9} 9/9 Dreadnought. Prototype {4}{U}{U} — 6/6.
+/// "This creature doesn't untap during your untap step. / {3}: Untap this."
+pub fn depth_charge_colossus() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Depth Charge Colossus",
+        cost: cost(&[generic(9)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: construct(vec![CreatureType::Dreadnought]),
+        power: 9,
+        toughness: 9,
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+            ..Default::default()
+        }],
+        prototype: proto(cost(&[generic(4), u(), u()]), 6, 6),
+        ..Default::default()
+    }
+}
+
+/// Bitter Reunion — {1}{R} Enchantment. ETB: you may discard a card; if you
+/// do, draw two. "{1}, Sacrifice this: Creatures you control gain haste."
+pub fn bitter_reunion() -> CardDefinition {
+    use crate::effect::shortcut::{each_your_creature, you};
+    CardDefinition {
+        name: "Bitter Reunion",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "discard a card, then draw two".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: you(), amount: Value::Const(1), random: false },
+                draw(2),
+            ])),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Powerstone Shard — {3} Artifact. "{T}: Add {C} for each artifact you
+/// control named Powerstone Shard."
+pub fn powerstone_shard() -> CardDefinition {
+    CardDefinition {
+        name: "Powerstone Shard",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::CountOf(Box::new(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasName("Powerstone Shard".into()),
+                }))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tocasia's Welcome — {2}{W} Enchantment. "Whenever one or more creatures you
+/// control with mana value 3 or less enter, draw a card. This ability triggers
+/// only once each turn."
+pub fn tocasias_welcome() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Tocasia's Welcome",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                })
+                .once_per_turn(),
+            effect: draw(1),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Frogmyr Enforcer — {7} 4/4 Frog Myr. Prototype {3}{R} — 2/2.
 /// Affinity for artifacts (CR 702.41 — this spell costs {1} less per artifact
 /// you control).

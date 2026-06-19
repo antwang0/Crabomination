@@ -3276,6 +3276,7 @@ pub fn auto_advance_p0(
     // auto-passing and surface the window so the player gets priority.
     let has_instant_play = !cv.castable_hand.is_empty()
         || !cv.back_castable_hand.is_empty()
+        || !cv.prototypable_hand.is_empty()
         || !cv.prepare_castable.is_empty()
         || !cv.activatable_permanents.is_empty()
         || !cv.kickable_hand.is_empty()
@@ -4041,6 +4042,13 @@ pub fn handle_game_input(
                                 *legal_targets = l;
                             }
                         }
+                    } else if cv.prototypable_hand.contains(&card.id)
+                        && !cv.castable_hand.contains(&card.id)
+                    {
+                        // CR 702.160 — the full cost isn't affordable but the
+                        // prototype cost is; click casts it for the smaller,
+                        // colored face (no on-cast target).
+                        outbox.submit(GameAction::CastPrototype { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                     } else {
                         outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                     }
