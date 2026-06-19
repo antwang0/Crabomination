@@ -2208,8 +2208,7 @@ pub fn siege_gang_commander() -> CardDefinition {
 }
 
 /// Sea Gate Oracle — {2}{U}, 1/3 Human Wizard. ETB: look at the top two
-/// cards, put one into your hand. (The "other on the bottom" half is
-/// approximated by leaving it on top.)
+/// cards, put one into your hand and the other on the bottom of your library.
 pub fn sea_gate_oracle() -> CardDefinition {
     CardDefinition {
         name: "Sea Gate Oracle",

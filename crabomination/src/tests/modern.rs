@@ -27067,6 +27067,11 @@ fn sea_gate_oracle_etb_draws_into_hand() {
     drain_stack(&mut g);
     // Cast removed the card from hand (-1) but ETB put one of top two into hand (+1).
     assert_eq!(g.players[0].hand.len(), hand_before, "ETB pulled a card into hand");
+    // The unpicked card of the top two is on the bottom (CR — not left on top).
+    let lib = g.players[0].library.len();
+    assert!(lib >= 1, "library still has the bottomed card");
+    assert_eq!(g.players[0].library[lib - 1].definition.name, "Island",
+        "the unchosen card was put on the bottom");
 }
 
 #[test]
