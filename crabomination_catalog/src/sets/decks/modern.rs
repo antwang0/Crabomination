@@ -39097,6 +39097,116 @@ pub fn drannith_magistrate() -> CardDefinition {
     }
 }
 
+/// Cackling Flames — {3}{R} Instant. Deal 3 damage to any target — 5 instead
+/// if you have no cards in hand (Hellbent).
+pub fn cackling_flames() -> CardDefinition {
+    CardDefinition {
+        name: "Cackling Flames",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::IfAtLeast {
+                value: Box::new(Value::HandSizeOf(PlayerRef::You)),
+                threshold: 1,
+                then: Box::new(Value::Const(3)),
+                else_: Box::new(Value::Const(5)),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// A Triome-flavored mana rock: {T}: add one of three colors; Cycling {2}.
+fn tri_crystal(name: &'static str, colors: Vec<Color>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(colors, Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Indatha Crystal — {3} Artifact. {T}: Add {W}, {B}, or {G}. Cycling {2}.
+pub fn indatha_crystal() -> CardDefinition {
+    tri_crystal("Indatha Crystal", vec![Color::White, Color::Black, Color::Green])
+}
+
+/// Raugrin Crystal — {3} Artifact. {T}: Add {U}, {R}, or {W}. Cycling {2}.
+pub fn raugrin_crystal() -> CardDefinition {
+    tri_crystal("Raugrin Crystal", vec![Color::Blue, Color::Red, Color::White])
+}
+
+/// Zagoth Crystal — {3} Artifact. {T}: Add {B}, {G}, or {U}. Cycling {2}.
+pub fn zagoth_crystal() -> CardDefinition {
+    tri_crystal("Zagoth Crystal", vec![Color::Black, Color::Green, Color::Blue])
+}
+
+/// Suntail Hawk — {W} 1/1 Bird with flying.
+pub fn suntail_hawk() -> CardDefinition {
+    CardDefinition {
+        name: "Suntail Hawk",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Excavation Mole — {2}{G} 3/3 Mole with trample. ETB: mill three cards.
+pub fn excavation_mole() -> CardDefinition {
+    CardDefinition {
+        name: "Excavation Mole",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mole], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
+        ..Default::default()
+    }
+}
+
+/// Bushmeat Poacher — {3}{B} 2/4 Human Soldier. {1}, {T}, Sacrifice another
+/// creature: gain life equal to its toughness, then draw a card.
+pub fn bushmeat_poacher() -> CardDefinition {
+    CardDefinition {
+        name: "Bushmeat Poacher",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::SacrificedToughness },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Honey Mammoth — {4}{G}{G} 6/6 Elephant. ETB: gain 4 life.
 pub fn honey_mammoth() -> CardDefinition {
     CardDefinition {

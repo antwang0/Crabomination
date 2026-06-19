@@ -57605,3 +57605,76 @@ fn drannith_magistrate_blocks_opponent_nonhand_casts() {
         card_id: own, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).is_ok(), "the Magistrate's own controller can still flashback");
 }
+
+#[test]
+fn cackling_flames_hellbent_scales_with_empty_hand() {
+    // With a card in hand: 3 damage. With an empty hand: 5.
+    for (hand_cards, expect) in [(1usize, 3i32), (0, 5)] {
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        for _ in 0..hand_cards { g.add_card_to_hand(0, catalog::forest()); }
+        let id = g.add_card_to_hand(0, catalog::cackling_flames());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        let life = g.players[1].life;
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("Cackling Flames castable");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, life - expect, "Hellbent damage with {hand_cards} cards in hand");
+    }
+}
+
+#[test]
+fn tri_crystals_tap_for_their_colors_and_cycle() {
+    use crate::card::Keyword;
+    let d = catalog::indatha_crystal();
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))), "has Cycling");
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::raugrin_crystal());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+}
+
+#[test]
+fn excavation_mole_mills_three_on_etb() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::excavation_mole());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 3, "milled three");
+}
+
+#[test]
+fn bushmeat_poacher_sac_gains_life_and_draws() {
+    let mut g = two_player_game();
+    let poacher = g.add_card_to_battlefield(0, catalog::bushmeat_poacher());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(poacher);
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: poacher, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("sac a creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].life, life + 2, "gained life equal to its toughness");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+#[test]
+fn suntail_hawk_is_a_one_mana_flyer() {
+    let d = catalog::suntail_hawk();
+    assert_eq!((d.power, d.toughness), (1, 1));
+    assert!(d.keywords.contains(&crate::card::Keyword::Flying));
+}
