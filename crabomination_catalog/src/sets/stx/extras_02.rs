@@ -964,21 +964,15 @@ pub fn symbol_of_strength() -> CardDefinition {
 
 // ── Magmatic Sinkhole (STA reprint, Modern Horizons 2) ─────────────────────
 
-/// Magmatic Sinkhole — {5}{R} Sorcery (STA reprint). "Surveil 2, then
-/// Magmatic Sinkhole deals 4 damage to target creature or planeswalker."
-///
-/// ✅ Wired as `Seq(Surveil 2 → DealDamage 4 to Creature/PW)`. The
-/// "delve" alternative cost rider from the original printing is omitted
-/// (no exile-from-gy alt-cost-cmc-reduction primitive). Body fully ships
-/// the printed primary effect at the base cost.
-///
-/// Note: in some real printings Magmatic Sinkhole has Delve; the STA
-/// reprint exists at {1}{B}{R} without Delve.
+/// Magmatic Sinkhole — {5}{R} Sorcery with Delve. "Surveil 2, then it deals
+/// 4 damage to target creature or planeswalker." Delve exiles graveyard cards
+/// to pay the generic part of the cost (`Keyword::Delve` + `CastSpellDelve`).
 pub fn magmatic_sinkhole() -> CardDefinition {
     CardDefinition {
         name: "Magmatic Sinkhole",
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Delve],
         effect: Effect::Seq(vec![
             Effect::Surveil {
                 who: PlayerRef::You,

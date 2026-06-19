@@ -1547,6 +1547,26 @@ fn magmatic_sinkhole_surveils_and_deals_four_damage() {
 }
 
 #[test]
+fn magmatic_sinkhole_delve_pays_generic_from_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); } // for surveil
+    let gy: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.clear_sickness(target);
+    let id = g.add_card_to_hand(0, catalog::magmatic_sinkhole());
+    // {5}{R}: delve five to cover the {5}, pay the {R} with mana.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let exile_before = g.exile.len();
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    }).expect("castable for {R} after delving five");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == target), "4 damage killed the Angel");
+    assert_eq!(g.exile.len(), exile_before + 5, "five delved cards moved to exile");
+}
+
+#[test]
 fn sevinnes_reclamation_returns_low_mv_permanent_from_graveyard() {
     let mut g = two_player_game();
     // Put a 2-MV creature in P0's graveyard.
