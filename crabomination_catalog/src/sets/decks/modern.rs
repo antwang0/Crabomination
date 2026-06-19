@@ -53114,6 +53114,109 @@ pub fn boneyard_lurker() -> CardDefinition {
     }
 }
 
+/// Voracious Greatshark — {3}{U}{U} 5/4 Shark. Flash. When it enters, counter
+/// target artifact or creature spell.
+pub fn voracious_greatshark() -> CardDefinition {
+    CardDefinition {
+        name: "Voracious Greatshark",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Shark], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Heightened Reflexes — {R} Instant. Target creature gets +1/+0 until end of
+/// turn. Put a first strike counter on it.
+pub fn heightened_reflexes() -> CardDefinition {
+    CardDefinition {
+        name: "Heightened Reflexes",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Weaponize the Monsters — {R} Enchantment. {2}, Sacrifice a creature: deal 2
+/// damage to any target.
+pub fn weaponize_the_monsters() -> CardDefinition {
+    CardDefinition {
+        name: "Weaponize the Monsters",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unbreakable Bond — {4}{B} Sorcery. Return target creature card from your
+/// graveyard to the battlefield with a lifelink counter on it.
+pub fn unbreakable_bond() -> CardDefinition {
+    CardDefinition {
+        name: "Unbreakable Bond",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Heroes' Reunion — {G}{W} Instant. Target player gains 7 life.
+pub fn heroes_reunion() -> CardDefinition {
+    CardDefinition {
+        name: "Heroes' Reunion",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GainLife {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(7),
+        },
+        ..Default::default()
+    }
+}
+
 /// Forbidden Friendship — {1}{R} Sorcery. Create a 1/1 red Dinosaur with haste
 /// and a 1/1 white Human Soldier.
 pub fn forbidden_friendship() -> CardDefinition {

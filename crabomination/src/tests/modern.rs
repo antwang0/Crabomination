@@ -58111,6 +58111,102 @@ fn mutate_onto_fresh_host(g: &mut GameState, card: CardId) -> CardId {
     host
 }
 
+/// Voracious Greatshark counters a creature spell when it flashes in.
+#[test]
+fn voracious_greatshark_counters_creature_spell() {
+    let mut g = two_player_game();
+    // Opponent casts a creature spell on their own main phase.
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts Grizzly Bears");
+    // We flash in the Greatshark in response; its ETB counters the bear.
+    let shark = g.add_card_to_hand(0, catalog::voracious_greatshark());
+    for _ in 0..3 { g.players[0].mana_pool.add(Color::Blue, 1); }
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shark, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flash in Greatshark");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the creature spell was countered");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Voracious Greatshark"), "shark resolved");
+}
+
+/// Heightened Reflexes pumps and grants a first strike counter.
+#[test]
+fn heightened_reflexes_pumps_and_first_strikes() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::heightened_reflexes());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Heightened Reflexes");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!(b.power, 3, "+1/+0");
+    assert!(b.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Weaponize the Monsters fires a sacrificed creature at any target.
+#[test]
+fn weaponize_the_monsters_slings_a_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::weaponize_the_monsters());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: g.battlefield.iter().find(|c| c.definition.name == "Weaponize the Monsters").unwrap().id,
+        ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+    }).expect("activate, sacrificing the bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert_eq!(g.players[1].life, opp - 2, "dealt 2 to the opponent");
+}
+
+/// Unbreakable Bond reanimates a creature with a lifelink counter.
+#[test]
+fn unbreakable_bond_reanimates_with_lifelink() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let dead = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    let dead_id = dead.id;
+    g.players[0].graveyard.push(dead);
+    let id = g.add_card_to_hand(0, catalog::unbreakable_bond());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(dead_id))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(dead_id)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Unbreakable Bond");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead_id).is_some(), "creature reanimated");
+    assert!(g.computed_permanent(dead_id).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+/// Heroes' Reunion gains the target player 7 life.
+#[test]
+fn heroes_reunion_gains_seven() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::heroes_reunion());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Heroes' Reunion");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 7);
+}
+
 /// Forbidden Friendship makes a Dinosaur and a Human Soldier.
 #[test]
 fn forbidden_friendship_makes_two_tokens() {

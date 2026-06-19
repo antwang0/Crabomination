@@ -106,11 +106,21 @@ impl GameState {
         // magecraft "exile a card from your graveyard" with an `Any` /
         // `Nonland` filter) must not grab the just-cast spell sitting on
         // the stack.
-        if matches!(
-            req,
-            crate::card::SelectionRequirement::IsSpellOnStack
-                | crate::card::SelectionRequirement::SpellTargetsControllerOrControlled
-        ) {
+        // The gate fires for a bare `IsSpellOnStack` *and* for compound
+        // filters that narrow it (`And(IsSpellOnStack, Creature)` — "counter
+        // target creature spell"); `is_legal` still applies the full filter,
+        // so widening the gate only decides whether to walk the stack.
+        fn mentions_spell_on_stack(r: &crate::card::SelectionRequirement) -> bool {
+            use crate::card::SelectionRequirement as R;
+            match r {
+                R::IsSpellOnStack | R::SpellTargetsControllerOrControlled => true,
+                R::And(a, b) | R::Or(a, b) => {
+                    mentions_spell_on_stack(a) || mentions_spell_on_stack(b)
+                }
+                _ => false,
+            }
+        }
+        if mentions_spell_on_stack(req) {
             use crate::game::types::StackItem;
             // Topmost first: iterate the stack in reverse.
             let mut hostile: Option<Target> = None;
