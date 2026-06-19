@@ -33897,6 +33897,27 @@ fn desperate_ritual_makes_three_red() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "added RRR");
 }
 
+/// Desperate Ritual splices onto an Arcane spell: pay the splice cost, add the
+/// {R}{R}{R}, and keep the ritual in hand (CR 702.47).
+#[test]
+fn desperate_ritual_splices_onto_arcane() {
+    let mut g = two_player_game();
+    let mists = g.add_card_to_hand(0, catalog::reach_through_mists()); // U Arcane, draws 1
+    let ritual = g.add_card_to_hand(0, catalog::desperate_ritual());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1); // splice {1}{R}
+    g.perform_action(GameAction::CastSpellSpliced {
+        card_id: mists, splice_cards: vec![ritual],
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reach Through Mists splicing Desperate Ritual");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "spliced ritual added RRR");
+    assert!(g.players[0].hand.iter().any(|c| c.id == ritual),
+        "the spliced card stays in hand (CR 702.47a)");
+}
+
 #[test]
 fn cabal_coffers_scales_with_swamps() {
     let mut g = two_player_game();

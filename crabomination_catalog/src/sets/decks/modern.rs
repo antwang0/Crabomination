@@ -7337,14 +7337,19 @@ pub fn burning_inquiry() -> CardDefinition {
     }
 }
 
-/// Desperate Ritual — {1}{R} Instant — Arcane. Add {R}{R}{R}. (The Splice onto
-/// Arcane rider is omitted — no splice primitive.)
+/// Desperate Ritual — {1}{R} Instant — Arcane. Add {R}{R}{R}. Splice onto
+/// Arcane {1}{R}.
 pub fn desperate_ritual() -> CardDefinition {
+    use crate::card::SpellSubtype;
     CardDefinition {
         name: "Desperate Ritual",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes { creature_types: vec![], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Arcane],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Splice(cost(&[generic(1), r()]), SpellSubtype::Arcane)],
         effect: Effect::AddMana {
             who: PlayerRef::You,
             pool: ManaPayload::Colors(vec![Color::Red; 3]),
