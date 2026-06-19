@@ -21810,6 +21810,21 @@ fn tasigur_activated_ability_hybrid_pip_payable_with_blue() {
     assert!(g.players[0].library.len() <= lib_before - 2);
 }
 
+/// Tasigur can be cast for {B} after delving five graveyard cards.
+#[test]
+fn tasigur_delve_pays_generic_from_graveyard() {
+    let mut g = two_player_game();
+    let gy: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::tasigur_the_golden_fang());
+    g.players[0].mana_pool.add(Color::Black, 1); // {5} covered by delve, {B} by mana
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    }).expect("Tasigur castable for {B} after delving five");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Tasigur resolved onto the battlefield");
+}
+
 /// Stonecoil Serpent: 0/0 artifact creature with trample and reach.
 /// Stonecoil Serpent: definition shape check.
 // ── modern_decks-17: agent-implemented cards ────────────────────────────────

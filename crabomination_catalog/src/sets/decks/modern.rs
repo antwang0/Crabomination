@@ -18120,9 +18120,8 @@ pub fn urza_planeswalker() -> CardDefinition {
     }
 }
 
-/// Tasigur, the Golden Fang — {5}{B} Creature 4/5 Legendary Human Shaman.
-/// Delve omitted; shipped at full cost.
-/// Activated: {2}{G/U}: Mill 2, then return a nonland card from your
+/// Tasigur, the Golden Fang — {5}{B} Creature 4/5 Legendary Human Shaman with
+/// Delve. Activated: {2}{G/U}: Mill 2, then return a nonland card from your
 /// graveyard to your hand.
 ///
 /// The {G/U} pip in the activated cost is a real
@@ -18140,6 +18139,7 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
+        keywords: vec![Keyword::Delve],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
