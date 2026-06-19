@@ -43486,11 +43486,37 @@ fn gingerbrute_sacrifices_for_life() {
     g.players[0].mana_pool.add_colorless(2);
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("sac for 3 life");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 3);
     assert!(g.battlefield_find(id).is_none(), "sacrificed");
+}
+
+/// Gingerbrute's {1} evasion: it can't be blocked except by haste creatures.
+#[test]
+fn gingerbrute_evasion_only_haste_can_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let gb = g.add_card_to_battlefield(0, catalog::gingerbrute());
+    g.clear_sickness(gb);
+    let plain = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no haste
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("grant evasion");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gb).unwrap()
+        .granted_keywords_eot.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))),
+        "Gingerbrute got the evasion keyword");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: gb, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(plain, gb)])).is_err(),
+        "a non-haste creature can't block Gingerbrute after its evasion ability");
 }
 
 // ── Channel lands (Kamigawa legendary lands) ─────────────────────────────────

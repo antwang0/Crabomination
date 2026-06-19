@@ -36625,10 +36625,11 @@ pub fn hamlet_glutton() -> CardDefinition {
 }
 
 /// Gingerbrute — {1} Artifact Creature — Food Golem 1/1 with Haste.
-/// `{2}, {T}, Sacrifice this creature: You gain 3 life.` (The "{1}: can't be
-/// blocked except by haste creatures" evasion ability is dropped.)
+/// `{1}: This can't be blocked this turn except by creatures with haste.`
+/// `{2}, {T}, Sacrifice this creature: You gain 3 life.`
 pub fn gingerbrute() -> CardDefinition {
     use crate::card::{ActivatedAbility, ArtifactSubtype};
+    use crate::effect::Duration;
     CardDefinition {
         name: "Gingerbrute",
         cost: cost(&[generic(1)]),
@@ -36641,13 +36642,26 @@ pub fn gingerbrute() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Haste],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[generic(2)]),
-            tap_cost: true,
-            sac_cost: true,
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
-            ..Default::default()
-        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::CantBeBlockedExceptBy(Box::new(
+                        SelectionRequirement::HasKeyword(Keyword::Haste),
+                    )),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
