@@ -1717,16 +1717,20 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
-- ⏳ **Mutate (CR 702.140) — high-leverage, unblocks the whole Ikoria cycle.**
-  Cubwarden, Pollywog Symbiote, Boneyard Lurker, Dirge Bat, Migratory
-  Greathorn, Trumpeting Gnarr, Glowstone Recluse, Archipelagore, Cavern
-  Whisperer are all blocked on it. Model on the existing **meld** machinery
-  (`CardInstance.meld_parts` + leave-the-battlefield routing): a mutate pile is
-  a host permanent storing the over/under cards, sharing the topmost card's
-  characteristics with all abilities unioned, and the whole pile changes zones
-  together. Add `CardDefinition.mutate: Option<ManaCost>`, `GameAction::CastMutate
-  { card_id, target, on_top }`, an `EventKind::Mutated` for "whenever this
-  creature mutates" triggers, and a client cast-mutate UI.
+- ✅ **Mutate (CR 702.140).** Shipped: `CardDefinition.mutate: Option<ManaCost>`,
+  `GameAction::CastMutate { card_id, target, on_top }`, `CardInstance.mutate_stack`
+  (component cards top-to-bottom; live `definition` = union of the top card's
+  characteristics + every card's abilities), `EventKind::Mutated` /
+  `GameEvent::Mutated`, leave-the-battlefield scatter (all three meld sites), and
+  snapshot round-trip (union rebuilt on load). Cycle: Glowstone Recluse,
+  Trumpeting Gnarr, Cubwarden, Cavern Whisperer, Dirge Bat, Migratory Greathorn,
+  Boneyard Lurker (tests in `tests/modern.rs`). Follow-ups:
+  - ⏳ **Pollywog Symbiote** — mutate-spell cost reduction + "cast a creature
+    spell with mutate → loot" (needs a "spell has mutate" predicate).
+  - ⏳ **Archipelagore** — "tap up to X, X = times this has mutated" needs a
+    per-host mutate-count (store on the host, bump in `apply_mutate`).
+  - ⏳ **Client cast-mutate UI + `mutatable` affordance** (host picker). Engine
+    path is fully wired and tested; only the UI is missing.
 
 - ✅ **Catalog-wide stat sweep (2026-06-16) — same problem beyond STX.** The
   modern supplement (`decks/`, `mod_set/`) and small older sets carried the same

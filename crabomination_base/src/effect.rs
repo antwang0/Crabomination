@@ -1265,6 +1265,10 @@ pub enum EventKind {
     /// the transforming permanent is the event subject (`EventScope::SelfSource`
     /// for "when this transforms"). Matched to `GameEvent::Transformed`.
     Transformed,
+    /// CR 702.140f — a creature mutated ("Whenever this creature mutates").
+    /// Fires once per mutate onto the merged host (`EventScope::SelfSource`
+    /// for the cards in the merged pile). Matched to `GameEvent::Mutated`.
+    Mutated,
     /// CR 708.8 — a permanent was turned face up ("when this creature is
     /// turned face up", megamorph payoffs). The flipped permanent is the
     /// subject (`EventScope::SelfSource`). Matched to `GameEvent::TurnedFaceUp`.

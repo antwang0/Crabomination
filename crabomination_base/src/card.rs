@@ -1603,6 +1603,12 @@ pub struct CardDefinition {
     /// abilities and types. Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub prototype: Option<Box<Prototype>>,
+    /// CR 702.140 — Mutate. `Some(cost)` lets this non-Human creature spell
+    /// be cast for its mutate cost (`GameAction::CastMutate`), merging with a
+    /// target non-Human creature you own instead of entering on its own.
+    /// Defaults to `None` via `#[serde(default)]`.
+    #[serde(default)]
+    pub mutate: Option<crate::mana::ManaCost>,
     /// CR 702.139 — Companion deck restriction. `Some` for the ten companion
     /// legends; `format::companion_restriction_met` checks a deck against it.
     #[serde(default)]
@@ -2869,6 +2875,15 @@ pub struct CardInstance {
     /// only on a melded object; when it leaves the battlefield, the parts go
     /// to that zone instead and the melded shell ceases to exist.
     pub meld_parts: Vec<CardInstance>,
+    /// CR 702.140 — the component cards of a merged (mutated) permanent,
+    /// top-to-bottom. Non-empty only on a mutate pile; `definition` is the
+    /// synthesized union (top card's characteristics + every card's
+    /// abilities). When the pile leaves the battlefield each component goes
+    /// to that zone as its own card.
+    pub mutate_stack: Vec<CardInstance>,
+    /// Set on a mutate spell on the stack: `(host id, on_top)`. On resolution
+    /// the spell merges onto the host instead of entering as a new creature.
+    pub mutate_onto: Option<(CardId, bool)>,
 }
 
 impl CardInstance {
@@ -2961,6 +2976,8 @@ impl CardInstance {
             battlefield_timestamp: 0,
             detained_by: None,
             meld_parts: Vec::new(),
+            mutate_stack: Vec::new(),
+            mutate_onto: None,
         }
     }
 
@@ -3157,6 +3174,49 @@ impl CardInstance {
             self.definition = printed;
             self.cast_as_prototype = false;
         }
+    }
+
+    /// CR 702.140e — merge `incoming` onto this host permanent. `on_top`
+    /// puts the incoming card's characteristics on top of the merged pile.
+    /// The host keeps its id, counters, damage, and summoning sickness; only
+    /// its printed characteristics + abilities change.
+    pub fn apply_mutate(&mut self, incoming: CardInstance, on_top: bool) {
+        if self.mutate_stack.is_empty() {
+            // Seed the pile with a bare component carrying the host's printed
+            // card, so leaving the battlefield can scatter every component.
+            let mut host = CardInstance::new(self.id, self.definition.clone(), self.owner);
+            host.is_token = self.is_token;
+            self.mutate_stack.push(host);
+        }
+        let mut incoming = incoming;
+        incoming.mutate_onto = None;
+        if on_top {
+            self.mutate_stack.insert(0, incoming);
+        } else {
+            self.mutate_stack.push(incoming);
+        }
+        self.rebuild_mutate_definition();
+    }
+
+    /// Recompute the merged permanent's live `definition`: the top card's
+    /// characteristics with every component card's abilities unioned in.
+    pub fn rebuild_mutate_definition(&mut self) {
+        let Some(top) = self.mutate_stack.first() else { return };
+        let mut def = (*top.definition).clone();
+        for comp in self.mutate_stack.iter().skip(1) {
+            def.triggered_abilities
+                .extend(comp.definition.triggered_abilities.iter().cloned());
+            def.activated_abilities
+                .extend(comp.definition.activated_abilities.iter().cloned());
+            def.static_abilities
+                .extend(comp.definition.static_abilities.iter().cloned());
+            for kw in &comp.definition.keywords {
+                if !def.keywords.contains(kw) {
+                    def.keywords.push(kw.clone());
+                }
+            }
+        }
+        self.definition = Arc::new(def);
     }
 
     pub fn can_attack(&self) -> bool {
@@ -3448,6 +3508,13 @@ struct CardInstanceWire {
     /// snapshots load as empty.
     #[serde(default)]
     meld_parts: Vec<CardInstance>,
+    /// CR 702.140 merged-component cards. `#[serde(default)]` so older
+    /// snapshots load as empty; the union `definition` is rebuilt on load.
+    #[serde(default)]
+    mutate_stack: Vec<CardInstance>,
+    /// Pending mutate-onto target for a mutate spell on the stack.
+    #[serde(default)]
+    mutate_onto: Option<(CardId, bool)>,
     /// Entrancing Lyre tap-lock: this permanent doesn't untap while the
     /// linked source stays tapped. `#[serde(default)]` for back-compat.
     #[serde(default)]
@@ -3538,6 +3605,8 @@ impl serde::Serialize for CardInstance {
             battlefield_timestamp: self.battlefield_timestamp,
             detained_by: self.detained_by,
             meld_parts: self.meld_parts.clone(),
+            mutate_stack: self.mutate_stack.clone(),
+            mutate_onto: self.mutate_onto,
             untap_locked_by: self.untap_locked_by,
         };
         wire.serialize(ser)
@@ -3651,6 +3720,11 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.battlefield_timestamp = wire.battlefield_timestamp;
         c.detained_by = wire.detained_by;
         c.meld_parts = wire.meld_parts;
+        c.mutate_stack = wire.mutate_stack;
+        c.mutate_onto = wire.mutate_onto;
+        if !c.mutate_stack.is_empty() {
+            c.rebuild_mutate_definition();
+        }
         c.untap_locked_by = wire.untap_locked_by;
         Ok(c)
     }

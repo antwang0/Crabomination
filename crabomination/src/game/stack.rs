@@ -630,6 +630,66 @@ impl GameState {
             } => {
                 let card = *card;
                 let card_id = card.id;
+
+                // CR 702.140 — a creature with mutate merges onto its host
+                // permanent instead of entering on its own. If the host is no
+                // longer a legal mutate target it enters as a normal creature
+                // (CR 702.140i), so we only divert when the host is legal.
+                if let Some((host_id, on_top)) = card.mutate_onto {
+                    let legal_host = self.battlefield.iter().any(|c| {
+                        c.id == host_id
+                            && c.controller == caster
+                            && c.definition.is_creature()
+                            && !c
+                                .definition
+                                .has_creature_type(crate::card::CreatureType::Human)
+                    });
+                    if legal_host {
+                        let mut incoming = card;
+                        incoming.mutate_onto = None;
+                        let host = self
+                            .battlefield
+                            .iter_mut()
+                            .find(|c| c.id == host_id)
+                            .expect("legal_host verified");
+                        host.apply_mutate(incoming, on_top);
+                        events.push(GameEvent::Mutated { card_id: host_id });
+                        // CR 702.140f — "Whenever this creature mutates" from
+                        // every card in the merged pile (now unioned into the
+                        // host's live definition).
+                        let mutate_effects: Vec<Effect> = self
+                            .battlefield
+                            .iter()
+                            .find(|c| c.id == host_id)
+                            .map(|c| {
+                                c.definition
+                                    .triggered_abilities
+                                    .iter()
+                                    .filter(|t| {
+                                        t.event.kind == EventKind::Mutated
+                                            && matches!(t.event.scope, EventScope::SelfSource)
+                                    })
+                                    .map(|t| t.effect.clone())
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        for effect in mutate_effects {
+                            let auto_target = self.auto_target_for_effect(&effect, caster);
+                            self.stack.push(
+                                TriggerPush::new(host_id, caster, effect)
+                                    .target(auto_target)
+                                    .trigger_source(Some(
+                                        crate::game::effects::EntityRef::Permanent(host_id),
+                                    ))
+                                    .build(),
+                            );
+                        }
+                        let mut sba = self.check_state_based_actions();
+                        events.append(&mut sba);
+                        return Ok(events);
+                    }
+                }
+
                 // CR 715 — while on an adventure the card is its instant/
                 // sorcery half, so it resolves down the spell path (and is
                 // exiled, not put onto the battlefield) regardless of its
@@ -2750,6 +2810,13 @@ impl GameState {
         let mut card = card;
         if !card.meld_parts.is_empty() && zone != Zone::Battlefield {
             for part in std::mem::take(&mut card.meld_parts) {
+                self.place_card_at_resolved_zone(part, zone);
+            }
+            return;
+        }
+        // CR 702.140e — a merged (mutated) permanent leaves as its components.
+        if !card.mutate_stack.is_empty() && zone != Zone::Battlefield {
+            for part in std::mem::take(&mut card.mutate_stack) {
                 self.place_card_at_resolved_zone(part, zone);
             }
             return;

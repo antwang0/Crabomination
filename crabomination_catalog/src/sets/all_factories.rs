@@ -2393,6 +2393,13 @@ static DECKS: &[Factory] = &[
     super::decks::pest_control,
     super::decks::wrath_of_the_skies,
     super::decks::suntouched_myr,
+    super::decks::glowstone_recluse,
+    super::decks::trumpeting_gnarr,
+    super::decks::cubwarden,
+    super::decks::cavern_whisperer,
+    super::decks::dirge_bat,
+    super::decks::migratory_greathorn,
+    super::decks::boneyard_lurker,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

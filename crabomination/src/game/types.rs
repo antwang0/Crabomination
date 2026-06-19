@@ -168,6 +168,15 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.140 — cast a creature with Mutate for its mutate cost, merging
+    /// it onto `target` (a non-Human creature you own). `on_top` controls
+    /// whether the new card's characteristics sit on top of the merged pile.
+    CastMutate {
+        card_id: CardId,
+        target: CardId,
+        on_top: bool,
+        x_value: Option<u32>,
+    },
     /// CR 709 — cast the **right** half of a split card from hand, paying the
     /// right half's cost. Resolves the right half's effect and goes to the
     /// graveyard like any spell.
@@ -932,6 +941,7 @@ impl GameAction {
                 | A::CastAdventure { .. }
                 | A::CastAdventureCreature { .. }
                 | A::CastPrototype { .. }
+                | A::CastMutate { .. }
                 | A::CastSplitRight { .. }
                 | A::CastSplitFused { .. }
                 | A::CastAftermath { .. }
@@ -1287,6 +1297,9 @@ pub enum GameEvent {
     Transformed { card_id: CardId },
     /// CR 711 — a flip card flipped to its flipped (bottom) face.
     Flipped { card_id: CardId },
+    /// CR 702.140 — a creature mutated (a mutate spell merged onto it).
+    /// `card_id` is the resulting merged permanent (the host).
+    Mutated { card_id: CardId },
     /// CR 708.8 — a face-down permanent was turned face up.
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },

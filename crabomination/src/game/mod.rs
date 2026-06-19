@@ -2890,6 +2890,15 @@ impl GameState {
             }
             return any_exiled;
         }
+        // CR 702.140e — a merged (mutated) permanent dies as its components.
+        if !card.mutate_stack.is_empty() {
+            let mut card = card;
+            let mut any_exiled = false;
+            for part in std::mem::take(&mut card.mutate_stack) {
+                any_exiled |= self.route_to_graveyard(part, events);
+            }
+            return any_exiled;
+        }
         let owner = card.owner;
         // CR 614.6 — "shuffle into its owner's library instead" (Darksteel
         // Colossus). The card never touches the graveyard.
@@ -5112,6 +5121,12 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_prototype(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastMutate {
+                card_id,
+                target,
+                on_top,
+                x_value,
+            } => self.cast_mutate(card_id, target, on_top, x_value),
             GameAction::CastPrepareSpell {
                 creature_id,
                 target,
@@ -8977,6 +8992,8 @@ fn is_event_hardcoded(ev: &GameEvent, spec: &crate::effect::EventSpec) -> bool {
     use crate::effect::EventScope;
     match ev {
         GameEvent::PermanentEntered { .. } => matches!(spec.scope, EventScope::SelfSource),
+        // SelfSource mutate triggers are pushed inline by `resolve_top_of_stack`.
+        GameEvent::Mutated { .. } => matches!(spec.scope, EventScope::SelfSource),
         GameEvent::AttackerDeclared(_) => matches!(spec.scope, EventScope::SelfSource),
         GameEvent::CreatureDied { .. } => matches!(spec.scope, EventScope::SelfSource),
         GameEvent::SpellCast { .. } => true,

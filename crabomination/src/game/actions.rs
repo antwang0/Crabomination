@@ -1442,6 +1442,77 @@ impl GameState {
         result
     }
 
+    /// CR 702.140 — cast a creature with Mutate for its mutate cost, merging
+    /// it onto `host` (a non-Human creature you own). Paid like a normal
+    /// creature spell whose cost is the mutate cost; on resolution the spell
+    /// merges instead of entering (`resolve_top_of_stack`).
+    pub(crate) fn cast_mutate(
+        &mut self,
+        card_id: CardId,
+        host: CardId,
+        on_top: bool,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::CreatureType;
+        let p = self.priority.player_with_priority;
+        if !self.players[p].has_in_hand(card_id) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let (printed, mutate_cost) = {
+            let card = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .expect("has_in_hand verified");
+            match card.definition.mutate.clone() {
+                Some(c) => (card.definition.clone(), c),
+                None => return Err(GameError::InvalidTarget),
+            }
+        };
+        // CR 702.140a — target must be a non-Human creature its controller owns.
+        let legal_host = self.battlefield.iter().any(|c| {
+            c.id == host
+                && c.owner == p
+                && c.definition.is_creature()
+                && !c.definition.has_creature_type(CreatureType::Human)
+        });
+        if !legal_host {
+            return Err(GameError::InvalidTarget);
+        }
+        // Pay the mutate cost via the normal pipeline by swapping in a
+        // mutate-cost definition; restore the printed face after the cast so
+        // the merged pile carries the real characteristics.
+        if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+            let mut d = (*printed).clone();
+            d.cost = mutate_cost;
+            c.definition = std::sync::Arc::new(d);
+            c.mutate_onto = Some((host, on_top));
+        }
+        let result = self.cast_spell(card_id, None, Vec::new(), None, x_value);
+        match result {
+            Ok(events) => {
+                // Restore the printed definition on the stack spell so the
+                // merge unions the real card (its printed cost/abilities).
+                for item in self.stack.iter_mut().rev() {
+                    if let StackItem::Spell { card, .. } = item
+                        && card.id == card_id
+                    {
+                        card.definition = printed;
+                        break;
+                    }
+                }
+                Ok(events)
+            }
+            Err(e) => {
+                if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+                    c.definition = printed;
+                    c.mutate_onto = None;
+                }
+                Err(e)
+            }
+        }
+    }
+
     /// SOS Prepare — cast a copy of a prepared creature's inset prepare
     /// spell. The copy is paid for and timing-checked like a normal spell
     /// of its card type via the regular `cast_spell` pipeline (a fresh

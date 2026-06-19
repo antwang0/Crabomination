@@ -15,7 +15,8 @@ use crate::card::{
 use crate::card::{CounterType, DynamicPt, EventKind, EventScope, EventSpec};
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::{
-    each_your_creature, etb, etb_explore, explore, investigate, on_attack, on_dies, target_filtered,
+    each_your_creature, etb, etb_explore, explore, investigate, on_attack, on_dies, on_mutate,
+    target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, hybrid, phyrexian, r, u, w, x};
@@ -52925,6 +52926,190 @@ pub fn suntouched_myr() -> CardDefinition {
         power: 0,
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        ..Default::default()
+    }
+}
+
+// ── Ikoria mutate cycle (CR 702.140) ────────────────────────────────────────
+
+/// Glowstone Recluse — {2}{G} 2/3 Spider. Reach. Mutate {3}{G}. On mutate, put
+/// two +1/+1 counters on it.
+pub fn glowstone_recluse() -> CardDefinition {
+    CardDefinition {
+        name: "Glowstone Recluse",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        mutate: Some(cost(&[generic(3), g()])),
+        triggered_abilities: vec![on_mutate(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Trumpeting Gnarr — {1}{G}{U} 3/3 Beast. Mutate {3}{G/U}{G/U}. On mutate,
+/// create a 3/3 green Beast token.
+pub fn trumpeting_gnarr() -> CardDefinition {
+    CardDefinition {
+        name: "Trumpeting Gnarr",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        mutate: Some(cost(&[
+            generic(3),
+            hybrid(Color::Green, Color::Blue),
+            hybrid(Color::Green, Color::Blue),
+        ])),
+        triggered_abilities: vec![on_mutate(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Beast".into(),
+                power: 3,
+                toughness: 3,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Beast],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cubwarden — {3}{W} 3/5 Cat. Lifelink. Mutate {2}{W}{W}. On mutate, create
+/// two 1/1 white Cat tokens with lifelink.
+pub fn cubwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Cubwarden",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Lifelink],
+        mutate: Some(cost(&[generic(2), w(), w()])),
+        triggered_abilities: vec![on_mutate(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Cat".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                keywords: vec![Keyword::Lifelink],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Cat],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cavern Whisperer — {4}{B} 4/4 Nightmare. Menace. Mutate {3}{B}. On mutate,
+/// each opponent discards a card.
+pub fn cavern_whisperer() -> CardDefinition {
+    CardDefinition {
+        name: "Cavern Whisperer",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Menace],
+        mutate: Some(cost(&[generic(3), b()])),
+        triggered_abilities: vec![on_mutate(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dirge Bat — {2}{B}{B} 3/3 Bat. Flash, Flying. Mutate {4}{B}{B}. On mutate,
+/// destroy target creature or planeswalker an opponent controls.
+pub fn dirge_bat() -> CardDefinition {
+    CardDefinition {
+        name: "Dirge Bat",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        mutate: Some(cost(&[generic(4), b(), b()])),
+        triggered_abilities: vec![on_mutate(Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Migratory Greathorn — {3}{G} 3/4 Beast. Mutate {2}{G}. On mutate, search
+/// your library for a basic land, put it onto the battlefield tapped, shuffle.
+pub fn migratory_greathorn() -> CardDefinition {
+    CardDefinition {
+        name: "Migratory Greathorn",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        mutate: Some(cost(&[generic(2), g()])),
+        triggered_abilities: vec![on_mutate(Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            count: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Boneyard Lurker — {2}{B}{G} 4/4 Nightmare Beast. Mutate {2}{B/G}{B/G}. On
+/// mutate, return target permanent card from your graveyard to your hand.
+pub fn boneyard_lurker() -> CardDefinition {
+    CardDefinition {
+        name: "Boneyard Lurker",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        mutate: Some(cost(&[
+            generic(2),
+            hybrid(Color::Black, Color::Green),
+            hybrid(Color::Black, Color::Green),
+        ])),
+        triggered_abilities: vec![on_mutate(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::InYourGraveyard),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
         ..Default::default()
     }
 }

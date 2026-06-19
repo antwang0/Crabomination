@@ -314,6 +314,14 @@ pub fn on_dies(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// CR 702.140f — "Whenever this creature mutates, `effect`."
+pub fn on_mutate(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::Mutated, EventScope::SelfSource),
+        effect,
+    }
+}
+
 /// "When you cast this spell, `effect`." A cast trigger resolving above
 /// the spell on the stack (CR 601.2 / the Eldrazi titans). Targeted bodies
 /// pick their target via `target_filtered` as the trigger goes on the stack.

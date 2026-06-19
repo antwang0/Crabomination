@@ -681,6 +681,14 @@ impl GameState {
             }
             return;
         }
+        // CR 702.140e — a merged (mutated) permanent leaving the battlefield
+        // becomes its individual component cards in that zone.
+        if !card.mutate_stack.is_empty() && intended != crate::card::Zone::Battlefield {
+            for part in std::mem::take(&mut card.mutate_stack) {
+                self.place_card_in_dest(part, default_player, dest, events);
+            }
+            return;
+        }
         let resolved = self.resolve_zone_change(
             card.id,
             crate::card::Zone::Battlefield,

@@ -1655,6 +1655,7 @@ pub enum GameEventWire {
     Explored { card_id: CardId, controller: usize },
     BecameMonstrous { card_id: CardId },
     Transformed { card_id: CardId },
+    Mutated { card_id: CardId },
     Flipped { card_id: CardId },
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
@@ -1828,6 +1829,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::Transformed { card_id } => {
                 GameEventWire::Transformed { card_id: *card_id }
+            }
+            GameEvent::Mutated { card_id } => {
+                GameEventWire::Mutated { card_id: *card_id }
             }
             GameEvent::Flipped { card_id } => {
                 GameEventWire::Flipped { card_id: *card_id }
@@ -2027,6 +2031,7 @@ impl GameEventWire {
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),
             E::Transformed { card_id } => format!("{} transformed", name(*card_id)),
+            E::Mutated { card_id } => format!("{} mutated", name(*card_id)),
             E::Flipped { card_id } => format!("{} flipped", name(*card_id)),
             E::TurnedFaceUp { card_id } => format!("{} was turned face up", name(*card_id)),
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),

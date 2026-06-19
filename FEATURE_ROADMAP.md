@@ -195,7 +195,10 @@ Each unblocks a large swath of cards.
 Each a small targeted feature; sweep batch by batch.
 
 - **High frequency / modern staples:** ✅ Madness, ✅ Escape, ✅ Adventure,
-  ✅ Soulbond, ⏳ Mutate, ✅ Companion ({3} sideboard→hand + `companion`
+  ✅ Soulbond, ✅ Mutate (CR 702.140 — `CardDefinition.mutate` +
+  `GameAction::CastMutate`; merges onto a non-Human host you own, unions
+  abilities, scatters on leave, `EventKind::Mutated` triggers — the Ikoria
+  cycle), ✅ Companion ({3} sideboard→hand + `companion`
   deck-construction validation, full Ikoria cycle),
   ✅ Foretell, ✅ Disturb, ✅ Daybound/Nightbound (keywords + day/night +
   502.2 transition + DFC auto-flip), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,

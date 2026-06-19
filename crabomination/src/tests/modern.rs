@@ -57912,6 +57912,169 @@ fn sonorous_howlbonder_locks_menace_creatures_to_three_blockers() {
         "menace creature gains the 3-blocker restriction");
 }
 
+// ── Ikoria mutate cycle (CR 702.140) ────────────────────────────────────────
+
+/// Casting Glowstone Recluse for its mutate cost merges it onto a non-Human
+/// host: the pile takes the top card's name/P-T and fires the mutate trigger
+/// (two +1/+1 counters).
+#[test]
+fn mutate_glowstone_recluse_merges_on_top_and_triggers() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion()); // non-Human Beast 3/2
+    let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3); // mutate {3}{G}
+    g.perform_action(GameAction::CastMutate {
+        card_id: recluse, target: host, on_top: true, x_value: None,
+    }).expect("cast Glowstone Recluse for mutate");
+    drain_stack(&mut g);
+    // The merged permanent is the host id, now showing the Recluse on top.
+    let pile = g.battlefield_find(host).expect("merged pile alive");
+    assert_eq!(pile.definition.name, "Glowstone Recluse");
+    // Mutate trigger added two +1/+1 counters → 2/3 base + 2 = 4/5.
+    assert_eq!(pile.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2);
+    assert_eq!((pile.power(), pile.toughness()), (4, 5));
+    // The spell did not enter as its own creature.
+    assert!(g.battlefield_find(recluse).is_none());
+}
+
+/// Mutating under the host keeps the host's characteristics on top but unions
+/// the abilities (the under card's mutate trigger still fires).
+#[test]
+fn mutate_under_keeps_host_face_unions_abilities() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastMutate {
+        card_id: recluse, target: host, on_top: false, x_value: None,
+    }).expect("mutate under");
+    drain_stack(&mut g);
+    let pile = g.battlefield_find(host).expect("alive");
+    // Top is still the host's name, but Reach (from the under card) is unioned in.
+    assert_eq!(pile.definition.name, "Garruk's Companion");
+    assert!(pile.definition.keywords.contains(&Keyword::Reach));
+    assert_eq!(pile.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2);
+}
+
+/// A merged pile leaving the battlefield scatters into its component cards in
+/// the destination zone (CR 702.140e).
+#[test]
+fn mutate_pile_scatters_on_death() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let bat = g.add_card_to_hand(0, catalog::dirge_bat());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4); // mutate {4}{B}{B}
+    // No opponent target for the destroy trigger; let it auto-fizzle.
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastMutate {
+        card_id: bat, target: host, on_top: true, x_value: None,
+    }).expect("mutate Dirge Bat");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "mutate trigger destroyed opp creature");
+    // Destroy the pile; both component cards hit the graveyard.
+    g.remove_to_graveyard_with_triggers(host);
+    drain_stack(&mut g);
+    let gy: Vec<&str> = g.players[0].graveyard.iter().map(|c| c.definition.name).collect();
+    assert!(gy.contains(&"Dirge Bat"), "Dirge Bat in graveyard: {gy:?}");
+    assert!(gy.contains(&"Garruk's Companion"), "host in graveyard: {gy:?}");
+}
+
+/// Cubwarden's mutate trigger mints two 1/1 lifelink Cats; the merged pile
+/// keeps Cubwarden's lifelink on top.
+#[test]
+fn mutate_cubwarden_makes_two_lifelink_cats() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let cub = g.add_card_to_hand(0, catalog::cubwarden());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2); // {2}{W}{W}
+    g.perform_action(GameAction::CastMutate {
+        card_id: cub, target: host, on_top: true, x_value: None,
+    }).expect("mutate Cubwarden");
+    drain_stack(&mut g);
+    let cats: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Cat" && c.controller == 0).collect();
+    assert_eq!(cats.len(), 2, "two Cat tokens");
+    assert!(cats[0].definition.keywords.contains(&Keyword::Lifelink));
+    assert!(g.battlefield_find(host).unwrap().definition.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Trumpeting Gnarr's mutate trigger makes a 3/3 Beast.
+#[test]
+fn mutate_trumpeting_gnarr_makes_beast() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let gnarr = g.add_card_to_hand(0, catalog::trumpeting_gnarr());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3); // {3}{G/U}{G/U}
+    g.perform_action(GameAction::CastMutate {
+        card_id: gnarr, target: host, on_top: true, x_value: None,
+    }).expect("mutate Trumpeting Gnarr");
+    drain_stack(&mut g);
+    let beasts = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Beast" && c.controller == 0).count();
+    assert_eq!(beasts, 1, "one 3/3 Beast token");
+}
+
+/// Cavern Whisperer's mutate trigger makes each opponent discard.
+#[test]
+fn mutate_cavern_whisperer_opponent_discards() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // opponent's only card
+    let whisper = g.add_card_to_hand(0, catalog::cavern_whisperer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3); // {3}{B}
+    g.perform_action(GameAction::CastMutate {
+        card_id: whisper, target: host, on_top: true, x_value: None,
+    }).expect("mutate Cavern Whisperer");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "opponent discarded their card");
+}
+
+/// Migratory Greathorn's mutate trigger fetches a basic land tapped.
+#[test]
+fn mutate_migratory_greathorn_ramps() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let horn = g.add_card_to_hand(0, catalog::migratory_greathorn());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{G}
+    g.perform_action(GameAction::CastMutate {
+        card_id: horn, target: host, on_top: true, x_value: None,
+    }).expect("mutate Migratory Greathorn");
+    drain_stack(&mut g);
+    let land = g.battlefield.iter().find(|c| c.definition.name == "Forest" && c.controller == 0);
+    assert!(land.is_some_and(|l| l.tapped), "Forest entered tapped");
+}
+
+/// Boneyard Lurker's mutate trigger returns a permanent card from the
+/// graveyard to hand.
+#[test]
+fn mutate_boneyard_lurker_regrows() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let card = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    let bears_id = card.id;
+    g.players[0].graveyard.push(card);
+    let lurker = g.add_card_to_hand(0, catalog::boneyard_lurker());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{B/G}{B/G}
+    g.perform_action(GameAction::CastMutate {
+        card_id: lurker, target: host, on_top: true, x_value: None,
+    }).expect("mutate Boneyard Lurker");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears_id), "permanent card returned to hand");
+}
+
 #[test]
 fn frillscare_mentor_grants_menace_then_pumps_menace_team() {
     use crate::card::{CounterType, Keyword};
