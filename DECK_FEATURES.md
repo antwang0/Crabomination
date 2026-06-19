@@ -53,6 +53,7 @@ Tezzeret, Cruel Captain, on real oracle text).
 | Feature | Status | Notes |
 |---|---|---|
 | Uncounterable spell flag | ✅ | `StackItem::Spell.uncounterable`, respected by `CounterSpell`. Cavern of Souls stamps casts uncounterable via mana provenance; Veil of Summer is a turn-scoped grant. |
+| Mutate (CR 702.140) | ✅ | `CardDefinition.mutate` + `GameAction::CastMutate`; merges onto a non-Human host you own (`CardInstance.mutate_stack`, union definition), `EventKind::Mutated` triggers (`Value::MutateCount`, `SelectionRequirement::HasMutate`), scatters on leave, snapshot round-trip. Ikoria cycle in `decks::modern`. Only Archipelagore (dynamic up-to-X targeting) and the client cast-mutate UI remain — see TODO.md. |
 | X-cost creature side-effects | 🟡 | Thud / Burn at the Stake ride `SacrificeAndRemember` + `Value::SacrificedPower`. Casualty and Adventure ✅. |
 | Sacrifice-as-cost effects | 🟡 | Thud ✅; variable-count sacrifice ✅ (`Effect::SacrificeAnyNumber`); flashback-with-additional-cost ✅ (Lava Dart, Dread Return). |
 

@@ -58111,6 +58111,22 @@ fn mutate_onto_fresh_host(g: &mut GameState, card: CardId) -> CardId {
     host
 }
 
+/// Wingfold Pteron enters with a chosen hexproof counter.
+#[test]
+fn wingfold_pteron_enters_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)])); // hexproof
+    let id = g.add_card_to_hand(0, catalog::wingfold_pteron());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Wingfold Pteron");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Hexproof));
+}
+
 /// Voracious Greatshark counters a creature spell when it flashes in.
 #[test]
 fn voracious_greatshark_counters_creature_spell() {

@@ -53114,6 +53114,32 @@ pub fn boneyard_lurker() -> CardDefinition {
     }
 }
 
+/// Wingfold Pteron — {5}{U} 3/6 Dinosaur. Enters with your choice of a flying
+/// counter or a hexproof counter on it.
+pub fn wingfold_pteron() -> CardDefinition {
+    CardDefinition {
+        name: "Wingfold Pteron",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 3,
+        toughness: 6,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Hexproof,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Voracious Greatshark — {3}{U}{U} 5/4 Shark. Flash. When it enters, counter
 /// target artifact or creature spell.
 pub fn voracious_greatshark() -> CardDefinition {
