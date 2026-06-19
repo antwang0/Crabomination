@@ -7285,6 +7285,41 @@ fn qasali_pridemage_exalted_pumps_lone_attacker() {
         "Exalted pumps the lone attacker to 3/3");
 }
 
+/// CR 702.83b — multiple Exalted sources stack on the lone attacker;
+/// 702.83a — no bonus when the creature doesn't attack alone.
+#[test]
+fn cr_702_83_exalted_stacks_and_requires_attacking_alone() {
+    let mut g = two_player_game();
+    let q1 = g.add_card_to_battlefield(0, catalog::qasali_pridemage());
+    let _q2 = g.add_card_to_battlefield(0, catalog::qasali_pridemage()); // 2nd exalted source
+    g.clear_sickness(q1);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: q1, target: AttackTarget::Player(1),
+    }])).expect("q1 attacks alone");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(q1).expect("alive");
+    assert_eq!((cp.power, cp.toughness), (4, 4),
+        "two Exalted sources each pump the lone attacker (+2/+2)");
+
+    // New combat, attacking with two creatures → not alone → no bonus.
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::qasali_pridemage());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("two attackers");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(a).expect("alive");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "no Exalted when not attacking alone");
+}
+
 /// Greater Good: sac creature, draw P, discard 3.
 #[test]
 fn greater_good_sacrifices_creature_and_draws_power() {
@@ -25718,6 +25753,29 @@ fn steady_progress_proliferates_then_draws() {
     assert_eq!(n, 2, "proliferate grew the +1/+1 counter");
     // -1 cast from hand, +1 drawn.
     assert_eq!(g.players[0].hand.len(), hand_before, "Steady Progress drew a card");
+}
+
+/// CR 701.34 / 606 — Proliferate adds a loyalty counter to a planeswalker
+/// you control (loyalty counters are counters).
+#[test]
+fn cr_701_34_proliferate_adds_loyalty_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
+    let before = g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty);
+    let id = g.add_card_to_hand(0, catalog::steady_progress());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty),
+        before + 1,
+        "proliferate added one loyalty counter to your planeswalker",
+    );
 }
 
 #[test]
