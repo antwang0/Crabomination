@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use crate::card::{CardDefinition, Supertype};
+use crate::card::{CardDefinition, CompanionRule, Supertype};
 use crate::mana::{ColorSet, ManaSymbol};
 
 // ── Format enum ───────────────────────────────────────────────────────────────
@@ -244,6 +244,9 @@ pub enum DeckError {
     BannedCard { card_name: &'static str },
     /// The card is restricted (Vintage) and appears more than once.
     RestrictedCard { card_name: &'static str, found: u32 },
+    /// A card violates the chosen companion's deck-construction restriction
+    /// (CR 702.139c). `card_name` is the first offending card.
+    CompanionRestriction { companion: &'static str, card_name: &'static str },
 }
 
 impl std::fmt::Display for DeckError {
@@ -263,6 +266,9 @@ impl std::fmt::Display for DeckError {
             }
             DeckError::RestrictedCard { card_name, found } => {
                 write!(f, "{card_name} is restricted ({found} copies, maximum is 1)")
+            }
+            DeckError::CompanionRestriction { companion, card_name } => {
+                write!(f, "{card_name} violates {companion}'s companion restriction")
             }
         }
     }
@@ -343,6 +349,132 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
     }
 
     if errors.is_empty() { Ok(()) } else { Err(errors) }
+}
+
+// ── Companion deck restriction (CR 702.139c) ──────────────────────────────
+
+/// Does a single card satisfy a companion's per-card restriction? Returns
+/// `false` for the *offending* card so the caller can name it. Lands are
+/// exempt from the mana-value clauses (which speak of "each card" but the
+/// printed restrictions only ever constrain nonland / permanent cards).
+fn card_meets_companion(rule: &CompanionRule, c: &CardDefinition) -> bool {
+    let mv = c.cost.cmc();
+    match rule {
+        CompanionRule::PermanentsManaValueAtMost(n) => !c.is_permanent() || mv <= *n,
+        CompanionRule::NonlandManaValueAtLeast(n) => c.is_land() || mv >= *n,
+        CompanionRule::NonlandEvenManaValue => c.is_land() || mv % 2 == 0,
+        CompanionRule::NonlandOddManaValue => c.is_land() || mv % 2 == 1,
+        CompanionRule::NoDuplicateManaSymbols => !cost_has_duplicate_symbol(c),
+        CompanionRule::Singleton => true, // handled deck-wide below
+        CompanionRule::CreatureTypesAmong(types) => {
+            !c.is_creature()
+                || c.subtypes.creature_types.iter().any(|t| types.contains(t))
+                // Changelings are every creature type (CR 702.73a).
+                || c.keywords.contains(&crate::card::Keyword::Changeling)
+        }
+        CompanionRule::NonlandShareACardType => true, // handled deck-wide below
+        CompanionRule::DeckSizeAtLeastOverMinimum(_) => true, // deck-wide
+        CompanionRule::PermanentsHaveActivatedAbility => {
+            !c.is_permanent() || !c.activated_abilities.is_empty()
+        }
+    }
+}
+
+/// True if any single mana symbol appears two or more times in the cost
+/// (Jegantha). Hybrid/Phyrexian pips count by their printed symbol.
+fn cost_has_duplicate_symbol(c: &CardDefinition) -> bool {
+    use std::collections::HashMap;
+    let mut seen: HashMap<String, u32> = HashMap::new();
+    for s in &c.cost.symbols {
+        // Generic/colorless/X amounts are a single symbol regardless of size.
+        let key = match s {
+            ManaSymbol::Colored(col) => format!("{col:?}"),
+            ManaSymbol::Hybrid(a, b) => format!("H{a:?}{b:?}"),
+            ManaSymbol::MonoHybrid(n, col) => format!("M{n}{col:?}"),
+            ManaSymbol::Phyrexian(col) => format!("P{col:?}"),
+            ManaSymbol::Generic(_) => "generic".into(),
+            ManaSymbol::Colorless(_) => "colorless".into(),
+            ManaSymbol::Snow => "snow".into(),
+            ManaSymbol::X => "x".into(),
+        };
+        let e = seen.entry(key).or_insert(0);
+        *e += 1;
+        if *e >= 2 {
+            return true;
+        }
+    }
+    false
+}
+
+/// CR 702.139c — validate a deck (main + any lands) against the companion's
+/// deck-construction restriction. `min_deck_size` feeds Yorion's "≥N over the
+/// minimum" clause. Returns the first offending card, if any.
+pub fn companion_restriction_met(
+    companion: &CardDefinition,
+    deck: &[CardDefinition],
+    min_deck_size: u32,
+) -> Result<(), DeckError> {
+    let Some(rule) = &companion.companion else { return Ok(()) };
+
+    // Deck-wide clauses first.
+    match rule {
+        CompanionRule::DeckSizeAtLeastOverMinimum(extra) => {
+            if (deck.len() as u32) < min_deck_size + extra {
+                return Err(DeckError::CompanionRestriction {
+                    companion: companion.name,
+                    card_name: "deck size",
+                });
+            }
+        }
+        CompanionRule::Singleton => {
+            let mut seen: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
+            for c in deck {
+                if is_basic_land(c) {
+                    continue;
+                }
+                let e = seen.entry(c.name).or_insert(0);
+                *e += 1;
+                if *e > 1 {
+                    return Err(DeckError::CompanionRestriction {
+                        companion: companion.name,
+                        card_name: c.name,
+                    });
+                }
+            }
+        }
+        CompanionRule::NonlandShareACardType => {
+            // Umori: there must exist a card type held by every nonland card.
+            use crate::card::CardType;
+            let candidates = [
+                CardType::Creature, CardType::Artifact, CardType::Enchantment,
+                CardType::Instant, CardType::Sorcery, CardType::Planeswalker,
+            ];
+            let nonland: Vec<&CardDefinition> = deck.iter().filter(|c| !c.is_land()).collect();
+            let shared = candidates
+                .iter()
+                .any(|t| nonland.iter().all(|c| c.card_types.contains(t)));
+            if !nonland.is_empty() && !shared {
+                if let Some(c) = nonland.last() {
+                    return Err(DeckError::CompanionRestriction {
+                        companion: companion.name,
+                        card_name: c.name,
+                    });
+                }
+            }
+        }
+        _ => {}
+    }
+
+    // Per-card clauses.
+    for c in deck {
+        if !card_meets_companion(rule, c) {
+            return Err(DeckError::CompanionRestriction {
+                companion: companion.name,
+                card_name: c.name,
+            });
+        }
+    }
+    Ok(())
 }
 
 // ── Commander color identity (Phase K) ────────────────────────────────────

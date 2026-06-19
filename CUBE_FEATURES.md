@@ -33,7 +33,6 @@ online.
 | Adventure (cost-mode duality) | ✅ | `CardDefinition.adventure` + `CastAdventure`/`CastAdventureCreature` (incl. Virtue of Loyalty enchantment // instant). |
 | Storm count + cast-from-top | 🟡 | Cast-from-library-top statics ✅ (Mystic Forge, Courser, Oracle of Mul Daya). Storm count wired (`Value::StormCount`, auto-copy on cast) + `Effect::CopySpell`. Exile-top-and-grant-free-play ✅ (Robber of the Rich, Mind's Desire); energy-gated free cast-from-exile ✅ (Amped Raptor). |
 | Soulbond | ✅ | `Keyword::Soulbond` + `soulbond_partner` + `SoulbondBonus` (P/T, keywords, granted abilities). Pairs auto-resolve on ETB, break on leave (Wolfir Silverheart, Deadeye Navigator, …). |
-| Companion (CR 702.139) | 🟡 | `Keyword::Companion` + `CompanionToHand` ({3} sideboard → hand — Zirda). Deck-construction validation ⏳ (Tier 10). |
 | Saga lore counters | ✅ | `saga_chapters` (History of Benalia). DFC sagas ✅ (`ExileSelfReturnTransformed` — Fable of the Mirror-Breaker). |
 | Transforming DFCs | ✅ | `Effect::Transform` + `CardInstance.{transformed,front_face}`; swaps face in place, round-trips through snapshots (Delver, Concealing Curtains, The Everflowing Well). Daybound/Nightbound, DFC sagas, manifest/disguise all ship. |
 | Hideaway lands | ✅ | `Effect::Hideaway { count }` + `CardExiledWithSource` (Shelldock Isle, Mosswort Bridge, Spinerock Knoll, Windbrisk Heights). |

@@ -38791,6 +38791,8 @@ pub fn zirda_the_dawnwaker() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Companion],
+        // CR 702.139c — every permanent card in the deck has an activated ability.
+        companion: Some(crate::card::CompanionRule::PermanentsHaveActivatedAbility),
         static_abilities: vec![StaticAbility {
             description: "Abilities you activate that aren't mana abilities cost {2} less to activate.",
             effect: StaticEffect::ActivationCostReduction { amount: 2 },
@@ -38802,6 +38804,269 @@ pub fn zirda_the_dawnwaker() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
                 keyword: Keyword::CantBlock,
                 duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Companion cycle (CR 702.139 — Ikoria) ────────────────────────────────
+// Each carries a `companion` deck restriction (validated by
+// `format::companion_restriction_met`) plus `Keyword::Companion`, so it can be
+// brought from the sideboard to hand for {3} (`GameAction::CompanionToHand`).
+
+/// Lurrus of the Dream-Den — {1}{W/B}{W/B} 3/2 Cat Nightmare. Lifelink; once
+/// each turn you may cast a permanent spell with mana value 2 or less from
+/// your graveyard. (Companion: each permanent card has mana value ≤ 2.)
+pub fn lurrus_of_the_dream_den() -> CardDefinition {
+    CardDefinition {
+        name: "Lurrus of the Dream-Den",
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Nightmare],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink, Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::PermanentsManaValueAtMost(2)),
+        // Graveyard-cast permission rides the Muldrotha-style static; the
+        // once-per-turn-and-MV≤2 gate is approximated (one per permanent type).
+        static_abilities: vec![StaticAbility {
+            description: "Once during each of your turns, you may cast a permanent spell with mana value 2 or less from your graveyard.",
+            effect: StaticEffect::MayCastPermanentsFromGraveyard,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gyruda, Doom of Depths — {4}{U/B}{U/B} 6/6 Demon Kraken. ETB: each player
+/// mills four. (The reanimate-an-even-MV-milled-creature rider is approximated
+/// away.) Companion: deck contains only even-mana-value cards.
+pub fn gyruda_doom_of_depths() -> CardDefinition {
+    CardDefinition {
+        name: "Gyruda, Doom of Depths",
+        cost: cost(&[generic(4), hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon, CreatureType::Kraken],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::NonlandEvenManaValue),
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(4),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kaheera, the Orphanguard — {1}{G/W}{G/W} 3/2 Cat Beast. Vigilance; other
+/// Cat/Elemental/Nightmare/Dinosaur/Beast you control get +1/+1 and vigilance.
+/// Companion: each creature card is one of those types.
+pub fn kaheera_the_orphanguard() -> CardDefinition {
+    use crate::card::CompanionRule;
+    let kindred = SelectionRequirement::HasCreatureType(CreatureType::Cat)
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Elemental))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Nightmare))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Dinosaur))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Beast));
+    let others = || Selector::EachPermanent(
+        kindred.clone().and(SelectionRequirement::ControlledByYou).and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Kaheera, the Orphanguard",
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance, Keyword::Companion],
+        companion: Some(CompanionRule::CreatureTypesAmong(vec![
+            CreatureType::Cat, CreatureType::Elemental, CreatureType::Nightmare,
+            CreatureType::Dinosaur, CreatureType::Beast,
+        ])),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each other creature you control that's a Cat, Elemental, Nightmare, Dinosaur, or Beast gets +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "… and has vigilance.",
+                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::Vigilance },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Keruga, the Macrosage — {3}{G/U}{G/U} 5/4 Dinosaur Hippo. ETB: draw a card
+/// for each other permanent you control with mana value 3 or greater.
+/// Companion: deck contains only cards with mana value ≥ 3 and lands.
+pub fn keruga_the_macrosage() -> CardDefinition {
+    CardDefinition {
+        name: "Keruga, the Macrosage",
+        cost: cost(&[generic(3), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Hippo],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::NonlandManaValueAtLeast(3)),
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::CountMatching {
+                sel: Box::new(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::OtherThanSource,
+                }),
+                filter: SelectionRequirement::ManaValueAtLeast(3),
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Lutri, the Spellchaser — {1}{U/R}{U/R} 3/2 Elemental Otter. Flash; ETB (if
+/// cast): copy target instant or sorcery spell you control (may choose new
+/// targets). Companion: each nonland card has a different name.
+pub fn lutri_the_spellchaser() -> CardDefinition {
+    CardDefinition {
+        name: "Lutri, the Spellchaser",
+        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Otter],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::Singleton),
+        // "if you cast it" cast-condition on the ETB is approximated away.
+        triggered_abilities: vec![etb(Effect::CopySpellMayChooseTargets {
+            what: target_filtered(SelectionRequirement::Or(
+                Box::new(SelectionRequirement::HasCardType(CardType::Instant)),
+                Box::new(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            )),
+            count: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Obosh, the Preypiercer — {3}{B/R}{B/R} 3/5 Hellion Horror. (The odd-mana-
+/// value damage-doubling replacement is approximated away.) Companion: deck
+/// contains only odd-mana-value cards and lands.
+pub fn obosh_the_preypiercer() -> CardDefinition {
+    CardDefinition {
+        name: "Obosh, the Preypiercer",
+        cost: cost(&[generic(3), hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hellion, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::NonlandOddManaValue),
+        ..Default::default()
+    }
+}
+
+/// Umori, the Collector — {2}{B/G}{B/G} 4/5 Ooze. (The "choose a card type;
+/// spells of that type cost {1} less" rider is approximated away.) Companion:
+/// each nonland card shares a card type.
+pub fn umori_the_collector() -> CardDefinition {
+    CardDefinition {
+        name: "Umori, the Collector",
+        cost: cost(&[generic(2), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::NonlandShareACardType),
+        ..Default::default()
+    }
+}
+
+/// Yorion, Sky Nomad — {3}{W/U}{W/U} 4/5 Bird Serpent. Flying; ETB: exile any
+/// number of other nonland permanents you own and control, returning them at
+/// the next end step. Companion: deck is ≥ 20 cards over the minimum.
+pub fn yorion_sky_nomad() -> CardDefinition {
+    CardDefinition {
+        name: "Yorion, Sky Nomad",
+        cost: cost(&[generic(3), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Serpent],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::DeckSizeAtLeastOverMinimum(20)),
+        triggered_abilities: vec![etb(Effect::ExileReturnNextEndStep {
+            what: Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::And(
+                    Box::new(SelectionRequirement::OtherThanSource),
+                    Box::new(SelectionRequirement::Nonland),
+                ),
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jegantha, the Wellspring — {4}{R/G} 5/5 Elemental Elk. {T}: add {W}{U}{B}{R}
+/// {G}. (The "can't pay generic costs" spend restriction is approximated away.)
+/// Companion: no card's cost has two of the same mana symbol.
+pub fn jegantha_the_wellspring() -> CardDefinition {
+    CardDefinition {
+        name: "Jegantha, the Wellspring",
+        cost: cost(&[generic(4), hybrid(Color::Red, Color::Green)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Elk],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Companion],
+        companion: Some(crate::card::CompanionRule::NoDuplicateManaSymbols),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![
+                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                ]),
             },
             ..Default::default()
         }],

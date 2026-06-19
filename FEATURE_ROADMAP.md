@@ -195,7 +195,8 @@ Each unblocks a large swath of cards.
 Each a small targeted feature; sweep batch by batch.
 
 - **High frequency / modern staples:** ✅ Madness, ✅ Escape, ✅ Adventure,
-  ✅ Soulbond, ⏳ Mutate, 🟡 Companion ({3} sideboard→hand; deck validation ⏳),
+  ✅ Soulbond, ⏳ Mutate, ✅ Companion ({3} sideboard→hand + `companion`
+  deck-construction validation, full Ikoria cycle),
   ✅ Foretell, ✅ Disturb, ✅ Daybound/Nightbound (keywords + day/night +
   502.2 transition + DFC auto-flip), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,
   ✅ Backup, ✅ Bargain, ⏳ Craft, ✅ Disguise/Cloak, ✅ Plot, ✅ Saddle,
@@ -328,8 +329,9 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **Best-of-3 + sideboarding** flow.
 - 🟡 **Deck legality validation** — size/copy/singleton/Commander-identity ✅,
-  ban + restricted lists ✅ (`format::validate_deck`). Remaining: per-set legality
-  pools (Standard rotation), Pauper rarity.
+  ban + restricted lists ✅ (`format::validate_deck`), companion deck
+  restrictions ✅ (`format::companion_restriction_met`, CR 702.139c). Remaining:
+  per-set legality pools (Standard rotation), Pauper rarity.
 - ⏳ **More 60-card formats** (Modern/Pioneer/Legacy/Vintage/Pauper — mostly
   banlist/pool config).
 - ⏳ **Limited match rules** (40-card, basic-land access).

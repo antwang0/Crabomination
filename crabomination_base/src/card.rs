@@ -1598,6 +1598,10 @@ pub struct CardDefinition {
     /// abilities and types. Defaults to `None` via `#[serde(default)]`.
     #[serde(default)]
     pub prototype: Option<Box<Prototype>>,
+    /// CR 702.139 — Companion deck restriction. `Some` for the ten companion
+    /// legends; `format::companion_restriction_met` checks a deck against it.
+    #[serde(default)]
+    pub companion: Option<CompanionRule>,
     /// CR 702.170 — Plot. `Some(cost)` marks the card as plottable: during
     /// your main phase with an empty stack, pay this cost to exile it
     /// face-up (`GameAction::Plot`); on a later turn cast it from exile
@@ -1719,6 +1723,35 @@ pub struct Prototype {
     pub cost: ManaCost,
     pub power: i32,
     pub toughness: i32,
+}
+
+/// CR 702.139 — the deck-construction restriction a Companion imposes on your
+/// starting deck. If every card in the deck satisfies it, the companion may be
+/// brought from the sideboard to hand once (`GameAction::CompanionToHand`,
+/// {3}). Checked by `format::companion_restriction_met`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompanionRule {
+    /// Lurrus — every permanent card has mana value ≤ N.
+    PermanentsManaValueAtMost(u32),
+    /// Keruga — every card with mana value ≥ N (lands exempt).
+    NonlandManaValueAtLeast(u32),
+    /// Gyruda — every card has even mana value (lands exempt).
+    NonlandEvenManaValue,
+    /// Obosh — every card has odd mana value (lands exempt).
+    NonlandOddManaValue,
+    /// Jegantha — no card's mana cost contains two or more of the same mana
+    /// symbol (`{R}{R}`, `{G}{G}`, hybrid pairs, etc.).
+    NoDuplicateManaSymbols,
+    /// Lutri — at most one copy of each nonland card (singleton).
+    Singleton,
+    /// Kaheera — every creature card is among these types.
+    CreatureTypesAmong(Vec<CreatureType>),
+    /// Umori — every nonland card shares one card type.
+    NonlandShareACardType,
+    /// Yorion — the deck contains at least N cards beyond the format minimum.
+    DeckSizeAtLeastOverMinimum(u32),
+    /// Zirda — every permanent card has an activated ability.
+    PermanentsHaveActivatedAbility,
 }
 
 /// CR 707 — "enters as a copy of [filter] permanent" spec, stored on

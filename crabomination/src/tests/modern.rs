@@ -57454,3 +57454,49 @@ fn fleshwrither_transfigure_same_mana_value() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == flesh), "Fleshwrither sacrificed");
     assert!(g.battlefield.iter().any(|c| c.id == nek), "same-MV creature put onto battlefield");
 }
+
+#[test]
+fn keruga_etb_draws_per_big_permanent() {
+    // ETB: draw a card for each *other* permanent you control with MV ≥ 3.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // MV5
+    g.add_card_to_battlefield(0, catalog::shivan_dragon()); // MV6
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV2 — doesn't count
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::keruga_the_macrosage());
+    g.players[0].mana_pool.add(Color::Green, 5);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Keruga castable for {3}{G/U}{G/U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "drew 2 (Serra + Shivan), Keruga left hand");
+}
+
+#[test]
+fn gyruda_etb_mills_each_player_four() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::gyruda_doom_of_depths());
+    g.players[0].mana_pool.add(Color::Black, 6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gyruda castable for {4}{U/B}{U/B}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 4, "controller milled 4");
+    assert_eq!(g.players[1].graveyard.len(), 4, "opponent milled 4");
+}
+
+#[test]
+fn kaheera_anthems_matching_creatures() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kaheera_the_orphanguard());
+    let beast = g.add_card_to_battlefield(0, catalog::garruks_companion()); // 3/2 Beast
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 Bear — not a kindred type
+    let cp = g.computed_permanent(beast).expect("beast alive");
+    assert_eq!((cp.power, cp.toughness), (4, 3), "Beast gets +1/+1 from Kaheera");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "Beast gains vigilance");
+    let bp = g.computed_permanent(bear).expect("bear alive");
+    assert_eq!((bp.power, bp.toughness), (2, 2), "non-kindred Bear unaffected");
+}
