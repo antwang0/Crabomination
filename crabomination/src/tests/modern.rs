@@ -57744,3 +57744,125 @@ fn wretched_throng_death_tutors_a_copy() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == copy), "tutored a copy to hand");
 }
+
+#[test]
+fn frost_bite_scales_with_snow_permanents() {
+    use crate::card::Supertype;
+    for (snow, expect) in [(0usize, 2i32), (3, 3)] {
+        let mut g = two_player_game();
+        for _ in 0..snow {
+            let mut land = catalog::forest();
+            land.supertypes.push(Supertype::Snow);
+            g.add_card_to_battlefield(0, land);
+        }
+        let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 5 toughness, survives
+        let id = g.add_card_to_hand(0, catalog::frost_bite());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(big)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("Frost Bite castable");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(big).map(|c| c.damage).unwrap_or(0), expect as u32,
+            "{snow} snow → {expect} damage");
+    }
+}
+
+#[test]
+fn divine_verdict_destroys_an_attacker() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: atk, target: crate::game::types::AttackTarget::Player(0),
+    }])).expect("P1 attacks");
+    let id = g.add_card_to_hand(0, catalog::divine_verdict());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(atk)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Divine Verdict castable on an attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).is_none(), "attacker destroyed");
+}
+
+#[test]
+fn goring_ceratops_grants_team_double_strike_on_attack() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let cera = g.add_card_to_battlefield(0, catalog::goring_ceratops());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(cera);
+    g.clear_sickness(bear);
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::types::Attack {
+        attacker: cera, target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("declare attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "other creatures gain double strike");
+}
+
+#[test]
+fn migration_path_fetches_two_basics_tapped() {
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::migration_path());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f1)),
+        DecisionAnswer::Search(Some(f2)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Migration Path castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(f1).is_some_and(|c| c.tapped), "first basic, tapped");
+    assert!(g.battlefield_find(f2).is_some_and(|c| c.tapped), "second basic, tapped");
+}
+
+#[test]
+fn titanoth_rex_cycle_adds_trample_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::titanoth_rex());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Cycle { card_id: id, x_value: None }).expect("cycle {1}{G}");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().keyword_counters.get(&Keyword::Trample).copied().unwrap_or(0),
+        1, "trample counter from the cycle trigger");
+}
+
+#[test]
+fn crystacean_is_a_flash_wall() {
+    let d = catalog::crystacean();
+    assert_eq!((d.power, d.toughness), (1, 6));
+    assert!(d.keywords.contains(&crate::card::Keyword::Flash));
+}
+
+#[test]
+fn aerial_assault_destroys_tapped_and_gains_per_flyer() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::suntail_hawk()); // a flyer we control
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::aerial_assault());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Aerial Assault castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "tapped creature destroyed");
+    assert_eq!(g.players[0].life, life + 1, "gained 1 per flyer (the Hawk)");
+}

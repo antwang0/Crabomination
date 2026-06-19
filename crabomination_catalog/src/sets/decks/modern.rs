@@ -15,7 +15,7 @@ use crate::card::{
 use crate::card::{CounterType, DynamicPt, EventKind, EventScope, EventSpec};
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::{
-    each_your_creature, etb, etb_explore, explore, investigate, on_dies, target_filtered,
+    each_your_creature, etb, etb_explore, explore, investigate, on_attack, on_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, hybrid, phyrexian, r, u, w, x};
@@ -39092,6 +39092,150 @@ pub fn drannith_magistrate() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Your opponents can't cast spells from anywhere other than their hands.",
             effect: StaticEffect::OpponentsCantCastFromAnywhereButHand,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crystacean — {3}{U} 1/6 Crab with flash.
+pub fn crystacean() -> CardDefinition {
+    CardDefinition {
+        name: "Crystacean",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Crab], ..Default::default() },
+        power: 1,
+        toughness: 6,
+        keywords: vec![Keyword::Flash],
+        ..Default::default()
+    }
+}
+
+/// Frost Bite — {R} Snow Instant. Deal 2 damage to target creature or
+/// planeswalker — 3 instead if you control three or more snow permanents.
+pub fn frost_bite() -> CardDefinition {
+    CardDefinition {
+        name: "Frost Bite",
+        cost: cost(&[r()]),
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker)),
+            amount: Value::IfAtLeast {
+                value: Box::new(Value::SnowPermanentCountControlledBy(PlayerRef::You)),
+                threshold: 3,
+                then: Box::new(Value::Const(3)),
+                else_: Box::new(Value::Const(2)),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Divine Verdict — {3}{W} Instant. Destroy target attacking or blocking creature.
+pub fn divine_verdict() -> CardDefinition {
+    CardDefinition {
+        name: "Divine Verdict",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Aerial Assault — {2}{W} Sorcery. Destroy target tapped creature; gain 1 life
+/// for each creature you control with flying.
+pub fn aerial_assault() -> CardDefinition {
+    CardDefinition {
+        name: "Aerial Assault",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goring Ceratops — {5}{W}{W} 3/3 Dinosaur with double strike. Whenever it
+/// attacks, other creatures you control gain double strike until end of turn.
+pub fn goring_ceratops() -> CardDefinition {
+    CardDefinition {
+        name: "Goring Ceratops",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            keyword: Keyword::DoubleStrike,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Migration Path — {3}{G} Sorcery. Search for up to two basic lands, put them
+/// onto the battlefield tapped, then shuffle. Cycling {2}.
+pub fn migration_path() -> CardDefinition {
+    CardDefinition {
+        name: "Migration Path",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::SearchUpToN {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            count: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Titanoth Rex — {7}{G}{G} 11/11 Dinosaur Beast with trample. Cycling {1}{G}.
+/// When you cycle this, put a trample counter on target creature you control.
+pub fn titanoth_rex() -> CardDefinition {
+    CardDefinition {
+        name: "Titanoth Rex",
+        cost: cost(&[generic(7), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 11,
+        toughness: 11,
+        keywords: vec![Keyword::Trample, Keyword::Cycling(cost(&[generic(1), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                keyword: Keyword::Trample,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
