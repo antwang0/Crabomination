@@ -1564,7 +1564,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.115 — Ingest
 - ✅ CR 701.x — Process
 - ✅ CR 208.2 / 613.7b — Set base P/T
-- ✅ CR 702.21 — Ward (discard)
+- ✅ CR 702.21 — Ward (discard / life / `WardCost::LifeSourcePower` = source's power — Phyrexian Fleshgorger; `cr_702_21_*`)
+- ✅ CR 702.160 — Prototype (`CardDefinition.prototype` + `GameAction::CastPrototype`; the BRO cycle; `cr_702_160_*`)
 - ✅ CR 602.5b — Return-to-hand activation cost
 - ✅ CR 602.5c — "Abilities can't be activated"
 - ✅ CR 119.3 — Life gained this turn

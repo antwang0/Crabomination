@@ -4,8 +4,10 @@
 //! death-replacement at the destroy funnel (CR 614), Exchange control
 //! (CR 701.12), Fight + deathtouch (CR 701.14 / 702.2), and the
 //! defending-player binding for "a creature you control attacks"
-//! triggers (CR 509.2 / 603.2), Domain (CR 702.43), and Equipment-granted
-//! triggers resolving on the Equipment (CR 702.6e).
+//! triggers (CR 509.2 / 603.2), Domain (CR 702.43), Equipment-granted
+//! triggers resolving on the Equipment (CR 702.6e), Prototype (CR 702.160),
+//! Ward—pay-life-equal-to-power (CR 702.21), and once-each-turn triggers
+//! (CR 603.3d).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -3039,4 +3041,81 @@ fn cr_704_5g_zero_toughness_creature_dies() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(bear).is_none(), "the 0-toughness creature left the battlefield");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "put into its owner's graveyard (CR 704.5g)");
+}
+
+// ── CR 702.160 — Prototype ──────────────────────────────────────────────────
+
+#[test]
+fn cr_702_160_prototype_sets_cost_color_and_size_keeping_abilities() {
+    let mut g = two_player_game();
+    // Full cast: colorless, full size, keeps abilities (Deathtouch).
+    let full = g.add_card_to_hand(0, catalog::goring_warplow());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 6);
+    }
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: full, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("full cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(full).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4));
+    assert!(cp.colors.is_empty(), "full-cost prototype is colorless (CR 702.160c)");
+
+    // Prototype cast: colored, smaller, same abilities, smaller mana value.
+    let proto = g.add_card_to_hand(0, catalog::goring_warplow());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastPrototype {
+        card_id: proto, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("prototype cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(proto).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size (CR 702.160c)");
+    assert_eq!(cp.colors, vec![Color::Black], "prototype color follows its cost");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Deathtouch), "abilities/types kept");
+}
+
+// ── CR 702.21 — Ward (cost = source's power) ─────────────────────────────────
+
+#[test]
+fn cr_702_21_ward_life_equal_to_power_is_paid_or_countered() {
+    let mut g = two_player_game();
+    let gorger = g.add_card_to_battlefield(0, catalog::phyrexian_fleshgorger()); // 7/5
+    // Opponent targets it: Ward—Pay life equal to its power (7).
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(gorger)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 7, "Ward paid life = source power");
+    assert!(g.battlefield_find(gorger).is_some(), "creature survives the 3-damage bolt");
+}
+
+// ── CR 603.3d — "This ability triggers only once each turn" ──────────────────
+
+#[test]
+fn cr_603_3d_trigger_fires_at_most_once_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tocasias_welcome());
+    let nid = g.next_id();
+    g.players[0].library.push(crate::card::CardInstance::new(nid, catalog::lightning_bolt(), 0));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let cast_small = |g: &mut GameState| {
+        let c = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: c, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast");
+        drain_stack(g);
+    };
+    cast_small(&mut g);
+    cast_small(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "the once-each-turn trigger drew only once");
 }
