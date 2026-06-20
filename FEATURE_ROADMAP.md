@@ -52,7 +52,11 @@ exercising each) was elided in a compaction pass; recover it from
   (`CostReductionDuringOpponentsTurn` — Naiad of Hidden Coves).
 - **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
   the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
-  (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders).
+  (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders),
+  `SelectionRequirement::ManaValueParity` (Extinction Event's odd/even sweep);
+  CDA P/T for creatures-in-your-graveyard and other-flyers-you-control
+  (`DynamicPt::BasePlusCreaturesInControllerGraveyard` — Fiend Artisan;
+  `BasePlusOtherFlyersControlled` — Skycat Sovereign).
 - **Ability/trigger riders:** statics-granted triggered abilities (Kataki),
   conditional aura riders, rhystic taxes (Esper Sentinel), once-per-turn
   triggers (603.3d), opponents-only activations, discard-self cost,
@@ -61,7 +65,12 @@ exercising each) was elided in a compaction pass; recover it from
   auras-on-dying-creature payoffs (`auras_at_death` +
   `Value::AurasYouControlledOnDyingSubject` — Hateful Eidolon, Dawn Evangel);
   name-gated first-cast-this-turn delayed trigger
-  (`DelayedKind::YourNextNamedSpellThisTurn` — Medomai's Prophecy).
+  (`DelayedKind::YourNextNamedSpellThisTurn` — Medomai's Prophecy);
+  next-spell delayed triggers expose the cast spell's mana value
+  (`event_amount` → `ManaValueLessThanEventAmount` — Vivien, Monsters'
+  Advocate's lesser-MV tutor); conditional defender-bypass
+  (`StaticEffect::CanAttackIgnoringDefenderWhile` — Drowsing Tyrannodon);
+  bounty-counter dies payoff (`CounterType::Bounty` — Chevill).
 - **Protection / locks / piles (THB batch):** protection from each mana value
   other than N (`Keyword::ProtectionFromManaValueExcept`, all DEBT facets —
   Haktos); permanent opponents-can't-cast-named lock + linked counter-exile

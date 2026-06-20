@@ -1738,19 +1738,24 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     path is fully wired and tested; only the UI is missing.
 
 - ⏳ **Ikoria cards deferred (need new primitives or are complex):**
-  - **Narset of the Ancient Way / Vivien, Monsters' Advocate (IKO walkers)** —
-    multi-ability walkers (Lukka already shipped). Narset's restricted-mana +1
-    (add mana spendable only on noncreature spells) + discard-linked damage,
-    and Vivien's −2 "next creature spell tutors a lesser-MV creature to the
-    battlefield" (needs an MV-less-than-the-cast-spell filter). Vivien's
-    cast-from-top static + +1 token-with-chosen-keyword-counter ride existing
-    primitives (`PlayFromLibraryTop`, `AddKeywordCounter`, resolution-time
-    mode pick).
+  - **IKO walkers still missing:** Narset of the Ancient Way (restricted-mana +1
+    spendable only on noncreature spells + discard-linked damage; −6 emblem) and
+    Lukka, Coppercoat Outcast (+1 exile-top-3 with conditional cast-from-exile;
+    −2 reveal-until-greater-MV deploy). Vivien, Monsters' Advocate now ships
+    (cast-from-top static, +1 token+keyword-counter, −2 lesser-MV tutor via the
+    new next-spell `event_amount` wiring).
   - **Other complex IKO holdouts** (next-run candidates): Winota (attack-trigger
-    coin-flip-free tutor), Kinnan (mana-doubling + big-creature dig), Brokkos
-    (escape + mutate), Chevill (bounty counters), Quartzwood's faithful "any
-    trampler you control" batch trigger, Memory Leak (reveal-hand + exile from
-    hand/gy).
+    coin-flip-free tutor — put-onto-battlefield-attacking + indestructible EOT),
+    Kinnan (tap-for-mana doubling + big-creature dig), Quartzwood's faithful
+    "any trampler you control" batch trigger, Memory Leak (reveal-hand + exile
+    from hand/gy), Sea Serpent (can't-attack-unless-defender-has-Island +
+    sac-if-no-Islands), Titans' Nest (surveil + restricted exile-for-mana).
+  - **Brokkos, Apex of Forever** ships with mutate+trample; the "cast from
+    graveyard using its mutate ability" rider is dropped — `cast_mutate` only
+    reads the hand. A `mutate_from_graveyard` flag + a graveyard cast path
+    (mirroring `cast_escape`) would finish it.
+  - **Mind Spike** drops the "if they revealed nothing, draw a card" rider;
+    **Howl of the Hunt** drops the Wolf/Werewolf untap-on-enter rider.
   - **Glimpse the Cosmos** ships the dig-3-take-1; the "cast from graveyard
     while you control a Giant" rider is dropped.
   - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` were
