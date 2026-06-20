@@ -315,6 +315,9 @@ pub enum CounterType {
     /// a coin-countered creature dies, its card returns under Athreos's
     /// controller's control.
     Coin,
+    /// Tide counter — Ominous Seas accrues one on your first draw each turn;
+    /// at four or more they're removed to mint an 8/8 Kraken.
+    Tide,
 }
 
 /// Every zone a card can occupy.
@@ -1056,6 +1059,10 @@ pub enum SelectionRequirement {
     /// shape rather than the `AtMost`/`AtLeast` approximations).
     /// Composes naturally with `And`/`Or` for range gates.
     ManaValueExactly(u32),
+    /// True when the card's mana value has the given parity — odd when
+    /// `odd: true`, even (incl. 0) otherwise. Extinction Event's "exile each
+    /// creature with mana value of the chosen parity".
+    ManaValueParity { odd: bool },
     /// True when the card's mana value equals the number of counters of the
     /// given kind on the resolving ability's source (Aether Vial). Resolved
     /// to a concrete `ManaValueExactly(n)` by `resolve_source_counters` at

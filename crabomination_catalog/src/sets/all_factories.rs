@@ -2539,6 +2539,8 @@ static DECKS: &[Factory] = &[
     super::decks::snare_tactician,
     super::decks::capture_sphere,
     super::decks::boot_nipper,
+    super::decks::ominous_seas,
+    super::decks::extinction_event,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

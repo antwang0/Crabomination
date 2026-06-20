@@ -56283,3 +56283,92 @@ pub fn patagia_tiger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 3 ───────────────────────────────────────────────────────────
+
+/// Ominous Seas — {1}{U} Enchantment. On your first draw each turn, add a tide
+/// counter; at four or more, remove them and create an 8/8 blue Kraken.
+pub fn ominous_seas() -> CardDefinition {
+    CardDefinition {
+        name: "Ominous Seas",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                once_per_turn: true,
+                ..EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+            },
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Tide,
+                    amount: Value::Const(1),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Tide },
+                        Value::Const(4),
+                    ),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter {
+                            what: Selector::This,
+                            kind: CounterType::Tide,
+                            amount: Value::CountersOn {
+                                what: Box::new(Selector::This),
+                                kind: CounterType::Tide,
+                            },
+                        },
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::Const(1),
+                            definition: TokenDefinition {
+                                name: "Kraken".into(),
+                                power: 8,
+                                toughness: 8,
+                                card_types: vec![CardType::Creature],
+                                colors: vec![Color::Blue],
+                                subtypes: Subtypes {
+                                    creature_types: vec![CreatureType::Kraken],
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Extinction Event — {4}{B} Sorcery. Choose odd or even, then exile each
+/// creature with mana value of the chosen parity. (AutoDecider picks odd.)
+pub fn extinction_event() -> CardDefinition {
+    CardDefinition {
+        name: "Extinction Event",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                // Mode 0: odd mana value.
+                Effect::Exile {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueParity { odd: true }),
+                    ),
+                },
+                // Mode 1: even mana value.
+                Effect::Exile {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueParity { odd: false }),
+                    ),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}

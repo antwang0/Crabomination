@@ -630,7 +630,7 @@ fn foretell_demon_bolt_kills_a_creature() {
 #[test]
 fn foretell_behold_the_multiverse_draws_two() {
     let mut g = two_player_game();
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::behold_the_multiverse());
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell for {2}");
@@ -12083,7 +12083,7 @@ fn think_twice_draws_and_has_flashback() {
 #[test]
 fn forbidden_alchemy_digs_four_and_buries_the_rest() {
     let mut g = two_player_game();
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::forbidden_alchemy());
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -28180,7 +28180,7 @@ fn theros_artifact_bodies() {
 #[test]
 fn returned_centaur_etb_mills_four() {
     let mut g = two_player_game();
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     let yard = g.players[0].graveyard.len();
     let id = g.add_card_to_hand(0, catalog::returned_centaur());
     g.players[0].mana_pool.add_colorless(3);
@@ -28488,7 +28488,7 @@ fn rapid_hybridization_destroys_and_makes_a_frog_lizard() {
 #[test]
 fn impulse_digs_four_and_puts_one_in_hand() {
     let mut g = two_player_game();
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     let imp = g.add_card_to_hand(0, catalog::impulse());
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -53364,7 +53364,7 @@ fn dress_down_strips_abilities() {
 #[test]
 fn ox_of_agonas_etb_and_escape_counter() {
     let mut g = two_player_game();
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     for _ in 0..2 { g.add_card_to_hand(0, catalog::island()); }
     // Escape it from the graveyard: 8 other cards to exile.
     let ox = g.add_card_to_graveyard(0, catalog::ox_of_agonas());
@@ -56520,7 +56520,7 @@ fn cleave_winged_portent_counts_fliers_then_everything() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(0, catalog::consecrated_sphinx()); // flyer
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     let a = g.add_card_to_hand(0, catalog::winged_portent());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
@@ -56716,7 +56716,7 @@ fn fleet_swallower_mills_half_rounded_up() {
 #[test]
 fn otherworldly_gaze_surveil_and_flashback() {
     let mut g = two_player_game();
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::otherworldly_gaze());
     g.players[0].mana_pool.add(Color::Blue, 1);
     // AutoDecider keeps everything on top (no graveyard sends).
@@ -59527,7 +59527,7 @@ fn crystalline_giant_gains_random_counter() {
 fn inspired_ultimatum_gain_burn_draw() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4, dies to 5
-    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
     let spell = g.add_card_to_hand(0, catalog::inspired_ultimatum());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add(Color::Red, 3);
@@ -60326,4 +60326,62 @@ fn sleeper_dart_draws_and_locks_untap() {
     }).expect("sac to stun");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dart).is_none(), "Sleeper Dart sacrificed");
+}
+
+/// Ominous Seas accrues a tide counter on the first draw each turn (only the
+/// first), and at four counters mints an 8/8 Kraken, clearing the counters.
+#[test]
+fn ominous_seas_tide_counters_then_kraken() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let seas = g.add_card_to_battlefield(0, catalog::ominous_seas());
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
+    let tide = |g: &GameState| g.battlefield_find(seas).unwrap()
+        .counters.get(&CounterType::Tide).copied().unwrap_or(0);
+    let kraken_count = |g: &GameState| g.battlefield.iter()
+        .filter(|c| c.definition.name == "Kraken").count();
+
+    for turn in 1..=3 {
+        g.triggered_once_per_turn_used.clear();
+        // Two draws this turn — only the first adds a counter.
+        for _ in 0..2 {
+            let mut ev = Vec::new();
+            g.draw_one(0, &mut ev);
+            g.dispatch_triggers_for_events(&ev);
+            drain_stack(&mut g);
+        }
+        assert_eq!(tide(&g), turn, "one tide counter per turn (first draw only)");
+    }
+    assert_eq!(kraken_count(&g), 0, "no Kraken below four counters");
+    // Fourth turn's first draw hits four → Kraken, counters cleared.
+    g.triggered_once_per_turn_used.clear();
+    let mut ev = Vec::new();
+    g.draw_one(0, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(kraken_count(&g), 1, "four tide counters mint an 8/8 Kraken");
+    assert_eq!(tide(&g), 0, "tide counters removed when the Kraken is made");
+}
+
+/// Extinction Event (default odd) exiles every creature with odd mana value,
+/// leaving the even-MV creatures on the battlefield.
+#[test]
+fn extinction_event_exiles_chosen_parity() {
+    let mut g = two_player_game();
+    let lion = g.add_card_to_battlefield(1, catalog::savannah_lions()); // MV1 odd
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());   // MV5 odd
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV2 even
+    let memnite = g.add_card_to_battlefield(0, catalog::memnite());     // MV0 even
+    let spell = g.add_card_to_hand(0, catalog::extinction_event());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Extinction Event");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lion).is_none(), "MV1 (odd) exiled");
+    assert!(g.battlefield_find(angel).is_none(), "MV5 (odd) exiled");
+    assert!(g.battlefield_find(bears).is_some(), "MV2 (even) survives");
+    assert!(g.battlefield_find(memnite).is_some(), "MV0 (even) survives");
 }
