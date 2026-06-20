@@ -157,6 +157,7 @@ impl Effect {
             Effect::TapUpToValue { .. } => false,
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
+            Effect::ReturnGraveyardCardsToHand { .. } => false,
             Effect::LookTopNDeployPermanentsRestToHand { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,

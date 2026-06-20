@@ -58326,6 +58326,89 @@ fn sanctuary_lockdown_anthem_and_tap() {
         "two Humans tapped to pay");
 }
 
+/// Mythos of Illuna makes a token copy of a target permanent.
+#[test]
+fn mythos_of_illuna_copies_permanent() {
+    let mut g = two_player_game();
+    let orig = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let m = g.add_card_to_hand(0, catalog::mythos_of_illuna());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2); // {2}{U}{U}
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: Some(Target::Permanent(orig)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Illuna");
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count();
+    assert_eq!(bears, 1, "a Grizzly Bears token copy under our control");
+}
+
+/// Mythos of Brokkos returns up to two permanent cards from the graveyard.
+#[test]
+fn mythos_of_brokkos_returns_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // nonpermanent — ineligible
+    let m = g.add_card_to_hand(0, catalog::mythos_of_brokkos());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2); // {2}{G}{G}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Brokkos");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a), "creature returned to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == b), "land returned to hand");
+}
+
+/// Mythos of Vadrok deals 5 damage divided (here, all to one creature).
+#[test]
+fn mythos_of_vadrok_divides_damage() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let m = g.add_card_to_hand(0, catalog::mythos_of_vadrok());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2); // {2}{R}{R}
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Vadrok");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the 2/2 took lethal from the 5 damage");
+}
+
+/// Kogla's ETB fights an opponent creature; its activation grants indestructible.
+#[test]
+fn kogla_fights_on_etb_and_protects() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let kogla = g.add_card_to_hand(0, catalog::kogla_the_titan_ape());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(3); // {3}{G}{G}{G}
+    g.perform_action(GameAction::CastSpell {
+        card_id: kogla, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Kogla");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "Kogla's ETB fight killed the 2/2");
+    let k = g.battlefield_find(kogla).expect("Kogla survives the fight (7/6 vs 2/2)");
+    assert_eq!(k.damage, 2, "Kogla took 2 from the fight");
+
+    // Activate: return a Human (none here → fizzle on the move) is awkward, so
+    // just confirm the ability grants indestructible to Kogla.
+    let human = g.add_card_to_battlefield(0, catalog::beskir_shieldmate());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kogla, ability_index: 0,
+        target: Some(Target::Permanent(human)), additional_targets: vec![], x_value: None,
+    }).expect("activate Kogla");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == human), "Human returned to hand");
+    assert!(g.battlefield_find(kogla).unwrap().is_indestructible(), "Kogla gained indestructible");
+}
+
 /// Parcelbeast's ability puts a revealed top land onto the battlefield.
 #[test]
 fn parcelbeast_drops_top_land() {

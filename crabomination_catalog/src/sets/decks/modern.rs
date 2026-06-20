@@ -54505,3 +54505,104 @@ pub fn parcelbeast() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kogla, the Titan Ape — {3}{G}{G}{G} 7/6 legendary Ape. ETB fights up to one
+/// creature you don't control. Attack: destroy target artifact/enchantment an
+/// opponent controls. {1}{G}: return a Human you control to hand; Kogla gains
+/// indestructible until end of turn.
+pub fn kogla_the_titan_ape() -> CardDefinition {
+    CardDefinition {
+        name: "Kogla, the Titan Ape",
+        cost: cost(&[generic(3), g(), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ape], ..Default::default() },
+        power: 7,
+        toughness: 6,
+        triggered_abilities: vec![
+            etb(Effect::Fight {
+                attacker: Selector::This,
+                defender: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+            on_attack(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Enchantment)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::HasCreatureType(CreatureType::Human)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mythos of Illuna — {2}{U}{U} Sorcery. Create a token that's a copy of target
+/// permanent. (The {R}{G}-spent fight rider is dropped — no spend-tracking.)
+pub fn mythos_of_illuna() -> CardDefinition {
+    CardDefinition {
+        name: "Mythos of Illuna",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(SelectionRequirement::Permanent),
+            extra_creature_types: vec![],
+            override_pt: None,
+            non_legendary: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Mythos of Vadrok — {2}{R}{R} Sorcery. Deal 5 damage divided as you choose
+/// among any number of target creatures and/or planeswalkers. (The {W}{U}-spent
+/// can't-attack rider is dropped.)
+pub fn mythos_of_vadrok() -> CardDefinition {
+    CardDefinition {
+        name: "Mythos of Vadrok",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(5),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            max_targets: 5,
+        },
+        ..Default::default()
+    }
+}
+
+/// Mythos of Brokkos — {2}{G}{G} Sorcery. Return up to two permanent cards from
+/// your graveyard to your hand. (The {U}{B}-spent self-mill rider is dropped.)
+pub fn mythos_of_brokkos() -> CardDefinition {
+    CardDefinition {
+        name: "Mythos of Brokkos",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ReturnGraveyardCardsToHand {
+            filter: SelectionRequirement::Permanent,
+            max: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}

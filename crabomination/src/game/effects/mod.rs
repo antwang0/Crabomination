@@ -3630,6 +3630,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnGraveyardCardsToHand { filter, max } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = self.evaluate_value(max, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Return up to {n} cards to your hand"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: n,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids
+                        .into_iter()
+                        .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                        .take(n as usize)
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                for cid in chosen {
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::LookTopNDeployPermanentsRestToHand { count } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::effect::ZoneDest;

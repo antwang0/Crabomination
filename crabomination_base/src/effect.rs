@@ -2480,6 +2480,10 @@ pub enum Effect {
     /// picks at resolution (`Decision::ChooseCards`); duplicate names are
     /// dropped so each returned card has a distinct name.
     ReturnGraveyardPermanentsDifferentNames,
+    /// "Return up to `max` `filter` cards from your graveyard to your hand"
+    /// (Mythos of Brokkos). Resolution-time `Decision::ChooseCards` pick (no
+    /// targeting); reusable for any choose-as-resolves graveyard recursion.
+    ReturnGraveyardCardsToHand { filter: SelectionRequirement, max: Value },
     /// Genesis Ultimatum — look at the top `count` cards of the controller's
     /// library; put any number of permanent cards among them onto the
     /// battlefield and the rest into hand. The controller picks the permanents
