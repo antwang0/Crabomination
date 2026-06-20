@@ -57328,3 +57328,89 @@ pub fn forsake_the_worldly() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cruel Edict — {1}{B} Sorcery. Target opponent sacrifices a creature.
+pub fn cruel_edict() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Edict",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::Target(0)),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        },
+        ..Default::default()
+    }
+}
+
+/// Liliana's Triumph — {1}{B} Instant. Each opponent sacrifices a creature; if
+/// you control a Liliana planeswalker, each opponent also discards a card.
+pub fn lilianas_triumph() -> CardDefinition {
+    use crate::card::PlaneswalkerSubtype;
+    CardDefinition {
+        name: "Liliana's Triumph",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Planeswalker
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::HasPlaneswalkerType(PlaneswalkerSubtype::Liliana)),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                    random: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sailor of Means — {2}{U} 1/4 Human Pirate. ETB: create a Treasure token.
+pub fn sailor_of_means() -> CardDefinition {
+    CardDefinition {
+        name: "Sailor of Means",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::game::effects::treasure_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Reave Soul — {1}{B} Sorcery. Destroy target creature with power 3 or less.
+pub fn reave_soul() -> CardDefinition {
+    CardDefinition {
+        name: "Reave Soul",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(3)),
+            ),
+        },
+        ..Default::default()
+    }
+}

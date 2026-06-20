@@ -61076,3 +61076,72 @@ fn forsake_the_worldly_exiles_artifact() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none(), "artifact exiled");
 }
+
+/// Cruel Edict makes the target opponent sacrifice a creature.
+#[test]
+fn cruel_edict_forces_sacrifice() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::cruel_edict());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cruel Edict");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "opponent sacrificed their creature");
+}
+
+/// Liliana's Triumph edicts each opponent and, with a Liliana out, also makes
+/// them discard.
+#[test]
+fn lilianas_triumph_edict_and_liliana_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::liliana_of_the_veil()); // a Liliana
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::island()); // discard fodder
+    let spell = g.add_card_to_hand(0, catalog::lilianas_triumph());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    let opp_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Liliana's Triumph");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "opponent sacrificed a creature");
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "Liliana rider made them discard");
+}
+
+/// Sailor of Means makes a Treasure on entry.
+#[test]
+fn sailor_of_means_makes_treasure() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::sailor_of_means());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1,
+        "ETB made a Treasure");
+}
+
+/// Reave Soul destroys a small creature but not a big one.
+#[test]
+fn reave_soul_destroys_power_three_or_less() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // power 4
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // power 2
+    let spell = g.add_card_to_hand(0, catalog::reave_soul());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    // Can't target the power-4 creature.
+    assert!(g.cast_spell(spell, Some(Target::Permanent(big)), vec![], None, None).is_err(),
+        "power 4 is an illegal target");
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(small)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reave Soul on the small creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none(), "power-2 creature destroyed");
+}

@@ -2575,6 +2575,10 @@ static DECKS: &[Factory] = &[
     super::decks::secure_the_wastes,
     super::decks::captains_call,
     super::decks::forsake_the_worldly,
+    super::decks::cruel_edict,
+    super::decks::lilianas_triumph,
+    super::decks::sailor_of_means,
+    super::decks::reave_soul,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
