@@ -2475,6 +2475,14 @@ pub enum Effect {
     /// "tap up to N target permanents", etc. The inner effect must address
     /// its operand via `Selector::Target(0)`.
     ApplyToTargets { max_targets: u8, filter: SelectionRequirement, effect: Box<Effect> },
+    /// "Tap up to N target permanents; they don't untap during their
+    /// controller's next untap step" where N is a runtime `Value`
+    /// (Archipelagore — N = `Value::MutateCount`). The controller chooses up
+    /// to the evaluated count of matching permanents at resolution
+    /// (`Decision::ChooseCards`), so the dynamic count sidesteps the
+    /// fixed-slot declared-target model. `skip_untap` adds the
+    /// `skip_next_untap` flag to each tapped permanent.
+    TapUpToValue { count: Value, filter: SelectionRequirement, skip_untap: bool },
     /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /

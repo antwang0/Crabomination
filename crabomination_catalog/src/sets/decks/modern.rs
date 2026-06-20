@@ -53140,6 +53140,26 @@ pub fn wingfold_pteron() -> CardDefinition {
     }
 }
 
+/// Archipelagore — {5}{U}{U} 7/7 Leviathan. Mutate {5}{U}. On mutate, tap up to
+/// X target creatures (X = times this has mutated); they don't untap next turn.
+pub fn archipelagore() -> CardDefinition {
+    CardDefinition {
+        name: "Archipelagore",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        mutate: Some(cost(&[generic(5), u()])),
+        triggered_abilities: vec![on_mutate(Effect::TapUpToValue {
+            count: Value::MutateCount,
+            filter: SelectionRequirement::Creature,
+            skip_untap: true,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Voracious Greatshark — {3}{U}{U} 5/4 Shark. Flash. When it enters, counter
 /// target artifact or creature spell.
 pub fn voracious_greatshark() -> CardDefinition {

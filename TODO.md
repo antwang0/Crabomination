@@ -1727,13 +1727,8 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Boneyard Lurker, Pollywog Symbiote (`HasMutate` filter), Vulpikeet, Majestic
   Auricorn, Sawtusk Demolisher, Gemrazer, Insatiable Hemophage, Chittering
   Harvester, Regal Leosaur, Cloudpiercer, Sea-Dasher Octopus, Essence Symbiote,
-  Porcuparrot (`Value::MutateCount`). Tests in `tests/modern.rs`. Follow-ups:
-  - ⏳ **Archipelagore** — "tap **up to X** target creatures, X = times this has
-    mutated, they don't untap next turn". Blocked only on a dynamic-count
-    "up to X targets" prompt (`Effect::ApplyToTargets` takes a fixed `u8`;
-    `Value::MutateCount` already exists). Add an `ApplyToTargets`-style effect
-    whose `max_targets` is a `Value`, with the resolution-time multi-target
-    picker.
+  Porcuparrot (`Value::MutateCount`), Archipelagore (`Effect::TapUpToValue` —
+  dynamic-count resolution-time picker). Tests in `tests/modern.rs`. Follow-ups:
   - ⏳ **Client cast-mutate UI + `mutatable` affordance** (host picker). Engine
     path is fully wired and tested; only the UI is missing.
 

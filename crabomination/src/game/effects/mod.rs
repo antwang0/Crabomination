@@ -3499,6 +3499,49 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TapUpToValue { count, filter, skip_untap } => {
+                // Archipelagore — tap up to N permanents the controller chooses
+                // at resolution, N evaluated now (e.g. mutate count). Optional
+                // "don't untap next turn" rider.
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Tap up to {n} target creatures"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: n,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    crate::decision::DecisionAnswer::Cards(ids) => ids
+                        .into_iter()
+                        .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                        .take(n as usize)
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                for cid in chosen {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        if !c.tapped {
+                            c.tapped = true;
+                            events.push(GameEvent::PermanentTapped { card_id: cid });
+                        }
+                        if *skip_untap {
+                            c.skip_next_untap = true;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::TapAndUntapLock { what } => {
                 // Entrancing Lyre — tap the target and lock it from untapping
                 // while the source stays tapped (cleared in the untap step once

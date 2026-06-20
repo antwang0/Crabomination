@@ -152,6 +152,9 @@ impl Effect {
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
+            // Targets are chosen at resolution (Decision::ChooseCards), so no
+            // cast-time target slot is demanded.
+            Effect::TapUpToValue { .. } => false,
             Effect::NameCardTargetDiscardsMatching => true,
             Effect::TemptingOffer { body } => body.requires_target(),
             // The accept branch's slot-0 player is bound at resolution; only

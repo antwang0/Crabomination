@@ -2402,6 +2402,7 @@ static DECKS: &[Factory] = &[
     super::decks::boneyard_lurker,
     super::decks::pollywog_symbiote,
     super::decks::wingfold_pteron,
+    super::decks::archipelagore,
     super::decks::voracious_greatshark,
     super::decks::heightened_reflexes,
     super::decks::weaponize_the_monsters,

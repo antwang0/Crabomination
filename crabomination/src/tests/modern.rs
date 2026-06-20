@@ -58021,6 +58021,27 @@ fn mutate_trumpeting_gnarr_makes_beast() {
     assert_eq!(beasts, 1, "one 3/3 Beast token");
 }
 
+/// Archipelagore's mutate trigger taps up to X creatures (X = mutate count)
+/// chosen at resolution; they don't untap next turn (`skip_next_untap`).
+#[test]
+fn mutate_archipelagore_taps_dynamic_count() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let arch = g.add_card_to_hand(0, catalog::archipelagore());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5); // mutate {5}{U}
+    // X = 1 after a single mutate; controller taps the opponent's creature.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![victim])]));
+    g.perform_action(GameAction::CastMutate {
+        card_id: arch, target: host, on_top: true, x_value: None,
+    }).expect("mutate Archipelagore");
+    drain_stack(&mut g);
+    let v = g.battlefield_find(victim).expect("victim alive");
+    assert!(v.tapped, "victim tapped by Archipelagore");
+    assert!(v.skip_next_untap, "victim won't untap next turn");
+}
+
 /// Cavern Whisperer's mutate trigger makes each opponent discard.
 #[test]
 fn mutate_cavern_whisperer_opponent_discards() {
