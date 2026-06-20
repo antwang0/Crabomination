@@ -28153,6 +28153,219 @@ pub fn knight_of_malice() -> CardDefinition {
     }
 }
 
+/// Kazandu Nectarpot — {1}{G} Creature — Insect 1/3. Landfall: gain 1 life
+/// whenever a land you control enters.
+pub fn kazandu_nectarpot() -> CardDefinition {
+    CardDefinition {
+        name: "Kazandu Nectarpot",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fearless Fledgling — {1}{W} Creature — Griffin 1/1. Landfall: put a +1/+1
+/// counter on it and it gains flying until end of turn.
+pub fn fearless_fledgling() -> CardDefinition {
+    CardDefinition {
+        name: "Fearless Fledgling",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sporeweb Weaver — {2}{G} Creature — Spider 1/4. Reach, hexproof from blue.
+/// When it's dealt damage, gain 1 life and create a 1/1 green Saproling.
+pub fn sporeweb_weaver() -> CardDefinition {
+    use crate::effect::shortcut::enrage;
+    CardDefinition {
+        name: "Sporeweb Weaver",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::HexproofFromColor(Color::Blue)],
+        triggered_abilities: vec![enrage(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Saproling".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Saproling],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Brushfire Elemental — {R}{G} Creature — Elemental 1/1. Haste; can't be
+/// blocked by creatures with power 2 or less; landfall: +2/+2 until end of turn.
+pub fn brushfire_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Brushfire Elemental",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![
+            Keyword::Haste,
+            Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::PowerAtMost(2))),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Subtle Strike — {1}{B} Instant. Choose one or both — a target creature gets
+/// -1/-1 until end of turn; put a +1/+1 counter on a target creature.
+pub fn subtle_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Subtle Strike",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Resolute Strike — {W} Instant. Target creature gets +2/+2 until end of turn.
+/// (The "if it's a Warrior, attach an Equipment you control" rider is dropped.)
+pub fn resolute_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Resolute Strike",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Adventure Awaits — {1}{G} Sorcery. Look at the top five cards; put a creature
+/// card from among them into your hand, rest on the bottom in a random order.
+/// (The "gain 4 life if you didn't find one" rider is dropped.)
+pub fn adventure_awaits() -> CardDefinition {
+    CardDefinition {
+        name: "Adventure Awaits",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Creature),
+            take: None,
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Sneaking Guide — {R} Creature — Goblin Rogue 1/1. `{2}, {T}`: target creature
+/// with power 2 or less can't be blocked this turn.
+pub fn sneaking_guide() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Sneaking Guide",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)) },
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sink into Stupor // Soporific Springs — {1}{U}{U} Instant MDFC (MKM).
 /// Front: "Return target spell or nonland permanent an opponent controls to
 /// its owner's hand." (The spell-on-stack half collapses to the nonland-

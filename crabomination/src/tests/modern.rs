@@ -52334,6 +52334,126 @@ fn cragplate_baloth_kicked_enters_bigger() {
     assert_eq!(g.computed_permanent(cb).unwrap().power, 10, "6 + 4 counters");
 }
 
+/// Kazandu Nectarpot gains life on landfall.
+#[test]
+fn kazandu_nectarpot_landfall_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kazandu_nectarpot());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 21, "gained 1 on landfall");
+}
+
+/// Fearless Fledgling grows and flies on landfall.
+#[test]
+fn fearless_fledgling_landfall_counter_and_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let f = g.add_card_to_battlefield(0, catalog::fearless_fledgling());
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(f).unwrap();
+    assert_eq!(cp.power, 2, "+1/+1 counter");
+    assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+}
+
+/// Sporeweb Weaver triggers on taking damage.
+#[test]
+fn sporeweb_weaver_enrage_makes_saproling() {
+    let mut g = two_player_game();
+    let spider = g.add_card_to_battlefield(0, catalog::sporeweb_weaver()); // 1/4
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Permanent(spider)); // 3 dmg — survives
+    assert!(g.battlefield_find(spider).is_some(), "1/4 survives 3 damage");
+    assert_eq!(g.players[0].life, 21, "gained 1 life from enrage");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Saproling"));
+}
+
+/// Subtle Strike both modes: -1/-1 on one creature, +1/+1 counter on another.
+#[test]
+fn subtle_strike_chooses_both() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ss = g.add_card_to_hand(0, catalog::subtle_strike());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![0, 1])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: ss, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![Target::Permanent(mine)], mode: None, x_value: None,
+    }).expect("cast both modes");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(foe).unwrap().toughness, 1, "-1/-1");
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "+1/+1 counter");
+}
+
+/// Brushfire Elemental can't be blocked by small creatures and grows on landfall.
+#[test]
+fn brushfire_elemental_evasion_and_landfall() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let be = g.add_card_to_battlefield(0, catalog::brushfire_elemental());
+    assert!(g.battlefield_find(be).unwrap().definition.keywords.iter().any(|k|
+        matches!(k, Keyword::CantBeBlockedBy(_))));
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(be).unwrap().power, 3, "1 + 2 landfall");
+}
+
+/// Resolute Strike pumps a creature +2/+2.
+#[test]
+fn resolute_strike_pumps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rs = g.add_card_to_hand(0, catalog::resolute_strike());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, rs, Target::Permanent(bear));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "2 + 2");
+}
+
+/// Adventure Awaits digs five for a creature.
+#[test]
+fn adventure_awaits_finds_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let aa = g.add_card_to_hand(0, catalog::adventure_awaits());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aa, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+/// Sneaking Guide makes a small creature unblockable.
+#[test]
+fn sneaking_guide_grants_unblockable() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let guide = g.add_card_to_battlefield(0, catalog::sneaking_guide());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
+    g.clear_sickness(guide);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: guide, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
 /// Knight of Malice gets +1/+0 only while a white permanent is in play.
 #[test]
 fn knight_of_malice_pumps_against_white() {
