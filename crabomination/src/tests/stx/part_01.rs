@@ -4824,3 +4824,52 @@ fn hofri_ghostforge_token_leaving_returns_exiled_card_to_graveyard() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
         "exiled card returned to its owner's graveyard");
 }
+
+/// Wandering Archaic // Explore the Vastlands — the MDFC back face is castable
+/// from hand: {4} Sorcery adds six colorless mana and gains 3 life.
+#[test]
+fn wandering_archaic_back_explore_the_vastlands_castable_from_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wandering_archaic());
+    g.players[0].mana_pool.add_colorless(4); // {4} for the back
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Explore the Vastlands (back face) castable for {4}");
+    drain_stack(&mut g);
+
+    // The sorcery resolved (not the creature): +3 life and six colorless mana.
+    assert_eq!(g.players[0].life, life + 3, "Explore the Vastlands gains 3 life");
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == id),
+        "casting the back face does not put the creature onto the battlefield",
+    );
+}
+
+/// Pestilent Cauldron // Restorative Burst — the (already-defined) back face is
+/// castable from hand: {2}{B} Sorcery drains 4.
+#[test]
+fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pestilent_cauldron());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Restorative Burst (back face) castable for {2}{B}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 4, "back-face drain hits the opponent for 4");
+    assert_eq!(g.players[0].life, p0 + 4, "you gain 4");
+}

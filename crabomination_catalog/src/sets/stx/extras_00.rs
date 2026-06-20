@@ -2121,10 +2121,10 @@ pub fn tezzerets_gambit() -> CardDefinition {
 
 // ── Wandering Archaic ───────────────────────────────────────────────────────
 
-/// Wandering Archaic — {5} Creature — Spirit, 4/4.
-/// (Front face only; the printed card is reversible with a back face
-/// "Explore the Vastlands" that's omitted here — reversible-card
-/// pipeline is engine-wide ⏳ similar to the back-face MDFC handling.)
+/// Wandering Archaic // Explore the Vastlands — {5} Creature — Spirit, 4/4.
+/// Modal double-faced; the back face `Explore the Vastlands` ({4} Sorcery —
+/// add six colorless mana, gain 3 life) is now wired via `back_face` and is
+/// castable from hand through `GameAction::CastSpellBack`.
 ///
 /// "Whenever an opponent casts an instant or sorcery spell, that
 /// player may pay {2}. If they don't, you may copy the spell. You may
@@ -2172,6 +2172,24 @@ pub fn wandering_archaic() -> CardDefinition {
                 count: Value::Const(1),
             },
         }],
+        // Back face: Explore the Vastlands — {4} Sorcery. Add {C}{C}{C}{C}{C}{C};
+        // you gain 3 life. Cast from hand via GameAction::CastSpellBack.
+        back_face: Some(Box::new(CardDefinition {
+            name: "Explore the Vastlands",
+            cost: cost(&[generic(4)]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(6)),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+            ]),
+            ..Default::default()
+        })),
         ..Default::default()
     }
 }

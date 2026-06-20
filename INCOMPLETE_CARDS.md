@@ -84,9 +84,13 @@ modes: real fix needs **cast-time** mode choice (CR 601.2b) — the engine resol
 at cast. Tracked: Silverquill / Lorehold / Witherbloom / Quandrix / Prismari
 Commands · Moment of Reckoning · Vanquish the Horde.
 
-### 3. No MDFC / transform-and-cast-from-graveyard back faces (whole face unreachable)
-Pestilent Cauldron // Restorative Burst · Wandering Archaic // Explore the Vastlands ·
-Selfless Glyphweaver // Deadly Vanity · Birgi // Harnfel.
+### 3. MDFC back faces — **mechanism is fully wired** (`back_face` + `GameAction::CastSpellBack`/`PlayLandBack`; 71 cards use it)
+The "engine-wide ⏳" notes on these were stale. Status:
+- ✅ **Pestilent Cauldron // Restorative Burst** — back was already defined + attached; now has a from-hand back-cast test.
+- ✅ **Wandering Archaic // Explore the Vastlands** — back wired (`{4}` → add 6 colorless, gain 3 life) + test.
+- ⏳ **Selfless Glyphweaver // Deadly Vanity** — back needs a "each player keeps one creature, destroys the rest" primitive (no multi-pick decision shape).
+- ⏳ **Birgi // Harnfel** — back (discard→impulse top two) needs its own wiring.
+- ⏳ **transform-and-cast-from-graveyard** (Pestilent Cauldron's printed rider) — `cast_spell_back_face` walks hand only; an MDFC-from-graveyard pipeline is the remaining engine gap.
 
 ### 4. No "controller-of-target" / "that player" actor (forces each-opponent / you)
 ~~Generous Gift~~ ✅ **FIXED** (now mints the 3/3 Elephant for the target's controller via `CreateToken { who: ControllerOf(Target(0)) }`, created before the Destroy — the "no primitive" doc note was stale) · Harsh Annotation · Kemuri-Onna ·
