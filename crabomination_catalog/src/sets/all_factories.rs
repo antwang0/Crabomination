@@ -2547,6 +2547,8 @@ static DECKS: &[Factory] = &[
     super::decks::solar_blaze,
     super::decks::bonders_enclave,
     super::decks::auspicious_starrix,
+    super::decks::skycat_sovereign,
+    super::decks::chevill_bane_of_monsters,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

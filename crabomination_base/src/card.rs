@@ -318,6 +318,10 @@ pub enum CounterType {
     /// Tide counter — Ominous Seas accrues one on your first draw each turn;
     /// at four or more they're removed to mint an 8/8 Kraken.
     Tide,
+    /// Bounty counter — Chevill, Bane of Monsters marks an opponent's
+    /// creature/planeswalker; when a bounty-countered creature dies, Chevill's
+    /// controller draws and gains a life.
+    Bounty,
 }
 
 /// Every zone a card can occupy.
@@ -2012,6 +2016,10 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of creature cards in the
     /// controller's graveyard. Fiend Artisan (base 1/1).
     BasePlusCreaturesInControllerGraveyard { base: i32 },
+    /// Power = toughness = `base` + the number of *other* creatures the
+    /// controller controls that have flying. Skycat Sovereign (base 1/1).
+    /// Reads printed flying (granted flying isn't counted).
+    BasePlusOtherFlyersControlled { base: i32 },
     /// Power = toughness = base + total land cards in all graveyards.
     /// Knight of the Reliquary (base 2/2; grows +1/+1 per land in any
     /// player's graveyard).

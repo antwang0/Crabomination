@@ -3967,6 +3967,15 @@ impl GameState {
                         .filter(|c| c.definition.is_creature()).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::BasePlusOtherFlyersControlled { base } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.id != card.id
+                            && c.controller == card.controller
+                            && c.definition.is_creature()
+                            && c.definition.keywords.contains(&crate::card::Keyword::Flying)
+                    }).count() as i32;
+                    (base + n, base + n)
+                }
                 crate::card::DynamicPt::BasePlusOpponentGraveyards { base, creatures_only } => {
                     let n: i32 = self
                         .opponents_of(card.controller)

@@ -60541,3 +60541,49 @@ fn auspicious_starrix_mutate_deploys_permanent() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == land), "a permanent card was put onto the battlefield");
 }
+
+/// Skycat Sovereign grows with other flyers and can mint a flying Cat Bird.
+#[test]
+fn skycat_sovereign_scales_with_flyers() {
+    let mut g = two_player_game();
+    let skycat = g.add_card_to_battlefield(0, catalog::skycat_sovereign());
+    assert_eq!(g.computed_permanent(skycat).unwrap().power, 1, "base 1/1 alone");
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // a flyer
+    assert_eq!(g.computed_permanent(skycat).unwrap().power, 2, "+1/+1 per other flyer");
+    // Use its ability to make a Cat Bird flyer → grows again.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skycat, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("make a Cat Bird");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(skycat).unwrap().power, 3, "Cat Bird flyer counted too");
+}
+
+/// Chevill bounties an opponent creature at upkeep, and cashes it on death.
+#[test]
+fn chevill_bounty_then_payoff() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let chevill = g.add_card_to_battlefield(0, catalog::chevill_bane_of_monsters());
+    let _ = chevill;
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    // Upkeep trigger bounties the opponent's creature.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(prey).unwrap().counters.get(&CounterType::Bounty).copied().unwrap_or(0),
+        1, "bounty counter placed on opponent creature");
+    // It dies → Chevill's controller draws and gains a life.
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(prey).unwrap().damage = 99;
+    let events = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 on bounty death");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on bounty death");
+}

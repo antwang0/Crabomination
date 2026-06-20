@@ -7630,7 +7630,7 @@ pub fn crabomination() -> CardDefinition {
             // graveyard" — covers the most common path: combat / removal
             // putting it there from the battlefield.)
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
                 effect: Effect::Scry {
                     who: PlayerRef::You,
                     amount: Value::Const(1),
@@ -56565,6 +56565,108 @@ pub fn auspicious_starrix() -> CardDefinition {
             life_per_revealed: 0,
             miss_dest: crate::effect::RevealMissDest::Graveyard,
         })],
+        ..Default::default()
+    }
+}
+
+/// Skycat Sovereign — {W}{U} 1/1 Elemental Cat with flying. Gets +1/+1 for each
+/// other creature you control with flying. {2}{W}{U}: make a 1/1 flying Cat
+/// Bird.
+pub fn skycat_sovereign() -> CardDefinition {
+    use crate::card::DynamicPt;
+    CardDefinition {
+        name: "Skycat Sovereign",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        dynamic_pt: Some(DynamicPt::BasePlusOtherFlyersControlled { base: 1 }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), u()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Cat Bird".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Cat, CreatureType::Bird],
+                        ..Default::default()
+                    },
+                    keywords: vec![Keyword::Flying],
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chevill, Bane of Monsters — {B}{G} 1/3 legendary, Deathtouch. Upkeep: if no
+/// opponent permanent has a bounty counter, bounty an opponent creature/PW. A
+/// bounty-countered creature dying draws you a card and gains 1 life.
+pub fn chevill_bane_of_monsters() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    CardDefinition {
+        name: "Chevill, Bane of Monsters",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::WithCounter(CounterType::Bounty)
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                        n: Value::Const(1),
+                    })),
+                    then: Box::new(Effect::AddCounter {
+                        what: target_filtered(
+                            SelectionRequirement::ControlledByOpponent.and(
+                                SelectionRequirement::Creature
+                                    .or(SelectionRequirement::Planeswalker),
+                            ),
+                        ),
+                        kind: CounterType::Bounty,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::WithCounter(CounterType::Bounty),
+                    }),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            },
+        ],
         ..Default::default()
     }
 }

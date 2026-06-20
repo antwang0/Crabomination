@@ -873,6 +873,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Ki => "Ki",
         CounterType::Coin => "Coin",
         CounterType::Tide => "Tide",
+        CounterType::Bounty => "Bounty",
     }
 }
 
