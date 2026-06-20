@@ -226,3 +226,58 @@ fn mizzixs_mastery_overload_recasts_each() {
 
     assert_eq!(g.players[1].life, life - 5, "both spells recast for 3 + 2");
 }
+
+/// Lorehold Tomb Robber: copy a graveyard creature card (hasty token),
+/// exile the original, and exile the token at the next end step.
+#[test]
+fn lorehold_tomb_robber_copies_gy_creature_with_haste_then_exiles_both() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2/2 in gy
+    let id = g.add_card_to_hand(0, catalog::lorehold_tomb_robber());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(dead)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Tomb Robber castable");
+    drain_stack(&mut g);
+
+    // A copy token of the graveyard creature is on P0's battlefield, with haste.
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.controller == 0 && c.definition.name == "Grizzly Bears")
+        .expect("a copy token of the graveyard creature");
+    let token_id = token.id;
+    assert_eq!(token.power(), 2);
+    assert_eq!(token.toughness(), 2);
+    assert!(
+        g.permanent_has_keyword(token_id, &crate::card::Keyword::Haste),
+        "the copy has haste",
+    );
+    // The original card is exiled out of the graveyard.
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == dead),
+        "the original creature card left the graveyard",
+    );
+    assert!(g.exile.iter().any(|c| c.id == dead), "the original is exiled");
+
+    // At the next end step, the token is exiled — and, being a token, it
+    // then ceases to exist (CR 111.7), so it's gone from every zone.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == token_id),
+        "the token is exiled at the next end step",
+    );
+    assert!(
+        !g.exile.iter().any(|c| c.id == token_id),
+        "the exiled token ceases to exist (not lingering in exile)",
+    );
+}

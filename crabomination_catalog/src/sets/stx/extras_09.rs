@@ -1729,11 +1729,12 @@ pub fn solo_striker() -> CardDefinition {
 /// a copy of that card except it has haste. Exile that token at the
 /// beginning of the next end step."
 ///
-/// Approximation: since the engine has no permanent-copy primitive
-/// (Effect::CreateCopyToken is still ⏳), this ships the simpler
-/// Move(target gy creature card → battlefield, tapped) + grant haste +
-/// delayed Exile-at-end-step. That's a one-turn-rental reanimation
-/// pattern equivalent to printed Oracle for combat math.
+/// Wired faithfully via `Effect::CreateTokenCopyOf` (the permanent-copy
+/// primitive copies a card from the graveyard, as Embalm/Eternalize do):
+/// copy the target graveyard creature card → grant the copy haste →
+/// exile the original card → delay-exile the token at the next end step
+/// (`Selector::LastCreatedToken` is snapshotted by `DelayUntil`'s
+/// `bound_token`, so it still points at this copy when the delay fires).
 pub fn lorehold_tomb_robber() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Tomb Robber",
@@ -1748,22 +1749,34 @@ pub fn lorehold_tomb_robber() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
+                // Create a token that's a copy of target creature card in
+                // your graveyard...
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                    non_legendary: false,
                 },
+                // ...except it has haste.
                 Effect::GrantKeyword {
-                    what: Selector::Target(0),
+                    what: Selector::LastCreatedToken,
                     keyword: Keyword::Haste,
                     duration: Duration::EndOfTurn,
                 },
+                // Exile the original creature card from your graveyard.
+                Effect::Exile {
+                    what: Selector::Target(0),
+                },
+                // Exile that token at the beginning of the next end step.
                 Effect::DelayUntil {
                     kind: crate::effect::DelayedTriggerKind::NextEndStep,
                     body: Box::new(Effect::Exile {
-                        what: Selector::Target(0),
+                        what: Selector::LastCreatedToken,
                     }),
                 },
             ]),
