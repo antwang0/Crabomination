@@ -54947,7 +54947,7 @@ pub fn of_one_mind() -> CardDefinition {
 }
 
 /// Cunning Nightbonder — {U/B}{U/B} 2/2 Human Rogue, Flash. Flash spells you
-/// cast cost {1} less. (Their "can't be countered" rider is dropped.)
+/// cast cost {1} less and can't be countered.
 pub fn cunning_nightbonder() -> CardDefinition {
     CardDefinition {
         name: "Cunning Nightbonder",
@@ -54960,13 +54960,21 @@ pub fn cunning_nightbonder() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        static_abilities: vec![StaticAbility {
-            description: "Flash spells you cast cost {1} less.",
-            effect: StaticEffect::CostReduction {
-                filter: SelectionRequirement::HasKeyword(Keyword::Flash),
-                amount: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Flash spells you cast cost {1} less.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flash),
+                    amount: 1,
+                },
             },
-        }],
+            StaticAbility {
+                description: "Flash spells you cast can't be countered.",
+                effect: StaticEffect::SpellsUncounterable {
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flash),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -55443,6 +55451,21 @@ pub fn honor_the_god_pharaoh() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             amass_zombies(1),
         ]),
+        ..Default::default()
+    }
+}
+
+/// Flame Spill — {4}{R} Sorcery. Deal 5 damage to target creature; excess
+/// damage is dealt to that creature's controller.
+pub fn flame_spill() -> CardDefinition {
+    CardDefinition {
+        name: "Flame Spill",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageExcessToController {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }

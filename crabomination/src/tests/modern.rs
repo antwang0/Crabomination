@@ -59435,6 +59435,28 @@ fn cunning_nightbonder_discounts_flash_spells() {
     let nonflash = g.players[0].hand.iter().find(|c| c.id == nonflash_id).unwrap().clone();
     assert_eq!(cost_reduction_for_spell(&g, 0, &flash, None), 1, "flash spell discounted");
     assert_eq!(cost_reduction_for_spell(&g, 0, &nonflash, None), 0, "non-flash undiscounted");
+    // Flash spells can't be countered; non-flash spells can.
+    assert!(g.caster_grants_uncounterable(0, &flash), "flash spell is uncounterable");
+    assert!(!g.caster_grants_uncounterable(0, &nonflash), "non-flash spell counterable");
+}
+
+/// Flame Spill: 5 to a 2/2 kills it and spills 3 excess onto its controller.
+#[test]
+fn flame_spill_excess_hits_controller() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::flame_spill());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Flame Spill");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to 5 damage");
+    assert_eq!(g.players[1].life, life - 3, "5 - 2 lethal = 3 excess to controller");
 }
 
 /// Lullmage's Domination at X=2 gains control of a mana-value-2 creature.

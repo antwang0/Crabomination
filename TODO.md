@@ -1736,13 +1736,6 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Narset of the Ancient Way / Vivien, Monsters' Advocate (IKO walkers)** —
     multi-ability walkers (Lukka already shipped). Narset's restricted-mana +1
     and Vivien's cast-from-top static + token-with-chosen-counter need wiring.
-  - **Greater Sandwurm** — "can't be blocked by creatures with power 2 or less"
-    wants a `Keyword::CantBeBlockedByPowerAtMost(n)` (block-legality gate).
-  - **Flame Spill** — "excess damage is dealt to that creature's controller"
-    wants a spell-side excess-damage-to-controller primitive (trample-like).
-  - **Cunning Nightbonder** ships only the {1}-less half; "your flash spells
-    can't be countered" wants a per-controller `YourSpellsCantBeCountered
-    { filter }` static.
   - **Glimpse the Cosmos** ships the dig-3-take-1; the "cast from graveyard
     while you control a Giant" rider is dropped.
   - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` were

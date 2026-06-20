@@ -1330,6 +1330,34 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 120.10 — deal `amount` to a creature; damage past its
+            // remaining toughness (lethal) spills onto its controller.
+            Effect::DealDamageExcessToController { to, amount } => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                for ent in self.resolve_selector(to, ctx) {
+                    let EntityRef::Permanent(id) = ent else { continue };
+                    let Some(c) = self.battlefield_find(id) else { continue };
+                    if !c.definition.is_creature() { continue; }
+                    let controller = c.controller;
+                    let already = c.damage;
+                    let lethal = self
+                        .computed_permanent(id)
+                        .map(|cp| cp.toughness.max(0) as u32)
+                        .unwrap_or(0)
+                        .saturating_sub(already);
+                    let excess = amt.saturating_sub(lethal);
+                    self.deal_damage_to_from(ent, amt, ctx.source, events);
+                    if excess > 0 {
+                        self.deal_damage_to_from(
+                            EntityRef::Player(controller), excess, ctx.source, events);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             // CR 601.2d — deal `total` damage divided among the chosen
             // targets. Targets were collected into `ctx.targets` across
             // slots `0..max_targets` at cast time; the split is decided

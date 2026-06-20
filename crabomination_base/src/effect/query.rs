@@ -257,6 +257,9 @@ impl Effect {
                 then.requires_target() || else_.requires_target()
             }
             Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
+            Effect::DealDamageExcessToController { to, amount } => {
+                sel_has_target(to) || value_has_target(amount)
+            }
             // Divided damage always targets (one or more chosen targets).
             Effect::DealDamageDivided { .. } => true,
             Effect::SupportCounters { .. } => true,
@@ -941,6 +944,14 @@ impl Effect {
                     _ => format!("deal damage to {t}"),
                 }
             }
+            Effect::DealDamageExcessToController { amount, .. } => {
+                let t = self.target_phrase();
+                match amount {
+                    Value::Const(n) => format!(
+                        "deal {n} damage to {t}; excess is dealt to its controller"),
+                    _ => format!("deal damage to {t}; excess is dealt to its controller"),
+                }
+            }
             Effect::DealDamageDivided { total, .. } => match total {
                 Value::Const(n) => format!("deal {n} damage divided among targets"),
                 _ => "deal damage divided among targets".into(),
@@ -1416,7 +1427,8 @@ impl Effect {
                 Effect::RollDie { results, .. } => results
                     .iter()
                     .find_map(|(_, _, e)| eff_find(e, slot, mode, kicked)),
-                Effect::DealDamage { to, amount } => {
+                Effect::DealDamage { to, amount }
+                | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
                 // Each of slots 0..max_targets carries the divide filter, so

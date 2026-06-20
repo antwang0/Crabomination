@@ -1636,6 +1636,10 @@ pub enum Effect {
 
     // ── Damage / life ────────────────────────────────────────────────────────
     DealDamage { to: Selector, amount: Value },
+    /// Deal `amount` damage to a target creature; any damage beyond what's
+    /// lethal (its remaining toughness) is dealt to that creature's
+    /// controller (CR 120.10, trample-like). Flame Spill.
+    DealDamageExcessToController { to: Selector, amount: Value },
     /// "Deal N damage divided as you choose among one or more / any number
     /// of targets." Targets are chosen at cast time across slots
     /// `0..max_targets` (each filtered by `filter`); the per-target split
