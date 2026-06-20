@@ -56868,3 +56868,87 @@ pub fn drowsing_tyrannodon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vivien, Monsters' Advocate — {3}{G}{G} Vivien planeswalker, 3 loyalty. Cast
+/// creatures from the top of your library. +1: make a 3/3 Beast with a chosen
+/// vigilance/reach/trample counter. −2: your next creature spell this turn
+/// tutors a lesser-MV creature to the battlefield.
+pub fn vivien_monsters_advocate() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Vivien, Monsters' Advocate",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Vivien],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        static_abilities: vec![StaticAbility {
+            description: "You may cast creature spells from the top of your library.",
+            effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Creature },
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: TokenDefinition {
+                            name: "Beast".into(),
+                            power: 3,
+                            toughness: 3,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Green],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Beast],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                    },
+                    Effect::ChooseMode(vec![
+                        Effect::AddKeywordCounter {
+                            what: Selector::LastCreatedTokens,
+                            keyword: Keyword::Vigilance,
+                            amount: Value::Const(1),
+                        },
+                        Effect::AddKeywordCounter {
+                            what: Selector::LastCreatedTokens,
+                            keyword: Keyword::Reach,
+                            amount: Value::Const(1),
+                        },
+                        Effect::AddKeywordCounter {
+                            what: Selector::LastCreatedTokens,
+                            keyword: Keyword::Trample,
+                            amount: Value::Const(1),
+                        },
+                    ]),
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::OnYourNextSpellCastThisTurn {
+                    body: Box::new(Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::Creature,
+                        },
+                        then: Box::new(Effect::Search {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Creature
+                                .and(SelectionRequirement::ManaValueLessThanEventAmount),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    }),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -60715,3 +60715,45 @@ fn drowsing_tyrannodon_conditional_defender() {
         attacker: dino, target: AttackTarget::Player(1),
     }])).expect("attacks once a 4-power creature is present");
 }
+
+/// Vivien's +1 mints a 3/3 Beast with a chosen keyword counter (vigilance).
+#[test]
+fn vivien_plus_one_beast_with_keyword_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let vivien = g.add_card_to_battlefield(0, catalog::vivien_monsters_advocate());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)])); // vigilance
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vivien, ability_index: 0, target: None, x_value: None,
+    }).expect("Vivien +1");
+    drain_stack(&mut g);
+    let beast = g.battlefield.iter().find(|c| c.definition.name == "Beast").expect("Beast token");
+    assert_eq!((beast.power(), beast.toughness()), (3, 3));
+    assert!(g.computed_permanent(beast.id).unwrap().keywords.contains(&Keyword::Vigilance),
+        "chose a vigilance counter");
+}
+
+/// Vivien's −2 tutors a lesser-MV creature to the battlefield on the next
+/// creature spell cast this turn.
+#[test]
+fn vivien_minus_two_tutors_lesser_creature() {
+    let mut g = two_player_game();
+    let vivien = g.add_card_to_battlefield(0, catalog::vivien_monsters_advocate());
+    let small = g.add_card_to_library(0, catalog::grizzly_bears()); // MV2
+    let big = g.add_card_to_hand(0, catalog::colossal_dreadmaw());   // MV6 creature
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(small))]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vivien, ability_index: 1, target: None, x_value: None,
+    }).expect("Vivien -2");
+    drain_stack(&mut g);
+    // Cast the creature spell → the delayed trigger tutors the smaller creature.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == small),
+        "tutored the lesser-MV creature onto the battlefield");
+}

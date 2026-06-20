@@ -6071,10 +6071,18 @@ impl GameState {
                     && matches!(dt.kind, crate::game::types::DelayedKind::YourNextSpellCastThisTurn)
             });
         self.delayed_triggers = rest;
+        // Expose the cast spell's mana value so bodies can gate on it
+        // (Vivien, Monsters' Advocate — "a creature card with lesser mana
+        // value" via `ManaValueLessThanEventAmount`).
+        let cast_mv = self
+            .find_card_anywhere(cast_card)
+            .map(|c| c.definition.cost.cmc())
+            .unwrap_or(0);
         for dt in next_cast {
             self.stack.push(
                 TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
                     .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                    .event_amount(cast_mv)
                     .build(),
             );
             // Repeating watchers ("whenever you cast a spell this turn",
