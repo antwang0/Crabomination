@@ -1690,7 +1690,45 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // As a last resort before passing, sink spare mana into a "{cost}: draw a
+    // card" ability when card-starved (Bonders' Enclave, Arch of Orazca-style
+    // engines). Dry-run-gated, so cost / activation conditions bottom out in
+    // `would_accept`.
+    if let Some(action) = pick_card_draw_ability(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Activate a bare "{cost}: draw a card" ability (no target, doesn't sacrifice
+/// the source) when the bot is card-starved (≤2 cards in hand) and can afford
+/// it. Fired last, as a mana sink, so it never pre-empts casting spells or
+/// playing lands. Dry-run-gated through `would_accept`.
+fn pick_card_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::Selector;
+    if state.players[seat].hand.len() > 2 {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Effect::Draw { who: Selector::You, .. } = &ab.effect else { continue };
+            if ab.sac_cost {
+                continue; // don't sacrifice the source just to draw
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Offer a `TurnFaceUp` for the first affordable face-down permanent the bot
@@ -3038,6 +3076,32 @@ mod tests {
         // With too little energy the bot leaves it alone.
         g.players[0].energy = 1;
         assert!(pick_energy_payoff(&g, 0).is_none(), "won't activate without enough energy");
+    }
+
+    /// When card-starved, the bot sinks spare mana into Bonders' Enclave's
+    /// "{3}, {T}: Draw a card" — but only once its activation condition (a
+    /// 4-power creature) is met.
+    #[test]
+    fn bot_draws_with_value_ability_when_card_starved() {
+        let mut g = two_player_game();
+        let land = g.add_card_to_battlefield(0, catalog::bonders_enclave());
+        g.clear_sickness(land);
+        g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+        g.players[0].mana_pool.add_colorless(3);
+        // No 4-power creature → the draw ability's condition fails.
+        assert!(pick_card_draw_ability(&g, 0).is_none(),
+            "no draw without a 4-power creature");
+        g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+        match pick_card_draw_ability(&g, 0).expect("bot draws when card-starved") {
+            GameAction::ActivateAbility { card_id, ability_index, .. } => {
+                assert_eq!(card_id, land);
+                assert_eq!(ability_index, 1, "the draw ability, not the mana ability");
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // A full hand → don't bother drawing.
+        for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
+        assert!(pick_card_draw_ability(&g, 0).is_none(), "won't draw with a full hand");
     }
 
     /// The bot fires Frostwielder's `{T}: 1 damage` ping to kill a 1/1, but

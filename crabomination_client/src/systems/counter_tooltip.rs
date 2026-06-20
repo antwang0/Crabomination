@@ -891,6 +891,8 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Hone => "Ticks down each of your upkeeps; cast from exile for {4} less when the last is removed.",
         CounterType::Burden => "The One Ring's tally: draw one per burden counter; lose that much life each upkeep.",
         CounterType::Ice => "Removed by triggered effects; the permanent transforms when the last one is gone.",
+        CounterType::Tide => "Ominous Seas: at four or more, remove them to make an 8/8 Kraken.",
+        CounterType::Bounty => "When this bountied creature dies, its bounty's owner draws a card and gains 1 life.",
         _ => return None,
     })
 }
