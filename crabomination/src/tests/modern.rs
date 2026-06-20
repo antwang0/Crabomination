@@ -58240,6 +58240,106 @@ fn mysteries_of_the_deep_landfall_draws_three() {
     assert_eq!(g.players[0].hand.len(), before - 1 + 3, "drew three with landfall");
 }
 
+/// Ruinous Ultimatum destroys all nonland permanents opponents control.
+#[test]
+fn ruinous_ultimatum_wraths_opponents() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let opp_land = g.add_card_to_battlefield(1, catalog::forest());
+    let r = g.add_card_to_hand(0, catalog::ruinous_ultimatum());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: r, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ruinous Ultimatum");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_creature).is_none(), "opponent's creature destroyed");
+    assert!(g.battlefield_find(opp_land).is_some(), "lands survive");
+    assert!(g.battlefield_find(mine).is_some(), "our creature survives");
+}
+
+/// Eerie Ultimatum returns differently-named permanents from the graveyard.
+#[test]
+fn eerie_ultimatum_returns_distinct_names() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // same name
+    let c = g.add_card_to_graveyard(0, catalog::forest());
+    let e = g.add_card_to_hand(0, catalog::eerie_ultimatum());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b, c])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: e, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Eerie Ultimatum");
+    drain_stack(&mut g);
+    // a + c return (distinct names); b is a duplicate Grizzly Bears, stays.
+    assert!(g.battlefield_find(a).is_some(), "first Grizzly returned");
+    assert!(g.battlefield_find(c).is_some(), "Forest returned");
+    assert!(g.players[0].graveyard.iter().any(|x| x.id == b), "duplicate-name card stayed");
+}
+
+/// Genesis Ultimatum deploys permanents from the top five, rest to hand.
+#[test]
+fn genesis_ultimatum_deploys_permanents() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_library(0, catalog::lightning_bolt());
+    let gen_id = g.add_card_to_hand(0, catalog::genesis_ultimatum());
+    let before_hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![creature])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: gen_id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Genesis Ultimatum");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(creature).is_some(), "creature deployed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == spell), "noncreature went to hand");
+    // Genesis Ultimatum exiles itself on resolve, not to graveyard.
+    assert!(g.exile.iter().any(|c| c.id == gen_id), "Genesis Ultimatum exiled");
+    let _ = before_hand;
+}
+
+/// Sanctuary Lockdown anthems Humans and taps with two Humans tapped.
+#[test]
+fn sanctuary_lockdown_anthem_and_tap() {
+    let mut g = two_player_game();
+    let lockdown = g.add_card_to_battlefield(0, catalog::sanctuary_lockdown());
+    // Two Humans you control; a victim opposite.
+    let h1 = g.add_card_to_battlefield(0, catalog::beskir_shieldmate());
+    let _ = lockdown;
+    let h2 = g.add_card_to_battlefield(0, catalog::beskir_shieldmate());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lockdown, ability_index: 0,
+        target: Some(Target::Permanent(victim)), additional_targets: vec![], x_value: None,
+    }).expect("activate Lockdown");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "opponent creature tapped");
+    assert!(g.battlefield_find(h1).unwrap().tapped && g.battlefield_find(h2).unwrap().tapped,
+        "two Humans tapped to pay");
+}
+
+/// Parcelbeast's ability puts a revealed top land onto the battlefield.
+#[test]
+fn parcelbeast_drops_top_land() {
+    let mut g = two_player_game();
+    let pb = g.add_card_to_battlefield(0, catalog::parcelbeast());
+    let land = g.add_card_to_library(0, catalog::forest()); // top of empty library
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Parcelbeast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "top land entered the battlefield");
+}
+
 /// Yidaro shuffles back into the library on a cycle; on the 4th cycle this
 /// game it enters the battlefield from the graveyard instead.
 #[test]

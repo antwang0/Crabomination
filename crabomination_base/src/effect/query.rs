@@ -156,6 +156,8 @@ impl Effect {
             // cast-time target slot is demanded.
             Effect::TapUpToValue { .. } => false,
             Effect::CycleRecurFromGraveyard { .. } => false,
+            Effect::ReturnGraveyardPermanentsDifferentNames => false,
+            Effect::LookTopNDeployPermanentsRestToHand { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::NameCardTargetDiscardsMatching => true,

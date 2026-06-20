@@ -3597,6 +3597,77 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnGraveyardPermanentsDifferentNames => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_permanent())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Return permanent cards with different names".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: candidates.len() as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                let mut seen: Vec<String> = Vec::new();
+                for cid in chosen {
+                    let Some(name) = candidates.iter().find(|(c, _)| *c == cid).map(|(_, n)| n.clone())
+                    else { continue };
+                    if seen.contains(&name) { continue; }
+                    seen.push(name);
+                    self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::LookTopNDeployPermanentsRestToHand { count } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top: Vec<CardId> = self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top.is_empty() { return Ok(()); }
+                let permanents: Vec<(CardId, String)> = top
+                    .iter()
+                    .filter_map(|id| self.players[p].library.iter().find(|c| c.id == *id))
+                    .filter(|c| c.definition.is_permanent())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let chosen: Vec<CardId> = if permanents.is_empty() {
+                    Vec::new()
+                } else {
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Put any number of permanent cards onto the battlefield".to_string(),
+                        candidates: permanents.clone(),
+                        min: 0,
+                        max: permanents.len() as u32,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(ids) => ids.into_iter().filter(|id| permanents.iter().any(|(c, _)| c == id)).collect(),
+                        _ => Vec::new(),
+                    }
+                };
+                for id in &top {
+                    if chosen.contains(id) {
+                        self.move_card_to(*id, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                    } else {
+                        self.move_card_to(*id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::TapUpToValue { count, filter, skip_untap } => {
                 // Archipelagore — tap up to N permanents the controller chooses
                 // at resolution, N evaluated now (e.g. mutate count). Optional

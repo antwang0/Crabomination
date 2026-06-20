@@ -2475,6 +2475,16 @@ pub enum Effect {
     /// "tap up to N target permanents", etc. The inner effect must address
     /// its operand via `Selector::Target(0)`.
     ApplyToTargets { max_targets: u8, filter: SelectionRequirement, effect: Box<Effect> },
+    /// Eerie Ultimatum — return any number of permanent cards with different
+    /// names from the controller's graveyard to the battlefield. The controller
+    /// picks at resolution (`Decision::ChooseCards`); duplicate names are
+    /// dropped so each returned card has a distinct name.
+    ReturnGraveyardPermanentsDifferentNames,
+    /// Genesis Ultimatum — look at the top `count` cards of the controller's
+    /// library; put any number of permanent cards among them onto the
+    /// battlefield and the rest into hand. The controller picks the permanents
+    /// to deploy at resolution (`Decision::ChooseCards`).
+    LookTopNDeployPermanentsRestToHand { count: Value },
     /// Yidaro, Wandering Monster — "When you cycle this card, shuffle it into
     /// your library from your graveyard. If you've cycled a card with this
     /// name `threshold` or more times this game, put it onto the battlefield

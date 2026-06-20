@@ -54397,3 +54397,111 @@ pub fn bristling_boar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 9: Ultimatums & friends ─────────────────────────────────────
+
+/// Ruinous Ultimatum — {R}{R}{W}{W}{W}{B}{B} Sorcery. Destroy all nonland
+/// permanents your opponents control.
+pub fn ruinous_ultimatum() -> CardDefinition {
+    CardDefinition {
+        name: "Ruinous Ultimatum",
+        cost: cost(&[r(), r(), w(), w(), w(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::ControlledByOpponent
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land))),
+            ),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Eerie Ultimatum — {W}{W}{B}{B}{B}{G}{G} Sorcery. Return any number of
+/// permanent cards with different names from your graveyard to the battlefield.
+pub fn eerie_ultimatum() -> CardDefinition {
+    CardDefinition {
+        name: "Eerie Ultimatum",
+        cost: cost(&[w(), w(), b(), b(), b(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ReturnGraveyardPermanentsDifferentNames,
+        ..Default::default()
+    }
+}
+
+/// Genesis Ultimatum — {G}{G}{U}{U}{U}{R}{R} Sorcery. Look at the top five cards
+/// of your library; put any number of permanent cards onto the battlefield and
+/// the rest into your hand. (The self-exile is the standard graveyard route.)
+pub fn genesis_ultimatum() -> CardDefinition {
+    CardDefinition {
+        name: "Genesis Ultimatum",
+        cost: cost(&[g(), g(), u(), u(), u(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
+        effect: Effect::LookTopNDeployPermanentsRestToHand { count: Value::Const(5) },
+        ..Default::default()
+    }
+}
+
+/// Sanctuary Lockdown — {2}{W} Enchantment. Humans you control get +1/+1.
+/// {2}, Tap two untapped Humans you control: Tap target creature an opponent
+/// controls.
+pub fn sanctuary_lockdown() -> CardDefinition {
+    CardDefinition {
+        name: "Sanctuary Lockdown",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Humans you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Human)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_n_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Human)
+                    .and(SelectionRequirement::ControlledByYou),
+                2,
+            )),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Parcelbeast — {2}{G}{U} 2/4 Elemental Beast. Mutate {G}{U}. {1}, {T}: Look at
+/// the top card of your library; if it's a land you may put it onto the
+/// battlefield, else into your hand. (The "may" on a land collapses to yes.)
+pub fn parcelbeast() -> CardDefinition {
+    CardDefinition {
+        name: "Parcelbeast",
+        cost: cost(&[generic(2), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        mutate: Some(cost(&[g(), u()])),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
