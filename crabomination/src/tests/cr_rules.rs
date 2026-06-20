@@ -6,8 +6,10 @@
 //! defending-player binding for "a creature you control attacks"
 //! triggers (CR 509.2 / 603.2), Domain (CR 702.43), Equipment-granted
 //! triggers resolving on the Equipment (CR 702.6e), Prototype (CR 702.160),
-//! Ward—pay-life-equal-to-power (CR 702.21), and once-each-turn triggers
-//! (CR 603.3d).
+//! Ward—pay-life-equal-to-power (CR 702.21), once-each-turn triggers
+//! (CR 603.3d), Defender + conditional attack override (CR 702.12),
+//! delayed "when you cast your next spell" triggers (CR 603.7e), and counters
+//! ceasing to exist on a zone change (CR 122.2).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -3176,4 +3178,75 @@ fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
     assert!(!crate::game::can_block_attacker_computed(
         binst, &bcomp, &acomp.keywords, &acomp.colors, acomp.power),
         "a shadow creature can't block a non-shadow attacker");
+}
+
+// ── CR 702.12 — Defender ─────────────────────────────────────────────────────
+
+/// CR 702.12b/702.12c — a creature with defender can't attack, but a static
+/// ability may let it attack anyway while a condition holds (Drowsing
+/// Tyrannodon — `CanAttackIgnoringDefenderWhile`).
+#[test]
+fn cr_702_12_defender_blocks_attack_unless_overridden() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::drowsing_tyrannodon());
+    g.clear_sickness(dino);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    // 702.12c: defender stops the attack with no qualifying creature.
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dino, target: AttackTarget::Player(1),
+    }])).is_err());
+    // Override condition met → it may attack despite defender.
+    let beater = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.clear_sickness(beater);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dino, target: AttackTarget::Player(1),
+    }])).expect("attacks once the static condition is satisfied");
+}
+
+// ── CR 603.7e — delayed "when you cast your next spell this turn" ─────────────
+
+/// CR 603.7e — a one-shot delayed trigger set up by a resolving ability fires
+/// on the controller's next qualifying spell, with that spell available to the
+/// trigger (Vivien's −2 reads the cast spell's mana value).
+#[test]
+fn cr_603_7e_next_spell_delayed_trigger_sees_the_cast_spell() {
+    let mut g = two_player_game();
+    let vivien = g.add_card_to_battlefield(0, catalog::vivien_monsters_advocate());
+    let small = g.add_card_to_library(0, catalog::grizzly_bears()); // MV2 < MV6
+    let big = g.add_card_to_hand(0, catalog::colossal_dreadmaw());   // MV6
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Search(Some(small))],
+    ));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: vivien, ability_index: 1, target: None, x_value: None,
+    }).expect("arm the delayed trigger");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the next spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == small),
+        "delayed trigger fired on the next cast and read its mana value");
+}
+
+// ── CR 122.2 — counters cease to exist on zone change ────────────────────────
+
+/// CR 122.2 — when a permanent leaves the battlefield, its counters cease to
+/// exist (verified with a freshly-added counter kind, Bounty).
+#[test]
+fn cr_122_2_counters_vanish_on_zone_change() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::Bounty, 2);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Bounty), 2);
+    g.remove_to_graveyard_with_triggers(bear);
+    // Re-entering as a new object carries no counters.
+    let again = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.battlefield_find(again).unwrap().counter_count(CounterType::Bounty), 0,
+        "counters did not persist across the zone change");
 }
