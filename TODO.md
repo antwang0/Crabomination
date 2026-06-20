@@ -1740,7 +1740,19 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ⏳ **Ikoria cards deferred (need new primitives or are complex):**
   - **Narset of the Ancient Way / Vivien, Monsters' Advocate (IKO walkers)** —
     multi-ability walkers (Lukka already shipped). Narset's restricted-mana +1
-    and Vivien's cast-from-top static + token-with-chosen-counter need wiring.
+    (add mana spendable only on noncreature spells) + discard-linked damage,
+    and Vivien's −2 "next creature spell tutors a lesser-MV creature to the
+    battlefield" (needs an MV-less-than-the-cast-spell filter). Vivien's
+    cast-from-top static + +1 token-with-chosen-keyword-counter ride existing
+    primitives (`PlayFromLibraryTop`, `AddKeywordCounter`, resolution-time
+    mode pick).
+  - **Other complex IKO holdouts** (next-run candidates): Winota (attack-trigger
+    coin-flip-free tutor), Kinnan (mana-doubling + big-creature dig), Fiend
+    Artisan (sac-tutor with self-pump), Brokkos (escape + mutate), Chevill /
+    General Kudro / Lurrus-adjacent value, Song of Creation, Ominous Seas
+    (tide-counter → 8/8 Kraken), Quartzwood's faithful "any trampler you
+    control" batch trigger, Extinction Event (exile-by-MV-parity sweep —
+    needs a parity filter), Memory Leak (reveal-hand + exile from hand/gy).
   - **Glimpse the Cosmos** ships the dig-3-take-1; the "cast from graveyard
     while you control a Giant" rider is dropped.
   - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` were
