@@ -1526,6 +1526,8 @@ static DECKS: &[Factory] = &[
     super::decks::stonework_packbeast,
     super::decks::cleric_of_chill_depths,
     super::decks::anticognition,
+    super::decks::pride_of_the_clouds,
+    super::decks::skyclave_squid,
     super::decks::concealing_curtains,
     super::decks::delver_of_secrets,
     super::decks::the_everflowing_well,

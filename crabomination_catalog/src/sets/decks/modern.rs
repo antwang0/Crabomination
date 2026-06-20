@@ -28558,6 +28558,68 @@ pub fn anticognition() -> CardDefinition {
     }
 }
 
+/// Pride of the Clouds — {W}{U} Creature — Elemental Cat 1/1. Flying; gets +1/+1
+/// for each other flyer (modeled as flyers *you* control). Forecast — {2}{W}{U},
+/// reveal from hand: create a 1/1 white and blue Bird with flying.
+pub fn pride_of_the_clouds() -> CardDefinition {
+    CardDefinition {
+        name: "Pride of the Clouds",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        dynamic_pt: Some(DynamicPt::BasePlusOtherFlyersControlled { base: 1 }),
+        activated_abilities: vec![crate::effect::shortcut::forecast(
+            cost(&[generic(2), w(), u()]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Bird".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White, Color::Blue],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Bird],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Skyclave Squid — {1}{U} Creature — Squid 3/2. Defender; landfall: it can
+/// attack this turn as though it didn't have defender.
+pub fn skyclave_squid() -> CardDefinition {
+    CardDefinition {
+        name: "Skyclave Squid",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::LoseKeywordThisTurn { what: Selector::This, keyword: Keyword::Defender },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sink into Stupor // Soporific Springs — {1}{U}{U} Instant MDFC (MKM).
 /// Front: "Return target spell or nonland permanent an opponent controls to
 /// its owner's hand." (The spell-on-stack half collapses to the nonland-

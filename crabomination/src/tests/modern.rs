@@ -52518,6 +52518,32 @@ fn anticognition_counters_creature_spell() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "countered (couldn't pay {{2}})");
 }
 
+/// Pride of the Clouds grows for each other flyer on the battlefield.
+#[test]
+fn pride_of_the_clouds_scales_with_flyers() {
+    let mut g = two_player_game();
+    let pride = g.add_card_to_battlefield(0, catalog::pride_of_the_clouds());
+    assert_eq!(g.computed_permanent(pride).unwrap().power, 1, "alone: just base 1");
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // a flyer you control
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // another flyer you control
+    assert_eq!(g.computed_permanent(pride).unwrap().power, 3, "1 + 2 other flyers you control");
+}
+
+/// Skyclave Squid can attack after a landfall despite Defender.
+#[test]
+fn skyclave_squid_landfall_lets_it_attack() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let squid = g.add_card_to_battlefield(0, catalog::skyclave_squid());
+    g.clear_sickness(squid);
+    let land = g.add_card_to_hand(0, catalog::island());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(squid).unwrap().keywords.contains(&Keyword::Defender),
+        "defender suppressed this turn");
+}
+
 /// Brushfire Elemental can't be blocked by small creatures and grows on landfall.
 #[test]
 fn brushfire_elemental_evasion_and_landfall() {
