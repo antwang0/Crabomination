@@ -84,25 +84,6 @@ pub fn dark_confidant() -> CardDefinition {
     }
 }
 
-/// Pridemalkin — {1}{W}, 2/2 Cat with Training (CR 702.149). The
-/// "each creature you control with a +1/+1 counter has trample" static
-/// is collapsed (kept as a vanilla Training body).
-pub fn pridemalkin() -> CardDefinition {
-    CardDefinition {
-        name: "Pridemalkin",
-        cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::training()],
-        ..Default::default()
-    }
-}
-
 /// Aether Adept — {1}{U}{U}, 2/2 Human Wizard. "When this enters, return
 /// target creature to its owner's hand."
 pub fn aether_adept() -> CardDefinition {

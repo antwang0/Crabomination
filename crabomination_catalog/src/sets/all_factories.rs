@@ -2763,7 +2763,6 @@ static MOD_SET: &[Factory] = &[
     super::mod_set::scrap_trawler,
     super::mod_set::thalia_guardian_of_thraben,
     super::mod_set::dark_confidant,
-    super::mod_set::pridemalkin,
     super::mod_set::aether_adept,
     super::mod_set::augury_owl,
     super::mod_set::cloudkin_seer,
