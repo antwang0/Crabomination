@@ -60757,3 +60757,23 @@ fn vivien_minus_two_tutors_lesser_creature() {
     assert!(g.battlefield.iter().any(|c| c.id == small),
         "tutored the lesser-MV creature onto the battlefield");
 }
+
+/// Mind Spike makes the opponent discard a chosen noncreature/nonland card and
+/// costs you 2 life.
+#[test]
+fn mind_spike_discards_and_costs_life() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // noncreature, nonland
+    g.add_card_to_hand(1, catalog::grizzly_bears());             // creature, not eligible
+    let spell = g.add_card_to_hand(0, catalog::mind_spike());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mind Spike");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "opponent discarded the noncreature card");
+    assert_eq!(g.players[0].life, life - 2, "you lost 2 life");
+}

@@ -2558,6 +2558,7 @@ static DECKS: &[Factory] = &[
     super::decks::brokkos_apex_of_forever,
     super::decks::drowsing_tyrannodon,
     super::decks::vivien_monsters_advocate,
+    super::decks::mind_spike,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

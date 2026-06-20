@@ -56952,3 +56952,23 @@ pub fn vivien_monsters_advocate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mind Spike — {B} Sorcery. Target opponent reveals each noncreature, nonland
+/// card; you choose one and they discard it. You lose 2 life. (The "if they
+/// revealed nothing, draw a card" rider is dropped.)
+pub fn mind_spike() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Spike",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature),
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
