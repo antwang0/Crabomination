@@ -55907,3 +55907,84 @@ pub fn light_of_hope() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Luminous Broodmoth — {2}{W}{W} 3/4 Insect with flying. Whenever a creature
+/// you control without flying dies, return that card to the battlefield under
+/// your control with a flying counter on it. (CR 122.1b keyword counter.)
+pub fn luminous_broodmoth() -> CardDefinition {
+    CardDefinition {
+        name: "Luminous Broodmoth",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying).negate(),
+                }),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddKeywordCounter {
+                    what: Selector::LastMoved,
+                    keyword: Keyword::Flying,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quartzwood Crasher — {3}{R}{G} 5/5 Dinosaur Beast with trample. Whenever it
+/// deals combat damage to a player, create an X/X green Dinosaur Beast with
+/// trample, where X is that damage. (The "any trampler you control" batch
+/// clause is narrowed to the Crasher's own combat damage.)
+pub fn quartzwood_crasher() -> CardDefinition {
+    CardDefinition {
+        name: "Quartzwood Crasher",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Dinosaur Beast".into(),
+                        power: 0,
+                        toughness: 0,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Dinosaur, CreatureType::Beast],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Trample],
+                        ..Default::default()
+                    },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::TriggerEventAmount,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

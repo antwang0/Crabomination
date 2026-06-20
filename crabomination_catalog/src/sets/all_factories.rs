@@ -2491,6 +2491,8 @@ static DECKS: &[Factory] = &[
     super::decks::shredded_sails,
     super::decks::raking_claws,
     super::decks::light_of_hope,
+    super::decks::luminous_broodmoth,
+    super::decks::quartzwood_crasher,
     super::decks::slitherwisp,
     super::decks::voracious_greatshark,
     super::decks::heightened_reflexes,

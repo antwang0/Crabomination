@@ -60100,3 +60100,49 @@ fn iko_gainlands_enter_tapped_with_life() {
     assert!(g.battlefield_find(hollow).unwrap().tapped, "enters tapped");
     assert_eq!(g.players[0].life, life + 1, "gains 1 life");
 }
+
+/// Luminous Broodmoth returns a died non-flyer with a flying counter (CR 122).
+#[test]
+fn luminous_broodmoth_returns_with_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::luminous_broodmoth());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, no flying
+    // Kill it through the real damage funnel so the death trigger dispatches.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    // The bear card returns to the battlefield (same id) with flying.
+    let back = g.battlefield_find(bear).expect("bear returned to battlefield");
+    assert_eq!(back.controller, 0);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "returned with a flying counter");
+}
+
+/// Quartzwood Crasher mints an X/X Dinosaur Beast on combat damage (CR 510.2).
+#[test]
+fn quartzwood_crasher_makes_token_on_combat_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let crasher = g.add_card_to_battlefield(0, catalog::quartzwood_crasher()); // 5/5 trample
+    g.clear_sickness(crasher);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: crasher, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    // Run combat to damage.
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).ok();
+        if g.stack.is_empty() && g.priority.player_with_priority == 0
+            && matches!(g.step, TurnStep::PostCombatMain | TurnStep::End) { break; }
+    }
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Dinosaur Beast");
+    let token = token.expect("a Dinosaur Beast token was created");
+    assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 5, "X = 5 combat damage");
+}
