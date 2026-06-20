@@ -59850,3 +59850,253 @@ fn reptilian_reflection_animates_on_cycle() {
     assert!(c.subtypes.creature_types.contains(&CreatureType::Dinosaur));
     assert!(c.keywords.contains(&Keyword::Trample) && c.keywords.contains(&Keyword::Haste));
 }
+
+// ── IKO commons/uncommons batch ──────────────────────────────────────────────
+
+/// Garrison Cat leaves a 1/1 Human Soldier when it dies.
+#[test]
+fn garrison_cat_dies_into_soldier() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::garrison_cat());
+    g.battlefield_find_mut(cat).unwrap().damage = 2; // lethal
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Human Soldier").collect();
+    assert_eq!(tokens.len(), 1, "Garrison Cat death makes one Soldier");
+}
+
+/// Daysquad Marshal's ETB mints a 1/1 Human Soldier.
+#[test]
+fn daysquad_marshal_etb_token() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::daysquad_marshal());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Human Soldier").count(),
+        1, "ETB mints a Soldier");
+}
+
+/// Serrated Scorpion drains each opponent for 2 and gains 2 on death.
+#[test]
+fn serrated_scorpion_death_drain() {
+    let mut g = two_player_game();
+    let scorp = g.add_card_to_battlefield(0, catalog::serrated_scorpion());
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.battlefield_find_mut(scorp).unwrap().damage = 2;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 2, "opponent takes 2");
+    assert_eq!(g.players[0].life, life0 + 2, "you gain 2");
+}
+
+/// Divine Arrow only targets attacking/blocking creatures, dealing 4.
+#[test]
+fn divine_arrow_kills_attacker() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    let arrow = g.add_card_to_hand(0, catalog::divine_arrow());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: arrow, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast on attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "4 damage kills the 2/2 attacker");
+}
+
+/// Blade Banish exiles a power-4 creature and rejects a small one.
+#[test]
+fn blade_banish_exiles_big_creature() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+    let bb = g.add_card_to_hand(0, catalog::blade_banish());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Permanent(dragon)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast on power-5 creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_none(), "exiled");
+}
+
+/// Dead Weight enchants a creature for -2/-2, killing a 2/2.
+#[test]
+fn dead_weight_shrinks_and_kills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dw = g.add_card_to_hand(0, catalog::dead_weight());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: dw, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "-2/-2 kills the 2/2");
+}
+
+/// Suffocating Fumes gives opponents' creatures -1/-1 and has Cycling.
+#[test]
+fn suffocating_fumes_weakens_opponents() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    assert!(catalog::suffocating_fumes().keywords.iter()
+        .any(|k| matches!(k, Keyword::Cycling(_))));
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::garrison_cat()); // 1/1
+    let sf = g.add_card_to_hand(0, catalog::suffocating_fumes());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's 2/2 dies to -1/-1");
+    assert!(g.battlefield_find(mine).is_some(), "your creature is unaffected");
+}
+
+/// Blazing Volley pings only opponents' creatures.
+#[test]
+fn blazing_volley_hits_opponents_only() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::ornithopter()); // 0/2
+    let theirs = g.add_card_to_battlefield(1, catalog::ornithopter()); // 0/2
+    g.battlefield_find_mut(theirs).unwrap().damage = 1; // already at 1; +1 = lethal
+    let bv = g.add_card_to_hand(0, catalog::blazing_volley());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bv, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's creature dies");
+    assert!(g.battlefield_find(mine).is_some(), "your creature is untouched");
+}
+
+/// Checkpoint Officer taps a target creature with its activated ability.
+#[test]
+fn checkpoint_officer_taps_target() {
+    let mut g = two_player_game();
+    let officer = g.add_card_to_battlefield(0, catalog::checkpoint_officer());
+    g.clear_sickness(officer);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: officer, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target is tapped");
+}
+
+/// Durable Coilbug returns itself from the graveyard to hand for {4}{B}.
+#[test]
+fn durable_coilbug_self_returns_from_graveyard() {
+    let mut g = two_player_game();
+    let bug = g.add_card_to_graveyard(0, catalog::durable_coilbug());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bug, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate from graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bug), "returned to hand");
+}
+
+/// Glimmerbell can untap itself for {1}{U}.
+#[test]
+fn glimmerbell_untaps_itself() {
+    let mut g = two_player_game();
+    let bell = g.add_card_to_battlefield(0, catalog::glimmerbell());
+    g.clear_sickness(bell);
+    g.battlefield_find_mut(bell).unwrap().tapped = true;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bell, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("untap self");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bell).unwrap().tapped, "untapped");
+}
+
+/// Avian Oddity's cycle trigger puts a flying counter on your creature.
+#[test]
+fn avian_oddity_cycle_grants_flying() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let oddity = g.add_card_to_hand(0, catalog::avian_oddity());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Cycle { card_id: oddity, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "flying counter grants flying");
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().keyword_counters.get(&Keyword::Flying).copied(),
+        Some(1));
+    let _ = CounterType::PlusOnePlusOne;
+}
+
+/// Light of Hope mode 0 gains 4 life.
+#[test]
+fn light_of_hope_gains_life() {
+    let mut g = two_player_game();
+    let loh = g.add_card_to_hand(0, catalog::light_of_hope());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: loh, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast mode 0");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "gained 4 life");
+}
+
+/// Dark Bargain draws two of the top three and costs 2 life.
+#[test]
+fn dark_bargain_digs_and_costs_life() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let db = g.add_card_to_hand(0, catalog::dark_bargain());
+    let hand0 = g.players[0].hand.len();
+    let life = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: db, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 2, "two cards to hand (minus the spell)");
+    assert_eq!(g.players[0].life, life - 2, "took 2 damage");
+}
+
+/// IKO gain-taplands enter tapped and gain a life.
+#[test]
+fn iko_gainlands_enter_tapped_with_life() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let hollow = g.move_card_to_battlefield_for_test(0, catalog::jungle_hollow());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hollow).unwrap().tapped, "enters tapped");
+    assert_eq!(g.players[0].life, life + 1, "gains 1 life");
+}

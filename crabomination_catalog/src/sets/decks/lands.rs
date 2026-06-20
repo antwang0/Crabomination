@@ -1436,6 +1436,32 @@ pub fn blossoming_sands() -> CardDefinition {
         Color::Green, Color::White, vec![etb_tap_then_gain_one()])
 }
 
+// IKO completes the enemy-pair half of the gain-tapland cycle.
+pub fn jungle_hollow() -> CardDefinition {
+    dual_land_with("Jungle Hollow", LandType::Swamp, LandType::Forest,
+        Color::Black, Color::Green, vec![etb_tap_then_gain_one()])
+}
+
+pub fn scoured_barrens() -> CardDefinition {
+    dual_land_with("Scoured Barrens", LandType::Plains, LandType::Swamp,
+        Color::White, Color::Black, vec![etb_tap_then_gain_one()])
+}
+
+pub fn swiftwater_cliffs() -> CardDefinition {
+    dual_land_with("Swiftwater Cliffs", LandType::Island, LandType::Mountain,
+        Color::Blue, Color::Red, vec![etb_tap_then_gain_one()])
+}
+
+pub fn thornwood_falls() -> CardDefinition {
+    dual_land_with("Thornwood Falls", LandType::Forest, LandType::Island,
+        Color::Green, Color::Blue, vec![etb_tap_then_gain_one()])
+}
+
+pub fn wind_scarred_crag() -> CardDefinition {
+    dual_land_with("Wind-Scarred Crag", LandType::Mountain, LandType::Plains,
+        Color::Red, Color::White, vec![etb_tap_then_gain_one()])
+}
+
 /// Restless Anchorage — W/U. `{1}{W}{U}`: 2/3 flying Bird. Whenever it
 /// attacks, create a Map token.
 pub fn restless_anchorage() -> CardDefinition {

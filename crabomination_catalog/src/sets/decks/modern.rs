@@ -55495,3 +55495,415 @@ pub fn reptilian_reflection() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria: Lair of Behemoths — commons/uncommons batch ──────────────────────
+
+fn iko_human_soldier_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Aegis Turtle — {U} 0/5 Turtle.
+pub fn aegis_turtle() -> CardDefinition {
+    CardDefinition {
+        name: "Aegis Turtle",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        toughness: 5,
+        ..Default::default()
+    }
+}
+
+/// Maned Serval — {1}{W} 1/4 Cat with vigilance.
+pub fn maned_serval() -> CardDefinition {
+    CardDefinition {
+        name: "Maned Serval",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Frenzied Raptor — {2}{R} 4/2 Dinosaur.
+pub fn frenzied_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Frenzied Raptor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Garrison Cat — {W} 1/1 Cat. When it dies, create a 1/1 white Human Soldier.
+pub fn garrison_cat() -> CardDefinition {
+    CardDefinition {
+        name: "Garrison Cat",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: iko_human_soldier_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Daysquad Marshal — {3}{W} 3/3 Human Soldier. ETB: create a 1/1 white
+/// Human Soldier.
+pub fn daysquad_marshal() -> CardDefinition {
+    CardDefinition {
+        name: "Daysquad Marshal",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: iko_human_soldier_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Checkpoint Officer — {1}{W} 1/2 Human Soldier. {1}{W}, {T}: Tap target
+/// creature.
+pub fn checkpoint_officer() -> CardDefinition {
+    CardDefinition {
+        name: "Checkpoint Officer",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aegis-class wall aside, Serrated Scorpion — {B} 1/2 Scorpion. When it
+/// dies, it deals 2 damage to each opponent and you gain 2 life.
+pub fn serrated_scorpion() -> CardDefinition {
+    CardDefinition {
+        name: "Serrated Scorpion",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Scorpion], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![on_dies(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Durable Coilbug — {1}{B} 2/2 Insect. {4}{B}: Return this card from your
+/// graveyard to your hand.
+pub fn durable_coilbug() -> CardDefinition {
+    CardDefinition {
+        name: "Durable Coilbug",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b()]),
+            from_graveyard: true,
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Prickly Marmoset — {2}{R} 2/3 Monkey with first strike. Whenever you cycle
+/// a card, it gets +2/+0 until end of turn.
+pub fn prickly_marmoset() -> CardDefinition {
+    CardDefinition {
+        name: "Prickly Marmoset",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Monkey], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glimmerbell — {1}{U} 1/3 Elemental Jellyfish with flying. {1}{U}: Untap it.
+pub fn glimmerbell() -> CardDefinition {
+    CardDefinition {
+        name: "Glimmerbell",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Jellyfish],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phase Dolphin — {2}{U} 1/4 Elemental Whale. Whenever it attacks, another
+/// target attacking creature can't be blocked this turn.
+pub fn phase_dolphin() -> CardDefinition {
+    CardDefinition {
+        name: "Phase Dolphin",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Whale],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::IsAttacking.and(SelectionRequirement::OtherThanSource),
+            ),
+            keyword: Keyword::Unblockable,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Avian Oddity — {3}{U} 2/4 Bird with flying. Cycling {2}{U}. When you cycle
+/// it, put a flying counter on target creature you control.
+pub fn avian_oddity() -> CardDefinition {
+    CardDefinition {
+        name: "Avian Oddity",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Cycling(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::AddKeywordCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dead Weight — {B} Aura. Enchanted creature gets -2/-2.
+pub fn dead_weight() -> CardDefinition {
+    aura_with("Dead Weight", cost(&[b()]), SelectionRequirement::Creature, -2, -2, vec![], vec![])
+}
+
+/// Divine Arrow — {1}{W} Instant. Deal 4 damage to target attacking or
+/// blocking creature.
+pub fn divine_arrow() -> CardDefinition {
+    CardDefinition {
+        name: "Divine Arrow",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+            ),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Blade Banish — {3}{W} Instant. Exile target creature with power 4 or greater.
+pub fn blade_banish() -> CardDefinition {
+    CardDefinition {
+        name: "Blade Banish",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Dark Bargain — {3}{B} Instant. Look at the top three cards of your library;
+/// put two into your hand and the other into your graveyard. You take 2 damage.
+pub fn dark_bargain() -> CardDefinition {
+    CardDefinition {
+        name: "Dark Bargain",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: Some(Value::Const(2)),
+                to_battlefield: false,
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::You),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Suffocating Fumes — {2}{B} Instant. Creatures your opponents control get
+/// -1/-1 until end of turn. Cycling {2}.
+pub fn suffocating_fumes() -> CardDefinition {
+    CardDefinition {
+        name: "Suffocating Fumes",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Blazing Volley — {R} Sorcery. Deal 1 damage to each creature your
+/// opponents control.
+pub fn blazing_volley() -> CardDefinition {
+    CardDefinition {
+        name: "Blazing Volley",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(1),
+        },
+        ..Default::default()
+    }
+}
+
+/// Shredded Sails — {1}{R} Instant. Choose one — destroy target artifact; or
+/// deal 4 damage to target creature with flying. Cycling {2}.
+pub fn shredded_sails() -> CardDefinition {
+    CardDefinition {
+        name: "Shredded Sails",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ),
+                amount: Value::Const(4),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Raking Claws — {1}{R} Instant. Target creature gains double strike until
+/// end of turn. Cycling {2}.
+pub fn raking_claws() -> CardDefinition {
+    CardDefinition {
+        name: "Raking Claws",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::DoubleStrike,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Light of Hope — {W} Instant. Choose one — you gain 4 life; or destroy
+/// target enchantment; or put a +1/+1 counter on target creature.
+pub fn light_of_hope() -> CardDefinition {
+    CardDefinition {
+        name: "Light of Hope",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
