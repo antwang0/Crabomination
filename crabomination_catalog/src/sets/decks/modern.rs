@@ -55378,3 +55378,31 @@ pub fn gleaming_overseer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+
+// ── Ikoria batch 18 ──────────────────────────────────────────────────────────
+
+/// Ferocious Tigorilla — {3}{R} 4/3 Cat Ape. Enters with your choice of a
+/// trample counter or a menace counter on it.
+pub fn ferocious_tigorilla() -> CardDefinition {
+    CardDefinition {
+        name: "Ferocious Tigorilla",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Ape],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddKeywordCounter {
+                what: Selector::This, keyword: Keyword::Trample, amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::This, keyword: Keyword::Menace, amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}

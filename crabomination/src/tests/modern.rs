@@ -59743,3 +59743,24 @@ fn gleaming_overseer_zombie_anthem() {
     let o = g.computed_permanent(overseer).unwrap();
     assert!(o.keywords.contains(&Keyword::Hexproof), "Overseer (a Zombie) has hexproof");
 }
+
+/// Ferocious Tigorilla enters with a chosen trample or menace counter.
+#[test]
+fn ferocious_tigorilla_etb_keyword_counter() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    // Mode 1 = menace.
+    let mut g = two_player_game();
+    let t = g.add_card_to_battlefield(0, catalog::ferocious_tigorilla());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+    g.fire_self_etb_triggers(t, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(t).unwrap().keywords.contains(&Keyword::Menace), "chose menace");
+    // Mode 0 = trample.
+    let mut g = two_player_game();
+    let t = g.add_card_to_battlefield(0, catalog::ferocious_tigorilla());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(0)]));
+    g.fire_self_etb_triggers(t, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(t).unwrap().keywords.contains(&Keyword::Trample), "chose trample");
+}

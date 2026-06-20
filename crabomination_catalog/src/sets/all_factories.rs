@@ -2460,6 +2460,7 @@ static DECKS: &[Factory] = &[
     super::decks::adaptive_shimmerer,
     super::decks::will_of_the_all_hunter,
     super::decks::gleaming_overseer,
+    super::decks::ferocious_tigorilla,
     super::decks::slitherwisp,
     super::decks::voracious_greatshark,
     super::decks::heightened_reflexes,
