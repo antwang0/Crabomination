@@ -57005,3 +57005,89 @@ pub fn pristine_talisman() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ram Through — {1}{G} Instant. Target creature you control deals damage equal
+/// to its power to target creature you don't control. (Trample excess-to-player
+/// rider is dropped.)
+pub fn ram_through() -> CardDefinition {
+    CardDefinition {
+        name: "Ram Through",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            })),
+        },
+        ..Default::default()
+    }
+}
+
+/// Survivors' Bond — {1}{G} Sorcery. Choose one or both — return a Human and/or
+/// a non-Human creature card from your graveyard to your hand.
+pub fn survivors_bond() -> CardDefinition {
+    CardDefinition {
+        name: "Survivors' Bond",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::InGraveyard)
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::InGraveyard)
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Human).negate()),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Sagittars' Volley — {2}{G} Instant. Destroy target creature with flying; deal
+/// 1 damage to each creature with flying your opponents control.
+pub fn sagittars_volley() -> CardDefinition {
+    CardDefinition {
+        name: "Sagittars' Volley",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying))
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(1),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}

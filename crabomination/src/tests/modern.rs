@@ -60802,3 +60802,65 @@ fn pristine_talisman_mana_and_life() {
     assert_eq!(g.players[0].life, life + 1, "gained 1 life");
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
 }
+
+/// Ram Through: your creature deals its power to a target you don't control.
+#[test]
+fn ram_through_one_sided_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel());   // 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::ram_through());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Ram Through");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "2/2 took 4 and died");
+    assert!(g.battlefield_find(mine).is_some(), "one-sided: your creature took nothing");
+}
+
+/// Survivors' Bond returns a Human and a non-Human creature card from your gy.
+#[test]
+fn survivors_bond_returns_both() {
+    let mut g = two_player_game();
+    let human = g.add_card_to_graveyard(0, catalog::savannah_lions()); // Cat? use a Human
+    let nonhuman = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // Bear, non-Human
+    // Use an actual Human in the graveyard.
+    let real_human = g.add_card_to_graveyard(0, catalog::champion_of_the_parish());
+    let _ = human;
+    let spell = g.add_card_to_hand(0, catalog::survivors_bond());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(real_human)),
+        additional_targets: vec![Target::Permanent(nonhuman)], mode: None, x_value: None,
+    }).expect("cast Survivors' Bond");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == real_human), "Human returned to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == nonhuman), "non-Human returned to hand");
+}
+
+/// Sagittars' Volley destroys a target flyer and pings each opposing flyer.
+#[test]
+fn sagittars_volley_destroys_and_pings_flyers() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());  // 4/4 flyer
+    let small = g.add_card_to_battlefield(1, catalog::skyscanner()); // 1/1 flyer
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no flying
+    let spell = g.add_card_to_hand(0, catalog::sagittars_volley());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sagittars' Volley");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "target flyer destroyed");
+    assert!(g.battlefield_find(small).is_none(), "1/2 flyer took 1 and died");
+    assert!(g.battlefield_find(ground).is_some(), "non-flyer untouched");
+}
