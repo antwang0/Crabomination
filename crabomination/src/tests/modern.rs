@@ -52320,6 +52320,16 @@ fn cragplate_baloth_kicked_enters_bigger() {
     assert_eq!(g.computed_permanent(cb).unwrap().power, 10, "6 + 4 counters");
 }
 
+/// Knight of Malice gets +1/+0 only while a white permanent is in play.
+#[test]
+fn knight_of_malice_pumps_against_white() {
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, catalog::knight_of_malice());
+    assert_eq!(g.computed_permanent(knight).unwrap().power, 2, "no white permanent yet");
+    g.add_card_to_battlefield(1, catalog::serra_angel()); // a white permanent
+    assert_eq!(g.computed_permanent(knight).unwrap().power, 3, "+1/+0 while white is out");
+}
+
 /// Glasspool Mimic enters as a copy of a creature you control.
 #[test]
 fn glasspool_mimic_copies_your_creature() {

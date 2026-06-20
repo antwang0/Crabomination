@@ -3250,3 +3250,27 @@ fn cr_122_2_counters_vanish_on_zone_change() {
     assert_eq!(g.battlefield_find(again).unwrap().counter_count(CounterType::Bounty), 0,
         "counters did not persist across the zone change");
 }
+
+// ── CR 702.11e — Hexproof from [color] ───────────────────────────────────────
+
+/// CR 702.11e — a creature with "hexproof from black" can't be targeted by an
+/// opponent's black spell, but a white spell targets it fine. Knight of Grace.
+#[test]
+fn cr_702_11e_hexproof_from_black_blocks_only_black() {
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, catalog::knight_of_grace());
+    // Opponent's black removal can't target it.
+    let blade = g.add_card_to_hand(1, catalog::doom_blade());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: blade, target: Some(Target::Permanent(knight)),
+        additional_targets: vec![], mode: None, x_value: None });
+    assert!(matches!(err, Err(GameError::TargetHasHexproof(_))), "black blocked, got {err:?}");
+    // A white spell is unaffected.
+    let swords = g.add_card_to_hand(1, catalog::swords_to_plowshares());
+    g.players[1].mana_pool.add(Color::White, 1);
+    crate::game::cast_at(&mut g, swords, Target::Permanent(knight));
+    assert!(g.battlefield_find(knight).is_none(), "white Swords exiled it");
+}

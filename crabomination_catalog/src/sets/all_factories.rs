@@ -1508,6 +1508,8 @@ static DECKS: &[Factory] = &[
     super::decks::skyclave_geopede,
     super::decks::nimana_skydancer,
     super::decks::cragplate_baloth,
+    super::decks::knight_of_grace,
+    super::decks::knight_of_malice,
     super::decks::concealing_curtains,
     super::decks::delver_of_secrets,
     super::decks::the_everflowing_well,

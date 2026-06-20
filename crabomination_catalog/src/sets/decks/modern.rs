@@ -28095,6 +28095,64 @@ pub fn cragplate_baloth() -> CardDefinition {
     }
 }
 
+/// Knight of Grace — {1}{W} Creature — Human Knight 2/2. First strike, hexproof
+/// from black; gets +1/+0 as long as any player controls a black permanent.
+pub fn knight_of_grace() -> CardDefinition {
+    CardDefinition {
+        name: "Knight of Grace",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::HexproofFromColor(Color::Black)],
+        static_abilities: vec![StaticAbility {
+            description: "+1/+0 as long as any player controls a black permanent.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasColor(Color::Black),
+                )),
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Knight of Malice — {1}{B} Creature — Human Knight 2/2. First strike, hexproof
+/// from white; gets +1/+0 as long as any player controls a white permanent.
+pub fn knight_of_malice() -> CardDefinition {
+    CardDefinition {
+        name: "Knight of Malice",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::HexproofFromColor(Color::White)],
+        static_abilities: vec![StaticAbility {
+            description: "+1/+0 as long as any player controls a white permanent.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasColor(Color::White),
+                )),
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sink into Stupor // Soporific Springs — {1}{U}{U} Instant MDFC (MKM).
 /// Front: "Return target spell or nonland permanent an opponent controls to
 /// its owner's hand." (The spell-on-stack half collapses to the nonland-
