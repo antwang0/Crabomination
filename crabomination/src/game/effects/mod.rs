@@ -3499,6 +3499,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CycleRecurFromGraveyard { threshold } => {
+                use crate::effect::{LibraryPosition, ZoneDest};
+                let Some(src) = ctx.source else { return Ok(()) };
+                // The cycled card must still be in its owner's graveyard.
+                let Some(card) = self.players[ctx.controller].graveyard.iter().find(|c| c.id == src)
+                else { return Ok(()) };
+                let name = card.definition.name.to_string();
+                let count = self.cycled_count_by_name.get(&name).copied().unwrap_or(0);
+                let dest = if count >= *threshold {
+                    ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }
+                } else {
+                    ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top }
+                };
+                self.move_card_to(src, &dest, ctx, events);
+                if count < *threshold {
+                    use rand::seq::SliceRandom;
+                    self.players[ctx.controller].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => {
                 use crate::card::{CardType, Zone};
                 use crate::decision::{Decision, DecisionAnswer};

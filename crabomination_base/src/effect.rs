@@ -2475,6 +2475,11 @@ pub enum Effect {
     /// "tap up to N target permanents", etc. The inner effect must address
     /// its operand via `Selector::Target(0)`.
     ApplyToTargets { max_targets: u8, filter: SelectionRequirement, effect: Box<Effect> },
+    /// Yidaro, Wandering Monster — "When you cycle this card, shuffle it into
+    /// your library from your graveyard. If you've cycled a card with this
+    /// name `threshold` or more times this game, put it onto the battlefield
+    /// from your graveyard instead." Reads `GameState.cycled_count_by_name`.
+    CycleRecurFromGraveyard { threshold: u32 },
     /// Illuna, Apex of Wishes — exile cards from the top of the controller's
     /// library until a nonland *permanent* card is exiled, then put that card
     /// onto the battlefield or into hand (controller's choice via

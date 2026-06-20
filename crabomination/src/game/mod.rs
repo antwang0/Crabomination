@@ -356,6 +356,11 @@ pub struct GameState {
     pub(crate) skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// CR 702.29 — per-game tally of how many times a card with each name has
+    /// been cycled (Yidaro, Wandering Monster's "four or more times this game"
+    /// recursion). Keyed by card name; never reset. `#[serde(default)]`.
+    #[serde(default)]
+    pub(crate) cycled_count_by_name: std::collections::HashMap<String, u32>,
     /// CR 700.14 — running total of mana the active player has spent to
     /// cast spells this turn (Expend). Bumped in `finalize_cast` by each
     /// spell's `mana_spent`; reset at cleanup. `#[serde(default)]`.
@@ -1007,6 +1012,7 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            cycled_count_by_name: self.cycled_count_by_name.clone(),
             mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
             expend_prev_total: self.expend_prev_total,
             spells_cast_last_turn: self.spells_cast_last_turn,
@@ -1137,6 +1143,7 @@ impl GameState {
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            cycled_count_by_name: std::collections::HashMap::new(),
             mana_spent_on_spells_this_turn: 0,
             expend_prev_total: 0,
             spells_cast_last_turn: 0,
@@ -5373,10 +5380,16 @@ impl GameState {
         // graveyard move, CardDiscarded, discard-matters counters, and the
         // Madness replacement, CR 702.35).
         let mut events = vec![];
+        let cycled_name = self
+            .find_card_anywhere(card_id)
+            .map(|c| c.definition.name.to_string());
         if self.discard_card(seat, card_id, &mut events) {
             // CR 702.29c — emit the cycle-specific event in addition to
             // the discard event, so "When you cycle this card" triggers
             // distinguish cycle from a regular hand discard.
+            if let Some(name) = cycled_name {
+                *self.cycled_count_by_name.entry(name).or_insert(0) += 1;
+            }
             events.push(GameEvent::CardCycled {
                 player: seat,
                 card_id,

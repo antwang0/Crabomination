@@ -54243,3 +54243,28 @@ pub fn zilortha_strength_incarnate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Yidaro, Wandering Monster — {5}{R}{R} 8/8 legendary Dinosaur Turtle, trample,
+/// haste. Cycling {1}{R}. When you cycle it, shuffle it into your library from
+/// your graveyard — or, if cycled 4+ times this game, put it onto the
+/// battlefield instead (`Effect::CycleRecurFromGraveyard`).
+pub fn yidaro_wandering_monster() -> CardDefinition {
+    CardDefinition {
+        name: "Yidaro, Wandering Monster",
+        cost: cost(&[generic(5), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Turtle],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Trample, Keyword::Haste, Keyword::Cycling(cost(&[generic(1), r()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::CycleRecurFromGraveyard { threshold: 4 },
+        }],
+        ..Default::default()
+    }
+}

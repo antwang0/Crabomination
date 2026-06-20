@@ -155,6 +155,7 @@ impl Effect {
             // Targets are chosen at resolution (Decision::ChooseCards), so no
             // cast-time target slot is demanded.
             Effect::TapUpToValue { .. } => false,
+            Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::NameCardTargetDiscardsMatching => true,

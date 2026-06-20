@@ -58158,6 +58158,31 @@ fn zagoth_triome_enters_tapped_three_colors() {
 }
 
 
+/// Yidaro shuffles back into the library on a cycle; on the 4th cycle this
+/// game it enters the battlefield from the graveyard instead.
+#[test]
+fn yidaro_recurs_on_fourth_cycle() {
+    let mut g = two_player_game();
+    // First cycle: shuffles into the library (not onto the battlefield).
+    let y1 = g.add_card_to_hand(0, catalog::yidaro_wandering_monster());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Cycle { card_id: y1, x_value: None }).expect("cycle 1");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Yidaro, Wandering Monster"),
+        "first cycle shuffles back, no battlefield Yidaro");
+    assert!(g.players[0].library.iter().any(|c| c.id == y1), "Yidaro shuffled into library");
+
+    // Pre-load the game count to 3 so the next cycle is the 4th.
+    g.cycled_count_by_name.insert("Yidaro, Wandering Monster".into(), 3);
+    let y2 = g.add_card_to_hand(0, catalog::yidaro_wandering_monster());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Cycle { card_id: y2, x_value: None }).expect("cycle 4");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(y2).is_some(), "4th cycle puts Yidaro onto the battlefield");
+}
+
 /// Zilortha makes your creatures' lethal threshold their power, not toughness:
 /// a damaged 0/4 dies; an undamaged one survives.
 #[test]
