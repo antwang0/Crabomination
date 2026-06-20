@@ -59560,3 +59560,103 @@ fn dirgur_nemesis_stats() {
     assert!(d.keywords.contains(&Keyword::Defender));
     assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))));
 }
+
+/// Coordinated Charge pumps your team +2/+1 until end of turn.
+#[test]
+fn coordinated_charge_team_pump() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cc = g.add_card_to_hand(0, catalog::coordinated_charge());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Coordinated Charge");
+    drain_stack(&mut g);
+    let mine = g.computed_permanent(a).unwrap();
+    assert_eq!((mine.power, mine.toughness), (4, 3), "my creature +2/+1");
+    let theirs = g.computed_permanent(enemy).unwrap();
+    assert_eq!((theirs.power, theirs.toughness), (2, 2), "enemy unaffected");
+}
+
+/// Fully Grown gives +3/+3 and a trample counter.
+#[test]
+fn fully_grown_pump_and_trample_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fg = g.add_card_to_hand(0, catalog::fully_grown());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fg, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fully Grown");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "+3/+3");
+    assert!(c.keywords.contains(&Keyword::Trample), "trample counter");
+}
+
+/// Plague Wight shrinks its blockers when it becomes blocked.
+#[test]
+fn plague_wight_shrinks_blockers() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let wight = g.add_card_to_battlefield(0, catalog::plague_wight());
+    let blk = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives combat
+    g.clear_sickness(wight);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: wight, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, wight)])).expect("block");
+    drain_stack(&mut g);
+    // The becomes-blocked trigger shrinks the 4/4 blocker to 3/3.
+    let after = g.computed_permanent(blk).unwrap();
+    assert_eq!((after.power, after.toughness), (3, 3), "blocker got -1/-1");
+}
+
+/// Zagoth Mamba's mutate trigger shrinks an opponent's creature.
+#[test]
+fn zagoth_mamba_mutate_debuff() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // non-Human host
+    let mamba = g.add_card_to_hand(0, catalog::zagoth_mamba());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.clear_sickness(host);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.perform_action(GameAction::CastMutate {
+        card_id: mamba, target: host, on_top: false, x_value: None,
+    }).expect("mutate onto host");
+    drain_stack(&mut g);
+    let v = g.computed_permanent(victim).unwrap();
+    assert_eq!((v.power, v.toughness), (2, 2), "Serra Angel got -2/-2");
+}
+
+/// Fight as One buffs both a Human and a non-Human with indestructible.
+#[test]
+fn fight_as_one_buffs_both() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let human = g.add_card_to_battlefield(0, catalog::wingspan_mentor()); // Human
+    let beast = g.add_card_to_battlefield(0, catalog::grizzly_bears());    // non-Human
+    let spell = g.add_card_to_hand(0, catalog::fight_as_one());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(human)),
+        additional_targets: vec![Target::Permanent(beast)], mode: None, x_value: None,
+    }).expect("cast Fight as One choosing both");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(human).unwrap().keywords.contains(&Keyword::Indestructible),
+        "Human gained indestructible");
+    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Indestructible),
+        "non-Human gained indestructible");
+}

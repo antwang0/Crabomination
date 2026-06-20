@@ -55162,3 +55162,135 @@ pub fn dirgur_nemesis() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 16 ──────────────────────────────────────────────────────────
+
+/// Coordinated Charge — {4}{W} Instant. Creatures you control get +2/+1 until
+/// end of turn. Cycling {2}.
+pub fn coordinated_charge() -> CardDefinition {
+    CardDefinition {
+        name: "Coordinated Charge",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::PumpPT {
+            what: each_your_creature(),
+            power: Value::Const(2),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Fully Grown — {2}{G} Instant. Target creature gets +3/+3 until end of turn
+/// and gets a trample counter.
+pub fn fully_grown() -> CardDefinition {
+    CardDefinition {
+        name: "Fully Grown",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Plague Wight — {1}{B} 2/1 Zombie. Whenever it becomes blocked, each creature
+/// blocking it gets -1/-1 until end of turn.
+pub fn plague_wight() -> CardDefinition {
+    CardDefinition {
+        name: "Plague Wight",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::BlockingCreatures,
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zagoth Mamba — {B} 1/1 Nightmare Snake. Mutate {1}{B}{G}. When it mutates,
+/// target creature an opponent controls gets -2/-2 until end of turn.
+pub fn zagoth_mamba() -> CardDefinition {
+    CardDefinition {
+        name: "Zagoth Mamba",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        mutate: Some(cost(&[generic(1), b(), g()])),
+        triggered_abilities: vec![on_mutate(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fight as One — {W} Instant. Choose one or both — a target Human you control
+/// and/or a target non-Human you control gets +1/+1 and gains indestructible
+/// until end of turn.
+pub fn fight_as_one() -> CardDefinition {
+    let buff = |filter: SelectionRequirement| {
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(filter.clone()),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(filter),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ])
+    };
+    let human = SelectionRequirement::Creature
+        .and(SelectionRequirement::ControlledByYou)
+        .and(SelectionRequirement::HasCreatureType(CreatureType::Human));
+    let non_human = SelectionRequirement::Creature
+        .and(SelectionRequirement::ControlledByYou)
+        .and(SelectionRequirement::Not(Box::new(
+            SelectionRequirement::HasCreatureType(CreatureType::Human),
+        )));
+    CardDefinition {
+        name: "Fight as One",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![buff(human), buff(non_human)],
+        },
+        ..Default::default()
+    }
+}
