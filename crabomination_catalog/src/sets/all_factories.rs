@@ -2447,6 +2447,7 @@ static DECKS: &[Factory] = &[
     super::decks::cunning_nightbonder,
     super::decks::lullmages_domination,
     super::decks::splash_portal,
+    super::decks::crystalline_giant,
     super::decks::slitherwisp,
     super::decks::voracious_greatshark,
     super::decks::heightened_reflexes,

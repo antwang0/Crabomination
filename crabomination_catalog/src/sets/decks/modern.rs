@@ -55024,3 +55024,35 @@ pub fn splash_portal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Crystalline Giant — {3} 3/3 Artifact Giant. At the beginning of combat on
+/// your turn, put a counter of a kind it doesn't already have on it, chosen at
+/// random from flying, first strike, deathtouch, hexproof, lifelink, menace,
+/// reach, trample, vigilance, and +1/+1.
+pub fn crystalline_giant() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Crystalline Giant",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::AddRandomMissingCounter {
+                what: Selector::This,
+                keyword_options: vec![
+                    Keyword::Flying, Keyword::FirstStrike, Keyword::Deathtouch,
+                    Keyword::Hexproof, Keyword::Lifelink, Keyword::Menace,
+                    Keyword::Reach, Keyword::Trample, Keyword::Vigilance,
+                ],
+                plus_one_plus_one: true,
+            },
+        }],
+        ..Default::default()
+    }
+}

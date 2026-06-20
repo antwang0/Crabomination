@@ -2382,6 +2382,17 @@ pub enum Effect {
     /// (assuming no other source) when the last keyword counter is
     /// removed. Push (modern_decks batch 183): added per CR 122.1b.
     AddKeywordCounter { what: Selector, keyword: crate::card::Keyword, amount: Value },
+    /// CR 122.1b / "choose a kind of counter at random" — pick uniformly at
+    /// random one option `what` doesn't already have (a keyword counter from
+    /// `keyword_options`, or a +1/+1 counter when `plus_one_plus_one`), and put
+    /// one of that kind on it. Crystalline Giant. If every option is already
+    /// present, nothing happens.
+    AddRandomMissingCounter {
+        what: Selector,
+        keyword_options: Vec<crate::card::Keyword>,
+        #[serde(default)]
+        plus_one_plus_one: bool,
+    },
     /// CR 122.1b — Remove up to `amount` keyword counters of `keyword`
     /// from `what`. Clamped at the source's actual count; the host loses
     /// the keyword (assuming no other source) when the last counter of

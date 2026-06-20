@@ -4722,6 +4722,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddRandomMissingCounter { what, keyword_options, plus_one_plus_one } => {
+                use crate::card::CounterType;
+                if self.counters_locked() { return Ok(()); } // CR 122.1 — Solemnity
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(c) = self.battlefield_find(cid) else { continue };
+                    // Counter kinds this permanent doesn't already have on it.
+                    let mut missing_kw: Vec<crate::card::Keyword> = keyword_options
+                        .iter()
+                        .filter(|kw| c.keyword_counters.get(kw).copied().unwrap_or(0) == 0)
+                        .cloned()
+                        .collect();
+                    let missing_pp = *plus_one_plus_one
+                        && c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0) == 0;
+                    let total = missing_kw.len() + usize::from(missing_pp);
+                    if total == 0 { continue; }
+                    let pick = (rand::random::<u64>() % total as u64) as usize;
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                    if pick < missing_kw.len() {
+                        let kw = missing_kw.swap_remove(pick);
+                        if let Some(c) = self.battlefield_find_mut(cid) {
+                            *c.keyword_counters.entry(kw.clone()).or_insert(0) += 1;
+                        }
+                        events.push(GameEvent::KeywordCounterAdded { card_id: cid, keyword: kw, count: 1 });
+                    } else if let Some(c) = self.battlefield_find_mut(cid) {
+                        *c.counters.entry(CounterType::PlusOnePlusOne).or_insert(0) += 1;
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid, counter_type: CounterType::PlusOnePlusOne, count: 1,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             // CR 122.1b — Remove keyword counters from `what`. Clamped at
             // the source's actual count; the host loses the keyword
             // (assuming no other source) when the last counter is

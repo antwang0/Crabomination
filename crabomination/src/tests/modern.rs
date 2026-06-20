@@ -59474,3 +59474,28 @@ fn splash_portal_blinks_and_draws_on_type() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Wingspan Mentor" && c.controller == 0),
         "creature returned to the battlefield");
 }
+
+/// Crystalline Giant gains a random missing counter at the beginning of combat,
+/// and never duplicates a counter kind it already has.
+#[test]
+fn crystalline_giant_gains_random_counter() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::crystalline_giant());
+    let count_kinds = |g: &GameState| -> usize {
+        let c = g.battlefield_find(giant).unwrap();
+        c.keyword_counters.len()
+            + usize::from(c.counters.get(&crate::card::CounterType::PlusOnePlusOne)
+                .copied().unwrap_or(0) > 0)
+    };
+    // Fire begin-combat ten times; each adds exactly one new distinct kind
+    // until the 10-option pool is exhausted (never duplicating).
+    for expected in 1..=10 {
+        g.fire_step_triggers(TurnStep::BeginCombat);
+        drain_stack(&mut g);
+        assert_eq!(count_kinds(&g), expected.min(10), "one new counter kind each combat");
+    }
+    // Pool exhausted: an 11th trigger adds nothing.
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(count_kinds(&g), 10, "no duplicate counter kinds beyond the 10 options");
+}

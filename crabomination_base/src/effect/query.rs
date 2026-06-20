@@ -427,6 +427,7 @@ impl Effect {
             | Effect::RemoveKeywordCounter { what, amount, .. } => {
                 sel_has_target(what) || value_has_target(amount)
             }
+            Effect::AddRandomMissingCounter { what, .. } => sel_has_target(what),
             Effect::MoveAllCounters { from, to } => sel_has_target(from) || sel_has_target(to),
             Effect::MoveCounter { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
@@ -653,7 +654,8 @@ impl Effect {
             | Effect::RemoveAllCounters { what }
             | Effect::SetLoyalty { what, .. }
             | Effect::AddKeywordCounter { what, .. }
-            | Effect::RemoveKeywordCounter { what, .. } => sel_filter(what),
+            | Effect::RemoveKeywordCounter { what, .. }
+            | Effect::AddRandomMissingCounter { what, .. } => sel_filter(what),
             // CreateTokenCopyOf — the `source` is the targeted permanent to
             // copy (Esika's Chariot "copy target token you control").
             Effect::CreateTokenCopyOf { source, .. } => sel_filter(source),
@@ -1207,6 +1209,7 @@ impl Effect {
             | Effect::RemoveCounter { .. }
             | Effect::AddKeywordCounter { .. }
             | Effect::RemoveKeywordCounter { .. }
+            | Effect::AddRandomMissingCounter { .. }
             | Effect::PumpPT { .. }
             | Effect::SetBasePT { .. }
             | Effect::SwitchPT { .. }
@@ -1506,7 +1509,8 @@ impl Effect {
                 }
                 Effect::RemoveAllCounters { what } => sel_find(what, slot),
                 Effect::AddKeywordCounter { what, .. }
-                | Effect::RemoveKeywordCounter { what, .. } => sel_find(what, slot),
+                | Effect::RemoveKeywordCounter { what, .. }
+                | Effect::AddRandomMissingCounter { what, .. } => sel_find(what, slot),
                 Effect::BecomeBasicLand { what, .. }
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
