@@ -60902,3 +60902,55 @@ fn rangers_guile_pump_and_hexproof() {
     assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
     assert!(c.keywords.contains(&Keyword::Hexproof), "granted hexproof");
 }
+
+/// Brimstone Volley deals 3, or 5 (morbid) if a creature died this turn.
+#[test]
+fn brimstone_volley_morbid_scaling() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::brimstone_volley());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Brimstone Volley");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "no morbid → 3 damage");
+
+    // Now with a creature having died this turn → 5.
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.remove_to_graveyard_with_triggers(victim);
+    let spell2 = g.add_card_to_hand(0, catalog::brimstone_volley());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life2 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell2, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Brimstone Volley again");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life2 - 5, "morbid → 5 damage");
+}
+
+/// Unexpected Windfall: discard a card, draw two, make two Treasures.
+#[test]
+fn unexpected_windfall_draws_and_makes_treasures() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::island()); // the discard fodder
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::unexpected_windfall());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    let hand_before = g.players[0].hand.len(); // includes the spell + fodder
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Unexpected Windfall");
+    drain_stack(&mut g);
+    // -1 spell, -1 discard, +2 draw = net 0 vs hand_before.
+    assert_eq!(g.players[0].hand.len(), hand_before - 2 + 2, "discard 1, draw 2");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 2,
+        "two Treasure tokens created");
+}

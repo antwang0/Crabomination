@@ -57141,3 +57141,45 @@ pub fn rangers_guile() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Brimstone Volley — {2}{R} Instant. Deal 3 damage to any target; morbid —
+/// deal 5 instead if a creature died this turn.
+pub fn brimstone_volley() -> CardDefinition {
+    let any_target = || Selector::TargetFiltered {
+        slot: 0,
+        filter: SelectionRequirement::Creature
+            .or(SelectionRequirement::Player)
+            .or(SelectionRequirement::Planeswalker),
+    };
+    CardDefinition {
+        name: "Brimstone Volley",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) },
+            then: Box::new(Effect::DealDamage { to: any_target(), amount: Value::Const(5) }),
+            else_: Box::new(Effect::DealDamage { to: any_target(), amount: Value::Const(3) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Unexpected Windfall — {2}{R}{R} Instant. Additional cost: discard a card.
+/// Draw two cards and create two Treasure tokens.
+pub fn unexpected_windfall() -> CardDefinition {
+    CardDefinition {
+        name: "Unexpected Windfall",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard { count: 1 }],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crate::game::effects::treasure_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
