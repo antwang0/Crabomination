@@ -60385,3 +60385,97 @@ fn extinction_event_exiles_chosen_parity() {
     assert!(g.battlefield_find(bears).is_some(), "MV2 (even) survives");
     assert!(g.battlefield_find(memnite).is_some(), "MV0 (even) survives");
 }
+
+/// Song of Creation: casting a spell draws two; end step discards the hand.
+#[test]
+fn song_of_creation_draws_then_dumps_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::song_of_creation());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    // -1 bolt, +2 from Song's cast trigger.
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "cast trigger drew two");
+    // End step discards the whole hand.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "end step discarded the hand");
+}
+
+/// Fiend Artisan grows with creature cards in the graveyard.
+#[test]
+fn fiend_artisan_grows_with_graveyard() {
+    let mut g = two_player_game();
+    let artisan = g.add_card_to_battlefield(0, catalog::fiend_artisan());
+    assert_eq!(g.computed_permanent(artisan).unwrap().power, 1, "base 1/1");
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // not a creature
+    assert_eq!(g.computed_permanent(artisan).unwrap().power, 3, "+1/+1 per creature card (two)");
+    assert_eq!(g.computed_permanent(artisan).unwrap().toughness, 3, "toughness tracks too");
+}
+
+/// General Kudro: anthem buffs other Humans; sac-two-Humans destroys a creature.
+#[test]
+fn general_kudro_anthem_and_sacrifice() {
+    let mut g = two_player_game();
+    let kudro = g.add_card_to_battlefield(0, catalog::general_kudro_of_drannith());
+    let soldier = g.add_card_to_battlefield(0, catalog::savannah_lions()); // Human-ish? it's a Cat
+    // Use two Humans for the sac cost: add two Human tokens via Champion etc.
+    let h1 = g.add_card_to_battlefield(0, catalog::champion_of_the_parish());
+    let h2 = g.add_card_to_battlefield(0, catalog::champion_of_the_parish());
+    // Anthem: another Human (Champion 1/1) is buffed to 2/2; Kudro itself isn't.
+    assert_eq!(g.computed_permanent(h1).unwrap().power, 2, "other Human gets +1/+1");
+    assert_eq!(g.computed_permanent(kudro).unwrap().power, 3, "Kudro doesn't buff itself");
+    let _ = soldier;
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kudro, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("sac two Humans to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "target creature destroyed");
+    assert!(g.battlefield_find(h1).is_none() && g.battlefield_find(h2).is_none(),
+        "two Humans sacrificed");
+}
+
+/// General Kudro's own entry (and another Human's) exiles an opponent gy card.
+#[test]
+fn general_kudro_etb_exiles_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let opp_gy = g.players[1].graveyard.len();
+    g.move_card_to_battlefield_for_test(0, catalog::general_kudro_of_drannith());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), opp_gy - 1, "Kudro's own ETB exiled a gy card");
+}
+
+/// Fiend Artisan's activated ability sacrifices another creature and tutors a
+/// creature with mana value ≤ X straight to the battlefield.
+#[test]
+fn fiend_artisan_tutors_to_battlefield() {
+    let mut g = two_player_game();
+    let artisan = g.add_card_to_battlefield(0, catalog::fiend_artisan());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_library(0, catalog::llanowar_elves()); // MV1
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));
+    g.players[0].mana_pool.add(Color::Black, 1); // pays the {B/G}
+    g.players[0].mana_pool.add_colorless(1);     // pays X=1 generic
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: artisan, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: Some(1),
+    }).expect("activate Fiend Artisan tutor");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert!(g.battlefield_find(artisan).is_some(), "Artisan not sacrificed (another creature)");
+    assert!(g.battlefield.iter().any(|c| c.id == elf), "tutored the MV1 creature to the battlefield");
+}

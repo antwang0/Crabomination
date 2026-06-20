@@ -56372,3 +56372,120 @@ pub fn extinction_event() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Song of Creation — {1}{G}{U}{R} Enchantment. Extra land each turn; draw two
+/// whenever you cast a spell; discard your hand at your end step.
+pub fn song_of_creation() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Song of Creation",
+        cost: cost(&[generic(1), g(), u(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                effect: Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                    random: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fiend Artisan — {B/G}{B/G} 1/1 Nightmare. +1/+1 per creature card in your
+/// graveyard. {X}{B/G}, {T}, Sacrifice another creature: tutor a creature with
+/// mana value X or less straight to the battlefield.
+pub fn fiend_artisan() -> CardDefinition {
+    use crate::card::DynamicPt;
+    CardDefinition {
+        name: "Fiend Artisan",
+        cost: cost(&[hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        dynamic_pt: Some(DynamicPt::BasePlusCreaturesInControllerGraveyard { base: 1 }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), hybrid(Color::Black, Color::Green)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMostXFromCost),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// General Kudro of Drannith — {1}{W}{B} 3/3 Human Soldier. Other Humans get
+/// +1/+1; this or another Human entering exiles a card from an opponent's
+/// graveyard; {2}, Sacrifice two Humans: destroy target creature.
+pub fn general_kudro_of_drannith() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    CardDefinition {
+        name: "General Kudro of Drannith",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Humans you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Human)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![
+            // Kudro's own entry.
+            etb(Effect::Exile {
+                what: target_filtered(SelectionRequirement::InOpponentGraveyard),
+            }),
+            // Another Human you control entering.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
+                    }),
+                effect: Effect::Exile {
+                    what: target_filtered(SelectionRequirement::InOpponentGraveyard),
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Human), 2)),
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

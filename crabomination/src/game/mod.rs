@@ -3962,6 +3962,11 @@ impl GameState {
                     let n = self.players[card.controller].graveyard.len() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::BasePlusCreaturesInControllerGraveyard { base } => {
+                    let n = self.players[card.controller].graveyard.iter()
+                        .filter(|c| c.definition.is_creature()).count() as i32;
+                    (base + n, base + n)
+                }
                 crate::card::DynamicPt::BasePlusOpponentGraveyards { base, creatures_only } => {
                     let n: i32 = self
                         .opponents_of(card.controller)

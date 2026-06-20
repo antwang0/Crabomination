@@ -2009,6 +2009,9 @@ pub enum DynamicPt {
     /// Power = toughness = size of the controller's graveyard. Cruel
     /// Somnophage.
     ControllerGraveyardSize,
+    /// Power = toughness = `base` + the number of creature cards in the
+    /// controller's graveyard. Fiend Artisan (base 1/1).
+    BasePlusCreaturesInControllerGraveyard { base: i32 },
     /// Power = toughness = base + total land cards in all graveyards.
     /// Knight of the Reliquary (base 2/2; grows +1/+1 per land in any
     /// player's graveyard).

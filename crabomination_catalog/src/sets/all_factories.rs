@@ -2541,6 +2541,9 @@ static DECKS: &[Factory] = &[
     super::decks::boot_nipper,
     super::decks::ominous_seas,
     super::decks::extinction_event,
+    super::decks::song_of_creation,
+    super::decks::fiend_artisan,
+    super::decks::general_kudro_of_drannith,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
