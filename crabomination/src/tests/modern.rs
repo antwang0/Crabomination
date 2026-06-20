@@ -58157,6 +58157,67 @@ fn zagoth_triome_enters_tapped_three_colors() {
     assert_eq!(land.definition.activated_abilities.len(), 3, "three mana abilities");
 }
 
+
+/// Mythos of Nethroi destroys a target creature.
+#[test]
+fn mythos_of_nethroi_destroys_creature() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_hand(0, catalog::mythos_of_nethroi());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{B}
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Nethroi");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "target creature destroyed");
+}
+
+/// Mutual Destruction sacrifices a creature (additional cost) and destroys one.
+#[test]
+fn mutual_destruction_sacs_and_destroys() {
+    let mut g = two_player_game();
+    let md = g.add_card_to_hand(0, catalog::mutual_destruction());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1); // {B}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![fodder])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: md, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mutual Destruction");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed our creature");
+    assert!(g.battlefield_find(victim).is_none(), "destroyed target creature");
+}
+
+/// Everquill Phoenix's mutate trigger mints a Feather token whose sac ability
+/// reanimates a Phoenix from the graveyard.
+#[test]
+fn mutate_everquill_phoenix_feather_reanimates() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let phoenix = g.add_card_to_hand(0, catalog::everquill_phoenix());
+    let dead = g.add_card_to_graveyard(0, catalog::everquill_phoenix()); // a Phoenix in gy
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3); // mutate {3}{R}
+    g.perform_action(GameAction::CastMutate {
+        card_id: phoenix, target: host, on_top: true, x_value: None,
+    }).expect("mutate Everquill Phoenix");
+    drain_stack(&mut g);
+    let feather = g.battlefield.iter().find(|c| c.definition.name == "Feather")
+        .expect("Feather token minted").id;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: feather, ability_index: 0,
+        target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+    }).expect("activate Feather");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(), "Phoenix returned to the battlefield");
+    assert!(g.battlefield_find(feather).is_none(), "Feather sacrificed");
+}
+
 /// Cavern Whisperer's mutate trigger makes each opponent discard.
 #[test]
 fn mutate_cavern_whisperer_opponent_discards() {

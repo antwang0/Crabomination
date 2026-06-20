@@ -54149,3 +54149,72 @@ pub fn nethroi_apex_of_death() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 7 ───────────────────────────────────────────────────────────
+
+/// Mythos of Nethroi — {2}{B} Instant. Destroy target creature. (The {G}{W}-spent
+/// upgrade to "any nonland permanent" is dropped — no spend-tracking here.)
+pub fn mythos_of_nethroi() -> CardDefinition {
+    CardDefinition {
+        name: "Mythos of Nethroi",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Mutual Destruction — {B} Sorcery. As an additional cost, sacrifice a
+/// creature. Destroy target creature. (Conditional flash is dropped.)
+pub fn mutual_destruction() -> CardDefinition {
+    CardDefinition {
+        name: "Mutual Destruction",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Everquill Phoenix — {2}{R}{R} 4/4 Phoenix, flying. Mutate {3}{R}. On mutate,
+/// create a red Feather artifact token: "{1}, Sacrifice this token: Return
+/// target Phoenix card from your graveyard to the battlefield tapped."
+pub fn everquill_phoenix() -> CardDefinition {
+    CardDefinition {
+        name: "Everquill Phoenix",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phoenix], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        mutate: Some(cost(&[generic(3), r()])),
+        triggered_abilities: vec![on_mutate(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Feather".into(),
+                card_types: vec![CardType::Artifact],
+                colors: vec![Color::Red],
+                activated_abilities: vec![ActivatedAbility {
+                    mana_cost: cost(&[generic(1)]),
+                    sac_cost: true,
+                    effect: Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::HasCreatureType(CreatureType::Phoenix)
+                                .and(SelectionRequirement::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    },
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
