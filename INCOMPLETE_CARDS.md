@@ -168,8 +168,10 @@ Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 ### Other notable HIGH (doc-derived — confirm)
 Veil of Summer (✅ now wires the draw gate + uncounterable + lifegain-lock;
 only the hexproof-from-blue/black rider remains) · Approach of the Second Sun
-(✅ wins via `WinGame` — doc was stale) · ~~Heroic Intervention~~ ✅ (now grants
-hexproof + indestructible) · Fractal Tender (both triggers omitted) ·
+(✅ wins via `WinGame` — doc was stale) · ~~Heroic Intervention~~ ✅ (code
+already granted **both** hexproof + indestructible — only the in-code comment was
+stale; test now proves granted hexproof blocks opponent targeting) ·
+Fractal Tender (both triggers omitted) ·
 Pestilent Cauldron / Wandering Archaic (back faces).
 
 ### Fixed this run (protection / keyword / copy primitives)

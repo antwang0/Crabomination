@@ -13703,12 +13703,11 @@ pub fn kitchen_finks() -> CardDefinition {
 /// Heroic Intervention — {1}{G} Instant. Permanents you control gain
 /// hexproof and indestructible until end of turn.
 ///
-/// Cube-style approximation: the engine has no `Hexproof` keyword-grant
-/// to permanents en masse, but `Indestructible` keyword-grant works
-/// (CR 702.12b). Wired via `ForEach(your perms) + GrantKeyword
-/// (Indestructible, EOT)`. The hexproof half is dropped — strictly
-/// weaker than printed, but the typical use-case (saving the board
-/// from a Wrath) is preserved.
+/// Faithful: `ForEach(your perms)` grants **both** `Indestructible` and
+/// `Hexproof` (EOT). Granted Hexproof is honored by targeting because
+/// `check_target_legality` reads layer-computed keywords (CR 613), which
+/// include EOT grants — so an opponent can't target the protected
+/// permanents.
 pub fn heroic_intervention() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {

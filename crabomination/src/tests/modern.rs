@@ -18087,6 +18087,17 @@ fn heroic_intervention_grants_indestructible_to_your_perms() {
         "Bear gained indestructible");
     assert!(bear_card.has_keyword(&crate::card::Keyword::Hexproof),
         "Bear gained hexproof");
+    // The granted hexproof is functional: an opponent can't target the bear.
+    use crate::game::types::Target;
+    assert!(
+        g.check_target_legality(&Target::Permanent(bear), 1).is_err(),
+        "opponent can't target the hexproof-granted bear",
+    );
+    // ...but its controller still can.
+    assert!(
+        g.check_target_legality(&Target::Permanent(bear), 0).is_ok(),
+        "controller can still target their own hexproof permanent",
+    );
 }
 
 #[test]
