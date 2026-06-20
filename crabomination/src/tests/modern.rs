@@ -59660,3 +59660,86 @@ fn fight_as_one_buffs_both() {
     assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Indestructible),
         "non-Human gained indestructible");
 }
+
+/// Adaptive Shimmerer enters as a 3/3 (three +1/+1 counters on a 0/0).
+#[test]
+fn adaptive_shimmerer_enters_three_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::adaptive_shimmerer());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Adaptive Shimmerer");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(id).expect("alive (not a counter-less 0/0)");
+    assert_eq!((c.power, c.toughness), (3, 3), "0/0 with three +1/+1 = 3/3");
+    assert_eq!(g.battlefield_find(id).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 3);
+}
+
+/// Will of the All-Hunter pumps a non-blocking creature but counters a blocker.
+#[test]
+fn will_of_the_all_hunter_modes() {
+    use crate::card::CounterType;
+    use crate::game::types::{Attack, AttackTarget};
+    // Non-blocking → +2/+2 until end of turn.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let w = g.add_card_to_hand(0, catalog::will_of_the_all_hunter());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: w, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast at idle creature");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "+2/+2 when not blocking");
+    assert_eq!(g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0,
+        "no counters in the pump mode");
+    // Blocking → two +1/+1 counters instead.
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, atk)])).expect("block");
+    let w = g.add_card_to_hand(0, catalog::will_of_the_all_hunter());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: w, target: Some(Target::Permanent(blocker)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast at blocker");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(blocker).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2,
+        "two +1/+1 counters when blocking");
+}
+
+/// Gleaming Overseer grants your Zombies hexproof and unblockable, and amasses.
+#[test]
+fn gleaming_overseer_zombie_anthem() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let overseer = g.add_card_to_battlefield(0, catalog::gleaming_overseer());
+    g.fire_self_etb_triggers(overseer, 0);
+    drain_stack(&mut g);
+    // Amass made a Zombie Army token.
+    let army = g.battlefield.iter().find(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Army))
+        .map(|c| c.id).expect("Army token");
+    let a = g.computed_permanent(army).unwrap();
+    assert!(a.subtypes.creature_types.contains(&CreatureType::Zombie), "Army is a Zombie");
+    assert!(a.keywords.contains(&Keyword::Hexproof) && a.keywords.contains(&Keyword::Unblockable),
+        "Zombie Army has hexproof + unblockable");
+    // The Overseer itself is a Zombie too.
+    let o = g.computed_permanent(overseer).unwrap();
+    assert!(o.keywords.contains(&Keyword::Hexproof), "Overseer (a Zombie) has hexproof");
+}

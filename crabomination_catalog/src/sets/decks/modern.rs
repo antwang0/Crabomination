@@ -55294,3 +55294,87 @@ pub fn fight_as_one() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 17 ──────────────────────────────────────────────────────────
+
+/// Adaptive Shimmerer — {5} 0/0 Insect with Flash. Enters with three +1/+1
+/// counters on it.
+pub fn adaptive_shimmerer() -> CardDefinition {
+    CardDefinition {
+        name: "Adaptive Shimmerer",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flash],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        ..Default::default()
+    }
+}
+
+/// Will of the All-Hunter — {1}{W} Instant. Target creature gets +2/+2 until
+/// end of turn; if it's blocking, instead put two +1/+1 counters on it.
+/// Cycling {2}.
+pub fn will_of_the_all_hunter() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Will of the All-Hunter",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::If {
+            cond: Predicate::EntityMatches {
+                what: target_filtered(SelectionRequirement::Creature),
+                filter: SelectionRequirement::IsBlocking,
+            },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+
+/// Gleaming Overseer — {1}{U}{B} 1/4 Zombie Wizard. ETB: amass Zombies 1.
+/// Zombies you control have hexproof and can't be blocked.
+pub fn gleaming_overseer() -> CardDefinition {
+    use crate::effect::shortcut::amass_zombies;
+    let zombies = || Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::HasCreatureType(CreatureType::Zombie)),
+    );
+    CardDefinition {
+        name: "Gleaming Overseer",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![etb(amass_zombies(1))],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Zombies you control have hexproof.",
+                effect: StaticEffect::GrantKeyword { applies_to: zombies(), keyword: Keyword::Hexproof },
+            },
+            StaticAbility {
+                description: "Zombies you control can't be blocked.",
+                effect: StaticEffect::GrantKeyword { applies_to: zombies(), keyword: Keyword::Unblockable },
+            },
+        ],
+        ..Default::default()
+    }
+}
