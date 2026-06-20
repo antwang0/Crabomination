@@ -132,6 +132,11 @@ pub enum StaticEffect {
     LoseKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
     EntersTapped { applies_to: Selector },
+    /// "Lethal damage dealt to matching creatures is determined by their power
+    /// rather than their toughness" (Zilortha, Strength Incarnate / Mountain
+    /// Goat). The SBA reads `power` as the lethal threshold for any creature
+    /// `applies_to` matches.
+    LethalDamageByPower { applies_to: Selector },
     /// Controller may play one additional land per turn.
     ExtraLandPerTurn,
     /// Generic cost reduction for spells matching filter.

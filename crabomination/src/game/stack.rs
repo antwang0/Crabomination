@@ -2202,7 +2202,21 @@ impl GameState {
                 if c.is_indestructible() {
                     return false;
                 }
-                if (c.damage as i32) >= computed_toughness {
+                // Zilortha — lethal is measured against power, not toughness,
+                // for any creature a LethalDamageByPower static matches. The
+                // power threshold can be 0, so gate on actual damage being
+                // marked (a 0-power creature dies only once it's been dealt
+                // damage; an undamaged one survives — CR 704.5g ruling).
+                let lethal_threshold = if self.lethal_damage_by_power(c.id) {
+                    computed
+                        .iter()
+                        .find(|cp| cp.id == c.id)
+                        .map(|cp| cp.power)
+                        .unwrap_or(c.power())
+                } else {
+                    computed_toughness
+                };
+                if c.damage > 0 && (c.damage as i32) >= lethal_threshold {
                     return true;
                 }
                 c.dealt_deathtouch_damage && c.damage > 0

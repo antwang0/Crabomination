@@ -9219,6 +9219,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                 }
             }
             StaticEffect::EntersTapped { .. }
+            | StaticEffect::LethalDamageByPower { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }

@@ -58158,6 +58158,24 @@ fn zagoth_triome_enters_tapped_three_colors() {
 }
 
 
+/// Zilortha makes your creatures' lethal threshold their power, not toughness:
+/// a damaged 0/4 dies; an undamaged one survives.
+#[test]
+fn zilortha_lethal_measured_by_power() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zilortha_strength_incarnate());
+    let wall = g.add_card_to_battlefield(0, catalog::wall_of_omens()); // 0/4
+    // 1 marked damage: normally survives (1 < 4) but dies under Zilortha (1 ≥ power 0).
+    g.battlefield_find_mut(wall).unwrap().damage = 1;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(wall).is_none(), "0/4 dies once damaged under Zilortha");
+
+    // An undamaged 0/4 survives (power threshold 0, but no damage marked).
+    let wall2 = g.add_card_to_battlefield(0, catalog::wall_of_omens());
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(wall2).is_some(), "undamaged 0/4 survives");
+}
+
 /// Mythos of Nethroi destroys a target creature.
 #[test]
 fn mythos_of_nethroi_destroys_creature() {

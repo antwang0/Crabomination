@@ -144,9 +144,10 @@ Each unblocks a large swath of cards.
   play", devotion-gated non-type states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
 - ✅ **Regeneration shields & "next time" prevention** as proper shields.
-- ⏳ **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
-  CR 120/704. (Wither/Infect damage-as-counters already ships; this is the
-  marking-interplay audit.)
+- 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
+  CR 120/704. (Wither/Infect damage-as-counters already ships; lethal-by-power
+  `StaticEffect::LethalDamageByPower` — Zilortha — now overrides the toughness
+  threshold in the SBA. Remaining: the broader marking-interplay audit.)
 - 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
   (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`).
   Remaining: "any time" activation riders, attacking-planeswalker redirect.

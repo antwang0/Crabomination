@@ -54218,3 +54218,28 @@ pub fn everquill_phoenix() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zilortha, Strength Incarnate — {3}{R}{G} 7/3 legendary Dinosaur, trample.
+/// Lethal damage dealt to creatures you control is measured by power, not
+/// toughness (`StaticEffect::LethalDamageByPower`).
+pub fn zilortha_strength_incarnate() -> CardDefinition {
+    CardDefinition {
+        name: "Zilortha, Strength Incarnate",
+        cost: cost(&[generic(3), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 7,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Lethal damage dealt to creatures you control is determined by their power.",
+            effect: StaticEffect::LethalDamageByPower {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}

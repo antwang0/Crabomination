@@ -1285,6 +1285,37 @@ impl GameState {
         }
     }
 
+    /// CR 704.5g (Zilortha) — true iff some active `LethalDamageByPower` static
+    /// matches the creature `card_id`, so its lethal-damage threshold is power
+    /// rather than toughness.
+    pub(crate) fn lethal_damage_by_power(&self, card_id: CardId) -> bool {
+        use crate::effect::StaticEffect;
+        use crate::game::layers::{AffectedPermanents, affected_includes};
+        let Some(target) = self.battlefield_find(card_id) else { return false };
+        for src in &self.battlefield {
+            for sa in &src.definition.static_abilities {
+                let StaticEffect::LethalDamageByPower { applies_to } = &sa.effect else {
+                    continue;
+                };
+                let Some(mut affected) = super::selector_to_affected(applies_to, src) else {
+                    continue;
+                };
+                if let AffectedPermanents::AllOpponents { source_controller, friendly_seats, .. } =
+                    &mut affected
+                    && friendly_seats.is_empty()
+                {
+                    let mut seats = self.teammates(*source_controller);
+                    seats.push(*source_controller);
+                    *friendly_seats = seats;
+                }
+                if affected_includes(&affected, src.id, target) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     pub(crate) fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
         // CR 614.13 — apply enters-tapped replacements before ETB triggers fire.
         self.apply_enters_tapped_replacement(card_id);

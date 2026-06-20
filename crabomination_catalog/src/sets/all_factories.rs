@@ -2415,6 +2415,7 @@ static DECKS: &[Factory] = &[
     super::decks::mythos_of_nethroi,
     super::decks::mutual_destruction,
     super::decks::everquill_phoenix,
+    super::decks::zilortha_strength_incarnate,
     super::decks::slitherwisp,
     super::decks::voracious_greatshark,
     super::decks::heightened_reflexes,
