@@ -60777,3 +60777,28 @@ fn mind_spike_discards_and_costs_life() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "opponent discarded the noncreature card");
     assert_eq!(g.players[0].life, life - 2, "you lost 2 life");
 }
+
+/// Skyscanner draws a card on entry.
+#[test]
+fn skyscanner_draws_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let h = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::skyscanner());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h + 1, "ETB drew a card");
+}
+
+/// Pristine Talisman taps for {C} and gains a life (as one mana ability).
+#[test]
+fn pristine_talisman_mana_and_life() {
+    let mut g = two_player_game();
+    let tal = g.add_card_to_battlefield(0, catalog::pristine_talisman());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tal, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].life, life + 1, "gained 1 life");
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
+}

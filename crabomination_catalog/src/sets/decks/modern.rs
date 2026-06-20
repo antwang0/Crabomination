@@ -56972,3 +56972,36 @@ pub fn mind_spike() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Skyscanner — {3} 1/1 Thopter artifact creature with flying. ETB: draw a card.
+pub fn skyscanner() -> CardDefinition {
+    CardDefinition {
+        name: "Skyscanner",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Pristine Talisman — {3} Artifact. {T}: Add {C} and gain 1 life.
+pub fn pristine_talisman() -> CardDefinition {
+    CardDefinition {
+        name: "Pristine Talisman",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

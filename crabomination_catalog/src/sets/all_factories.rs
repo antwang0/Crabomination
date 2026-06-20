@@ -2559,6 +2559,8 @@ static DECKS: &[Factory] = &[
     super::decks::drowsing_tyrannodon,
     super::decks::vivien_monsters_advocate,
     super::decks::mind_spike,
+    super::decks::skyscanner,
+    super::decks::pristine_talisman,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
