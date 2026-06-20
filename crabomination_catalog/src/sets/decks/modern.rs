@@ -55056,3 +55056,109 @@ pub fn crystalline_giant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 15 ──────────────────────────────────────────────────────────
+
+/// Inspired Ultimatum — {U}{U}{R}{R}{R}{W}{W} Sorcery. Target player gains 5
+/// life; deal 5 damage to any target; then you draw five cards.
+pub fn inspired_ultimatum() -> CardDefinition {
+    CardDefinition {
+        name: "Inspired Ultimatum",
+        cost: cost(&[u(), u(), r(), r(), r(), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(5),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                },
+                amount: Value::Const(5),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(5) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Spelleater Wolverine — {2}{R} 3/2 Wolverine. Has double strike as long as
+/// there are three or more instant and/or sorcery cards in your graveyard.
+pub fn spelleater_wolverine() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Spelleater Wolverine",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolverine], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Double strike while you have 3+ instants/sorceries in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    },
+                    Value::Const(3),
+                ),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::DoubleStrike],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pridemalkin — {2}{G} 2/1 Cat. ETB: put a +1/+1 counter on target creature
+/// you control. Each creature you control with a +1/+1 counter has trample.
+pub fn pridemalkin() -> CardDefinition {
+    CardDefinition {
+        name: "Pridemalkin",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with a +1/+1 counter have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dirgur Nemesis — {5}{U} 6/5 Serpent with defender. Megamorph {6}{U}.
+pub fn dirgur_nemesis() -> CardDefinition {
+    CardDefinition {
+        name: "Dirgur Nemesis",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Defender, Keyword::Megamorph(cost(&[generic(6), u()]))],
+        ..Default::default()
+    }
+}

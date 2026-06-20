@@ -59499,3 +59499,64 @@ fn crystalline_giant_gains_random_counter() {
     drain_stack(&mut g);
     assert_eq!(count_kinds(&g), 10, "no duplicate counter kinds beyond the 10 options");
 }
+
+/// Inspired Ultimatum: target player gains 5, deal 5 to any target, draw five.
+#[test]
+fn inspired_ultimatum_gain_burn_draw() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4, dies to 5
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::inspired_ultimatum());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::PreCombatMain;
+    let hand_before = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(victim)], mode: None, x_value: None,
+    }).expect("cast Inspired Ultimatum");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 25, "controller gained 5");
+    assert!(g.battlefield_find(victim).is_none(), "5 damage killed the 4/4");
+    assert_eq!(g.players[0].hand.len(), hand_before + 5, "drew five");
+}
+
+/// Spelleater Wolverine has double strike only with 3+ I/S in the graveyard.
+#[test]
+fn spelleater_wolverine_conditional_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let wolf = g.add_card_to_battlefield(0, catalog::spelleater_wolverine());
+    assert!(!g.computed_permanent(wolf).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "no double strike with an empty graveyard");
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::ponder());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    assert!(g.computed_permanent(wolf).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "double strike with 3 instants/sorceries");
+}
+
+/// Pridemalkin grants trample to your +1/+1-countered creatures.
+#[test]
+fn pridemalkin_counter_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let malkin = g.add_card_to_battlefield(0, catalog::pridemalkin());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(bear))]));
+    g.fire_self_etb_triggers(malkin, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        "countered creature has trample");
+}
+
+/// Dirgur Nemesis is a 6/5 Defender with megamorph.
+#[test]
+fn dirgur_nemesis_stats() {
+    use crate::card::Keyword;
+    let d = catalog::dirgur_nemesis();
+    assert_eq!((d.power, d.toughness), (6, 5));
+    assert!(d.keywords.contains(&Keyword::Defender));
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))));
+}
