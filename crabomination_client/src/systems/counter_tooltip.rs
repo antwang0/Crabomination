@@ -638,6 +638,23 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Daybound => "If it's neither day nor night, it becomes day; transforms when it becomes night.",
         K::Nightbound => "Transforms back when it becomes day.",
         K::Conspire => "As you cast it, you may tap two untapped creatures that share a color with it to copy it.",
+        K::Disturb(_) => "You may cast it from your graveyard transformed for its disturb cost.",
+        K::Entwine(_) => "Choose both modes if you pay the entwine cost.",
+        K::Epic => "Copy this spell at the start of each of your upkeeps; you can't cast other spells.",
+        K::Improvise => "You may tap untapped artifacts to help pay this spell's cost.",
+        K::JumpStart => "You may cast it from your graveyard by also discarding a card, then exile it.",
+        K::Replicate(_) => "As you cast it, pay its replicate cost any number of times to copy it that many times.",
+        K::Splice(_, _) => "As you cast an Arcane spell, you may reveal this from hand and pay its splice cost to add its effects.",
+        K::Squad(_) => "As you cast it, pay its squad cost any number of times to make that many extra token copies.",
+        K::UmbraArmor => "If enchanted creature would be destroyed, instead remove all damage and destroy this Aura.",
+        K::Companion => "If your deck meets its condition, you may play it from outside the game once per game.",
+        K::ProtectionFromColoredSpells => "Can't be targeted, blocked, or damaged by colored spells.",
+        K::ProtectionFromSpells => "Can't be targeted or damaged by spells.",
+        K::ProtectionFromCreatures => "Can't be blocked, targeted, or damaged by creatures.",
+        K::ProtectionFromMulticolored => "Can't be blocked, targeted, or damaged by multicolored sources.",
+        K::ProtectionFromManaValueExcept(_) => "Has protection from each mana value other than the named one.",
+        K::ProtectionFromCreatureType(_) => "Can't be blocked, targeted, or damaged by sources of the named creature type.",
+        K::ProtectionFromSpellSubtype(_) => "Can't be targeted or damaged by spells of the named subtype.",
         _ => return None,
     })
 }
@@ -1229,6 +1246,27 @@ mod tests {
             Keyword::CantBeCopied, Keyword::DealsNoCombatDamage,
             Keyword::Protection(Color::Red), Keyword::Bushido(2),
             Keyword::Rampage(1), Keyword::Crew(3), Keyword::Madness(ManaCost::default()),
+        ] {
+            assert!(keyword_reminder(&kw).is_some(),
+                "expected reminder text for {kw:?}");
+        }
+    }
+
+    #[test]
+    fn alt_cost_and_protection_keywords_carry_reminder_text() {
+        use crabomination::card::{CreatureType, Keyword, SpellSubtype};
+        use crabomination::mana::ManaCost;
+        for kw in [
+            Keyword::Disturb(ManaCost::default()), Keyword::Entwine(ManaCost::default()),
+            Keyword::Epic, Keyword::Improvise, Keyword::JumpStart,
+            Keyword::Replicate(ManaCost::default()),
+            Keyword::Splice(ManaCost::default(), SpellSubtype::Arcane),
+            Keyword::Squad(ManaCost::default()), Keyword::UmbraArmor, Keyword::Companion,
+            Keyword::ProtectionFromColoredSpells, Keyword::ProtectionFromSpells,
+            Keyword::ProtectionFromCreatures, Keyword::ProtectionFromMulticolored,
+            Keyword::ProtectionFromManaValueExcept(3),
+            Keyword::ProtectionFromCreatureType(CreatureType::Human),
+            Keyword::ProtectionFromSpellSubtype(SpellSubtype::Arcane),
         ] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");

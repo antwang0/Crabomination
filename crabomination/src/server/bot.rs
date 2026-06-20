@@ -894,6 +894,27 @@ fn decide_choose_cards(
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
         return DecisionAnswer::Cards(chosen);
     }
+    // Battlefield-source pick (Archipelagore's "tap up to X target creatures",
+    // and similar resolution-time multi-target taps): the AutoDecider declines,
+    // so the bot would tap nothing. Prefer opponents' untapped creatures — the
+    // biggest threats first — up to the cap.
+    let all_on_battlefield = candidates
+        .iter()
+        .all(|(id, _)| state.battlefield.iter().any(|c| c.id == *id));
+    if all_on_battlefield {
+        let mut ranked: Vec<(crate::card::CardId, i32)> = candidates
+            .iter()
+            .filter_map(|(id, _)| {
+                let c = state.battlefield.iter().find(|c| c.id == *id)?;
+                // Only enemy creatures; prefer untapped (tapping a tapped
+                // creature is wasted) and higher power.
+                (!state.same_team(c.controller, seat)).then_some((*id, c.power() + if c.tapped { -100 } else { 0 }))
+            })
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(&a.1));
+        let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, _)| id).collect();
+        return DecisionAnswer::Cards(chosen);
+    }
     let owner_of = |id: crate::card::CardId| -> Option<usize> {
         state
             .players
@@ -4359,6 +4380,27 @@ mod tests {
         match decide_choose_cards(&g, 0, &candidates, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
+    }
+
+    /// `decide_choose_cards` over battlefield creatures (Archipelagore's tap)
+    /// targets opponents' biggest creature, never the bot's own.
+    #[test]
+    fn bot_choose_cards_taps_enemy_creatures() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        let big = g.add_card_to_battlefield(1, catalog::shivan_dragon());   // 5/5
+        let candidates = vec![
+            (mine, "Grizzly Bears".to_string()),
+            (small, "Grizzly Bears".to_string()),
+            (big, "Shivan Dragon".to_string()),
+        ];
+        match decide_choose_cards(&g, 0, &candidates, 1) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
+                "bot taps the opponent's biggest creature, not its own"),
             other => panic!("expected Cards, got {other:?}"),
         }
     }
