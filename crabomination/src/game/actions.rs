@@ -149,6 +149,7 @@ pub(crate) fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut tax = 0u32;
@@ -199,6 +200,19 @@ pub(crate) fn extra_cost_for_spell(
                     if src.named_card.as_deref() == Some(card.definition.name) =>
                 {
                     tax += amount;
+                }
+                // Jubilant Skybonder: opponents' spells targeting a qualifying
+                // permanent the source controls cost {amount} more.
+                StaticEffect::TaxOpponentSpellsTargeting { target_filter, amount }
+                    if src.controller != caster =>
+                {
+                    if let Some(crate::game::Target::Permanent(pid)) = target
+                        && let Some(tc) = state.battlefield_find(*pid)
+                        && tc.controller == src.controller
+                        && state.evaluate_requirement_on_card(target_filter, tc, src.controller)
+                    {
+                        tax += amount;
+                    }
                 }
                 _ => {}
             }
@@ -3448,6 +3462,15 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16 — protection from each mana value of a parity
+                // (Lavabrink Venturer): can't be targeted by a spell whose
+                // mana value matches the chosen odd/even quality.
+                if let Keyword::ProtectionFromManaValueParity { odd } = kw
+                    && (card.definition.cost.cmc() % 2 == 1) == *odd
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // CR 702.16 — protection from multicolored: can't be targeted
                 // by a spell that is two or more colors.
                 if matches!(kw, Keyword::ProtectionFromMulticolored)
@@ -3537,7 +3560,7 @@ impl GameState {
                 cost.symbols.push(*s);
             }
         }
-        let tax = extra_cost_for_spell(self, p, &card);
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
@@ -5288,7 +5311,7 @@ impl GameState {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(commander_tax));
         }
-        let tax = extra_cost_for_spell(self, p, &card);
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(tax));
@@ -5643,7 +5666,7 @@ impl GameState {
         } else {
             alt.mana_cost.clone()
         };
-        let tax = extra_cost_for_spell(self, p, &card);
+        let tax = extra_cost_for_spell(self, p, &card, target.as_ref());
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
@@ -5939,6 +5962,7 @@ impl GameState {
                     | Keyword::ProtectionFromCreatures
                     | Keyword::ProtectionFromCreatureType(_)
                     | Keyword::ProtectionFromManaValueExcept(_)
+                    | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
             )
         }) {
@@ -5955,6 +5979,7 @@ impl GameState {
             Keyword::ProtectionFromCreatures => src_is_creature,
             Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
+            Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
             _ => false,
         })

@@ -174,6 +174,12 @@ pub enum StaticEffect {
     /// cast time alongside `AdditionalCostAfterFirstSpell` in
     /// `extra_cost_for_spell`.
     AdditionalCost { filter: SelectionRequirement, amount: u32 },
+    /// Jubilant-Skybonder-style "spells your opponents cast that target a
+    /// [`target_filter`] permanent you control cost `amount` more" — a
+    /// continuous target-tax read off the source's controller. Evaluated in
+    /// `extra_cost_for_spell` against the spell's chosen target; the tax only
+    /// applies to spells cast by an opponent of the source's controller.
+    TaxOpponentSpellsTargeting { target_filter: SelectionRequirement, amount: u32 },
     /// Card-intrinsic "This spell costs {X} less to cast, where X is the
     /// greatest power among creatures you control" (The Great Henge). Read by
     /// `cost_reduction_for_spell` off the *spell being cast* (not battlefield

@@ -34462,8 +34462,8 @@ fn thorn_of_amethyst_taxes_only_noncreature_spells() {
     let bear_id = g.add_card_to_hand(0, catalog::grizzly_bears());
     let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let bear = g.players[0].hand.iter().find(|c| c.id == bear_id).unwrap().clone();
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt), 1, "noncreature taxed");
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bear), 0, "creature untaxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt, None), 1, "noncreature taxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bear, None), 0, "creature untaxed");
 }
 
 #[test]
@@ -34474,8 +34474,8 @@ fn lodestone_golem_taxes_nonartifact_spells() {
     let sol_id = g.add_card_to_hand(0, catalog::sol_ring());
     let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
     let sol = g.players[0].hand.iter().find(|c| c.id == sol_id).unwrap().clone();
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt), 1, "nonartifact taxed");
-    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &sol), 0, "artifact untaxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt, None), 1, "nonartifact taxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &sol, None), 0, "artifact untaxed");
 }
 
 #[test]
@@ -59268,4 +59268,116 @@ fn frillscare_mentor_grants_menace_then_pumps_menace_team() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(beast).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
         1, "menace beast got a +1/+1 counter");
+}
+/// Jubilant Skybonder taxes opponents' spells that target a flyer you control.
+#[test]
+fn jubilant_skybonder_taxes_opponent_spells_targeting_flyers() {
+    use crate::game::actions::extra_cost_for_spell;
+    let mut g = two_player_game();
+    let skybonder = g.add_card_to_battlefield(0, catalog::jubilant_skybonder()); // 2/2 flyer
+    let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());          // no flying
+    // Opponent (player 1) casts a spell at our flyer vs. our ground creature.
+    let bolt_id = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt = g.players[1].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
+    let at_flyer = crate::game::Target::Permanent(skybonder);
+    let at_ground = crate::game::Target::Permanent(ground);
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_flyer)), 2, "flyer taxed by 2");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_ground)), 0, "ground creature untaxed");
+    // The controller's own spells are never taxed.
+    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_flyer)), 0, "own spells untaxed");
+}
+
+/// Lavabrink Venturer's ETB choice grants protection from the chosen parity:
+/// choosing even blocks even-mana-value spells, choosing odd blocks odd ones.
+#[test]
+fn lavabrink_venturer_parity_protection() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    // Helper: enter a Venturer with the given odd/even choice and try to
+    // target it with `spell`; returns whether the cast was rejected.
+    fn try_target(mode: usize, spell: crate::card::CardDefinition) -> bool {
+        let mut g = two_player_game();
+        // Venturer belongs to player 1; the active player 0 (with priority)
+        // tries to target it.
+        let venturer = g.add_card_to_battlefield(1, catalog::lavabrink_venturer());
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(mode)]));
+        g.fire_self_etb_triggers(venturer, 1);
+        drain_stack(&mut g);
+        let expect_odd = mode == 1;
+        assert!(g.computed_permanent(venturer).unwrap().keywords
+            .contains(&Keyword::ProtectionFromManaValueParity { odd: expect_odd }));
+        let s = g.add_card_to_hand(0, spell);
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: s, target: Some(Target::Permanent(venturer)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err()
+    }
+    // Chose even: Doom Blade (mv 2, even) blocked; Lightning Bolt (mv 1, odd) ok.
+    assert!(try_target(0, catalog::doom_blade()), "even-protected blocks even spell");
+    assert!(!try_target(0, catalog::lightning_bolt()), "even-protected allows odd spell");
+    // Chose odd: Lightning Bolt blocked; Doom Blade allowed.
+    assert!(try_target(1, catalog::lightning_bolt()), "odd-protected blocks odd spell");
+    assert!(!try_target(1, catalog::doom_blade()), "odd-protected allows even spell");
+}
+
+/// Mythos of Snapdax: each player keeps their best of each nonland type and
+/// sacrifices the rest.
+#[test]
+fn mythos_of_snapdax_keeps_one_per_type() {
+    let mut g = two_player_game();
+    // Player 0: two creatures (keeps Serra Angel — higher MV) + an artifact.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    // Player 1: two creatures.
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::mythos_of_snapdax());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Snapdax");
+    drain_stack(&mut g);
+    let names = |p: usize| -> Vec<&str> {
+        let mut v: Vec<&str> = g.battlefield.iter().filter(|c| c.controller == p)
+            .map(|c| c.definition.name).collect();
+        v.sort();
+        v
+    };
+    // Each player keeps their best creature; player 0 also keeps the artifact.
+    assert_eq!(names(0), vec!["Mind Stone", "Serra Angel"]);
+    assert_eq!(names(1), vec!["Serra Angel"]);
+}
+
+/// Clackbridge Troll: ETB gifts the opponent three Goats; the begin-combat
+/// tempting offer (accepted) sacrifices a creature, taps the Troll, and the
+/// controller gains 3 life and draws.
+#[test]
+fn clackbridge_troll_etb_goats_and_combat_offer() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let troll = g.add_card_to_battlefield(0, catalog::clackbridge_troll());
+    g.fire_self_etb_triggers(troll, 0);
+    drain_stack(&mut g);
+    let goats = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.subtypes.creature_types.contains(&CreatureType::Goat))
+        .count();
+    assert_eq!(goats, 3, "opponent got three Goats");
+    // Begin combat: opponent accepts and sacrifices a Goat.
+    g.add_card_to_library(0, catalog::forest()); // something to draw
+    let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Goat)).count(),
+        2, "opponent sacrificed one Goat");
+    assert!(g.battlefield_find(troll).unwrap().tapped, "Troll tapped");
+    assert_eq!(g.players[0].life, 23, "gained 3 life");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
 }

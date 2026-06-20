@@ -4365,6 +4365,7 @@ impl GameState {
             Keyword::Protection(color) => src_colors.contains(color),
             Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
+            Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src_colors.len() >= 2,
             _ => false,
         })
@@ -9492,6 +9493,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ExtraManaOnLandTap { .. }
             // ETB-counter replacement, read at `chosen_type_etb_counter_specs`.
             | StaticEffect::TypeEntersWithCounter { .. }
+            // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
+            | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
             | StaticEffect::OpponentsCantCastFromAnywhereButHand => vec![],
@@ -9803,6 +9806,13 @@ pub(crate) fn can_block_attacker_computed(
         // can't be blocked by a creature whose mana value isn't N.
         if let Keyword::ProtectionFromManaValueExcept(n) = kw
             && blocker.definition.cost.cmc() != *n
+        {
+            return false;
+        }
+        // CR 702.16 — protection from each mana value of a parity: can't be
+        // blocked by a creature whose mana value matches the chosen quality.
+        if let Keyword::ProtectionFromManaValueParity { odd } = kw
+            && (blocker.definition.cost.cmc() % 2 == 1) == *odd
         {
             return false;
         }

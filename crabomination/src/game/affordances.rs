@@ -1146,7 +1146,7 @@ impl GameState {
         else {
             return 0;
         };
-        crate::game::actions::extra_cost_for_spell(self, caster, card)
+        crate::game::actions::extra_cost_for_spell(self, caster, card, None)
     }
 }
 

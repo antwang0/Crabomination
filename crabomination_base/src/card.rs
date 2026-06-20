@@ -472,6 +472,11 @@ pub enum Keyword {
     /// Unscarred). Can't be blocked/damaged/targeted by a source whose mana
     /// value isn't `N`. Granted at random on ETB.
     ProtectionFromManaValueExcept(u32),
+    /// CR 702.16 — "protection from each mana value of the chosen quality"
+    /// (Lavabrink Venturer). `odd == true` → protection from every odd mana
+    /// value; `odd == false` → every even mana value (zero is even). Granted
+    /// on ETB by the controller's odd/even choice.
+    ProtectionFromManaValueParity { odd: bool },
     /// CR 702.16 — "protection from multicolored" (Stonecoil Serpent, Mirran
     /// Crusader). Can't be blocked/damaged/targeted/enchanted by a source that
     /// is two or more colors.

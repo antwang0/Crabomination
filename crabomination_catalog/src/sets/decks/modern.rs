@@ -54743,3 +54743,134 @@ pub fn tentative_connection() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 13 ──────────────────────────────────────────────────────────
+
+/// Jubilant Skybonder — {1}{W/U}{W/U} 2/2 Human Wizard. Flying; creatures you
+/// control with flying have "Spells your opponents cast that target this
+/// creature cost {2} more to cast."
+pub fn jubilant_skybonder() -> CardDefinition {
+    CardDefinition {
+        name: "Jubilant Skybonder",
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Spells opponents cast targeting your flyers cost {2} more.",
+            effect: StaticEffect::TaxOpponentSpellsTargeting {
+                target_filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                amount: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lavabrink Venturer — {2}{W} 3/3 Human Soldier. As it enters, choose odd or
+/// even; it has protection from each mana value of the chosen quality.
+pub fn lavabrink_venturer() -> CardDefinition {
+    CardDefinition {
+        name: "Lavabrink Venturer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            // mode 0 = even (zero is even), mode 1 = odd
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::ProtectionFromManaValueParity { odd: false },
+                duration: Duration::Permanent,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::ProtectionFromManaValueParity { odd: true },
+                duration: Duration::Permanent,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Mythos of Snapdax — {2}{W}{W} Sorcery. Each player keeps one artifact,
+/// creature, enchantment, and planeswalker among their nonland permanents and
+/// sacrifices the rest. (The {B}{R}-spent "you choose theirs" upgrade is
+/// dropped — no by-color mana-provenance tracking.)
+pub fn mythos_of_snapdax() -> CardDefinition {
+    CardDefinition {
+        name: "Mythos of Snapdax",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SacrificeAllButOnePerType {
+            who: Selector::Player(PlayerRef::EachPlayer),
+        },
+        ..Default::default()
+    }
+}
+
+/// Clackbridge Troll — {3}{B}{B} 8/8 Troll, Trample, Haste. ETB: an opponent
+/// makes three 0/1 white Goats. At the beginning of combat on your turn, an
+/// opponent may sacrifice a creature; if one does, tap Clackbridge Troll, you
+/// gain 3 life, and you draw a card. (Multiplayer "target opponent" collapses
+/// to each opponent, the catalog convention.)
+pub fn clackbridge_troll() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    let goat = TokenDefinition {
+        name: "Goat".into(),
+        power: 0,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goat], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Clackbridge Troll",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Troll], ..Default::default() },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::EachOpponent,
+                count: Value::Const(3),
+                definition: goat,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::PlayersMayAccept {
+                    who: PlayerRef::EachOpponent,
+                    description: "Sacrifice a creature to Clackbridge Troll?".into(),
+                    on_accept: Box::new(Effect::Seq(vec![
+                        Effect::Sacrifice {
+                            who: Selector::Player(PlayerRef::Target(0)),
+                            count: Value::Const(1),
+                            filter: SelectionRequirement::Creature,
+                        },
+                        Effect::Tap { what: Selector::This },
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    ])),
+                    otherwise: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
