@@ -655,6 +655,40 @@ fn witherbloom_pestmaster_b175_on_other_dies_mints_pest() {
 }
 
 #[test]
+fn witherbloom_necromancer_b156_pays_one_to_reanimate_the_dead_creature() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_necromancer_b156());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // P0 floats {1} to pay the optional reanimate cost.
+    g.players[0].mana_pool.add_colorless(1);
+    // Accept the "Pay {1}?" MayPay prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    // Opponent bolts P0's fodder; it dies and the dies trigger fires.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(fodder)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+
+    // The dead creature is reanimated to P0's battlefield (same card id),
+    // and the {1} was spent.
+    assert!(
+        g.battlefield_find(fodder).is_some_and(|c| c.controller == 0),
+        "the dead creature returns to the battlefield under your control",
+    );
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "it left the graveyard (the {{1}} cost is implied — the body only runs on a successful pay)",
+    );
+}
+
+#[test]
 fn lorehold_skirmishmage_b175_attacks_loots() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
