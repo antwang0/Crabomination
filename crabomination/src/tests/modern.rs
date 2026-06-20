@@ -60168,3 +60168,162 @@ fn stolen_creature_death_fires_controllers_watcher() {
     assert_eq!(g.players[1].life, p1 - 1, "the thief's Bastion drains the opponent");
     assert_eq!(g.players[0].life, p0 + 1, "the thief gains the life");
 }
+
+// ── IKO batch 2 ──────────────────────────────────────────────────────────────
+
+/// Ivy Elemental enters at X=3 as a 3/3.
+#[test]
+fn ivy_elemental_enters_with_x_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::ivy_elemental());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast at X=3");
+    drain_stack(&mut g);
+    let ivy = g.battlefield.iter().find(|c| c.definition.name == "Ivy Elemental").unwrap();
+    assert_eq!(ivy.counter_count(CounterType::PlusOnePlusOne), 3, "X=3 counters");
+}
+
+/// Unexpected Fangs adds a +1/+1 counter and a lifelink keyword counter.
+#[test]
+fn unexpected_fangs_adds_counters() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let uf = g.add_card_to_hand(0, catalog::unexpected_fangs());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: uf, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 counter");
+    assert!(cp.keywords.contains(&Keyword::Lifelink), "lifelink counter");
+}
+
+/// Go for Blood makes your creature fight an opponent's, and has Cycling.
+#[test]
+fn go_for_blood_fights_and_cycles() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    assert!(catalog::go_for_blood().keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
+    let mine = g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let gfb = g.add_card_to_hand(0, catalog::go_for_blood());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: gfb, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast fight");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "the 2/2 dies to the 5/5");
+    assert!(g.battlefield_find(mine).is_some(), "the 5/5 survives 2 damage");
+}
+
+/// Neutralize counters a spell on the stack.
+#[test]
+fn neutralize_counters_a_spell() {
+    let mut g = two_player_game();
+    // Opponent casts an instant (Lightning Bolt) at player 0.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts Bolt");
+    let life = g.players[0].life;
+    let neut = g.add_card_to_hand(0, catalog::neutralize());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: neut, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter it");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "the Bolt was countered (no damage)");
+}
+
+/// Dire Tactics: with no Human you control, you lose life equal to the exiled
+/// creature's toughness.
+#[test]
+fn dire_tactics_costs_life_without_a_human() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // 5/5
+    let dt = g.add_card_to_hand(0, catalog::dire_tactics());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: dt, target: Some(Target::Permanent(dragon)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dragon), "creature exiled");
+    assert_eq!(g.players[0].life, life - 5, "lose life = toughness (no Human)");
+}
+
+/// Colossification pumps +20/+20 and taps the enchanted creature on entry.
+#[test]
+fn colossification_pumps_and_taps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let col = g.add_card_to_hand(0, catalog::colossification());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: col, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (22, 22), "+20/+20");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "tapped on entry");
+}
+
+/// Pyroceratops grows when you cast a noncreature spell.
+#[test]
+fn pyroceratops_grows_on_noncreature_cast() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let cera = g.add_card_to_battlefield(0, catalog::pyroceratops());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a noncreature spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cera).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Sleeper Dart draws on entry; its sac ability stuns a creature's next untap.
+#[test]
+fn sleeper_dart_draws_and_locks_untap() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let hand0 = g.players[0].hand.len();
+    let dart = g.move_card_to_battlefield_for_test(0, catalog::sleeper_dart());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "ETB draws a card");
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dart, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("sac to stun");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dart).is_none(), "Sleeper Dart sacrificed");
+}

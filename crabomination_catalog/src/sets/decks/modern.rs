@@ -55988,3 +55988,298 @@ pub fn quartzwood_crasher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 2 ───────────────────────────────────────────────────────────
+
+/// Colossification — {5}{G}{G} Aura. ETB: tap the enchanted creature.
+/// Enchanted creature gets +20/+20.
+pub fn colossification() -> CardDefinition {
+    let mut def = aura_with(
+        "Colossification", cost(&[generic(5), g(), g()]),
+        SelectionRequirement::Creature, 20, 20, vec![], vec![],
+    );
+    def.triggered_abilities = vec![etb(Effect::Tap {
+        what: Selector::AttachedTo(Box::new(Selector::This)),
+    })];
+    def
+}
+
+/// Unexpected Fangs — {1}{B} Instant. Put a +1/+1 counter and a lifelink
+/// counter on target creature.
+pub fn unexpected_fangs() -> CardDefinition {
+    CardDefinition {
+        name: "Unexpected Fangs",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Spontaneous Flight — {2}{W} Instant. Target creature gets +2/+2 until end of
+/// turn; put a flying counter on it.
+pub fn spontaneous_flight() -> CardDefinition {
+    CardDefinition {
+        name: "Spontaneous Flight",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sudden Spinnerets — {G} Instant. Target creature gets +1/+3 until end of
+/// turn, gains a reach counter, and untaps.
+pub fn sudden_spinnerets() -> CardDefinition {
+    CardDefinition {
+        name: "Sudden Spinnerets",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Reach,
+                amount: Value::Const(1),
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ivy Elemental — {X}{G} 0/0 Elemental that enters with X +1/+1 counters.
+pub fn ivy_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Ivy Elemental",
+        cost: cost(&[x(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        ..Default::default()
+    }
+}
+
+/// Clash of Titans — {3}{R}{R} Instant. Target creature fights another target
+/// creature.
+pub fn clash_of_titans() -> CardDefinition {
+    CardDefinition {
+        name: "Clash of Titans",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Fight {
+            attacker: target_filtered(SelectionRequirement::Creature),
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Go for Blood — {1}{R} Sorcery. Target creature you control fights target
+/// creature you don't control. Cycling {1}.
+pub fn go_for_blood() -> CardDefinition {
+    CardDefinition {
+        name: "Go for Blood",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
+        effect: Effect::Fight {
+            attacker: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            },
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Neutralize — {1}{U}{U} Instant. Counter target spell. Cycling {2}.
+pub fn neutralize() -> CardDefinition {
+    CardDefinition {
+        name: "Neutralize",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+        ..Default::default()
+    }
+}
+
+/// Keep Safe — {1}{U} Instant. Counter target spell that targets a permanent
+/// you control. Draw a card.
+pub fn keep_safe() -> CardDefinition {
+    CardDefinition {
+        name: "Keep Safe",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::SpellTargetsControllerOrControlled),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dire Tactics — {W}{B} Instant. Exile target creature. If you control no
+/// Human, you lose life equal to that creature's toughness.
+pub fn dire_tactics() -> CardDefinition {
+    CardDefinition {
+        name: "Dire Tactics",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Human)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                })),
+                then: Box::new(Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sleeper Dart — {2} Artifact. ETB: draw a card. {T}, Sacrifice: target
+/// creature doesn't untap during its controller's next untap step.
+pub fn sleeper_dart() -> CardDefinition {
+    CardDefinition {
+        name: "Sleeper Dart",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::SkipNextUntap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blisterspit Gremlin — {R} 1/1 Gremlin. {1}, {T}: deal 1 damage to each
+/// opponent. Whenever you cast a noncreature spell, untap it.
+pub fn blisterspit_gremlin() -> CardDefinition {
+    CardDefinition {
+        name: "Blisterspit Gremlin",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gremlin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_noncreature()),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pyroceratops — {3}{R} 2/3 Elemental Dinosaur with trample. Whenever you cast
+/// a noncreature spell, put a +1/+1 counter on it.
+pub fn pyroceratops() -> CardDefinition {
+    CardDefinition {
+        name: "Pyroceratops",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_noncreature()),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Patagia Tiger — {4}{W} 3/4 Cat with flying. ETB: target Human you control
+/// gets +2/+2 until end of turn.
+pub fn patagia_tiger() -> CardDefinition {
+    CardDefinition {
+        name: "Patagia Tiger",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::HasCreatureType(CreatureType::Human)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
