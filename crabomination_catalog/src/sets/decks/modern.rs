@@ -55426,3 +55426,49 @@ pub fn glimpse_the_cosmos() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 19 ──────────────────────────────────────────────────────────
+
+/// Honor the God-Pharaoh — {2}{R} Sorcery. Additional cost: discard a card.
+/// Draw two cards, then amass Zombies 1.
+pub fn honor_the_god_pharaoh() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    use crate::effect::shortcut::amass_zombies;
+    CardDefinition {
+        name: "Honor the God-Pharaoh",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            amass_zombies(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Reptilian Reflection — {2}{R} Enchantment. Whenever you cycle a card, you
+/// may have it become a 5/4 Dinosaur with trample and haste (in addition to its
+/// other types) until end of turn.
+pub fn reptilian_reflection() -> CardDefinition {
+    CardDefinition {
+        name: "Reptilian Reflection",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Have Reptilian Reflection become a 5/4 Dinosaur?".into(),
+                body: Box::new(Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(5),
+                    toughness: Value::Const(4),
+                    creature_types: vec![CreatureType::Dinosaur],
+                    keywords: vec![Keyword::Trample, Keyword::Haste],
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}

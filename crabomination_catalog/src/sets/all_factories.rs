@@ -2462,6 +2462,8 @@ static DECKS: &[Factory] = &[
     super::decks::gleaming_overseer,
     super::decks::ferocious_tigorilla,
     super::decks::glimpse_the_cosmos,
+    super::decks::honor_the_god_pharaoh,
+    super::decks::reptilian_reflection,
     super::decks::slitherwisp,
     super::decks::voracious_greatshark,
     super::decks::heightened_reflexes,

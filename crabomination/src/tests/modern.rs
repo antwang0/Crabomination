@@ -59786,3 +59786,45 @@ fn glimpse_the_cosmos_digs_three_takes_one() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "took one card to hand");
     assert_eq!(g.players[0].library.len(), lib_before - 1, "other two stayed in library (bottom)");
 }
+
+/// Honor the God-Pharaoh: discard a card as a cost, draw two, amass Zombies 1.
+#[test]
+fn honor_the_god_pharaoh_discard_draw_amass() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::forest()); // fodder to discard
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::honor_the_god_pharaoh());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    let hand_before = g.players[0].hand.len(); // includes spell + forest
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Honor the God-Pharaoh");
+    drain_stack(&mut g);
+    // -spell -forest(discard) +2 draw = net +0 vs hand_before.
+    assert_eq!(g.players[0].hand.len(), hand_before, "discard one as cost, draw two");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Army)),
+        "amassed a Zombie Army");
+}
+
+/// Reptilian Reflection animates itself into a 5/4 Dinosaur on cycle.
+#[test]
+fn reptilian_reflection_animates_on_cycle() {
+    use crate::card::{CardType, CreatureType, Keyword};
+    let mut g = two_player_game();
+    let refl = g.add_card_to_battlefield(0, catalog::reptilian_reflection());
+    // A cycler in hand to trigger the cycle event.
+    let cyc = g.add_card_to_hand(0, catalog::greater_sandwurm()); // Cycling {2}
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::Cycle { card_id: cyc, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(refl).unwrap();
+    assert!(c.card_types.contains(&CardType::Creature), "became a creature");
+    assert_eq!((c.power, c.toughness), (5, 4));
+    assert!(c.subtypes.creature_types.contains(&CreatureType::Dinosaur));
+    assert!(c.keywords.contains(&Keyword::Trample) && c.keywords.contains(&Keyword::Haste));
+}
