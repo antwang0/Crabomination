@@ -60479,3 +60479,65 @@ fn fiend_artisan_tutors_to_battlefield() {
     assert!(g.battlefield_find(artisan).is_some(), "Artisan not sacrificed (another creature)");
     assert!(g.battlefield.iter().any(|c| c.id == elf), "tutored the MV1 creature to the battlefield");
 }
+
+/// Solar Blaze: every creature takes damage equal to its own power.
+#[test]
+fn solar_blaze_self_damage_by_power() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());   // 2/2 → 2 to self, dies
+    let lions = g.add_card_to_battlefield(1, catalog::savannah_lions());  // 2/1 → 2 to self, dies
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());     // 4/4 → 4 to self, dies
+    let spell = g.add_card_to_hand(0, catalog::solar_blaze());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Solar Blaze");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "2/2 took 2, died");
+    assert!(g.battlefield_find(lions).is_none(), "2/1 took 2, died");
+    assert!(g.battlefield_find(angel).is_none(), "4/4 took 4, died");
+}
+
+/// Bonders' Enclave only draws while you control a 4-power creature.
+#[test]
+fn bonders_enclave_conditional_draw() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::bonders_enclave());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    // No big creature → the draw ability is illegal.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "draw blocked without a 4-power creature");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("draw enabled with a 4-power creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Auspicious Starrix mutates a permanent card onto the battlefield (X=1 on the
+/// first mutation).
+#[test]
+fn auspicious_starrix_mutate_deploys_permanent() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion()); // non-Human Beast
+    let land = g.add_card_to_library(0, catalog::island()); // a permanent on top
+    let starrix = g.add_card_to_hand(0, catalog::auspicious_starrix());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5); // mutate {5}{G}
+    g.perform_action(GameAction::CastMutate {
+        card_id: starrix, target: host, on_top: true, x_value: None,
+    }).expect("mutate Auspicious Starrix");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == land), "a permanent card was put onto the battlefield");
+}

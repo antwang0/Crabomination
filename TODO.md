@@ -1747,12 +1747,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     primitives (`PlayFromLibraryTop`, `AddKeywordCounter`, resolution-time
     mode pick).
   - **Other complex IKO holdouts** (next-run candidates): Winota (attack-trigger
-    coin-flip-free tutor), Kinnan (mana-doubling + big-creature dig), Fiend
-    Artisan (sac-tutor with self-pump), Brokkos (escape + mutate), Chevill /
-    General Kudro / Lurrus-adjacent value, Song of Creation, Ominous Seas
-    (tide-counter → 8/8 Kraken), Quartzwood's faithful "any trampler you
-    control" batch trigger, Extinction Event (exile-by-MV-parity sweep —
-    needs a parity filter), Memory Leak (reveal-hand + exile from hand/gy).
+    coin-flip-free tutor), Kinnan (mana-doubling + big-creature dig), Brokkos
+    (escape + mutate), Chevill (bounty counters), Quartzwood's faithful "any
+    trampler you control" batch trigger, Memory Leak (reveal-hand + exile from
+    hand/gy).
   - **Glimpse the Cosmos** ships the dig-3-take-1; the "cast from graveyard
     while you control a Giant" rider is dropped.
   - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` were

@@ -2544,6 +2544,9 @@ static DECKS: &[Factory] = &[
     super::decks::song_of_creation,
     super::decks::fiend_artisan,
     super::decks::general_kudro_of_drannith,
+    super::decks::solar_blaze,
+    super::decks::bonders_enclave,
+    super::decks::auspicious_starrix,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

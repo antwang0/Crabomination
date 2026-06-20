@@ -56489,3 +56489,82 @@ pub fn general_kudro_of_drannith() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Solar Blaze — {2}{R}{W} Sorcery. Each creature deals damage to itself equal
+/// to its power.
+pub fn solar_blaze() -> CardDefinition {
+    CardDefinition {
+        name: "Solar Blaze",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Bonders' Enclave — Land. {T}: Add {C}. {3}, {T}: Draw a card — only if you
+/// control a creature with power 4 or greater.
+pub fn bonders_enclave() -> CardDefinition {
+    CardDefinition {
+        name: "Bonders' Enclave",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                condition: Some(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::Const(1),
+                }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Auspicious Starrix — {4}{G} 6/6 Elk Beast. Mutate {5}{G}. On mutate, exile
+/// from the top of your library until you exile X permanent cards (X = times
+/// it has mutated) and put them onto the battlefield.
+pub fn auspicious_starrix() -> CardDefinition {
+    CardDefinition {
+        name: "Auspicious Starrix",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elk, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        mutate: Some(cost(&[generic(5), g()])),
+        triggered_abilities: vec![on_mutate(Effect::RevealUntilFind {
+            who: PlayerRef::You,
+            find: SelectionRequirement::Permanent,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            cap: Value::MutateCount,
+            life_per_revealed: 0,
+            miss_dest: crate::effect::RevealMissDest::Graveyard,
+        })],
+        ..Default::default()
+    }
+}
