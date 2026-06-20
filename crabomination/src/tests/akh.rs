@@ -313,3 +313,26 @@ fn akh_green_batch_functionality() {
     let cp = g.computed_permanent(hb).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 4), "3/2 +2/+2 = 5/4 exerted");
 }
+
+/// Greater Sandwurm's CantBeBlockedBy(PowerAtMost 2) is enforced at block
+/// declaration: a power-2 blocker is illegal, a power-4 blocker is legal.
+#[test]
+fn greater_sandwurm_power_evasion_enforced() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let sw = g.add_card_to_battlefield(0, catalog::greater_sandwurm()); // 7/7
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // power 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());     // power 4
+    g.clear_sickness(sw);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sw, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(small, sw)])).is_err(),
+        "power-2 creature can't block Greater Sandwurm");
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(big, sw)])).is_ok(),
+        "power-4 creature may block it");
+}
