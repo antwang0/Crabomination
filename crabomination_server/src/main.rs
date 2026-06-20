@@ -300,10 +300,26 @@ fn run_match_caught(
 ) -> Option<MatchOutcome> {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_match(state, seats))) {
         Ok(outcome) => Some(outcome),
-        Err(_) => {
-            eprintln!("match aborted: engine panic ({ctx}) — connections dropped, slot released");
+        Err(payload) => {
+            eprintln!(
+                "match aborted: engine panic ({ctx}): {} — connections dropped, slot released",
+                panic_message(payload.as_ref()),
+            );
             None
         }
+    }
+}
+
+/// Recover the human-readable message from a caught panic payload. `panic!`
+/// stores a `&'static str` or a `String`; anything else logs as a generic
+/// note so the abort line always carries *some* context.
+fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&'static str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "non-string panic payload".to_string()
     }
 }
 
@@ -411,6 +427,16 @@ mod tests {
     use crabomination::server::LossReason;
     use std::env;
     use std::net::IpAddr;
+
+    #[test]
+    fn panic_message_recovers_str_and_string_payloads() {
+        let s = std::panic::catch_unwind(|| panic!("boom")).unwrap_err();
+        assert_eq!(panic_message(s.as_ref()), "boom");
+        let owned = std::panic::catch_unwind(|| panic!("{}", format!("n={}", 3))).unwrap_err();
+        assert_eq!(panic_message(owned.as_ref()), "n=3");
+        let other = std::panic::catch_unwind(|| std::panic::panic_any(7u32)).unwrap_err();
+        assert_eq!(panic_message(other.as_ref()), "non-string panic payload");
+    }
 
     /// Process-global env mutex for the test module. `cargo test` runs
     /// tests in parallel by default, but env vars are process-wide — without

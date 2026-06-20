@@ -311,14 +311,22 @@ pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize>
     if let Some(c) = state.battlefield_find(cid) {
         return Some(c.controller);
     }
+    // CR 603.10 — for a death event the actor is the creature's *last
+    // controller*, not the graveyard owner: a stolen creature that dies fires
+    // the thief's "a creature you control dies" watcher. The die-snapshot
+    // cache captures that controller (and is also the sole source for token
+    // deaths, which leave no graveyard card), so prefer it over the owner
+    // zone-walk fallback (correct only when controller and owner coincide).
     state
-        .players
-        .iter()
-        .position(|p| p.graveyard.iter().any(|c| c.id == cid))
-        // Token deaths: zone walk fails because the token ceases to exist
-        // in the same SBA pass. Fall back to the snapshot cache populated
-        // at die-time in `check_state_based_actions`.
-        .or_else(|| state.died_card_snapshots.get(&cid).map(|c| c.controller))
+        .died_card_snapshots
+        .get(&cid)
+        .map(|c| c.controller)
+        .or_else(|| {
+            state
+                .players
+                .iter()
+                .position(|p| p.graveyard.iter().any(|c| c.id == cid))
+        })
 }
 
 fn event_player(event: &GameEvent) -> Option<usize> {

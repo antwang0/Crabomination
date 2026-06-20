@@ -660,6 +660,16 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         },
         K::ProtectionFromCreatureType(_) => "Can't be blocked, targeted, or damaged by sources of the named creature type.",
         K::ProtectionFromSpellSubtype(_) => "Can't be targeted or damaged by spells of the named subtype.",
+        K::Cycling(_) => "Pay its cycling cost and discard it to draw a card, any time you could cast an instant.",
+        K::CyclingLife(_) => "Pay that much life and discard it to draw a card.",
+        K::Kicker(_) | K::Multikicker(_) => "You may pay an additional kicker cost as you cast it for a bonus effect.",
+        K::Flashback(_) | K::FlashbackTap(_) => "You may cast it from your graveyard for its flashback cost, then exile it.",
+        K::Suspend(_, _) => "You may exile it with that many time counters and pay its suspend cost; remove one each upkeep and cast it free when the last is gone.",
+        K::SuspendAccelerant => "While this is suspended, an opponent's action removes time counters from it.",
+        K::Echo(_) => "Pay its echo cost at the beginning of your next upkeep after it enters, or sacrifice it.",
+        K::Impending(_) => "Cast for its impending cost to enter with that many time counters; it isn't a creature until the last is removed.",
+        K::Casualty(_) => "As you cast it, you may sacrifice a creature with that much power to copy it.",
+        K::Saddle(_) => "Tap other creatures with total power N to saddle it; saddled abilities work when it attacks.",
         _ => return None,
     })
 }
@@ -1005,6 +1015,24 @@ mod tests {
         let body = build_tooltip_body(&p);
         if let Some(s) = body {
             assert!(!s.contains("marked:"), "no damage marked, should not surface: {s}");
+        }
+    }
+
+    #[test]
+    fn alt_cast_keywords_have_reminder_text() {
+        use crabomination::card::Keyword as K;
+        use crabomination::mana::{cost, generic};
+        // Previously these fell through to `None` (no tooltip line).
+        for kw in [
+            K::Cycling(cost(&[generic(2)])),
+            K::Kicker(cost(&[generic(1)])),
+            K::Flashback(cost(&[generic(3)])),
+            K::Echo(cost(&[generic(2)])),
+            K::Impending(3),
+            K::Casualty(2),
+            K::Saddle(3),
+        ] {
+            assert!(keyword_reminder(&kw).is_some(), "missing reminder for {kw:?}");
         }
     }
 

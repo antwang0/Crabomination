@@ -60146,3 +60146,25 @@ fn quartzwood_crasher_makes_token_on_combat_damage() {
     let token = token.expect("a Dinosaur Beast token was created");
     assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 5, "X = 5 combat damage");
 }
+
+/// CR 603.10: a stolen creature dying fires the *thief's* "a creature you
+/// control dies" watcher (Bastion drains), not the owner's.
+#[test]
+fn stolen_creature_death_fires_controllers_watcher() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bastion_of_remembrance());
+    // P1 owns the bear but P0 controls it (theft).
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().controller = 0;
+    let p1 = g.players[1].life;
+    let p0 = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the stolen creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 1, "the thief's Bastion drains the opponent");
+    assert_eq!(g.players[0].life, p0 + 1, "the thief gains the life");
+}
