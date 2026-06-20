@@ -28366,6 +28366,198 @@ pub fn sneaking_guide() -> CardDefinition {
     }
 }
 
+/// Canyon Jerboa — {2}{W} Creature — Mouse 1/2. Landfall: creatures you control
+/// get +1/+1 until end of turn.
+pub fn canyon_jerboa() -> CardDefinition {
+    CardDefinition {
+        name: "Canyon Jerboa",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Territorial Scythecat — {2}{G} Creature — Cat 2/1. Trample; landfall: put a
+/// +1/+1 counter on it.
+pub fn territorial_scythecat() -> CardDefinition {
+    CardDefinition {
+        name: "Territorial Scythecat",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Makindi Ox — {4}{W} Creature — Ox 4/4. Landfall: tap target creature an
+/// opponent controls.
+pub fn makindi_ox() -> CardDefinition {
+    CardDefinition {
+        name: "Makindi Ox",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ox],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ondu Greathorn — {3}{W} Creature — Beast 2/3. First strike; landfall: +2/+2
+/// until end of turn.
+pub fn ondu_greathorn() -> CardDefinition {
+    CardDefinition {
+        name: "Ondu Greathorn",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Joraga Visionary — {3}{G} Creature — Elf Wizard 3/2. ETB: draw a card.
+pub fn joraga_visionary() -> CardDefinition {
+    CardDefinition {
+        name: "Joraga Visionary",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Stonework Packbeast — {2} Artifact Creature — Beast 2/1. Also a Cleric, Rogue,
+/// Warrior, and Wizard. `{2}: Add one mana of any color.`
+pub fn stonework_packbeast() -> CardDefinition {
+    CardDefinition {
+        name: "Stonework Packbeast",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Beast,
+                CreatureType::Cleric,
+                CreatureType::Rogue,
+                CreatureType::Warrior,
+                CreatureType::Wizard,
+            ],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![crate::catalog::sets::tap_add_any_color()],
+        ..Default::default()
+    }
+}
+
+/// Cleric of Chill Depths — {1}{U} Creature — Merfolk Cleric 1/3. Whenever it
+/// blocks a creature, that creature doesn't untap during its controller's next
+/// untap step (Stun counter).
+pub fn cleric_of_chill_depths() -> CardDefinition {
+    use crate::effect::shortcut::blocks;
+    CardDefinition {
+        name: "Cleric of Chill Depths",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![blocks(Effect::AddCounter {
+            what: Selector::BlockedAttacker,
+            kind: CounterType::Stun,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Anticognition — {1}{U} Instant. Counter target creature or planeswalker spell
+/// unless its controller pays {2}. (The delirium "hard counter + scry 2" upgrade
+/// is dropped.)
+pub fn anticognition() -> CardDefinition {
+    CardDefinition {
+        name: "Anticognition",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Creature)
+                        .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+                ),
+            ),
+            mana_cost: cost(&[generic(2)]),
+            exile: false,
+            extra_generic: None,
+        },
+        ..Default::default()
+    }
+}
+
 /// Sink into Stupor // Soporific Springs — {1}{U}{U} Instant MDFC (MKM).
 /// Front: "Return target spell or nonland permanent an opponent controls to
 /// its owner's hand." (The spell-on-stack half collapses to the nonland-

@@ -52394,6 +52394,130 @@ fn subtle_strike_chooses_both() {
     assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "+1/+1 counter");
 }
 
+/// Canyon Jerboa pumps the team on landfall.
+#[test]
+fn canyon_jerboa_landfall_team_pump() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::canyon_jerboa());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 to the team");
+}
+
+/// Territorial Scythecat permanently grows on landfall.
+#[test]
+fn territorial_scythecat_landfall_counter() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::territorial_scythecat());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(cat).unwrap().power, 3, "2 + counter");
+}
+
+/// Makindi Ox taps a creature on landfall.
+#[test]
+fn makindi_ox_landfall_taps() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::makindi_ox());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent's creature tapped");
+}
+
+/// Ondu Greathorn grows on landfall and has first strike.
+#[test]
+fn ondu_greathorn_landfall_pump() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let ox = g.add_card_to_battlefield(0, catalog::ondu_greathorn());
+    assert!(g.battlefield_find(ox).unwrap().definition.keywords.contains(&Keyword::FirstStrike));
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ox).unwrap().power, 4, "2 + 2 landfall");
+}
+
+/// Joraga Visionary draws on enter.
+#[test]
+fn joraga_visionary_etb_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let jv = g.add_card_to_hand(0, catalog::joraga_visionary());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: jv, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -1 cast + 1 ETB draw = net 0.
+    assert_eq!(g.players[0].hand.len(), before, "drew a card on ETB");
+}
+
+/// Stonework Packbeast is all four party types and taps for any color.
+#[test]
+fn stonework_packbeast_is_full_party() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let pb = g.add_card_to_battlefield(0, catalog::stonework_packbeast());
+    let types = &g.battlefield_find(pb).unwrap().definition.subtypes.creature_types;
+    for t in [CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard] {
+        assert!(types.contains(&t), "is a {t:?}");
+    }
+}
+
+/// Cleric of Chill Depths stuns what it blocks.
+#[test]
+fn cleric_of_chill_depths_stuns_blocked() {
+    use crate::card::CounterType;
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let cleric = g.add_card_to_battlefield(0, catalog::cleric_of_chill_depths());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(cleric, attacker)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(attacker).unwrap().counter_count(CounterType::Stun), 1,
+        "blocked attacker is stunned");
+}
+
+/// Anticognition counters a creature spell unless its controller pays {2}.
+#[test]
+fn anticognition_counters_creature_spell() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bear");
+    let ac = g.add_card_to_hand(0, catalog::anticognition());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, ac, Target::Permanent(spell));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "countered (couldn't pay {{2}})");
+}
+
 /// Brushfire Elemental can't be blocked by small creatures and grows on landfall.
 #[test]
 fn brushfire_elemental_evasion_and_landfall() {
