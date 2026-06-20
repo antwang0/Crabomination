@@ -1402,6 +1402,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DamageCantBePreventedThisTurn => "Damage can't be prevented",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
+        Effect::GrantHexproofFromColorThisTurn { .. } => "Hexproof from color",
         Effect::Explore { .. } => "Explore",
         Effect::Goad { .. } => "Goad",
         Effect::Provoke { .. } => "Provoke",

@@ -572,6 +572,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Haste => "Can attack and tap the turn it comes under your control.",
         K::Indestructible => "Can't be destroyed by damage or \"destroy\" effects.",
         K::Hexproof => "Can't be the target of spells or abilities opponents control.",
+        K::HexproofFromColor(_) => "Can't be targeted by that color's spells or abilities opponents control.",
         K::Shroud => "Can't be the target of any spells or abilities.",
         K::Infect => "Damages creatures with -1/-1 counters and players with poison.",
         K::Wither => "Damages creatures as -1/-1 counters instead.",
@@ -701,6 +702,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Decayed => "Decayed".into(),
         K::Indestructible => "Indestructible".into(),
         K::Hexproof => "Hexproof".into(),
+        K::HexproofFromColor(c) => format!("Hexproof from {c:?}"),
         K::Flash => "Flash".into(),
         K::Shroud => "Shroud".into(),
         // Surface Ward's cost as "Ward {2}" or "Ward—pay 2 life"
