@@ -39339,20 +39339,6 @@ pub fn titanoth_rex() -> CardDefinition {
     }
 }
 
-/// Mosscoat Goriak — {2}{G} 2/4 Beast with vigilance.
-pub fn mosscoat_goriak() -> CardDefinition {
-    CardDefinition {
-        name: "Mosscoat Goriak",
-        cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
-        power: 2,
-        toughness: 4,
-        keywords: vec![Keyword::Vigilance],
-        ..Default::default()
-    }
-}
-
 /// Lava Serpent — {5}{R} 5/5 Elemental Serpent with haste. Cycling {2}.
 pub fn lava_serpent() -> CardDefinition {
     CardDefinition {
@@ -54603,6 +54589,96 @@ pub fn mythos_of_brokkos() -> CardDefinition {
             filter: SelectionRequirement::Permanent,
             max: Value::Const(2),
         },
+        ..Default::default()
+    }
+}
+
+// ── Ikoria batch 11 ──────────────────────────────────────────────────────────
+
+/// Essence Capture — {U}{U} Instant. Counter target creature spell; put a +1/+1
+/// counter on up to one target creature you control.
+pub fn essence_capture() -> CardDefinition {
+    CardDefinition {
+        name: "Essence Capture",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Creature),
+                ),
+            },
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                effect: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Drannith Stinger — {1}{R} 2/2 Human Wizard. Cycling {1}. Whenever you cycle
+/// another card, it deals 1 damage to each opponent.
+pub fn drannith_stinger() -> CardDefinition {
+    CardDefinition {
+        name: "Drannith Stinger",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mosscoat Goriak — {2}{G} 2/4 Beast with vigilance.
+pub fn mosscoat_goriak() -> CardDefinition {
+    CardDefinition {
+        name: "Mosscoat Goriak",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Gust of Wind — {3}{U} Sorcery. Return target nonland permanent you don't
+/// control to its owner's hand, then draw a card. (The "costs {2} less if you
+/// control a flyer" reduction is dropped — no conditional self-cost layer.)
+pub fn gust_of_wind() -> CardDefinition {
+    CardDefinition {
+        name: "Gust of Wind",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Not(Box::new(SelectionRequirement::Land))
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
         ..Default::default()
     }
 }

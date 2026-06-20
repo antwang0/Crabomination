@@ -58326,6 +58326,66 @@ fn sanctuary_lockdown_anthem_and_tap() {
         "two Humans tapped to pay");
 }
 
+/// Essence Capture counters a creature spell and grows one of your creatures.
+#[test]
+fn essence_capture_counters_and_grows() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts a creature");
+    let cap = g.add_card_to_hand(0, catalog::essence_capture());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cap, target: Some(Target::Permanent(spell)),
+        additional_targets: vec![Target::Permanent(mine)], mode: None, x_value: None,
+    }).expect("cast Essence Capture");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "creature spell countered");
+    let m = g.battlefield_find(mine).expect("our creature alive");
+    assert_eq!(m.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
+}
+
+/// Drannith Stinger pings each opponent when you cycle another card.
+#[test]
+fn drannith_stinger_pings_on_cycle() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drannith_stinger());
+    let cycler = g.add_card_to_hand(0, catalog::miscalculation()); // Cycling {2}
+    g.add_card_to_library(0, catalog::forest()); // draw for the cycle
+    g.players[1].life = 20;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Cycle { card_id: cycler, x_value: None }).expect("cycle a card");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent took 1 from the Stinger");
+}
+
+/// Gust of Wind bounces an opponent's nonland permanent and draws.
+#[test]
+fn gust_of_wind_bounces_and_draws() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let gust = g.add_card_to_hand(0, catalog::gust_of_wind());
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3); // {3}{U}
+    g.perform_action(GameAction::CastSpell {
+        card_id: gust, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Gust of Wind");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "bounced to owner's hand");
+    assert_eq!(g.players[0].hand.len(), before - 1 + 1, "drew a card (net: cast + draw)");
+}
+
 /// Mythos of Illuna makes a token copy of a target permanent.
 #[test]
 fn mythos_of_illuna_copies_permanent() {
