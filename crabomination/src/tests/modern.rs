@@ -52038,6 +52038,304 @@ fn silundi_vision_digs_for_instant() {
     );
 }
 
+// ── ZNR spell//land MDFC batch (2026) ────────────────────────────────────────
+
+/// Kazuul's Fury flings a sacrificed creature's power at any target.
+#[test]
+fn kazuuls_fury_deals_sacrificed_power() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 to sacrifice
+    let kf = g.add_card_to_hand(0, catalog::kazuuls_fury());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, kf, Target::Player(1));
+    assert_eq!(g.players[1].life, 18, "2 damage = bear's power");
+}
+
+/// Kabira Takedown deals damage equal to creatures you control.
+#[test]
+fn kabira_takedown_scales_with_board() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let kt = g.add_card_to_hand(0, catalog::kabira_takedown());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, kt, Target::Permanent(target));
+    assert_eq!(g.battlefield_find(target).unwrap().damage, 2, "two creatures → 2 damage");
+}
+
+/// Makindi Stampede pumps the whole team +2/+2.
+#[test]
+fn makindi_stampede_pumps_team() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ms = g.add_card_to_hand(0, catalog::makindi_stampede());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ms, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 4);
+    assert_eq!(g.computed_permanent(b).unwrap().toughness, 4);
+}
+
+/// Khalni Ambush makes your creature fight an opponent's.
+#[test]
+fn khalni_ambush_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let ka = g.add_card_to_hand(0, catalog::khalni_ambush());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ka, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "2/2 dies to 4 damage");
+}
+
+/// Sejiri Shelter grants protection from the chosen color.
+#[test]
+fn sejiri_shelter_grants_protection() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ss = g.add_card_to_hand(0, catalog::sejiri_shelter());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    cast_at(&mut g, ss, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Protection(Color::Red)));
+}
+
+/// Song-Mad Treachery steals a creature until end of turn.
+#[test]
+fn song_mad_treachery_steals() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let st = g.add_card_to_hand(0, catalog::song_mad_treachery());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_at(&mut g, st, Target::Permanent(theirs));
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "now yours");
+}
+
+/// Zof Consumption drains 4 and gains 4.
+#[test]
+fn zof_consumption_drains_four() {
+    let mut g = two_player_game();
+    let zc = g.add_card_to_hand(0, catalog::zof_consumption());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: zc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16);
+    assert_eq!(g.players[0].life, 24);
+}
+
+/// Vastwood Fortification puts a +1/+1 counter on a creature.
+#[test]
+fn vastwood_fortification_adds_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let vf = g.add_card_to_hand(0, catalog::vastwood_fortification());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, vf, Target::Permanent(bear));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "2 + counter");
+}
+
+/// Pelakka Predation makes an opponent discard a high-MV card.
+#[test]
+fn pelakka_predation_discards_expensive() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // MV 2, kept
+    g.add_card_to_hand(1, catalog::serra_angel()); // MV 5, discarded
+    let pp = g.add_card_to_hand(0, catalog::pelakka_predation());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Serra Angel"));
+    assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+/// Jwari Disruption counters a spell unless its controller pays {1}.
+#[test]
+fn jwari_disruption_counters_unpaid() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1); // just enough for the bolt
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bolt");
+    let jd = g.add_card_to_hand(0, catalog::jwari_disruption());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, jd, Target::Permanent(spell));
+    // Opponent has no spare mana to pay {1} → bolt is countered.
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "countered");
+    assert_eq!(g.players[0].life, 20, "bolt never resolved");
+}
+
+/// Shatterskull Smashing deals X damage divided (twice X at 6+).
+#[test]
+fn shatterskull_smashing_doubles_at_six() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // 6/6
+    let ss = g.add_card_to_hand(0, catalog::shatterskull_smashing());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(6); // X = 6
+    g.perform_action(GameAction::CastSpell {
+        card_id: ss, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: Some(6),
+    }).expect("cast X=6");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "twice-6 = 12 damage kills the 6/6");
+}
+
+/// Sea Gate Restoration refills your hand and removes the hand-size cap.
+#[test]
+fn sea_gate_restoration_draws_and_lifts_cap() {
+    let mut g = two_player_game();
+    for _ in 0..10 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::forest()); // 2 other cards in hand
+    let sg = g.add_card_to_hand(0, catalog::sea_gate_restoration());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    let before = g.players[0].hand.len(); // 3 (incl. Sea Gate)
+    g.perform_action(GameAction::CastSpell {
+        card_id: sg, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // Hand after cast = 2; draw 2+1 = 3 → 5.
+    assert_eq!(g.players[0].hand.len(), before - 1 + 3);
+    assert!(g.players[0].max_hand_size.is_none(), "no maximum hand size");
+}
+
+/// Emeria's Call makes two 4/4 flyers and shields non-Angels.
+#[test]
+fn emerias_call_makes_angels() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ec = g.add_card_to_hand(0, catalog::emerias_call());
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ec, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let angels = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Angel Warrior").count();
+    assert_eq!(angels, 2);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible),
+        "non-Angel gains indestructible");
+}
+
+/// Turntimber Symbiosis puts a creature from the top seven onto the battlefield.
+#[test]
+fn turntimber_symbiosis_deploys_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); }
+    let ts = g.add_card_to_hand(0, catalog::turntimber_symbiosis());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ts, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"));
+}
+
+/// Ondu Inversion destroys all nonland permanents.
+#[test]
+fn ondu_inversion_wraths_nonlands() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let oi = g.add_card_to_hand(0, catalog::ondu_inversion());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: oi, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert!(g.battlefield_find(land).is_some(), "land survives");
+}
+
+/// Akoum Hellhound grows on landfall.
+#[test]
+fn akoum_hellhound_landfall_pump() {
+    let mut g = two_player_game();
+    let dog = g.add_card_to_battlefield(0, catalog::akoum_hellhound());
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(dog).unwrap().power, 2, "0 + 2 landfall");
+}
+
+/// Nimana Skydancer mills two on enter.
+#[test]
+fn nimana_skydancer_mills_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::forest()); }
+    let ns = g.add_card_to_hand(0, catalog::nimana_skydancer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let gy_before = g.players[1].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: ns, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 2);
+}
+
+/// Cragplate Baloth enters with four +1/+1 counters when kicked.
+#[test]
+fn cragplate_baloth_kicked_enters_bigger() {
+    let mut g = two_player_game();
+    let cb = g.add_card_to_hand(0, catalog::cragplate_baloth());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(7); // {5}{G}{G} + {2}{G} kicker
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: cb, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(cb).unwrap().power, 10, "6 + 4 counters");
+}
+
+/// Glasspool Mimic enters as a copy of a creature you control.
+#[test]
+fn glasspool_mimic_copies_your_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 to copy
+    let gm = g.add_card_to_hand(0, catalog::glasspool_mimic());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let mimic = g.battlefield_find(gm).expect("entered");
+    assert_eq!((mimic.power(), mimic.toughness()), (4, 4), "copied the 4/4 Angel");
+}
+
 // ── Follow-ups batch A: lockdowns, land swaps, processors, mill engines ──────
 
 /// Sunken Citadel's second ability adds two restricted mana that fund land

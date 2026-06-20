@@ -27617,6 +27617,484 @@ pub fn veteran_swordsmith() -> CardDefinition {
     }
 }
 
+// ── Zendikar Rising spell // land MDFCs ──────────────────────────────────────
+//
+// Every ZNR modal card pairs a spell front with a land back. The common
+// (uncommon) cycle backs enter tapped unconditionally; the rare cycle backs
+// offer "pay 3 life or enter tapped" (shockland-style ETB choice). Both are
+// played via `GameAction::PlayLandBack`; the front casts normally.
+
+/// Back face for a ZNR rare MDFC: "As this enters, you may pay 3 life. If you
+/// don't, it enters tapped." `{T}: Add {color}`.
+fn znr_painland_back(name: &'static str, color: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Tap { what: Selector::This },
+            ]),
+        }],
+        activated_abilities: vec![crate::catalog::sets::tap_add(color)],
+        ..Default::default()
+    }
+}
+
+/// Kazuul's Fury // Kazuul's Cliffs — {2}{R} Instant. Sacrifice a creature;
+/// deal damage equal to its power to any target.
+pub fn kazuuls_fury() -> CardDefinition {
+    CardDefinition {
+        name: "Kazuul's Fury",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::SacrificedPower,
+            },
+        ]),
+        back_face: Some(Box::new(znr_mdfc_land("Kazuul's Cliffs", Color::Red))),
+        ..Default::default()
+    }
+}
+
+/// Kabira Takedown // Kabira Plateau — {1}{W} Instant. Deal damage equal to the
+/// number of creatures you control to target creature or planeswalker.
+pub fn kabira_takedown() -> CardDefinition {
+    CardDefinition {
+        name: "Kabira Takedown",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::count(each_your_creature()),
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Kabira Plateau", Color::White))),
+        ..Default::default()
+    }
+}
+
+/// Makindi Stampede // Makindi Mesas — {3}{W}{W} Sorcery. Creatures you control
+/// get +2/+2 until end of turn.
+pub fn makindi_stampede() -> CardDefinition {
+    CardDefinition {
+        name: "Makindi Stampede",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PumpPT {
+            what: each_your_creature(),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Makindi Mesas", Color::White))),
+        ..Default::default()
+    }
+}
+
+/// Khalni Ambush // Khalni Territory — {2}{G} Instant. A creature you control
+/// fights a creature you don't control.
+pub fn khalni_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Khalni Ambush",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Fight {
+            attacker: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            },
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Khalni Territory", Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Sejiri Shelter // Sejiri Glacier — {1}{W} Instant. Target creature you
+/// control gains protection from the color of your choice until end of turn.
+pub fn sejiri_shelter() -> CardDefinition {
+    CardDefinition {
+        name: "Sejiri Shelter",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            },
+            duration: Duration::EndOfTurn,
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Sejiri Glacier", Color::White))),
+        ..Default::default()
+    }
+}
+
+/// Song-Mad Treachery // Song-Mad Ruins — {3}{R}{R} Sorcery. Threaten: gain
+/// control of target creature until end of turn, untap it, it gains haste.
+pub fn song_mad_treachery() -> CardDefinition {
+    CardDefinition {
+        name: "Song-Mad Treachery",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: threaten_effect(&[]),
+        back_face: Some(Box::new(znr_mdfc_land("Song-Mad Ruins", Color::Red))),
+        ..Default::default()
+    }
+}
+
+/// Zof Consumption // Zof Bloodbog — {4}{B}{B} Sorcery. Each opponent loses 4
+/// life and you gain 4 life.
+pub fn zof_consumption() -> CardDefinition {
+    CardDefinition {
+        name: "Zof Consumption",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(4),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        ]),
+        back_face: Some(Box::new(znr_mdfc_land("Zof Bloodbog", Color::Black))),
+        ..Default::default()
+    }
+}
+
+/// Vastwood Fortification // Vastwood Thicket — {G} Instant. Put a +1/+1 counter
+/// on target creature.
+pub fn vastwood_fortification() -> CardDefinition {
+    CardDefinition {
+        name: "Vastwood Fortification",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Vastwood Thicket", Color::Green))),
+        ..Default::default()
+    }
+}
+
+/// Pelakka Predation // Pelakka Caverns — {2}{B} Sorcery. Target opponent
+/// reveals their hand; you choose a card with mana value 3+; they discard it.
+pub fn pelakka_predation() -> CardDefinition {
+    CardDefinition {
+        name: "Pelakka Predation",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DiscardChosen {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::ManaValueAtLeast(3),
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Pelakka Caverns", Color::Black))),
+        ..Default::default()
+    }
+}
+
+/// Jwari Disruption // Jwari Ruins — {1}{U} Instant. Counter target spell
+/// unless its controller pays {1}.
+pub fn jwari_disruption() -> CardDefinition {
+    CardDefinition {
+        name: "Jwari Disruption",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(1)]),
+            exile: false,
+            extra_generic: None,
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Jwari Ruins", Color::Blue))),
+        ..Default::default()
+    }
+}
+
+/// Glasspool Mimic // Glasspool Shore — {2}{U} Creature 0/0. May enter as a copy
+/// of a creature you control, except it's also a Shapeshifter Rogue.
+pub fn glasspool_mimic() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Glasspool Mimic",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter, CreatureType::Rogue],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            extra_creature_types: vec![CreatureType::Shapeshifter, CreatureType::Rogue],
+            ..Default::default()
+        }),
+        back_face: Some(Box::new(znr_mdfc_land("Glasspool Shore", Color::Blue))),
+        ..Default::default()
+    }
+}
+
+/// Shatterskull Smashing // Shatterskull, the Hammer Pass — {X}{R}{R} Sorcery.
+/// Deal X damage divided among up to two creatures/planeswalkers; if X is 6+,
+/// deal twice X instead.
+pub fn shatterskull_smashing() -> CardDefinition {
+    let filter = SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
+    CardDefinition {
+        name: "Shatterskull Smashing",
+        cost: cost(&[x(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(6)),
+            then: Box::new(Effect::DealDamageDivided {
+                total: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
+                filter: filter.clone(),
+                max_targets: 2,
+            }),
+            else_: Box::new(Effect::DealDamageDivided {
+                total: Value::XFromCost,
+                filter,
+                max_targets: 2,
+            }),
+        },
+        back_face: Some(Box::new(znr_painland_back(
+            "Shatterskull, the Hammer Pass",
+            Color::Red,
+        ))),
+        ..Default::default()
+    }
+}
+
+/// Sea Gate Restoration // Sea Gate, Reborn — {4}{U}{U}{U} Sorcery. Draw cards
+/// equal to your hand size plus one; you have no maximum hand size thereafter.
+pub fn sea_gate_restoration() -> CardDefinition {
+    CardDefinition {
+        name: "Sea Gate Restoration",
+        cost: cost(&[generic(4), u(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Sum(vec![
+                    Value::HandSizeOf(PlayerRef::You),
+                    Value::Const(1),
+                ]),
+            },
+            Effect::SetNoMaxHandSize { who: Selector::You },
+        ]),
+        back_face: Some(Box::new(znr_painland_back("Sea Gate, Reborn", Color::Blue))),
+        ..Default::default()
+    }
+}
+
+/// Emeria's Call // Emeria, Shattered Skyclave — {4}{W}{W}{W} Sorcery. Create
+/// two 4/4 white Angel Warrior flyers; non-Angel creatures you control gain
+/// indestructible until your next turn.
+pub fn emerias_call() -> CardDefinition {
+    CardDefinition {
+        name: "Emeria's Call",
+        cost: cost(&[generic(4), w(), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Angel Warrior".into(),
+                    power: 4,
+                    toughness: 4,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Angel, CreatureType::Warrior],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Angel).negate()),
+                ),
+                keyword: Keyword::Indestructible,
+                duration: Duration::UntilNextTurn,
+            },
+        ]),
+        back_face: Some(Box::new(znr_painland_back(
+            "Emeria, Shattered Skyclave",
+            Color::White,
+        ))),
+        ..Default::default()
+    }
+}
+
+/// Turntimber Symbiosis // Turntimber, Serpentine Wood — {4}{G}{G}{G} Sorcery.
+/// Look at the top seven; put a creature card from among them onto the
+/// battlefield. (The "+3 counters if its mana value is 3 or less" rider is dropped.)
+pub fn turntimber_symbiosis() -> CardDefinition {
+    CardDefinition {
+        name: "Turntimber Symbiosis",
+        cost: cost(&[generic(4), g(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(7),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Creature),
+            take: None,
+            to_battlefield: true,
+        },
+        back_face: Some(Box::new(znr_painland_back(
+            "Turntimber, Serpentine Wood",
+            Color::Green,
+        ))),
+        ..Default::default()
+    }
+}
+
+/// Ondu Inversion // Ondu Skyruins — {6}{W}{W} Sorcery. Destroy all nonland
+/// permanents.
+pub fn ondu_inversion() -> CardDefinition {
+    CardDefinition {
+        name: "Ondu Inversion",
+        cost: cost(&[generic(6), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Nonland),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        back_face: Some(Box::new(znr_mdfc_land("Ondu Skyruins", Color::White))),
+        ..Default::default()
+    }
+}
+
+/// Akoum Hellhound — {R} Creature — Elemental Dog 0/1. Landfall: whenever a
+/// land you control enters, it gets +2/+2 until end of turn.
+pub fn akoum_hellhound() -> CardDefinition {
+    CardDefinition {
+        name: "Akoum Hellhound",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skyclave Geopede — {2}{R} Creature — Insect 3/1. Trample. Landfall: gets
+/// +2/+2 until end of turn whenever a land you control enters.
+pub fn skyclave_geopede() -> CardDefinition {
+    CardDefinition {
+        name: "Skyclave Geopede",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nimana Skydancer — {2}{B} Creature — Human Rogue 2/1. Flash, flying. ETB:
+/// target opponent mills two cards.
+pub fn nimana_skydancer() -> CardDefinition {
+    CardDefinition {
+        name: "Nimana Skydancer",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cragplate Baloth — {5}{G}{G} Creature — Beast 6/6. Kicker {2}{G}. Can't be
+/// countered. Hexproof, haste. If kicked, enters with four +1/+1 counters.
+pub fn cragplate_baloth() -> CardDefinition {
+    CardDefinition {
+        name: "Cragplate Baloth",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![
+            Keyword::Kicker(cost(&[generic(2), g()])),
+            Keyword::CantBeCountered,
+            Keyword::Hexproof,
+            Keyword::Haste,
+        ],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Sink into Stupor // Soporific Springs — {1}{U}{U} Instant MDFC (MKM).
 /// Front: "Return target spell or nonland permanent an opponent controls to
 /// its owner's hand." (The spell-on-stack half collapses to the nonland-
