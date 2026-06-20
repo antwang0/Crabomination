@@ -9512,6 +9512,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
+            // Attack-permission static, read in `ignores_defender_for_attack`.
+            | StaticEffect::CanAttackIgnoringDefenderWhile { .. }
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
             | StaticEffect::OpponentsCantCastFromAnywhereButHand => vec![],
         })

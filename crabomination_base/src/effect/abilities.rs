@@ -80,6 +80,11 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
     },
+    /// "This creature can attack as though it didn't have defender as long as
+    /// [condition]." A self-static gating defender-bypass on a live predicate
+    /// (controller as context). Drowsing Tyrannodon ("…as long as you control
+    /// a creature with power 4 or greater").
+    CanAttackIgnoringDefenderWhile { condition: Predicate },
     /// "As long as [condition], [creatures the selector picks] get +P/+T."
     /// The conditional-team sibling of `PumpSelfIf` (self) and `PumpPT`
     /// (unconditional team). Resolved live in `gather_continuous_effects`:

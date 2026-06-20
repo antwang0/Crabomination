@@ -2555,6 +2555,8 @@ static DECKS: &[Factory] = &[
     super::decks::sanctuary_smasher,
     super::decks::powerstone_fracture,
     super::decks::howl_of_the_hunt,
+    super::decks::brokkos_apex_of_forever,
+    super::decks::drowsing_tyrannodon,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

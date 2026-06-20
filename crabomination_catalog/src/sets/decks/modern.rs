@@ -56813,3 +56813,58 @@ pub fn howl_of_the_hunt() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Brokkos, Apex of Forever — {2}{B}{G}{U} 6/6 Nightmare Beast Elemental,
+/// trample. Mutate {2}{U/B}{G}{G}. (The "cast from graveyard using mutate"
+/// rider is dropped — mutate casts from hand only.)
+pub fn brokkos_apex_of_forever() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    CardDefinition {
+        name: "Brokkos, Apex of Forever",
+        cost: cost(&[generic(2), b(), g(), u()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Beast, CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        mutate: Some(cost(&[
+            generic(2),
+            hybrid(Color::Blue, Color::Black),
+            g(),
+            g(),
+        ])),
+        ..Default::default()
+    }
+}
+
+/// Drowsing Tyrannodon — {1}{G} 3/3 Dinosaur with defender. Can attack as
+/// though it had no defender while you control a creature with power 4+.
+pub fn drowsing_tyrannodon() -> CardDefinition {
+    CardDefinition {
+        name: "Drowsing Tyrannodon",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        static_abilities: vec![StaticAbility {
+            description: "Can attack as though it didn't have defender while you control a creature with power 4 or greater.",
+            effect: StaticEffect::CanAttackIgnoringDefenderWhile {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::Const(1),
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}

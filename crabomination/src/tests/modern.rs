@@ -60675,3 +60675,43 @@ fn howl_of_the_hunt_buffs_and_grants_vigilance() {
     assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
     assert!(c.keywords.contains(&Keyword::Vigilance), "granted vigilance");
 }
+
+/// Brokkos can be cast for its mutate cost onto a non-Human host (trample 6/6).
+#[test]
+fn brokkos_mutates_onto_host() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // non-Human Beast 2/2
+    let brokkos = g.add_card_to_hand(0, catalog::brokkos_apex_of_forever());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2); // mutate {2}{U/B}{G}{G}
+    g.perform_action(GameAction::CastMutate {
+        card_id: brokkos, target: host, on_top: true, x_value: None,
+    }).expect("mutate Brokkos");
+    drain_stack(&mut g);
+    let pile = g.battlefield_find(host).expect("pile alive");
+    assert_eq!(pile.definition.name, "Brokkos, Apex of Forever");
+    assert!(g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+/// Drowsing Tyrannodon can only attack while you control a 4-power creature.
+#[test]
+fn drowsing_tyrannodon_conditional_defender() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::drowsing_tyrannodon());
+    g.clear_sickness(dino);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // No 4-power creature → defender blocks the attack.
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dino, target: AttackTarget::Player(1),
+    }])).is_err(), "defender stops the attack without a 4-power creature");
+    // Add a 4-power creature → the Tyrannodon may now attack.
+    let beater = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    g.clear_sickness(beater);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dino, target: AttackTarget::Player(1),
+    }])).expect("attacks once a 4-power creature is present");
+}

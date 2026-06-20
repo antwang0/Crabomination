@@ -4,6 +4,21 @@ use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
+    /// True if `card` carries a `CanAttackIgnoringDefenderWhile` static whose
+    /// condition currently holds — it may attack despite Defender
+    /// (Drowsing Tyrannodon).
+    pub(crate) fn ignores_defender_for_attack(&self, card: &CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        let ctx = crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
+        card.definition.static_abilities.iter().any(|sa| {
+            if let StaticEffect::CanAttackIgnoringDefenderWhile { condition } = &sa.effect {
+                self.evaluate_predicate(condition, &ctx)
+            } else {
+                false
+            }
+        })
+    }
+
     /// CR 509.1a — true if `controller` has a permanent granting "tapped
     /// creatures you control can block as though they were untapped" (Masako
     /// the Humorless).
@@ -121,7 +136,7 @@ impl GameState {
                 let kws = computed_kw(c.id);
                 let able = c.definition.is_creature()
                     && !c.tapped
-                    && !kws.contains(&Keyword::Defender)
+                    && (!kws.contains(&Keyword::Defender) || self.ignores_defender_for_attack(c))
                     && !kws.contains(&Keyword::CantAttack)
                     && (!c.summoning_sick || kws.contains(&Keyword::Haste));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
@@ -212,10 +227,12 @@ impl GameState {
                 let cohort_locked = kws
                     .contains(&Keyword::CantAttackUnlessCastCreatureThisTurn)
                     && self.players[p].creatures_cast_this_turn == 0;
+                let defender_locked =
+                    kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
                     && !card.tapped
                     && card.detained_by.is_none()
-                    && !kws.contains(&Keyword::Defender)
+                    && !defender_locked
                     && !kws.contains(&Keyword::CantAttack)
                     && !cohort_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
@@ -225,7 +242,7 @@ impl GameState {
                     }
                     // CR 701.35 — a detained permanent can't attack.
                     if card.detained_by.is_some()
-                        || kws.contains(&Keyword::Defender)
+                        || defender_locked
                         || kws.contains(&Keyword::CantAttack)
                         || cohort_locked
                     {
