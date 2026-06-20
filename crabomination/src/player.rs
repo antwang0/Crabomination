@@ -375,6 +375,14 @@ pub struct Player {
     /// snapshot back-compat.
     #[serde(default)]
     pub spells_uncounterable_this_turn: bool,
+    /// Colors this player (and their permanents) have hexproof from for the
+    /// rest of the turn (Veil of Summer's "you and permanents you control
+    /// gain hexproof from blue and from black until end of turn"). Set by
+    /// `Effect::GrantHexproofFromColorThisTurn`; reset for every player at
+    /// the active player's `do_untap`. Consulted by the targeting-legality
+    /// checks. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub hexproof_from_colors_this_turn: Vec<crate::mana::Color>,
     /// True once this player has cast a blue or black spell this turn. Set
     /// in `finalize_cast`; reset for every player at the active player's
     /// `do_untap`. Powers Veil of Summer's "draw a card if an opponent has
@@ -466,6 +474,7 @@ impl Player {
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,
+            hexproof_from_colors_this_turn: Vec::new(),
             cast_blue_or_black_this_turn: false,
             cant_cast_noncreature_this_turn: false,
             opponents_cant_cast_named: Vec::new(),

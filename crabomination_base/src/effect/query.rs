@@ -565,6 +565,7 @@ impl Effect {
             }
             Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
             Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
+            Effect::GrantHexproofFromColorThisTurn { who, .. } => sel_has_target(who),
             Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
@@ -1580,6 +1581,7 @@ impl Effect {
                 Effect::Endure { target, .. } => sel_find(target, slot),
                 Effect::LifeGainLockThisTurn { who }
                 | Effect::GrantSpellsUncounterableThisTurn { who }
+                | Effect::GrantHexproofFromColorThisTurn { who, .. }
                 | Effect::CantCastNoncreatureThisTurn { who } => sel_find(who, slot),
                 Effect::ExchangeLifeTotals { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))

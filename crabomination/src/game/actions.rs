@@ -3497,6 +3497,44 @@ impl GameState {
             }
         }
 
+        // CR 702.11e — hexproof from [color]: this object can't be targeted
+        // by opponents' spells of that color. Covers both printed
+        // `Keyword::HexproofFromColor` and the turn-scoped controller grant
+        // (Veil of Summer's "you and permanents you control gain hexproof
+        // from blue and black"). Applies to permanent and player targets.
+        let spell_colors = card.definition.cost.colors();
+        let hexproof_violation = match target {
+            Some(Target::Permanent(cid)) => self
+                .battlefield_find(cid)
+                .filter(|tc| tc.controller != p)
+                .is_some_and(|tc| {
+                    let controller = tc.controller;
+                    let printed = self
+                        .computed_permanent(cid)
+                        .map(|cp| cp.keywords)
+                        .unwrap_or_else(|| tc.definition.keywords.clone())
+                        .iter()
+                        .any(|kw| matches!(kw, Keyword::HexproofFromColor(c) if spell_colors.contains(c)));
+                    printed
+                        || self.players[controller]
+                            .hexproof_from_colors_this_turn
+                            .iter()
+                            .any(|c| spell_colors.contains(c))
+                }),
+            Some(Target::Player(tp)) => {
+                tp != p
+                    && self.players[tp]
+                        .hexproof_from_colors_this_turn
+                        .iter()
+                        .any(|c| spell_colors.contains(c))
+            }
+            None => false,
+        };
+        if hexproof_violation {
+            self.players[p].hand.push(card);
+            return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
+        }
+
         // Enforce the spell's target selection requirement (e.g. Terror's
         // "non-black, non-artifact creature"): if the effect binds a filter to
         // slot N and the chosen target doesn't match, reject the cast.
@@ -5968,8 +6006,36 @@ impl GameState {
     /// the source's qualities (color / creature-ness / creature type) rather
     /// than a spell's colors.
     pub(crate) fn ability_target_has_protection(&self, target: &Target, source: CardId) -> bool {
-        let Target::Permanent(tid) = target else { return false };
+        let Target::Permanent(tid) = target else {
+            // Player target: only the turn-scoped hexproof-from-color grant
+            // (Veil of Summer) applies — and only against opponents' abilities.
+            if let Target::Player(tp) = target {
+                let src_controller = self.battlefield_find(source).map(|c| c.controller);
+                if let Some(srcc) = src_controller
+                    && srcc != *tp
+                    && !self.players[*tp].hexproof_from_colors_this_turn.is_empty()
+                    && let Some(src) = self.computed_permanent(source)
+                {
+                    return self.players[*tp]
+                        .hexproof_from_colors_this_turn
+                        .iter()
+                        .any(|c| src.colors.contains(c));
+                }
+            }
+            return false;
+        };
         let Some(tgt) = self.computed_permanent(*tid) else { return false };
+        let tgt_controller = tgt.controller;
+        let src_is_opponent = self
+            .battlefield_find(source)
+            .is_some_and(|c| c.controller != tgt_controller);
+        let printed_hexproof_color = tgt
+            .keywords
+            .iter()
+            .any(|kw| matches!(kw, Keyword::HexproofFromColor(_)));
+        let turn_hexproof_color = !self.players[tgt_controller]
+            .hexproof_from_colors_this_turn
+            .is_empty();
         if !tgt.keywords.iter().any(|kw| {
             matches!(
                 kw,
@@ -5980,7 +6046,8 @@ impl GameState {
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
             )
-        }) {
+        }) && !(src_is_opponent && (printed_hexproof_color || turn_hexproof_color))
+        {
             return false;
         }
         let Some(src) = self.computed_permanent(source) else { return false };
@@ -5989,6 +6056,24 @@ impl GameState {
             .battlefield_find(source)
             .map(|c| c.definition.cost.cmc())
             .unwrap_or(0);
+        // Hexproof from [color] (printed or Veil's turn grant) blocks an
+        // opponent's same-color ability.
+        if src_is_opponent {
+            let blocks_color = |color: &ManaColor| src.colors.contains(color);
+            if turn_hexproof_color
+                && self.players[tgt_controller]
+                    .hexproof_from_colors_this_turn
+                    .iter()
+                    .any(blocks_color)
+            {
+                return true;
+            }
+            if tgt.keywords.iter().any(
+                |kw| matches!(kw, Keyword::HexproofFromColor(c) if src.colors.contains(c)),
+            ) {
+                return true;
+            }
+        }
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src.colors.contains(color),
             Keyword::ProtectionFromCreatures => src_is_creature,

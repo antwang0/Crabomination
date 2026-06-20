@@ -1562,6 +1562,37 @@ fn veil_of_summer_draws_when_opponent_cast_blue_or_black() {
     assert!(g.players[1].cannot_gain_life_this_turn, "opponents can't gain life");
 }
 
+/// Veil's rider grants you and your permanents hexproof from blue and black:
+/// an opponent's blue spell can't target your creature, but a red one still can.
+#[test]
+fn veil_of_summer_grants_hexproof_from_blue_and_black() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Player 0 resolves Veil of Summer.
+    let veil = g.add_card_to_hand(0, catalog::veil_of_summer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: veil, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Veil");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hexproof_from_colors_this_turn, vec![Color::Blue, Color::Black]);
+    // Opponent's blue Unsummon can't target the now-hexproof bear.
+    let bounce = g.add_card_to_hand(1, catalog::unsummon());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bounce, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None });
+    assert!(matches!(err, Err(GameError::TargetHasHexproof(_))), "blue blocked, got {err:?}");
+    // A red Lightning Bolt is unaffected by hexproof-from-blue/black.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("red bolt can still target");
+}
+
 #[test]
 fn veil_of_summer_no_draw_without_blue_or_black() {
     let mut g = two_player_game();

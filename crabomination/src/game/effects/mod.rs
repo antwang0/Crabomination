@@ -1843,6 +1843,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantHexproofFromColorThisTurn { who, colors } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for c in colors {
+                            if !self.players[p].hexproof_from_colors_this_turn.contains(c) {
+                                self.players[p].hexproof_from_colors_this_turn.push(*c);
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MakeSpellUncounterable { what } => {
                 use crate::game::types::StackItem;
                 for ent in self.resolve_selector(what, ctx) {

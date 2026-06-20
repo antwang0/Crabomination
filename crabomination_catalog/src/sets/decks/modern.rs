@@ -1448,30 +1448,26 @@ pub fn tarmogoyf() -> CardDefinition {
     }
 }
 
-/// Veil of Summer — {G} Instant. Draw a card if an opponent has cast a blue
-/// or black spell this turn.
-///
-/// Approximation: unconditional `Draw 1`. The "if blue/black spell cast"
-/// gate would require per-color cast tracking. Veil's full Oracle has
-/// other clauses (uncounterable, hexproof) we omit; here it acts as a
-/// 1-mana cantrip — still useful, just simplified.
+/// Veil of Summer — {G} Instant. Draw if an opponent cast a blue/black spell
+/// this turn; your spells become uncounterable, you and your permanents gain
+/// hexproof from blue and black, and opponents can't gain life — all this turn.
 pub fn veil_of_summer() -> CardDefinition {
+    use crate::mana::Color;
     CardDefinition {
         name: "Veil of Summer",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            // "Draw a card if an opponent has cast a blue or black spell
-            // this turn."
             Effect::If {
                 cond: Predicate::CastBlueOrBlackThisTurn { who: PlayerRef::EachOpponent },
                 then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
                 else_: Box::new(Effect::Noop),
             },
-            // "Spells your opponents control can't counter spells you
-            // control this turn …"
             Effect::GrantSpellsUncounterableThisTurn { who: Selector::You },
-            // "… and your opponents can't gain life this turn."
+            Effect::GrantHexproofFromColorThisTurn {
+                who: Selector::You,
+                colors: vec![Color::Blue, Color::Black],
+            },
             Effect::LifeGainLockThisTurn {
                 who: Selector::Player(PlayerRef::EachOpponent),
             },

@@ -116,8 +116,10 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   still resolve two fixed default modes. Real fix: choose modes during casting
   and gather each chosen mode's targets then (also unblocks Sublime Epiphany's
   mode-pick UI for arbitrary combinations). Oracle modes captured 2026-06-19.
-- ⏳ **Veil of Summer's hexproof-from-blue/black rider** — the only dropped half;
-  needs a turn-scoped "you and your permanents gain hexproof from {color}".
+- ✅ **Veil of Summer's hexproof-from-blue/black rider** — `Keyword::
+  HexproofFromColor` + turn-scoped `Player.hexproof_from_colors_this_turn`
+  (`Effect::GrantHexproofFromColorThisTurn`); gates spell *and* opponent-ability
+  targeting of you and your permanents.
 - ⏳ **Conditional-keyword statics beyond P/T** — `PumpSelfIf.keywords` covers the
   self case (Bloodghast's opp-≤10 haste). A team/granted conditional-keyword
   static (e.g. "creatures you control gain X while …") would generalize it.

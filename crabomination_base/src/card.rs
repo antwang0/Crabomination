@@ -493,6 +493,11 @@ pub enum Keyword {
     /// this Aura (Hyena Umbra, Spider Umbra).
     UmbraArmor,
     Hexproof,
+    /// CR 702.11e — "hexproof from [color]": can't be the target of
+    /// [color] spells or abilities opponents control. The targeting-only
+    /// half of protection-from-color (Witchbane Orb-style, Veil of Summer's
+    /// rider granted via the turn-scoped player flag).
+    HexproofFromColor(Color),
     Shroud,
     CantBeCountered,
     /// CR 117.x — "If X is N or more, this spell can't be countered."
