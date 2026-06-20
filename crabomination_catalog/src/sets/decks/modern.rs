@@ -54622,30 +54622,6 @@ pub fn essence_capture() -> CardDefinition {
     }
 }
 
-/// Drannith Stinger — {1}{R} 2/2 Human Wizard. Cycling {1}. Whenever you cycle
-/// another card, it deals 1 damage to each opponent.
-pub fn drannith_stinger() -> CardDefinition {
-    CardDefinition {
-        name: "Drannith Stinger",
-        cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardCycled, EventScope::YourControl),
-            effect: Effect::DealDamage {
-                to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
-        }],
-        ..Default::default()
-    }
-}
 
 /// Mosscoat Goriak — {2}{G} 2/4 Beast with vigilance.
 pub fn mosscoat_goriak() -> CardDefinition {

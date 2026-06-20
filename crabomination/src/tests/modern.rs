@@ -58414,20 +58414,6 @@ fn essence_capture_counters_and_grows() {
     assert_eq!(m.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
 }
 
-/// Drannith Stinger pings each opponent when you cycle another card.
-#[test]
-fn drannith_stinger_pings_on_cycle() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::drannith_stinger());
-    let cycler = g.add_card_to_hand(0, catalog::miscalculation()); // Cycling {2}
-    g.add_card_to_library(0, catalog::forest()); // draw for the cycle
-    g.players[1].life = 20;
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Cycle { card_id: cycler, x_value: None }).expect("cycle a card");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 19, "opponent took 1 from the Stinger");
-}
-
 /// Gust of Wind bounces an opponent's nonland permanent and draws.
 #[test]
 fn gust_of_wind_bounces_and_draws() {

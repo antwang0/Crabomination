@@ -2433,7 +2433,6 @@ static DECKS: &[Factory] = &[
     super::decks::mythos_of_vadrok,
     super::decks::mythos_of_brokkos,
     super::decks::essence_capture,
-    super::decks::drannith_stinger,
     super::decks::gust_of_wind,
     super::decks::clear_the_mind,
     super::decks::gloom_pangolin,
