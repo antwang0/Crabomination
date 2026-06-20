@@ -61034,3 +61034,45 @@ fn condescend_counters_unpaid_x() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
         "Bolt countered (opponent could not pay X)");
 }
+
+/// Secure the Wastes makes X Warriors; Captain's Call makes three Soldiers.
+#[test]
+fn token_makers_secure_and_captains() {
+    let mut g = two_player_game();
+    let stw = g.add_card_to_hand(0, catalog::secure_the_wastes());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3); // X=3
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: stw, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Secure the Wastes X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Warrior").count(), 3,
+        "three Warriors");
+    let cc = g.add_card_to_hand(0, catalog::captains_call());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Captain's Call");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count(), 3,
+        "three Soldiers");
+}
+
+/// Forsake the Worldly exiles a target artifact or enchantment.
+#[test]
+fn forsake_the_worldly_exiles_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::pristine_talisman());
+    let spell = g.add_card_to_hand(0, catalog::forsake_the_worldly());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(art)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Forsake the Worldly");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact exiled");
+}

@@ -2572,6 +2572,9 @@ static DECKS: &[Factory] = &[
     super::decks::deadly_rollick,
     super::decks::winged_words,
     super::decks::condescend,
+    super::decks::secure_the_wastes,
+    super::decks::captains_call,
+    super::decks::forsake_the_worldly,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

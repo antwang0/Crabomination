@@ -57264,3 +57264,67 @@ pub fn condescend() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Secure the Wastes — {X}{W} Instant. Create X 1/1 white Warrior tokens.
+pub fn secure_the_wastes() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Secure the Wastes",
+        cost: cost(&[x(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: TokenDefinition {
+                name: "Warrior".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Captain's Call — {3}{W} Sorcery. Create three 1/1 white Soldier tokens.
+pub fn captains_call() -> CardDefinition {
+    CardDefinition {
+        name: "Captain's Call",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: TokenDefinition {
+                name: "Soldier".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Forsake the Worldly — {2}{W} Instant. Exile target artifact or enchantment.
+/// Cycling {2}.
+pub fn forsake_the_worldly() -> CardDefinition {
+    CardDefinition {
+        name: "Forsake the Worldly",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+        },
+        ..Default::default()
+    }
+}
