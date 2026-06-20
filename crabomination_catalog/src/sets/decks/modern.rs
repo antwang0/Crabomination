@@ -8213,21 +8213,38 @@ pub fn hellrider() -> CardDefinition {
 /// Generous Gift — {2}{W} Instant. Destroy target permanent. Its
 /// controller creates a 3/3 green Elephant creature token.
 ///
-/// Cube-style approximation: the printed "owner gets an Elephant"
-/// downside is collapsed (no `CreateTokenFor { who: ControllerOfTarget,
-/// definition }` primitive — `Effect::CreateToken.who` resolves to a
-/// `PlayerRef`, not a target's controller). Ships as a clean `Destroy
-/// (Permanent)` with the token half dropped. Strictly stronger than
-/// printed; an upgrade-from-Generous-Gift candidate when the controller
-/// -of-target primitive lands.
+/// Faithful: the Elephant is minted for the target's controller via
+/// `CreateToken { who: PlayerRef::ControllerOf(Target(0)) }`. The token is
+/// created *before* the `Destroy` (same final state) so `ControllerOf`
+/// resolves while the target is still on the battlefield.
 pub fn generous_gift() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let elephant = TokenDefinition {
+        name: "Elephant".into(),
+        power: 3,
+        toughness: 3,
+        colors: vec![Color::Green],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     CardDefinition {
         name: "Generous Gift",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(SelectionRequirement::Any),
-        },
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: elephant,
+            },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Any),
+            },
+        ]),
         ..Default::default()
     }
 }

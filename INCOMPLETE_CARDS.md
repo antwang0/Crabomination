@@ -89,7 +89,7 @@ Pestilent Cauldron // Restorative Burst · Wandering Archaic // Explore the Vast
 Selfless Glyphweaver // Deadly Vanity · Birgi // Harnfel.
 
 ### 4. No "controller-of-target" / "that player" actor (forces each-opponent / you)
-Generous Gift ✓ (victim gets no Elephant) · Harsh Annotation · Kemuri-Onna ·
+~~Generous Gift~~ ✅ **FIXED** (now mints the 3/3 Elephant for the target's controller via `CreateToken { who: ControllerOf(Target(0)) }`, created before the Destroy — the "no primitive" doc note was stale) · Harsh Annotation · Kemuri-Onna ·
 Hellrider · Emeritus of Truce // STP · Channeled Force · several CHK Ninjas.
 
 ### 5. No "first/Nth spell this turn" / "no card drawn this turn" gate (over-triggers)

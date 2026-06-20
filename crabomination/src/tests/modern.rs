@@ -18849,6 +18849,13 @@ fn generous_gift_destroys_target_permanent() {
     }).expect("Generous Gift castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "Bear destroyed");
+    // The bear's controller (player 1) gets the 3/3 green Elephant.
+    let elephant = g.battlefield.iter().find(|c| {
+        c.is_token && c.definition.name == "Elephant" && c.controller == 1
+    });
+    let elephant = elephant.expect("target's controller gets a 3/3 Elephant token");
+    assert_eq!(elephant.definition.power, 3);
+    assert_eq!(elephant.definition.toughness, 3);
 }
 
 #[test]
