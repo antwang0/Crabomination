@@ -57183,3 +57183,41 @@ pub fn unexpected_windfall() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Feed the Swarm — {1}{B} Sorcery. Destroy target creature or enchantment an
+/// opponent controls; you lose life equal to its mana value.
+pub fn feed_the_swarm() -> CardDefinition {
+    CardDefinition {
+        name: "Feed the Swarm",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::ControlledByOpponent.and(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Enchantment),
+                    ),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Deadly Rollick — {3}{B} Instant. Exile target creature. (The free-cast-with-
+/// commander alt-cost is dropped.)
+pub fn deadly_rollick() -> CardDefinition {
+    CardDefinition {
+        name: "Deadly Rollick",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}

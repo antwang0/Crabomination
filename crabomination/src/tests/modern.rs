@@ -60954,3 +60954,39 @@ fn unexpected_windfall_draws_and_makes_treasures() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 2,
         "two Treasure tokens created");
 }
+
+/// Feed the Swarm destroys an opposing permanent and costs life equal to its MV.
+#[test]
+fn feed_the_swarm_destroys_and_drains_self() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV5
+    let spell = g.add_card_to_hand(0, catalog::feed_the_swarm());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Feed the Swarm");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "destroyed the creature");
+    assert_eq!(g.players[0].life, life - 5, "lost life equal to its mana value");
+}
+
+/// Deadly Rollick exiles a target creature.
+#[test]
+fn deadly_rollick_exiles_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::deadly_rollick());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Deadly Rollick");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature exiled");
+}

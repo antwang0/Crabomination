@@ -2568,6 +2568,8 @@ static DECKS: &[Factory] = &[
     super::decks::rangers_guile,
     super::decks::brimstone_volley,
     super::decks::unexpected_windfall,
+    super::decks::feed_the_swarm,
+    super::decks::deadly_rollick,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
