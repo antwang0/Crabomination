@@ -60864,3 +60864,41 @@ fn sagittars_volley_destroys_and_pings_flyers() {
     assert!(g.battlefield_find(small).is_none(), "1/2 flyer took 1 and died");
     assert!(g.battlefield_find(ground).is_some(), "non-flyer untouched");
 }
+
+/// Dawntreader Elk sacrifices itself to fetch a basic land tapped.
+#[test]
+fn dawntreader_elk_fetches_basic() {
+    let mut g = two_player_game();
+    let elk = g.add_card_to_battlefield(0, catalog::dawntreader_elk());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elk, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("sac Elk to fetch");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elk).is_none(), "Elk sacrificed");
+    let land = g.battlefield_find(forest).expect("fetched the Forest");
+    assert!(land.tapped, "fetched land enters tapped");
+}
+
+/// Ranger's Guile pumps +1/+1 and grants hexproof until end of turn.
+#[test]
+fn rangers_guile_pump_and_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::rangers_guile());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ranger's Guile");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
+    assert!(c.keywords.contains(&Keyword::Hexproof), "granted hexproof");
+}

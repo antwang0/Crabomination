@@ -2564,6 +2564,8 @@ static DECKS: &[Factory] = &[
     super::decks::ram_through,
     super::decks::survivors_bond,
     super::decks::sagittars_volley,
+    super::decks::dawntreader_elk,
+    super::decks::rangers_guile,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

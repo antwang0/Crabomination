@@ -57091,3 +57091,53 @@ pub fn sagittars_volley() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dawntreader Elk — {1}{G} 2/2 Elk. {G}, Sacrifice this: search your library
+/// for a basic land, put it onto the battlefield tapped, then shuffle.
+pub fn dawntreader_elk() -> CardDefinition {
+    CardDefinition {
+        name: "Dawntreader Elk",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ranger's Guile — {G} Instant. Target creature you control gets +1/+1 and
+/// gains hexproof until end of turn.
+pub fn rangers_guile() -> CardDefinition {
+    CardDefinition {
+        name: "Ranger's Guile",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
