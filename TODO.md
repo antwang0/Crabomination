@@ -1743,6 +1743,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Cunning Nightbonder** ships only the {1}-less half; "your flash spells
     can't be countered" wants a per-controller `YourSpellsCantBeCountered
     { filter }` static.
+  - **Glimpse the Cosmos** ships the dig-3-take-1; the "cast from graveyard
+    while you control a Giant" rider is dropped.
+  - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` were
+    added but could not be compile-verified here (the client needs a GPU/Wayland
+    desktop; headless cloud can't build `crabomination_client`). The arms sit
+    before the existing `_ =>` fallbacks, so a stale build still degrades safely.
   - **Approximations shipped this run** (dropped riders, all noted in the card
     doc comments): Gust of Wind / Tentative Connection / Mythos of Brokkos's
     "spent {X}{Y}" upgrades (no mana-provenance-by-color spend-tracking yet);

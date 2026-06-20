@@ -55406,3 +55406,23 @@ pub fn ferocious_tigorilla() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Glimpse the Cosmos — {1}{U} Sorcery. Look at the top three cards of your
+/// library, put one into your hand, and the rest on the bottom. (The "cast
+/// from graveyard while you control a Giant" rider is dropped.)
+pub fn glimpse_the_cosmos() -> CardDefinition {
+    CardDefinition {
+        name: "Glimpse the Cosmos",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: Some(Value::Const(1)),
+            to_battlefield: false,
+        },
+        ..Default::default()
+    }
+}

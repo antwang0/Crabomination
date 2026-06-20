@@ -59764,3 +59764,25 @@ fn ferocious_tigorilla_etb_keyword_counter() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(t).unwrap().keywords.contains(&Keyword::Trample), "chose trample");
 }
+
+/// Glimpse the Cosmos digs three, takes one, bottoms the rest.
+#[test]
+fn glimpse_the_cosmos_digs_three_takes_one() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::forest());       // ends bottom-ward
+    g.add_card_to_library(0, catalog::grizzly_bears()); // middle
+    g.add_card_to_library(0, catalog::island());        // top
+    let lib_before = g.players[0].library.len();
+    let spell = g.add_card_to_hand(0, catalog::glimpse_the_cosmos());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    let hand_before = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Glimpse the Cosmos");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "took one card to hand");
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "other two stayed in library (bottom)");
+}
