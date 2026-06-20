@@ -416,6 +416,21 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             }
         }
     }
+    // Card-intrinsic "costs {N} less if you control a permanent matching each
+    // filter" (Of One Mind). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedIfControlEach { filters, amount } = &sa.effect {
+            let all_present = filters.iter().all(|f| {
+                state
+                    .battlefield
+                    .iter()
+                    .any(|c| c.controller == caster && state.evaluate_requirement_on_card(f, c, caster))
+            });
+            if all_present {
+                reduction = reduction.saturating_add(*amount);
+            }
+        }
+    }
     // Card-intrinsic "costs {N} less per card you've discarded this turn"
     // (Hollow One). Generic-only, clamped by the caller.
     for sa in &card.definition.static_abilities {

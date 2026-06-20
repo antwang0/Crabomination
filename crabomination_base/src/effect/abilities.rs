@@ -203,6 +203,12 @@ pub enum StaticEffect {
     /// this turn" (Hollow One). Card-intrinsic; read by
     /// `cost_reduction_for_spell` off `Player.cards_discarded_this_turn`.
     SelfCostReducedPerDiscardThisTurn { per: u32 },
+    /// Card-intrinsic "This spell costs `amount` less to cast if you control a
+    /// permanent matching each of `filters`" (Of One Mind — a Human creature
+    /// *and* a non-Human creature). Read by `cost_reduction_for_spell` off the
+    /// *spell being cast*; the discount applies only when every filter has at
+    /// least one match among the caster's permanents. Generic-only.
+    SelfCostReducedIfControlEach { filters: Vec<SelectionRequirement>, amount: u32 },
     /// "Each player can't cast more than one spell each turn" (Rule of Law,
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_turn`.

@@ -1268,3 +1268,31 @@ fn cr_509_1d_block_tax_auto_taps_lands() {
     assert!(g.battlefield_find(land).unwrap().tapped, "Plains tapped for the {{1}}");
 }
 
+
+/// CR 702.16e — protection from a mana-value parity prevents combat damage
+/// from a source whose mana value matches the chosen quality. Lavabrink
+/// Venturer that chose "even" takes no damage from an even-MV attacker.
+#[test]
+fn cr_702_16e_parity_protection_prevents_combat_damage() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Player 0 attacks with Grizzly Bears (mana value 2 — even).
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let venturer = g.add_card_to_battlefield(1, catalog::lavabrink_venturer()); // 3/3
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(0)])); // even
+    g.fire_self_etb_triggers(venturer, 1);
+    drain_stack(&mut g);
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(venturer, atk)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    // Even-protected Venturer takes no damage from the even-MV Bears.
+    assert_eq!(g.battlefield_find(venturer).map(|c| c.damage), Some(0),
+        "combat damage from an even-MV source is prevented");
+}

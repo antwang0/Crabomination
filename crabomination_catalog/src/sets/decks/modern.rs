@@ -54874,3 +54874,153 @@ pub fn clackbridge_troll() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 14 ──────────────────────────────────────────────────────────
+
+/// Wingspan Mentor — {2}{U} 1/3 Human Wizard. ETB: put a flying counter on a
+/// target non-Human creature you control. {2}{U},{T}: put a +1/+1 counter on
+/// each creature you control with flying.
+pub fn wingspan_mentor() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Wingspan Mentor",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::Not(Box::new(
+                        SelectionRequirement::HasCreatureType(CreatureType::Human),
+                    ))),
+            ),
+            keyword: Keyword::Flying,
+            amount: Value::Const(1),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Of One Mind — {2}{U} Sorcery. Costs {2} less if you control a Human and a
+/// non-Human creature. Draw two cards.
+pub fn of_one_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Of One Mind",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {2} less if you control a Human and a non-Human creature.",
+            effect: StaticEffect::SelfCostReducedIfControlEach {
+                filters: vec![
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                        SelectionRequirement::HasCreatureType(CreatureType::Human),
+                    ))),
+                ],
+                amount: 2,
+            },
+        }],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Cunning Nightbonder — {U/B}{U/B} 2/2 Human Rogue, Flash. Flash spells you
+/// cast cost {1} less. (Their "can't be countered" rider is dropped.)
+pub fn cunning_nightbonder() -> CardDefinition {
+    CardDefinition {
+        name: "Cunning Nightbonder",
+        cost: cost(&[hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "Flash spells you cast cost {1} less.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasKeyword(Keyword::Flash),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lullmage's Domination — {X}{U}{U}{U} Sorcery. Gain control of target
+/// creature with mana value X. (The {3} graveyard discount is dropped.)
+pub fn lullmages_domination() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Lullmage's Domination",
+        cost: cost(&[x(), u(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::GainControl {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueExactlyXFromCost),
+            ),
+            to: None,
+            duration: Duration::Permanent,
+        },
+        ..Default::default()
+    }
+}
+
+/// Splash Portal — {U} Sorcery. Blink target creature you control; if it's a
+/// Bird, Frog, Otter, or Rat, draw a card.
+pub fn splash_portal() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Splash Portal",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Bird)
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Frog))
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Otter))
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Rat)),
+                },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}

@@ -59381,3 +59381,96 @@ fn clackbridge_troll_etb_goats_and_combat_offer() {
     assert_eq!(g.players[0].life, 23, "gained 3 life");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
 }
+
+/// Wingspan Mentor: ETB flying counter on a non-Human; activated grows flyers.
+#[test]
+fn wingspan_mentor_flying_counter_and_pump() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let mentor = g.add_card_to_battlefield(0, catalog::wingspan_mentor());
+    let beast = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // non-Human, no flying
+    g.clear_sickness(mentor);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(beast))]));
+    g.fire_self_etb_triggers(mentor, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Flying),
+        "flying counter granted flying");
+    // Activate: +1/+1 counter on each flyer (the now-flying Bears).
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mentor, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate {2}{U},T");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(beast).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        1, "flyer got a +1/+1 counter");
+}
+
+/// Of One Mind costs {2} less with a Human and a non-Human creature in play.
+#[test]
+fn of_one_mind_conditional_discount() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let som_id = g.add_card_to_hand(0, catalog::of_one_mind());
+    let som = g.players[0].hand.iter().find(|c| c.id == som_id).unwrap().clone();
+    // No creatures: no discount.
+    assert_eq!(cost_reduction_for_spell(&g, 0, &som, None), 0, "no creatures, no discount");
+    // A non-Human only: still no discount (needs both).
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &som, None), 0, "non-Human alone, no discount");
+    // Add a Human: now {2} less.
+    g.add_card_to_battlefield(0, catalog::wingspan_mentor()); // Human Wizard
+    assert_eq!(cost_reduction_for_spell(&g, 0, &som, None), 2, "Human + non-Human gives 2 less");
+}
+
+/// Cunning Nightbonder makes the controller's flash spells cost {1} less.
+#[test]
+fn cunning_nightbonder_discounts_flash_spells() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cunning_nightbonder());
+    let flash_id = g.add_card_to_hand(0, catalog::snapcaster_mage()); // has Flash
+    let flash = g.players[0].hand.iter().find(|c| c.id == flash_id).unwrap().clone();
+    let nonflash_id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let nonflash = g.players[0].hand.iter().find(|c| c.id == nonflash_id).unwrap().clone();
+    assert_eq!(cost_reduction_for_spell(&g, 0, &flash, None), 1, "flash spell discounted");
+    assert_eq!(cost_reduction_for_spell(&g, 0, &nonflash, None), 0, "non-flash undiscounted");
+}
+
+/// Lullmage's Domination at X=2 gains control of a mana-value-2 creature.
+#[test]
+fn lullmages_domination_steals_mv_x_creature() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let spell = g.add_card_to_hand(0, catalog::lullmages_domination());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast at X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).unwrap().controller, 0, "stole the MV-2 creature");
+}
+
+/// Splash Portal blinks a creature and draws when it's a Bird/Frog/Otter/Rat.
+#[test]
+fn splash_portal_blinks_and_draws_on_type() {
+    let mut g = two_player_game();
+    // Wingspan Mentor is a Human (not in the list) — no draw.
+    let human = g.add_card_to_battlefield(0, catalog::wingspan_mentor());
+    g.add_card_to_library(0, catalog::island());
+    let p1 = g.add_card_to_hand(0, catalog::splash_portal());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    let hand_before = g.players[0].hand.len() - 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: p1, target: Some(Target::Permanent(human)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("blink the Human");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "no draw for a Human");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Wingspan Mentor" && c.controller == 0),
+        "creature returned to the battlefield");
+}
