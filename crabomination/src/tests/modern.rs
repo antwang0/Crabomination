@@ -60636,3 +60636,42 @@ fn mysterious_egg_grows_on_mutate() {
     assert_eq!(pile.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1,
         "Egg's mutate trigger added a +1/+1 counter");
 }
+
+/// Powerstone Fracture: sacrifice an artifact/creature, then destroy a target.
+#[test]
+fn powerstone_fracture_sacrifice_then_destroy() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, catalog::powerstone_fracture());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    // The lone artifact/creature you control is auto-sacrificed for the cost.
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Powerstone Fracture");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed an artifact/creature");
+    assert!(g.battlefield_find(victim).is_none(), "destroyed the target");
+}
+
+/// Howl of the Hunt grants +2/+2 and vigilance to the enchanted creature.
+#[test]
+fn howl_of_the_hunt_buffs_and_grants_vigilance() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::howl_of_the_hunt());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Howl of the Hunt");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bears).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
+    assert!(c.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+}

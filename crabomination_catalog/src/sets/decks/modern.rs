@@ -56765,3 +56765,51 @@ pub fn sanctuary_smasher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Powerstone Fracture — {1}{B} Sorcery. Additional cost: sacrifice an artifact
+/// or creature. Destroy target creature or planeswalker.
+pub fn powerstone_fracture() -> CardDefinition {
+    CardDefinition {
+        name: "Powerstone Fracture",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            count: 1,
+        }],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Howl of the Hunt — {2}{G} Aura with Flash. Enchanted creature gets +2/+2 and
+/// has vigilance. (The Wolf/Werewolf untap-on-enter rider is dropped.)
+pub fn howl_of_the_hunt() -> CardDefinition {
+    CardDefinition {
+        name: "Howl of the Hunt",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Vigilance],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

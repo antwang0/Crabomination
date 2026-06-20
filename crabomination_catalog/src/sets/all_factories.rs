@@ -2553,6 +2553,8 @@ static DECKS: &[Factory] = &[
     super::decks::wild_ceratok,
     super::decks::glory_of_warfare,
     super::decks::sanctuary_smasher,
+    super::decks::powerstone_fracture,
+    super::decks::howl_of_the_hunt,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
