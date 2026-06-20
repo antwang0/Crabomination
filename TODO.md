@@ -273,6 +273,19 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     Fused button when either half targets (the targeting cursor collects one
     target; fused needs left + right slots).
 
+- ⏳ **Noticed this run (ZNR MDFC + hexproof-from-color batch):**
+  - **Dropped riders on shipped ZNR cards:** Hagra Mauling's "{1} less if an
+    opponent controls no basic lands" cost reduction; Turntimber Symbiosis's
+    "+3 counters if the deployed creature's MV ≤ 3" (the `LookPickToHand
+    { to_battlefield }` primitive can't condition counters on the pick).
+  - **ZNR cards still unimplemented** (each wants a new primitive):
+    Valakut Awakening (put any number from hand on bottom, then draw that
+    many +1 — no bottom-then-draw effect); Agadeem's Awakening (mass-reanimate
+    any number of *distinct-MV* creatures ≤ X — no different-MV multi-target
+    reanimation); Sea Gate Stormcaller (copy-your-next-cheap-I/S delayed
+    trigger). Sporeweb Weaver / Garruk's Harbinger want a general
+    "when this is dealt damage" trigger (non-combat enrage) + a combat-damage
+    library-look.
 - ⏳ **Noticed this run (claude/modern_decks, 2026-06-11 second pass):**
   `UnlessPlayerPays` per-seat routing ✅ (rhystic/Kataki taxes now prompt
   the taxed `wants_ui` seat via `ask_seat_bool`). Remaining:
@@ -2183,23 +2196,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   untapped artifact you control" cost shapes from Mirrodin /
   Convoke siblings.
 
-- ⏳ **CR 603.4 — Intervening 'if' clause "check again at resolve
-  time"** (push modern_decks suggested) — push (modern_decks) lands
-  the trigger-time half of the rule (predicate evaluated when
-  pushing the trigger onto the stack via `fire_step_triggers`'s new
-  filter-check). The second half of CR 603.4 — "if the ability
-  triggers, it checks the stated condition again as it resolves. If
-  the condition isn't true at that time, the ability is removed from
-  the stack" — is still ⏳. Wiring shape: add a `filter:
-  Option<Predicate>` to `StackItem::Trigger` and re-evaluate it in
-  `continue_trigger_resolution_with_source` before applying the body
-  (removing the trigger from the stack as a no-op when false).
-  Today the only catalog card exercising the resolve-time gap is
-  Triskaidekaphile (player could discard between upkeep-fire and
-  upkeep-resolve to drop hand below 13; engine wouldn't catch it).
-  Felidar Sovereign's "if you have 40 or more life" would have the
-  same gap once added. Low-priority until a real card surfaces a
-  meaningful resolve-time state change.
+- ✅ **CR 603.4 — Intervening 'if' clause** — both halves wired. Trigger-time
+  check drops triggers whose `event.filter` predicate is false; the survivors
+  carry the predicate on `StackItem::Trigger.intervening_if`, re-checked in the
+  resolver (`resolve_stack_item`) so a trigger fizzles when the condition is no
+  longer true at resolution. Tested by `tests/sos.rs` (Cuboid Colony's
+  mana-spent re-check).
 
 - ⏳ **`Predicate::ManaValueAtMostV(Value)` — value-keyed mana-value
   filter** (suggested by push modern_decks's Mind into Matter +

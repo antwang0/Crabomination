@@ -52040,6 +52040,20 @@ fn silundi_vision_digs_for_instant() {
 
 // ── ZNR spell//land MDFC batch (2026) ────────────────────────────────────────
 
+/// The rare-cycle MDFC land back pays 3 life to enter untapped (default
+/// ChooseMode pick), or enters tapped otherwise.
+#[test]
+fn znr_painland_back_pays_three_to_untap() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_hand(0, catalog::sea_gate_restoration());
+    g.perform_action(GameAction::PlayLandBack(card)).expect("land half playable");
+    drain_stack(&mut g);
+    let land = g.battlefield_find(card).expect("on battlefield");
+    assert_eq!(land.definition.name, "Sea Gate, Reborn");
+    assert!(!land.tapped, "default picks pay-3-life → untapped");
+    assert_eq!(g.players[0].life, 17, "paid 3 life");
+}
+
 /// Kazuul's Fury flings a sacrificed creature's power at any target.
 #[test]
 fn kazuuls_fury_deals_sacrificed_power() {
