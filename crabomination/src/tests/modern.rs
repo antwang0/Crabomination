@@ -58326,6 +58326,68 @@ fn sanctuary_lockdown_anthem_and_tap() {
         "two Humans tapped to pay");
 }
 
+/// Clear the Mind shuffles a graveyard into the library and draws.
+#[test]
+fn clear_the_mind_shuffles_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    let c = g.add_card_to_hand(0, catalog::clear_the_mind());
+    let before_hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: c, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Clear the Mind");
+    drain_stack(&mut g);
+    // The two seeded cards shuffled away (Clear the Mind itself then lands in gy).
+    assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"
+        || c.definition.name == "Lightning Bolt"), "seeded cards shuffled away");
+    assert_eq!(g.players[0].hand.len(), before_hand - 1 + 1, "drew a card");
+}
+
+/// Blitz of the Thunder-Raptor deals damage equal to I/S in graveyard and exiles.
+#[test]
+fn blitz_thunder_raptor_scales_and_exiles() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());   // instant
+    g.add_card_to_graveyard(0, catalog::ponder());           // sorcery
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());    // not I/S
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let blitz = g.add_card_to_hand(0, catalog::blitz_of_the_thunder_raptor());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: blitz, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blitz");
+    drain_stack(&mut g);
+    // 2 damage (2 I/S cards) kills the 2/2; exiled, not in graveyard.
+    assert!(g.battlefield_find(victim).is_none(), "victim died to 2 damage");
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled instead of graveyard");
+}
+
+/// Tentative Connection steals a creature for the turn with haste.
+#[test]
+fn tentative_connection_steals_for_turn() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(creature).unwrap().tapped = true;
+    let t = g.add_card_to_hand(0, catalog::tentative_connection());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3); // {3}{R}
+    g.perform_action(GameAction::CastSpell {
+        card_id: t, target: Some(Target::Permanent(creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tentative Connection");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(creature).expect("alive");
+    assert_eq!(c.controller, 0, "we control it now");
+    assert!(!c.tapped, "it was untapped");
+}
+
 /// Essence Capture counters a creature spell and grows one of your creatures.
 #[test]
 fn essence_capture_counters_and_grows() {

@@ -54682,3 +54682,88 @@ pub fn gust_of_wind() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 12 ──────────────────────────────────────────────────────────
+
+/// Clear the Mind — {2}{U} Sorcery. Target player shuffles their graveyard into
+/// their library; draw a card.
+pub fn clear_the_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Clear the Mind",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::Target(0) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gloom Pangolin — {2}{B} 1/5 Nightmare Pangolin.
+pub fn gloom_pangolin() -> CardDefinition {
+    CardDefinition {
+        name: "Gloom Pangolin",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Pangolin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        ..Default::default()
+    }
+}
+
+/// Blitz of the Thunder-Raptor — {1}{R} Instant. Deal damage to target creature
+/// or planeswalker equal to the instant/sorcery cards in your graveyard; if it
+/// would die this turn, exile it instead.
+pub fn blitz_of_the_thunder_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Blitz of the Thunder-Raptor",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            // Install the exile-instead-of-death replacement before the damage
+            // so a lethal hit is redirected to exile (CR 614 — the replacement
+            // must already be active when the creature would die).
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tentative Connection — {3}{R} Sorcery. Gain control of target creature until
+/// end of turn; untap it; it gains haste. (The menace cost reduction is dropped.)
+pub fn tentative_connection() -> CardDefinition {
+    CardDefinition {
+        name: "Tentative Connection",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
