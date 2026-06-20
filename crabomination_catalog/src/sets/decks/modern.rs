@@ -54268,3 +54268,132 @@ pub fn yidaro_wandering_monster() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 8 ───────────────────────────────────────────────────────────
+
+/// Farfinder — {3} 1/1 Fox, vigilance. ETB you may search your library for a
+/// basic land, reveal it, and put it into your hand.
+pub fn farfinder() -> CardDefinition {
+    CardDefinition {
+        name: "Farfinder",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fox], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search your library for a basic land card?".to_string(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Huntmaster Liger — {3}{W} 3/4 Cat. Mutate {2}{W}. On mutate, other creatures
+/// you control get +X/+X until end of turn (X = times this has mutated).
+pub fn huntmaster_liger() -> CardDefinition {
+    CardDefinition {
+        name: "Huntmaster Liger",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        mutate: Some(cost(&[generic(2), w()])),
+        triggered_abilities: vec![on_mutate(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            power: Value::MutateCount,
+            toughness: Value::MutateCount,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Flycatcher Giraffid — {4}{G} 3/5 Antelope Lizard. Enters with your choice of
+/// a vigilance counter or a reach counter on it.
+pub fn flycatcher_giraffid() -> CardDefinition {
+    CardDefinition {
+        name: "Flycatcher Giraffid",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Antelope, CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Vigilance, amount: Value::Const(1) },
+            Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Reach, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Humble Naturalist — {1}{G} 1/3 Human Druid. {T}: Add one mana of any color;
+/// spend only to cast a creature spell.
+pub fn humble_naturalist() -> CardDefinition {
+    CardDefinition {
+        name: "Humble Naturalist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
+                    crate::mana::SpendRestriction::CreatureOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mysteries of the Deep — {4}{U} Instant. Draw two cards; landfall — draw three
+/// instead if a land entered under your control this turn.
+pub fn mysteries_of_the_deep() -> CardDefinition {
+    CardDefinition {
+        name: "Mysteries of the Deep",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(Value::LandsPlayedThisTurn(PlayerRef::You), Value::Const(1)),
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+            else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Bristling Boar — {3}{G} 4/3 Boar. Can't be blocked by more than one creature.
+pub fn bristling_boar() -> CardDefinition {
+    CardDefinition {
+        name: "Bristling Boar",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::CantBeBlockedByMoreThanOne],
+        ..Default::default()
+    }
+}

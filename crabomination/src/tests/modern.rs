@@ -58158,6 +58158,88 @@ fn zagoth_triome_enters_tapped_three_colors() {
 }
 
 
+/// Farfinder's ETB optionally fetches a basic land to hand.
+#[test]
+fn farfinder_fetches_basic_to_hand() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let ff = g.add_card_to_hand(0, catalog::farfinder());
+    g.players[0].mana_pool.add_colorless(3); // {3}
+    let before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: ff, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Farfinder");
+    drain_stack(&mut g);
+    // -1 (cast Farfinder) +1 (fetched land) = net 0 vs before.
+    assert_eq!(g.players[0].hand.len(), before, "a basic land went to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"));
+}
+
+/// Huntmaster Liger's mutate trigger pumps your other creatures by the mutate count.
+#[test]
+fn mutate_huntmaster_liger_pumps_others() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let liger = g.add_card_to_hand(0, catalog::huntmaster_liger());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2); // mutate {2}{W}
+    g.perform_action(GameAction::CastMutate {
+        card_id: liger, target: host, on_top: true, x_value: None,
+    }).expect("mutate Huntmaster Liger");
+    drain_stack(&mut g);
+    let o = g.battlefield_find(other).expect("other alive");
+    assert_eq!((o.power(), o.toughness()), (3, 3), "other creature got +1/+1 (X=1)");
+}
+
+/// Flycatcher Giraffid enters with a chosen keyword counter.
+#[test]
+fn flycatcher_giraffid_choice_counter() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)])); // reach
+    let id = g.add_card_to_hand(0, catalog::flycatcher_giraffid());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4); // {4}{G}
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Flycatcher");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("alive");
+    assert_eq!(c.keyword_counters.get(&crate::card::Keyword::Reach).copied().unwrap_or(0), 1,
+        "a reach counter was placed");
+}
+
+/// Bristling Boar carries the can't-be-blocked-by-more-than-one keyword.
+#[test]
+fn bristling_boar_has_solo_block_clause() {
+    let g = two_player_game();
+    let def = catalog::bristling_boar();
+    assert!(def.keywords.contains(&crate::card::Keyword::CantBeBlockedByMoreThanOne));
+    let _ = g;
+}
+
+/// Mysteries of the Deep draws 3 with landfall, else 2.
+#[test]
+fn mysteries_of_the_deep_landfall_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    // Play a land first so landfall is active.
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    let m = g.add_card_to_hand(0, catalog::mysteries_of_the_deep());
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4); // {4}{U}
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mysteries");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 3, "drew three with landfall");
+}
+
 /// Yidaro shuffles back into the library on a cycle; on the 4th cycle this
 /// game it enters the battlefield from the graveyard instead.
 #[test]

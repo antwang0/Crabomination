@@ -61,7 +61,7 @@ pub enum CreatureType {
     Inkling, Pest, Fractal,
     Orc, Warlock, Bard, Sorcerer, Pilot,
     // Misc. subtypes used by SOS body-only cards.
-    Dwarf, Badger, Salamander, Giraffe,
+    Dwarf, Badger, Salamander, Giraffe, Antelope,
     // SOS Witherbloom Dryad subtype (Essenceknit Scholar).
     Dryad,
     // Modern supplement: Kari Zev's Ragavan token.
