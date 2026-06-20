@@ -60587,3 +60587,52 @@ fn chevill_bounty_then_payoff() {
     assert_eq!(g.players[0].life, life + 1, "gained 1 on bounty death");
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew on bounty death");
 }
+
+/// Glory of Warfare buffs your team +2/+0 on your turn, +0/+2 otherwise.
+#[test]
+fn glory_of_warfare_turn_conditional_anthem() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::glory_of_warfare());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.active_player_idx = 0;
+    assert_eq!((g.computed_permanent(bears).unwrap().power, g.computed_permanent(bears).unwrap().toughness),
+        (4, 2), "+2/+0 on your turn");
+    g.active_player_idx = 1;
+    assert_eq!((g.computed_permanent(bears).unwrap().power, g.computed_permanent(bears).unwrap().toughness),
+        (2, 4), "+0/+2 on others' turns");
+}
+
+/// Sanctuary Smasher's cycle puts a first strike counter on your creature.
+#[test]
+fn sanctuary_smasher_cycle_grants_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let smasher = g.add_card_to_hand(0, catalog::sanctuary_smasher());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bears))]));
+    g.perform_action(GameAction::Cycle { card_id: smasher, x_value: None }).expect("cycle Sanctuary Smasher");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "first strike counter granted on cycle");
+}
+
+/// Mysterious Egg gains a +1/+1 counter whenever it's mutated onto.
+#[test]
+fn mysterious_egg_grows_on_mutate() {
+    let mut g = two_player_game();
+    let egg = g.add_card_to_battlefield(0, catalog::mysterious_egg()); // 0/2, non-Human
+    let starrix = g.add_card_to_hand(0, catalog::auspicious_starrix());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastMutate {
+        card_id: starrix, target: egg, on_top: false, x_value: None,
+    }).expect("mutate onto the Egg");
+    drain_stack(&mut g);
+    // Egg's own mutate trigger added a +1/+1 counter to the pile.
+    let pile = g.battlefield_find(egg).expect("pile alive");
+    assert_eq!(pile.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1,
+        "Egg's mutate trigger added a +1/+1 counter");
+}

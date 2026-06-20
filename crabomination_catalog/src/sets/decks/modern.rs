@@ -56670,3 +56670,98 @@ pub fn chevill_bane_of_monsters() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mysterious Egg — {1} 0/2 Egg. On mutate, put a +1/+1 counter on it.
+pub fn mysterious_egg() -> CardDefinition {
+    CardDefinition {
+        name: "Mysterious Egg",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Egg], ..Default::default() },
+        power: 0,
+        toughness: 2,
+        triggered_abilities: vec![on_mutate(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Wild Ceratok — {3}{G} 4/3 Rhino (vanilla).
+pub fn wild_ceratok() -> CardDefinition {
+    CardDefinition {
+        name: "Wild Ceratok",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rhino], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Glory of Warfare — {2}{R}{W} Enchantment. Your turn: creatures you control
+/// get +2/+0; other turns: +0/+2.
+pub fn glory_of_warfare() -> CardDefinition {
+    let team = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Glory of Warfare",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "During your turn, creatures you control get +2/+0.",
+                effect: StaticEffect::PumpTeamIf {
+                    condition: Predicate::IsTurnOf(PlayerRef::You),
+                    applies_to: team(),
+                    power: 2,
+                    toughness: 0,
+                    keywords: vec![],
+                },
+            },
+            StaticAbility {
+                description: "During other turns, creatures you control get +0/+2.",
+                effect: StaticEffect::PumpTeamIf {
+                    condition: Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+                    applies_to: team(),
+                    power: 0,
+                    toughness: 2,
+                    keywords: vec![],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sanctuary Smasher — {4}{R}{R} 6/4 Rhino Beast, first strike. Cycling {2}{R};
+/// when cycled, put a first strike counter on a target creature you control.
+pub fn sanctuary_smasher() -> CardDefinition {
+    CardDefinition {
+        name: "Sanctuary Smasher",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike, Keyword::Cycling(cost(&[generic(2), r()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+            effect: Effect::AddKeywordCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::FirstStrike,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -2549,6 +2549,10 @@ static DECKS: &[Factory] = &[
     super::decks::auspicious_starrix,
     super::decks::skycat_sovereign,
     super::decks::chevill_bane_of_monsters,
+    super::decks::mysterious_egg,
+    super::decks::wild_ceratok,
+    super::decks::glory_of_warfare,
+    super::decks::sanctuary_smasher,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,
