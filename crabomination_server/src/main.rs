@@ -289,19 +289,40 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
     }
 }
 
+/// Run a match body, catching any panic so a single buggy game logs with
+/// context and lets the thread unwind cleanly (dropping its seats/streams and
+/// releasing its slot) instead of dying with an opaque default backtrace.
+/// Returns `None` if the match panicked.
+fn run_match_caught(
+    state: crabomination::game::GameState,
+    seats: Vec<SeatOccupant>,
+    ctx: &str,
+) -> Option<MatchOutcome> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_match(state, seats))) {
+        Ok(outcome) => Some(outcome),
+        Err(_) => {
+            eprintln!("match aborted: engine panic ({ctx}) — connections dropped, slot released");
+            None
+        }
+    }
+}
+
 fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) {
     let seat = match tcp_seat(stream) {
         Ok(s) => s,
         Err(e) => { eprintln!("tcp_seat failed for {peer}: {e}"); return; }
     };
     let started = Instant::now();
-    let outcome = run_match(
+    let Some(outcome) = run_match_caught(
         format.build(),
         vec![
             SeatOccupant::Human(seat),
             SeatOccupant::Bot(Box::new(RandomBot::new())),
         ],
-    );
+        &format!("bot match {peer}, format={}", format.label()),
+    ) else {
+        return;
+    };
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
@@ -351,10 +372,13 @@ fn run_pair_match(
         }
     };
     let started = Instant::now();
-    let outcome = run_match(
+    let Some(outcome) = run_match_caught(
         format.build(),
         vec![SeatOccupant::Human(a_seat), SeatOccupant::Human(b_seat)],
-    );
+        &format!("pair match {a_peer} ↔ {b_peer}, format={}", format.label()),
+    ) else {
+        return;
+    };
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());

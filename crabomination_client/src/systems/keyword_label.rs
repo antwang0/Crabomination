@@ -69,6 +69,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Landwalk(_) => "Wlk",
         Protection(_) => "Pro",
         ProtectionFromManaValueExcept(_) => "ProMV",
+        ProtectionFromManaValueParity { odd } => if *odd { "Pro-odd" } else { "Pro-even" },
         ProtectionFromMulticolored => "ProMC",
         Ward(_) => "Ward",
         Toxic(_) => "Tox",

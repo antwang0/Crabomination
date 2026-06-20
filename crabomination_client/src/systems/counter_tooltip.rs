@@ -653,6 +653,11 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::ProtectionFromCreatures => "Can't be blocked, targeted, or damaged by creatures.",
         K::ProtectionFromMulticolored => "Can't be blocked, targeted, or damaged by multicolored sources.",
         K::ProtectionFromManaValueExcept(_) => "Has protection from each mana value other than the named one.",
+        K::ProtectionFromManaValueParity { odd } => if *odd {
+            "Has protection from each odd mana value."
+        } else {
+            "Has protection from each even mana value."
+        },
         K::ProtectionFromCreatureType(_) => "Can't be blocked, targeted, or damaged by sources of the named creature type.",
         K::ProtectionFromSpellSubtype(_) => "Can't be targeted or damaged by spells of the named subtype.",
         _ => return None,
