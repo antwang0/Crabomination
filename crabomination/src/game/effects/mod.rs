@@ -3499,6 +3499,83 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopUntilPermanentToBattlefieldOrHand => {
+                use crate::card::{CardType, Zone};
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let permanent_types = [
+                    CardType::Artifact, CardType::Creature, CardType::Enchantment,
+                    CardType::Planeswalker, CardType::Battle,
+                ];
+                let mut hit: Option<crate::card::CardId> = None;
+                while !self.players[p].library.is_empty() {
+                    let top = &self.players[p].library[0];
+                    let cid = top.id;
+                    let is_land = top.definition.card_types.contains(&CardType::Land);
+                    let is_perm = top.definition.card_types.iter().any(|t| permanent_types.contains(t));
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if !is_land && is_perm {
+                        hit = Some(cid);
+                        break;
+                    }
+                }
+                if let Some(cid) = hit {
+                    let src = ctx.source.unwrap_or(CardId(0));
+                    let to_bf = matches!(
+                        self.decider.decide(&Decision::OptionalTrigger {
+                            source: src,
+                            description: "Put the exiled card onto the battlefield? (else into hand)".to_string(),
+                        }),
+                        DecisionAnswer::Bool(true)
+                    );
+                    let dest = if to_bf {
+                        ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }
+                    } else {
+                        ZoneDest::Hand(PlayerRef::You)
+                    };
+                    if self.find_card_zone(cid) == Some(Zone::Exile) {
+                        self.move_card_to(cid, &dest, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ReturnGraveyardCreaturesUpToTotalPower { max_total } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let cap = self.evaluate_value(max_total, ctx).max(0);
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.card_types.contains(&crate::card::CardType::Creature))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Return creatures with total power {cap} or less"),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max: candidates.len() as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids,
+                    _ => Vec::new(),
+                };
+                // Accept greedily while the running total stays within the cap.
+                let mut total = 0i32;
+                for cid in chosen {
+                    let Some(c) = self.players[p].graveyard.iter().find(|c| c.id == cid) else { continue };
+                    let pw = c.definition.power.max(0);
+                    if total + pw > cap { continue; }
+                    total += pw;
+                    self.move_card_to(cid, &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false }, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::TapUpToValue { count, filter, skip_untap } => {
                 // Archipelagore — tap up to N permanents the controller chooses
                 // at resolution, N evaluated now (e.g. mutate count). Optional

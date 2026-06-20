@@ -53966,3 +53966,186 @@ pub fn pollywog_symbiote() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Ikoria batch 6: Apex legendaries, Triomes, misc ──────────────────────────
+
+/// A Triome land — taps for three colors, enters tapped, Cycling {3}.
+fn triome(name: &'static str, types: [LandType; 3], colors: [Color; 3]) -> CardDefinition {
+    let tap = |c: Color| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c]) },
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: types.to_vec(), ..Default::default() },
+        keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
+        activated_abilities: vec![tap(colors[0]), tap(colors[1]), tap(colors[2])],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        ..Default::default()
+    }
+}
+
+pub fn zagoth_triome() -> CardDefinition {
+    triome("Zagoth Triome", [LandType::Swamp, LandType::Forest, LandType::Island],
+        [Color::Black, Color::Green, Color::Blue])
+}
+pub fn indatha_triome() -> CardDefinition {
+    triome("Indatha Triome", [LandType::Plains, LandType::Swamp, LandType::Forest],
+        [Color::White, Color::Black, Color::Green])
+}
+pub fn raugrin_triome() -> CardDefinition {
+    triome("Raugrin Triome", [LandType::Island, LandType::Mountain, LandType::Plains],
+        [Color::Blue, Color::Red, Color::White])
+}
+pub fn savai_triome() -> CardDefinition {
+    triome("Savai Triome", [LandType::Mountain, LandType::Plains, LandType::Swamp],
+        [Color::Red, Color::White, Color::Black])
+}
+pub fn ketria_triome() -> CardDefinition {
+    triome("Ketria Triome", [LandType::Forest, LandType::Island, LandType::Mountain],
+        [Color::Green, Color::Blue, Color::Red])
+}
+
+/// Snapdax, Apex of the Hunt — {1}{R}{W}{B} 3/5 legendary, double strike.
+/// Mutate {2}{B/R}{W}{W}. On mutate, deal 4 to an opponent's creature/PW and
+/// gain 4 life.
+pub fn snapdax_apex_of_the_hunt() -> CardDefinition {
+    CardDefinition {
+        name: "Snapdax, Apex of the Hunt",
+        cost: cost(&[generic(1), r(), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Cat, CreatureType::Nightmare],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::DoubleStrike],
+        mutate: Some(cost(&[generic(2), hybrid(Color::Black, Color::Red), w(), w()])),
+        triggered_abilities: vec![on_mutate(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Slitherwisp — {U}{B}{B} 3/2 Elemental Nightmare, flash. Whenever you cast
+/// another spell that has flash, draw a card and each opponent loses 1 life.
+pub fn slitherwisp() -> CardDefinition {
+    CardDefinition {
+        name: "Slitherwisp",
+        cost: cost(&[u(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Nightmare],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::HasKeyword(
+                    Keyword::Flash,
+                ))),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Illuna, Apex of Wishes — {2}{G}{U}{R} 6/6 legendary, flying, trample.
+/// Mutate {3}{R/G}{U}{U}. On mutate, exile from the top of your library until a
+/// nonland permanent card; put it onto the battlefield or into your hand.
+pub fn illuna_apex_of_wishes() -> CardDefinition {
+    CardDefinition {
+        name: "Illuna, Apex of Wishes",
+        cost: cost(&[generic(2), g(), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Elemental, CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        mutate: Some(cost(&[generic(3), hybrid(Color::Red, Color::Green), u(), u()])),
+        triggered_abilities: vec![on_mutate(Effect::ExileTopUntilPermanentToBattlefieldOrHand)],
+        ..Default::default()
+    }
+}
+
+/// Vadrok, Apex of Thunder — {U}{R}{W} 3/3 legendary, flying, first strike.
+/// Mutate {1}{W/U}{R}{R}. On mutate, you may cast target noncreature card with
+/// mana value 3 or less from your graveyard without paying its mana cost.
+pub fn vadrok_apex_of_thunder() -> CardDefinition {
+    CardDefinition {
+        name: "Vadrok, Apex of Thunder",
+        cost: cost(&[u(), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Dinosaur, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        mutate: Some(cost(&[generic(1), hybrid(Color::White, Color::Blue), r(), r()])),
+        triggered_abilities: vec![on_mutate(Effect::CastWithoutPayingImmediate {
+            what: target_filtered(
+                SelectionRequirement::InYourGraveyard
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)))
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            source_zone: crate::card::Zone::Graveyard,
+            exile_after: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nethroi, Apex of Death — {2}{W}{B}{G} 5/5 legendary, deathtouch, lifelink.
+/// Mutate {4}{G/W}{B}{B}. On mutate, return creature cards with total power 10
+/// or less from your graveyard to the battlefield.
+pub fn nethroi_apex_of_death() -> CardDefinition {
+    CardDefinition {
+        name: "Nethroi, Apex of Death",
+        cost: cost(&[generic(2), w(), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Nightmare, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        mutate: Some(cost(&[generic(4), hybrid(Color::Green, Color::White), b(), b()])),
+        triggered_abilities: vec![on_mutate(Effect::ReturnGraveyardCreaturesUpToTotalPower {
+            max_total: Value::Const(10),
+        })],
+        ..Default::default()
+    }
+}

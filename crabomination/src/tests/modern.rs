@@ -58042,6 +58042,121 @@ fn mutate_archipelagore_taps_dynamic_count() {
     assert!(v.skip_next_untap, "victim won't untap next turn");
 }
 
+/// Snapdax's mutate trigger deals 4 to an opponent creature and gains 4 life.
+#[test]
+fn mutate_snapdax_burns_and_gains() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let snap = g.add_card_to_hand(0, catalog::snapdax_apex_of_the_hunt());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[0].life = 20;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2); // mutate {2}{B/R}{W}{W}
+    g.perform_action(GameAction::CastMutate {
+        card_id: snap, target: host, on_top: true, x_value: None,
+    }).expect("mutate Snapdax");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim took 4 and died");
+    assert_eq!(g.players[0].life, 24, "gained 4 life");
+}
+
+/// Slitherwisp draws + drains 1 whenever you cast another flash spell.
+#[test]
+fn slitherwisp_triggers_on_flash_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::slitherwisp());
+    let flasher = g.add_card_to_hand(0, catalog::village_bell_ringer()); // {2}{W} Flash
+    g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{W}
+    g.perform_action(GameAction::CastSpell {
+        card_id: flasher, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast flash creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before, "drew 1 (net: cast 1, drew 1)");
+    assert_eq!(g.players[1].life, 19, "opponent lost 1 life");
+}
+
+/// Illuna's mutate trigger digs to the first nonland permanent and (here) puts
+/// it onto the battlefield.
+#[test]
+fn mutate_illuna_digs_to_permanent() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let illuna = g.add_card_to_hand(0, catalog::illuna_apex_of_wishes());
+    // Library: a land on top, then a creature (the first permanent hit).
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let nid = g.next_id();
+    g.players[0].library.insert(0, crate::card::CardInstance::new(
+        nid, catalog::lay_of_the_land(), 0)); // Sorcery (nonpermanent) on top
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3); // mutate {3}{R/G}{U}{U}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // → battlefield
+    g.perform_action(GameAction::CastMutate {
+        card_id: illuna, target: host, on_top: true, x_value: None,
+    }).expect("mutate Illuna");
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 1, "the creature was put onto the battlefield");
+}
+
+/// Vadrok's mutate trigger free-casts a noncreature card from the graveyard.
+#[test]
+fn mutate_vadrok_recasts_from_graveyard() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let vadrok = g.add_card_to_hand(0, catalog::vadrok_apex_of_thunder());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt()); // {R} instant, MV 1
+    g.players[1].life = 20;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1); // mutate {1}{W/U}{R}{R}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastMutate {
+        card_id: vadrok, target: host, on_top: true, x_value: None,
+    }).expect("mutate Vadrok");
+    drain_stack(&mut g);
+    // No creature targets on board → the free-cast bolt hits the opponent.
+    assert_eq!(g.players[1].life, 17, "Vadrok recast the bolt (3 to opponent)");
+}
+
+/// Nethroi returns creature cards from the graveyard with total power ≤ 10.
+#[test]
+fn mutate_nethroi_reanimates_within_power_cap() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let nethroi = g.add_card_to_hand(0, catalog::nethroi_apex_of_death());
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2 power
+    let b = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // 2 power
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4); // mutate {4}{G/W}{B}{B}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
+    g.perform_action(GameAction::CastMutate {
+        card_id: nethroi, target: host, on_top: true, x_value: None,
+    }).expect("mutate Nethroi");
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "both 2-power creatures returned (total 4 ≤ 10)");
+}
+
+/// Zagoth Triome enters tapped and taps for three colors.
+#[test]
+fn zagoth_triome_enters_tapped_three_colors() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::zagoth_triome());
+    g.perform_action(GameAction::PlayLand(id)).expect("play triome");
+    let land = g.battlefield_find(id).expect("triome on battlefield");
+    assert!(land.tapped, "Triome enters tapped");
+    assert_eq!(land.definition.activated_abilities.len(), 3, "three mana abilities");
+}
+
 /// Cavern Whisperer's mutate trigger makes each opponent discard.
 #[test]
 fn mutate_cavern_whisperer_opponent_discards() {

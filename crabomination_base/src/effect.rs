@@ -2475,6 +2475,17 @@ pub enum Effect {
     /// "tap up to N target permanents", etc. The inner effect must address
     /// its operand via `Selector::Target(0)`.
     ApplyToTargets { max_targets: u8, filter: SelectionRequirement, effect: Box<Effect> },
+    /// Illuna, Apex of Wishes — exile cards from the top of the controller's
+    /// library until a nonland *permanent* card is exiled, then put that card
+    /// onto the battlefield or into hand (controller's choice via
+    /// `Decision::OptionalTrigger`). The other exiled cards stay in exile.
+    ExileTopUntilPermanentToBattlefieldOrHand,
+    /// Nethroi, Apex of Death — return any number of creature cards from the
+    /// controller's graveyard with total power `max_total` or less to the
+    /// battlefield. The controller picks the set at resolution
+    /// (`Decision::ChooseCards`); picks are accepted greedily until the next
+    /// would exceed the cap.
+    ReturnGraveyardCreaturesUpToTotalPower { max_total: Value },
     /// "Tap up to N target permanents; they don't untap during their
     /// controller's next untap step" where N is a runtime `Value`
     /// (Archipelagore — N = `Value::MutateCount`). The controller chooses up
