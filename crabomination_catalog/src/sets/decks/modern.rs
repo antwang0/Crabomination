@@ -57221,3 +57221,46 @@ pub fn deadly_rollick() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Winged Words — {2}{U} Sorcery. Costs {1} less if you control a creature with
+/// flying. Draw two cards.
+pub fn winged_words() -> CardDefinition {
+    CardDefinition {
+        name: "Winged Words",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "Costs {1} less if you control a creature with flying.",
+            effect: StaticEffect::SelfCostReducedIfControlEach {
+                filters: vec![
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ],
+                amount: 1,
+            },
+        }],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Condescend — {X}{U} Instant. Counter target spell unless its controller pays
+/// {X}. Scry 2.
+pub fn condescend() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Condescend",
+        cost: cost(&[x(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: crate::mana::ManaCost::default(),
+                exile: false,
+                extra_generic: Some(Value::XFromCost),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}

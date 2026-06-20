@@ -2570,6 +2570,8 @@ static DECKS: &[Factory] = &[
     super::decks::unexpected_windfall,
     super::decks::feed_the_swarm,
     super::decks::deadly_rollick,
+    super::decks::winged_words,
+    super::decks::condescend,
 ];
 static DIS: &[Factory] = &[
     super::dis::azorius_first_wing,

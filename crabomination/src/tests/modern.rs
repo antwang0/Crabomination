@@ -60990,3 +60990,47 @@ fn deadly_rollick_exiles_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "creature exiled");
 }
+
+/// Winged Words costs {1} less with a flyer and draws two cards.
+#[test]
+fn winged_words_flyer_discount_and_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::storm_crow()); // a flyer
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::winged_words());
+    // Discounted to {1}{U}: pay exactly that.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    let h = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Winged Words castable for {1}{U} with a flyer out");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h - 1 + 2, "drew two");
+}
+
+/// Condescend counters a spell whose controller can't pay X, and scrys 2.
+#[test]
+fn condescend_counters_unpaid_x() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); } // scry fodder
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts Bolt");
+    let cond = g.add_card_to_hand(0, catalog::condescend());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3); // X=3
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cond, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Condescend with X=3");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "Bolt countered (opponent could not pay X)");
+}
