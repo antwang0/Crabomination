@@ -14307,8 +14307,10 @@ pub fn inkling_cantor_b175() -> CardDefinition {
 }
 
 /// Silverquill Penkeeper (b175) — {1}{B} 1/2 Vampire Warlock.
-/// Magecraft: each opp discards a card (collapsed to single discard, simplified).
-/// Actually we'll use Drain 1 as simpler stand-in.
+/// Magecraft — "Whenever you cast or copy an instant or sorcery spell, each
+/// opponent discards a card." Wired faithfully via `magecraft(Effect::Discard
+/// { EachOpponent })`; each opponent chooses their own discard (auto-decider
+/// discards by hand order).
 pub fn silverquill_penkeeper_b175() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Penkeeper (b175)",
@@ -14320,7 +14322,11 @@ pub fn silverquill_penkeeper_b175() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        triggered_abilities: vec![magecraft(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
         ..Default::default()
     }
 }
@@ -14645,10 +14651,10 @@ pub fn silverquill_pridecrier_b178() -> CardDefinition {
 }
 
 /// Silverquill Wordweaver (b177) — {3}{W}{B} 3/4 Vampire Bard Flying.
-/// ETB: each opp discards a card. (Approximated as Drain 1 — no targeted discard target.)
-/// We'll use drain to mark a meaningful effect; alternative is to skip and use a vanilla body.
+/// "When this enters, each opponent discards a card." Wired faithfully via
+/// `etb(Effect::Discard { EachOpponent })`; each opponent chooses their own
+/// discard (auto-decider discards by hand order).
 pub fn silverquill_wordweaver_b177() -> CardDefinition {
-    use crate::effect::shortcut::etb_drain;
     CardDefinition {
         name: "Silverquill Wordweaver (b177)",
         cost: cost(&[generic(3), w(), b()]),
@@ -14660,7 +14666,11 @@ pub fn silverquill_wordweaver_b177() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb_drain(2)],
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
         ..Default::default()
     }
 }

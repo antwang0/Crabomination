@@ -141,8 +141,8 @@ Paradox Surveyor · Conjurer's Bauble.
 ### Wrong-effect substitutions — implemented card is functionally a different card
 | Card | Location | Substitution |
 |---|---|---|
-| Silverquill Penkeeper | silverquill.rs:14312 | "each opponent discards" → Drain 1 |
-| Silverquill Wordweaver | silverquill.rs:14650 | "each opponent discards" → Drain 1 |
+| ~~Silverquill Penkeeper~~ ✅ **FIXED** | silverquill.rs:14312 | now `magecraft(Effect::Discard { EachOpponent })` — matches its own documented "each opponent discards" intent (was Drain 1) |
+| ~~Silverquill Wordweaver~~ ✅ **FIXED** | silverquill.rs:14653 | now `etb(Effect::Discard { EachOpponent })` (was Drain 2) |
 | Witherbloom Necromancer | witherbloom.rs:10709 | graveyard reanimation → Drain 1 |
 | Channel | modern.rs:11313 | "pay 1 life instead of {1} EOT" → one-shot lose-1-add-{C} |
 | ~~Echocasting Symposium~~ ✅ | sos/sorceries.rs | already on `CreateTokenCopyOf` (doc was stale) |

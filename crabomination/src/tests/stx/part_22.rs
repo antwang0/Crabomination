@@ -547,19 +547,25 @@ fn inkling_cantor_b175_etb_scrys_and_gains_life() {
 }
 
 #[test]
-fn silverquill_penkeeper_b175_magecraft_drains() {
+fn silverquill_penkeeper_b175_magecraft_each_opp_discards() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::silverquill_penkeeper_b175());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a card for the opponent to discard
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     let p1_life = g.players[1].life;
+    let p1_hand_before = g.players[1].hand.len();
+    let p1_grave_before = g.players[1].graveyard.len();
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)),
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("bolt");
     drain_stack(&mut g);
-    // Magecraft drain 1 + bolt 3 = -4 life.
-    assert_eq!(g.players[1].life, p1_life - 4);
+    // Magecraft now makes each opponent discard a card — only the bolt's
+    // 3 damage hits life (no drain).
+    assert_eq!(g.players[1].life, p1_life - 3, "bolt damage only; magecraft no longer drains");
+    assert_eq!(g.players[1].hand.len(), p1_hand_before - 1, "opponent discarded one card");
+    assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 1, "the discard hit the graveyard");
 }
 
 #[test]
@@ -1579,20 +1585,24 @@ fn inkling_stylekeeper_b177_magecraft_drains() {
 }
 
 #[test]
-fn silverquill_wordweaver_b177_etb_drains_two() {
+fn silverquill_wordweaver_b177_etb_each_opp_discards() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_wordweaver_b177());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a card for the opponent to discard
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     let p1_life = g.players[1].life;
-    let p0_life = g.players[0].life;
+    let p1_hand_before = g.players[1].hand.len();
+    let p1_grave_before = g.players[1].graveyard.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, p1_life - 2);
-    assert_eq!(g.players[0].life, p0_life + 2);
+    // ETB now makes each opponent discard a card (no life change).
+    assert_eq!(g.players[1].life, p1_life, "ETB no longer drains the opponent");
+    assert_eq!(g.players[1].hand.len(), p1_hand_before - 1, "opponent discarded one card");
+    assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 1, "the discard hit the graveyard");
 }
 
 #[test]
