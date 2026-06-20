@@ -1732,6 +1732,24 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - ⏳ **Client cast-mutate UI + `mutatable` affordance** (host picker). Engine
     path is fully wired and tested; only the UI is missing.
 
+- ⏳ **Ikoria cards deferred this run (need new primitives or are complex):**
+  - **Clackbridge Troll** — begin-combat "any opponent may sac a creature; if a
+    player does, tap this, gain 3, draw" (a reverse tempting-offer with a
+    self-consequence). ETB "target opponent makes three Goats" is easy; the
+    combat clause needs a PlayersMayAccept-style primitive with a tap/draw rider.
+  - **Mythos of Snapdax** — each player keeps one artifact/creature/enchantment/
+    planeswalker, sacs the rest (per-player keep-one-of-each-type sacrifice).
+  - **Lavabrink Venturer** — "choose odd or even, protection from each mana value
+    of the chosen quality" (parity-based protection keyword).
+  - **Jubilant Skybonder** — grant your flyers a "spells opponents cast targeting
+    this cost {2} more" static (granted target-tax aura).
+  - **Lukka / Narset / Vivien (IKO planeswalkers)** — multi-ability walkers;
+    Lukka's exile-cast-from-exile and reveal-bigger-creature need wiring.
+  - **Approximations shipped this run** (dropped riders, all noted in the card
+    doc comments): Gust of Wind / Tentative Connection / Mythos of Brokkos's
+    "spent {X}{Y}" upgrades (no mana-provenance-by-color spend-tracking yet);
+    Mythos of Nethroi's {G}{W} upgrade; Parcelbeast's "you may" on the land.
+
 - ✅ **Catalog-wide stat sweep (2026-06-16) — same problem beyond STX.** The
   modern supplement (`decks/`, `mod_set/`) and small older sets carried the same
   synthesized-stat drift. New tooling `scripts/audit_catalog_stats.py` (cost +

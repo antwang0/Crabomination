@@ -58221,6 +58221,17 @@ fn bristling_boar_has_solo_block_clause() {
     let _ = g;
 }
 
+/// Humble Naturalist taps for one creature-spell-restricted mana.
+#[test]
+fn humble_naturalist_makes_restricted_mana() {
+    let mut g = two_player_game();
+    let hn = g.add_card_to_battlefield(0, catalog::humble_naturalist());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hn, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap Humble Naturalist");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "one creature-only pip");
+}
+
 /// Mysteries of the Deep draws 3 with landfall, else 2.
 #[test]
 fn mysteries_of_the_deep_landfall_draws_three() {
