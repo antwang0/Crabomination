@@ -9211,6 +9211,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LockTargetNameUntilYourNextTurn { what } => {
+                // Reflector Mage — the bounced creature's owner can't cast
+                // spells with that name until the controller's next turn.
+                // Reads the targeted card's name (it's now in hand after the
+                // bounce, but resolves by id from any zone) and records it in
+                // the controller's `opponents_cant_cast_named` lock.
+                let name = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => self
+                            .find_card_anywhere(c)
+                            .map(|ci| ci.definition.name.to_string()),
+                        _ => None,
+                    });
+                if let Some(name) = name {
+                    let caster = ctx.controller;
+                    if !name.is_empty()
+                        && !self.players[caster].opponents_cant_cast_named.contains(&name)
+                    {
+                        self.players[caster].opponents_cant_cast_named.push(name);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageThisTurn => {
                 // CR 615.1 — set the engine-wide flag the combat damage
                 // resolver consults. Cleared in `do_cleanup` (CR 514.2).

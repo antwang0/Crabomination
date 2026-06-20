@@ -2084,9 +2084,11 @@ pub fn spark_double() -> CardDefinition {
     }
 }
 
-/// Reflector Mage — {1}{W}{U}, 2/3 Human Wizard. ETB: return target
-/// creature an opponent controls to its owner's hand. (The "can't recast
-/// until your next turn" rider is omitted.)
+/// Reflector Mage — {1}{W}{U}, 2/3 Human Wizard. "When this enters, return
+/// target creature an opponent controls to its owner's hand. That creature's
+/// owner can't cast spells with that name until your next turn." The recast
+/// rider rides `Effect::LockTargetNameUntilYourNextTurn` (records the bounced
+/// creature's name in the controller's `opponents_cant_cast_named` lock).
 pub fn reflector_mage() -> CardDefinition {
     CardDefinition {
         name: "Reflector Mage",
@@ -2100,12 +2102,20 @@ pub fn reflector_mage() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-            },
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                // Lock the bounced creature's name against its owner recasting
+                // it until your next turn.
+                Effect::LockTargetNameUntilYourNextTurn {
+                    what: Selector::Target(0),
+                },
+            ]),
         }],
         ..Default::default()
     }

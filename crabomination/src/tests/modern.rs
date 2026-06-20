@@ -26935,6 +26935,49 @@ fn reflector_mage_bounces_an_opponent_creature() {
 }
 
 #[test]
+fn reflector_mage_locks_the_bounced_creatures_name_until_your_next_turn() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::reflector_mage());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+
+    // The bounced creature's name is locked against its owner.
+    assert!(
+        g.players[0].opponents_cant_cast_named.iter().any(|n| n == "Grizzly Bears"),
+        "Reflector Mage records the recast lock",
+    );
+
+    // Enforcement: on P1's turn, P1 can't recast the bounced Grizzly Bears.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    let recast = g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(
+        matches!(recast, Err(crate::game::types::GameError::SpellNameLocked)),
+        "the owner can't recast the locked name (got {recast:?})",
+    );
+
+    // The lock clears as the controller's (P0's) next turn begins.
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(
+        g.players[0].opponents_cant_cast_named.is_empty(),
+        "the lock expires at your next turn",
+    );
+}
+
+#[test]
 fn man_o_war_bounces_a_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

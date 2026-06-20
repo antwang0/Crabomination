@@ -533,6 +533,7 @@ impl Effect {
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::NameCard { what } => sel_has_target(what),
+            Effect::LockTargetNameUntilYourNextTurn { what } => sel_has_target(what),
             Effect::NameOpponentCastLock => false,
             Effect::WinGame { who } | Effect::LoseGame { who } => player_has_target(who),
             Effect::SkipTurns { who, count } => {
@@ -766,6 +767,7 @@ impl Effect {
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::NameCreatureType { what }
             | Effect::NameCard { what }
+            | Effect::LockTargetNameUntilYourNextTurn { what }
             | Effect::Explore { who: what } => sel_filter(what),
             Effect::MoveAllCounters { from, to } | Effect::MoveCounter { from, to, .. } => {
                 sel_filter(from).or_else(|| sel_filter(to))
@@ -1567,6 +1569,7 @@ impl Effect {
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::NameCreatureType { what }
                 | Effect::NameCard { what }
+                | Effect::LockTargetNameUntilYourNextTurn { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),
                 Effect::MoveAllCounters { from, to }

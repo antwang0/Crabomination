@@ -3379,6 +3379,16 @@ pub enum Effect {
     /// next turn clears it.
     NameOpponentCastLock,
 
+    /// "[That card]'s owner can't cast spells with that name until your next
+    /// turn" (Reflector Mage). Reads the name of the card resolved by `what`
+    /// (typically the just-bounced `Selector::Target(0)`) and records it in
+    /// the resolving controller's `opponents_cant_cast_named` lock — the same
+    /// lock Academic Probation uses, but keyed off a *targeted* card's name
+    /// instead of a chosen one. The cast-legality gate then rejects that
+    /// owner's (an opponent's) spells of that name until the controller's
+    /// next turn clears it.
+    LockTargetNameUntilYourNextTurn { what: Selector },
+
     /// "[Player] skips their next `count` turns." Bumps the affected
     /// player's `skip_turns` counter; the turn-advance logic in
     /// `do_cleanup` decrements and bypasses each scheduled-skip turn.
