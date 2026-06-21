@@ -1410,6 +1410,29 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         if !self.players[p].has_in_hand(card_id) {
+            // MDFC back-face cast from the graveyard (Pestilent Cauldron):
+            // when the card is in the controller's graveyard with the one-shot
+            // `may_cast_back_from_graveyard` permission, hop it into hand for
+            // the normal back-face cast pipeline (the Muldrotha idiom),
+            // consuming the permission. Restore it to the graveyard on failure.
+            let gy_pos = self.players[p].graveyard.iter().position(|c| {
+                c.id == card_id
+                    && c.may_cast_back_from_graveyard
+                    && c.definition.back_face.is_some()
+            });
+            if let Some(pos) = gy_pos {
+                let mut card = self.players[p].graveyard.remove(pos);
+                card.may_cast_back_from_graveyard = false; // one-shot
+                self.players[p].hand.push(card);
+                let r = self.cast_spell_back_face(card_id, target, additional_targets, mode, x_value);
+                if r.is_err()
+                    && let Some(hand_pos) = self.players[p].hand.iter().position(|c| c.id == card_id)
+                {
+                    let card = self.players[p].hand.remove(hand_pos);
+                    self.players[p].send_to_graveyard(card);
+                }
+                return r;
+            }
             return Err(GameError::CardNotInHand(card_id));
         }
         // Snapshot the front-face definition AND look up the back face.

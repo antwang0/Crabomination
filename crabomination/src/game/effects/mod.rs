@@ -9269,6 +9269,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantCastBackFromGraveyard { what } => {
+                // Flag the resolved card (typically Selector::This, now in the
+                // graveyard after a sac cost) so its back face becomes castable
+                // from the graveyard. No-op if it has no back face.
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                for id in ids {
+                    if let Some(c) = self.find_card_anywhere_mut(id) {
+                        if c.definition.back_face.is_some() {
+                            c.may_cast_back_from_graveyard = true;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageThisTurn => {
                 // CR 615.1 — set the engine-wide flag the combat damage
                 // resolver consults. Cleared in `do_cleanup` (CR 514.2).

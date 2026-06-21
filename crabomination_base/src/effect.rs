@@ -2775,6 +2775,14 @@ pub enum Effect {
         #[serde(default)]
         any_color: bool,
     },
+    /// Grant a one-shot permission to cast `what`'s MDFC **back face from the
+    /// graveyard**, paying the back's cost (Pestilent Cauldron — "sacrifice
+    /// this, then you may cast Restorative Burst transformed"). Sets the
+    /// `may_cast_back_from_graveyard` flag on the resolved card; the controller
+    /// then casts the back via `GameAction::CastSpellBack`, which hops the card
+    /// out of the graveyard and consumes the permission. No-op if `what` has no
+    /// back face.
+    GrantCastBackFromGraveyard { what: Selector },
     /// Resolve-now equivalent of `GrantMayPlay`: at effect resolution
     /// time, ask the controller "cast `what` without paying its mana
     /// cost?" via `Decision::OptionalTrigger`. On yes, the card is

@@ -462,6 +462,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(count)
             }
             Effect::GrantMayPlay { what, .. } => sel_has_target(what),
+            Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
             Effect::AddCardTypeIndefinitely { what, .. } => sel_has_target(what),
             Effect::CastWithoutPayingImmediate { what, .. } => sel_has_target(what),

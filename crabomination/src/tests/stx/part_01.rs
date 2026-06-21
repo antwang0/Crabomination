@@ -4902,3 +4902,50 @@ fn selfless_glyphweaver_back_deadly_vanity_each_player_keeps_one() {
     assert_eq!(p0_creatures, 1, "P0 keeps exactly one creature");
     assert_eq!(p1_creatures, 1, "P1 keeps exactly one creature");
 }
+
+/// Pestilent Cauldron — after sacrificing it (which grants the one-shot
+/// permission), its back face Restorative Burst is castable from the
+/// graveyard ("...then cast it transformed"), draining 4 more.
+#[test]
+fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let pc = g.add_card_to_battlefield(0, catalog::pestilent_cauldron());
+    g.clear_sickness(pc);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(2); // {2} activation
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Cauldron activation");
+    drain_stack(&mut g);
+
+    // Sacrificed to the graveyard, carrying the one-shot back-cast permission.
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),
+        "Cauldron is in the graveyard with the cast-back-from-graveyard permission",
+    );
+    assert_eq!(g.players[1].life, p1 - 3, "activation drains 3");
+    assert_eq!(g.players[0].life, p0 + 3);
+
+    // Cast Restorative Burst (the back face) from the graveyard for {2}{B}.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: pc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Restorative Burst castable from the graveyard for {2}{B}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1 - 3 - 4, "Restorative Burst drains 4 more");
+    assert_eq!(g.players[0].life, p0 + 3 + 4);
+    // The one-shot permission was consumed.
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == pc && c.may_cast_back_from_graveyard),
+        "permission consumed after the back-face cast",
+    );
+}

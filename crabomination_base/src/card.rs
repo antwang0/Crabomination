@@ -2713,6 +2713,13 @@ pub struct CardInstance {
     /// "whenever you cast a spell from exile" payoffs (Nassari, Dean of
     /// Expression). Cleared when the card leaves the stack.
     pub cast_from_exile: bool,
+    /// One-shot permission to cast this MDFC's **back face from the
+    /// graveyard** (Pestilent Cauldron's "sacrifice, then cast Restorative
+    /// Burst transformed"). Set by `Effect::GrantCastBackFromGraveyard` once
+    /// the card is in the graveyard; consumed (cleared) by
+    /// `cast_spell_back_face` when it hops the card to hand to cast the back.
+    /// (serde handled via the wire-mirror struct, like `cast_via_flashback`.)
+    pub may_cast_back_from_graveyard: bool,
     /// "As [this] enters, choose a creature type." Cavern of Souls. The
     /// chosen type narrows which creature spells the controller can cast as
     /// uncounterable through this permanent. `None` until the ETB choice
@@ -2974,6 +2981,7 @@ impl CardInstance {
             cast_target_was_battlefield: false,
             cast_via_flashback: false,
             cast_from_exile: false,
+            may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
             exhausted_abilities: Vec::new(),
@@ -3440,6 +3448,8 @@ struct CardInstanceWire {
     cast_via_flashback: bool,
     #[serde(default)]
     cast_from_exile: bool,
+    #[serde(default)]
+    may_cast_back_from_graveyard: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
@@ -3608,6 +3618,7 @@ impl serde::Serialize for CardInstance {
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
             cast_from_exile: self.cast_from_exile,
+            may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             once_per_turn_used: self.once_per_turn_used.clone(),
             exhausted_abilities: self.exhausted_abilities.clone(),

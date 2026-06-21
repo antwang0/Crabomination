@@ -86,11 +86,11 @@ Commands · Moment of Reckoning · Vanquish the Horde.
 
 ### 3. MDFC back faces — **mechanism is fully wired** (`back_face` + `GameAction::CastSpellBack`/`PlayLandBack`; 71 cards use it)
 The "engine-wide ⏳" notes on these were stale. Status:
-- ✅ **Pestilent Cauldron // Restorative Burst** — back was already defined + attached; now has a from-hand back-cast test.
+- ✅ **Pestilent Cauldron // Restorative Burst** — back attached; from-hand back-cast test; **and** the transform-cast-from-graveyard rider now works (see below).
 - ✅ **Wandering Archaic // Explore the Vastlands** — back wired (`{4}` → add 6 colorless, gain 3 life) + test.
-- ⏳ **Selfless Glyphweaver // Deadly Vanity** — back needs a "each player keeps one creature, destroys the rest" primitive (no multi-pick decision shape).
-- ⏳ **Birgi // Harnfel** — back (discard→impulse top two) needs its own wiring.
-- ⏳ **transform-and-cast-from-graveyard** (Pestilent Cauldron's printed rider) — `cast_spell_back_face` walks hand only; an MDFC-from-graveyard pipeline is the remaining engine gap.
+- ✅ **Selfless Glyphweaver // Deadly Vanity** — back wired via new `Effect::EachPlayerKeepsOneSacrificeRest` (each player keeps one creature/PW, sacrifices the rest) + test.
+- ✅ **Birgi // Harnfel** — Harnfel back wired (`CardDiscarded` → `ExileTopAndGrantMayPlay { 2 }`), cast from hand as an artifact + test.
+- ✅ **transform-and-cast-from-graveyard** — `GameAction::CastSpellBack` now hops a permitted graveyard card into hand for the back-face cast pipeline (Muldrotha idiom), gated by a one-shot `CardInstance::may_cast_back_from_graveyard` flag set by `Effect::GrantCastBackFromGraveyard`. Pestilent Cauldron's sac ability grants it; Restorative Burst is then castable from the graveyard.
 
 ### 4. No "controller-of-target" / "that player" actor (forces each-opponent / you)
 ~~Generous Gift~~ ✅ **FIXED** (now mints the 3/3 Elephant for the target's controller via `CreateToken { who: ControllerOf(Target(0)) }`, created before the Destroy — the "no primitive" doc note was stale) · Harsh Annotation · Kemuri-Onna ·
