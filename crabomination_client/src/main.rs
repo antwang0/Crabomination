@@ -9,7 +9,7 @@ use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalA
 use bevy::anti_alias::contrast_adaptive_sharpening::ContrastAdaptiveSharpening;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy::post_process::bloom::Bloom;
-use bevy::render::view::Hdr;
+use bevy::camera::Hdr;
 use bevy::{anti_alias::smaa::Smaa, prelude::*};
 
 mod audit;
@@ -926,7 +926,7 @@ fn setup(
     commands.spawn((
         Transform::from_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, 1.0, -PI / 4.)),
         DirectionalLight {
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             illuminance: gfx.key_light_illuminance,
             ..default()
         },
@@ -942,7 +942,7 @@ fn setup(
     commands.spawn((
         Transform::from_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, -2.0, -PI / 6.)),
         DirectionalLight {
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             illuminance: gfx.fill_light_illuminance,
             ..default()
         },
@@ -1004,17 +1004,17 @@ fn apply_render_quality_change(
     let segments = new_quality.corner_segments();
 
     if let Some(assets) = &card_assets
-        && let Some(mesh) = meshes.get_mut(&assets.card_mesh) {
+        && let Some(mut mesh) = meshes.get_mut(&assets.card_mesh) {
             *mesh = create_rounded_rect_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, segments);
         }
 
     if let Some(assets) = &highlight_assets
-        && let Some(mesh) = meshes.get_mut(&assets.border_mesh) {
+        && let Some(mut mesh) = meshes.get_mut(&assets.border_mesh) {
             *mesh = create_border_mesh(CARD_WIDTH, CARD_HEIGHT, CORNER_RADIUS, BORDER_WIDTH, segments);
         }
 
     if let Ok(ground_mesh) = ground_query.single()
-        && let Some(mesh) = meshes.get_mut(&ground_mesh.0) {
+        && let Some(mut mesh) = meshes.get_mut(&ground_mesh.0) {
             *mesh = Plane3d::default().mesh().size(90.0, 90.0)
                 .subdivisions(new_quality.ground_subdivisions())
                 .into();

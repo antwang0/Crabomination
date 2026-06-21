@@ -1580,8 +1580,14 @@ fn apply_hint(
     if color.0 != new_color {
         *color = TextColor(new_color);
     }
-    if (font.font_size - new_size).abs() > f32::EPSILON {
-        font.font_size = new_size;
+    // `TextFont::font_size` is a `FontSize` enum in Bevy 0.19; the UI sets
+    // sizes in logical pixels, so compare/normalize on the `Px` value.
+    let cur_px = match font.font_size {
+        FontSize::Px(v) => v,
+        _ => f32::INFINITY,
+    };
+    if (cur_px - new_size).abs() > f32::EPSILON {
+        font.font_size = FontSize::Px(new_size);
     }
 }
 

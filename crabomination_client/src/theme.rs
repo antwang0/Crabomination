@@ -25,8 +25,8 @@ impl UiFonts {
     /// Build a `TextFont` using the project's standard font at `size` px.
     pub fn tf(&self, size: f32) -> TextFont {
         TextFont {
-            font: self.sans.clone(),
-            font_size: size,
+            font: self.sans.clone().into(),
+            font_size: FontSize::Px(size),
             ..default()
         }
     }
