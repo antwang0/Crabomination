@@ -1478,6 +1478,45 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a
+    // graveyard MDFC carrying the one-shot `may_cast_back_from_graveyard`
+    // permission (Pestilent Cauldron's "cast it transformed"). Targets come
+    // from the BACK face's effect; `would_accept` enforces cost / timing /
+    // zone, so these only surface when actually castable. (Land backs are
+    // played via PlayLandBack, handled by the land logic, so they're skipped
+    // here.)
+    let back_sources = state.players[seat].hand.iter().chain(
+        state.players[seat]
+            .graveyard
+            .iter()
+            .filter(|c| c.may_cast_back_from_graveyard),
+    );
+    for c in back_sources {
+        let Some(back) = c.definition.back_face.as_deref() else { continue };
+        if back.is_land() {
+            continue;
+        }
+        let (target, additional_targets) = if back.effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(&back.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellBack {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Adventure creature (CR 715) and plotted cards (CR 702.170d): cast the
     // creature half / a plotted card from exile. `would_accept` enforces the
     // later-turn + sorcery-speed timing, so this is only offered when legal.
@@ -4248,6 +4287,43 @@ mod tests {
         match main_phase_action(&g, 0) {
             GameAction::CastSpellAlternative { card_id, .. } => assert_eq!(card_id, id),
             other => panic!("expected a Spectacle alternative cast, got {other:?}"),
+        }
+    }
+
+    /// The bot casts an MDFC's back face from hand when the front is
+    /// unaffordable: Wandering Archaic ({5} creature) // Explore the Vastlands
+    /// ({4} sorcery), with only {4} in the pool.
+    #[test]
+    fn bot_casts_mdfc_back_face_from_hand() {
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        let id = g.add_card_to_hand(0, catalog::wandering_archaic());
+        g.players[0].mana_pool.add_colorless(4); // affords the {4} back, not the {5} front
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellBack { card_id, .. } => assert_eq!(card_id, id),
+            other => panic!("expected a back-face cast, got {other:?}"),
+        }
+    }
+
+    /// The bot casts an MDFC's back face from the graveyard when it carries the
+    /// `may_cast_back_from_graveyard` permission (Pestilent Cauldron after its
+    /// sacrifice → Restorative Burst).
+    #[test]
+    fn bot_casts_mdfc_back_face_from_graveyard() {
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        let pc = g.add_card_to_graveyard(0, catalog::pestilent_cauldron());
+        g.players[0]
+            .graveyard
+            .iter_mut()
+            .find(|c| c.id == pc)
+            .unwrap()
+            .may_cast_back_from_graveyard = true;
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2); // {2}{B} for Restorative Burst
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellBack { card_id, .. } => assert_eq!(card_id, pc),
+            other => panic!("expected a graveyard back-face cast, got {other:?}"),
         }
     }
 
