@@ -10,6 +10,7 @@ use bevy::anti_alias::contrast_adaptive_sharpening::ContrastAdaptiveSharpening;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy::post_process::bloom::Bloom;
 use bevy::camera::Hdr;
+use bevy::render::view::{ColorGrading, ColorGradingGlobal, ColorGradingSection};
 use bevy::{anti_alias::smaa::Smaa, prelude::*};
 
 mod audit;
@@ -961,6 +962,7 @@ fn setup(
         Camera3d::default(),
         Transform::from_xyz(0.0, 32.0, 14.0).looking_at(Vec3::ZERO, Vec3::Y),
         quality.msaa(),
+        scene_color_grading(),
         MainCamera,
     )).id();
     // Only attach SMAA when the current quality preset asks for it. Low
@@ -980,6 +982,34 @@ fn setup(
     if let Some(cas) = quality.sharpening() {
         commands.entity(cam).insert(cas);
     }
+}
+
+/// Post-tonemap colour grading for the main 3-D camera.
+///
+/// The card faces are **unlit** so they show their art as-authored, but the
+/// camera still runs the default `TonyMcMapface` tonemapper, which is a filmic
+/// curve tuned for HDR scenes — on flat SDR card art it slightly desaturates
+/// and lifts mid-tones, reading as "washed out" next to the un-tonemapped
+/// Alt-zoom popup. A gentle post-tonemap saturation lift plus a touch of
+/// section contrast pulls the rendered cards (and their dark text) back toward
+/// the authored look without the risk of disabling tonemapping wholesale
+/// (which would clip the lit ground/lights). Applies scene-wide; the ground is
+/// a flat table colour, so the boost is harmless there.
+///
+/// Conservative starting values — tune visually (raise `post_saturation` for
+/// more pop, `contrast` for snappier text; `KhronosPbrNeutral` tonemapping is
+/// an alternative worth A/B-testing for even more faithful card colours).
+fn scene_color_grading() -> ColorGrading {
+    ColorGrading::with_identical_sections(
+        ColorGradingGlobal {
+            post_saturation: 1.15,
+            ..default()
+        },
+        ColorGradingSection {
+            contrast: 1.08,
+            ..default()
+        },
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
