@@ -1007,19 +1007,19 @@ fn setup(
 /// (which would clip the lit ground/lights). Applies scene-wide; the ground is
 /// a flat table colour, so the boost is harmless there.
 ///
-/// Conservative starting values — tune visually (raise `post_saturation` for
-/// more pop, `contrast` for snappier text; `KhronosPbrNeutral` tonemapping is
-/// an alternative worth A/B-testing for even more faithful card colours).
+/// `post_saturation 0.9` read better than the default look (visual tuning via
+/// the temporary render-debug scrubber). Section `contrast` is left neutral:
+/// Bevy applies it pre-tonemap in log space, so it's a near-inert lever for
+/// flat SDR card art — `ColorGradingSection::lift` (black level) and the
+/// camera `Tonemapping` choice are the effective de-wash knobs, exposed live
+/// in the scrubber for further tuning.
 fn scene_color_grading() -> ColorGrading {
     ColorGrading::with_identical_sections(
         ColorGradingGlobal {
-            post_saturation: 1.15,
+            post_saturation: 0.9,
             ..default()
         },
-        ColorGradingSection {
-            contrast: 1.08,
-            ..default()
-        },
+        ColorGradingSection::default(),
     )
 }
 

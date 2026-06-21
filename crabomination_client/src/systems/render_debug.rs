@@ -41,6 +41,7 @@ pub struct RenderDebug {
     tonemap: usize,
     saturation: f32,
     contrast: f32,
+    lift: f32,
     exposure: f32,
 }
 
@@ -50,8 +51,11 @@ impl Default for RenderDebug {
             open: false,
             // Index of TonyMcMapface (the engine default the baseline uses).
             tonemap: 6,
-            saturation: 1.15,
-            contrast: 1.08,
+            // Mirrors `scene_color_grading()` — 0.9 read better than the
+            // washed-out look (your tuning).
+            saturation: 0.9,
+            contrast: 1.0,
+            lift: 0.0,
             exposure: 0.0,
         }
     }
@@ -61,6 +65,11 @@ impl Default for RenderDebug {
 enum Param {
     Saturation,
     Contrast,
+    /// Black level — additive `ColorGradingSection::lift`. The real de-wash
+    /// knob: a *negative* lift pulls blacks down and restores punch. Far more
+    /// visible than section `contrast`, which Bevy applies pre-tonemap in log
+    /// space (a weak lever for SDR card art).
+    Lift,
     Exposure,
 }
 
@@ -69,6 +78,7 @@ impl Param {
         match self {
             Param::Saturation => (0.0, 2.0),
             Param::Contrast => (0.5, 1.5),
+            Param::Lift => (-0.3, 0.3),
             Param::Exposure => (-2.0, 2.0),
         }
     }
@@ -76,6 +86,7 @@ impl Param {
         match self {
             Param::Saturation => rd.saturation,
             Param::Contrast => rd.contrast,
+            Param::Lift => rd.lift,
             Param::Exposure => rd.exposure,
         }
     }
@@ -85,6 +96,7 @@ impl Param {
         match self {
             Param::Saturation => rd.saturation = v,
             Param::Contrast => rd.contrast = v,
+            Param::Lift => rd.lift = v,
             Param::Exposure => rd.exposure = v,
         }
     }
@@ -92,6 +104,7 @@ impl Param {
         match self {
             Param::Saturation => "Saturation",
             Param::Contrast => "Contrast",
+            Param::Lift => "Black level",
             Param::Exposure => "Exposure",
         }
     }
@@ -193,6 +206,7 @@ fn spawn_panel(commands: &mut Commands, fonts: &UiFonts, rd: &RenderDebug) {
 
             slider_row(p, fonts, Param::Saturation, rd);
             slider_row(p, fonts, Param::Contrast, rd);
+            slider_row(p, fonts, Param::Lift, rd);
             slider_row(p, fonts, Param::Exposure, rd);
 
             // Reset button.
@@ -369,6 +383,7 @@ pub fn apply_render_debug(
         },
         ColorGradingSection {
             contrast: rd.contrast,
+            lift: rd.lift,
             ..default()
         },
     );
