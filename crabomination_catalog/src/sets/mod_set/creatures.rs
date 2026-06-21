@@ -8766,11 +8766,33 @@ pub fn esper_sentinel() -> CardDefinition {
     }
 }
 
-/// Birgi, God of Storytelling — {2}{R} Legendary Creature — God 3/3. "Whenever
-/// you cast a spell, add {R}." (Front face only; the Harnfel // back face is
-/// omitted.)
+/// Birgi, God of Storytelling // Harnfel, Horn of Bounty — {2}{R} Legendary
+/// Creature — God 3/3. "Whenever you cast a spell, add {R}." The DFC back face
+/// Harnfel ({5}{R} Legendary Artifact — "Whenever you discard a card, exile
+/// the top two cards of your library. Until the end of your next turn, you may
+/// play those cards.") is wired via `back_face` and cast from hand through
+/// `GameAction::CastSpellBack` (it resolves onto the battlefield as an
+/// artifact, like any permanent spell).
 pub fn birgi_god_of_storytelling() -> CardDefinition {
+    use crate::card::MayPlayDuration;
     use crate::mana::Color;
+    let harnfel = CardDefinition {
+        name: "Harnfel, Horn of Bounty",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            },
+        }],
+        ..Default::default()
+    };
     CardDefinition {
         name: "Birgi, God of Storytelling",
         cost: cost(&[generic(2), r()]),
@@ -8786,6 +8808,7 @@ pub fn birgi_god_of_storytelling() -> CardDefinition {
                 pool: ManaPayload::Colors(vec![Color::Red]),
             },
         }],
+        back_face: Some(Box::new(harnfel)),
         ..Default::default()
     }
 }

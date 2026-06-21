@@ -37501,6 +37501,45 @@ fn birgi_adds_red_on_cast() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "Birgi refunded {{R}} on cast");
 }
 
+/// Birgi // Harnfel — the DFC back face Harnfel is cast from hand (resolving
+/// as an artifact); discarding a card then exiles the top two of your library.
+#[test]
+fn birgi_back_harnfel_castable_and_exiles_top_two_on_discard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::birgi_god_of_storytelling());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Harnfel (back face) castable for {5}{R}");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.id == id && c.definition.name == "Harnfel, Horn of Bounty"),
+        "Harnfel resolves onto the battlefield as an artifact",
+    );
+
+    // Seed the library; top two are `a`, `b` (add_card_to_library appends to bottom).
+    let a = g.add_card_to_library(0, catalog::lightning_bolt());
+    let b = g.add_card_to_library(0, catalog::grizzly_bears());
+    let _c = g.add_card_to_library(0, catalog::forest());
+    let lib_before = g.players[0].library.len();
+    let exile_before = g.exile.len();
+
+    // Discard a card → Harnfel triggers.
+    let throwaway = g.add_card_to_hand(0, catalog::forest());
+    let card = g.players[0].remove_from_hand(throwaway).unwrap();
+    g.players[0].graveyard.push(card);
+    g.dispatch_triggers_for_events(&[GameEvent::CardDiscarded { player: 0, card_id: throwaway }]);
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].library.len(), lib_before - 2, "the top two cards left the library");
+    assert_eq!(g.exile.len(), exile_before + 2, "two cards were exiled");
+    assert!(
+        g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b),
+        "the exiled cards are the top two",
+    );
+}
+
 /// Field of Ruin taps for {C} and can sacrifice to destroy a nonbasic land.
 #[test]
 fn field_of_ruin_destroys_a_nonbasic_land() {
