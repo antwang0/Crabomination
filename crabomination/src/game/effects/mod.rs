@@ -9282,10 +9282,10 @@ impl GameState {
                     })
                     .collect();
                 for id in ids {
-                    if let Some(c) = self.find_card_anywhere_mut(id) {
-                        if c.definition.back_face.is_some() {
-                            c.may_cast_back_from_graveyard = true;
-                        }
+                    if let Some(c) = self.find_card_anywhere_mut(id)
+                        && c.definition.back_face.is_some()
+                    {
+                        c.may_cast_back_from_graveyard = true;
                     }
                 }
                 Ok(())

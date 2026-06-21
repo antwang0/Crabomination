@@ -911,7 +911,7 @@ fn decide_choose_cards(
                 (!state.same_team(c.controller, seat)).then_some((*id, c.power() + if c.tapped { -100 } else { 0 }))
             })
             .collect();
-        ranked.sort_by(|a, b| b.1.cmp(&a.1));
+        ranked.sort_by_key(|b| std::cmp::Reverse(b.1));
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, _)| id).collect();
         return DecisionAnswer::Cards(chosen);
     }
