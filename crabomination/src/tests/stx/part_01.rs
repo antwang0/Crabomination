@@ -4933,9 +4933,16 @@ fn pestilent_cauldron_back_castable_from_graveyard_after_sacrifice() {
     assert_eq!(g.players[1].life, p1 - 3, "activation drains 3");
     assert_eq!(g.players[0].life, p0 + 3);
 
-    // Cast Restorative Burst (the back face) from the graveyard for {2}{B}.
+    // The graveyard back-cast is surfaced as an affordance once affordable
+    // (so the UI highlights it and auto_advance won't skip the window).
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
+    assert!(
+        g.compute_hand_affordances(0).back_castable.contains(&pc),
+        "the permitted graveyard back-cast is surfaced in affordances",
+    );
+
+    // Cast Restorative Burst (the back face) from the graveyard for {2}{B}.
     g.perform_action(GameAction::CastSpellBack {
         card_id: pc, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Restorative Burst castable from the graveyard for {2}{B}");

@@ -278,10 +278,12 @@ pub struct HandAffordances {
     /// spell is castable right now (`GameAction::CastPrepareSpell` would
     /// be accepted: cost payable, timing legal).
     pub prepare_castable: Vec<CardId>,
-    /// Hand MDFCs whose **back face** is castable right now via
-    /// `GameAction::CastSpellBack`. Complements `castable` (which only
-    /// probes the front face) so back-affordable MDFCs still highlight
-    /// and hold open priority windows.
+    /// MDFCs whose **back face** is castable right now via
+    /// `GameAction::CastSpellBack` — from hand, plus any in the graveyard
+    /// carrying the one-shot `may_cast_back_from_graveyard` permission
+    /// (Pestilent Cauldron). Complements `castable` (which only probes the
+    /// front face) so back-affordable MDFCs still highlight and hold open
+    /// priority windows.
     pub back_castable: Vec<CardId>,
     /// CR 702.160 — hand cards with Prototype castable for the prototype
     /// cost right now, so the client can offer "cast for prototype".

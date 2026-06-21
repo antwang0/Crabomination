@@ -1025,19 +1025,29 @@ impl GameState {
             .collect()
     }
 
-    /// Hand MDFCs whose back face is castable right now. The front-face
+    /// MDFC cards whose back face is castable right now — from hand, plus any
+    /// in the graveyard carrying the one-shot `may_cast_back_from_graveyard`
+    /// permission (Pestilent Cauldron's "cast it transformed"). The front-face
     /// sweep (`castable_hand_cards_on`) never probes the back, so a
     /// pathway-style card whose only affordable half is the back would
     /// otherwise read as a dead card — no highlight, and `auto_advance`
     /// would pass priority windows where it's a legal play.
     fn back_castable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
-        self.players[seat]
+        let from_hand = self.players[seat]
             .hand
             .iter()
+            .filter(|c| c.definition.back_face.as_ref().is_some_and(|b| !b.is_land()))
+            .map(|c| c.id);
+        let from_graveyard = self.players[seat]
+            .graveyard
+            .iter()
             .filter(|c| {
-                c.definition.back_face.as_ref().is_some_and(|b| !b.is_land())
+                c.may_cast_back_from_graveyard
+                    && c.definition.back_face.as_ref().is_some_and(|b| !b.is_land())
             })
-            .map(|c| c.id)
+            .map(|c| c.id);
+        from_hand
+            .chain(from_graveyard)
             .filter(|&id| {
                 Self::would_accept_on(template, GameAction::CastSpellBack {
                     card_id: id,

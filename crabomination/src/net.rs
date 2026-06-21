@@ -273,9 +273,10 @@ pub struct ClientView {
     /// doesn't hold priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub castable_hand: Vec<CardId>,
-    /// Hand MDFCs whose **back face** is castable right now via
-    /// `CastSpellBack` — `castable_hand` only probes front faces.
-    /// Feeds the castable highlight and the auto-pass hold logic.
+    /// MDFCs whose **back face** is castable right now via `CastSpellBack` —
+    /// from hand, plus permitted graveyard backs (Pestilent Cauldron's
+    /// `may_cast_back_from_graveyard`). `castable_hand` only probes front
+    /// faces. Feeds the castable highlight and the auto-pass hold logic.
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub back_castable_hand: Vec<CardId>,
