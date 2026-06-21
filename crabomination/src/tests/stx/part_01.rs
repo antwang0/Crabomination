@@ -4873,3 +4873,32 @@ fn pestilent_cauldron_back_restorative_burst_castable_from_hand() {
     assert_eq!(g.players[1].life, p1 - 4, "back-face drain hits the opponent for 4");
     assert_eq!(g.players[0].life, p0 + 4, "you gain 4");
 }
+
+/// Selfless Glyphweaver // Deadly Vanity — the back face is a {4}{B}{B}{B}
+/// sorcery: each player keeps one creature/planeswalker and sacrifices the
+/// rest. Castable from hand via CastSpellBack.
+#[test]
+fn selfless_glyphweaver_back_deadly_vanity_each_player_keeps_one() {
+    let mut g = two_player_game();
+    // P0 controls three creatures, P1 controls two.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
+    for _ in 0..2 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::selfless_glyphweaver());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Deadly Vanity (back face) castable for {4}{B}{B}{B}");
+    drain_stack(&mut g);
+
+    let p0_creatures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count();
+    let p1_creatures = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count();
+    assert_eq!(p0_creatures, 1, "P0 keeps exactly one creature");
+    assert_eq!(p1_creatures, 1, "P1 keeps exactly one creature");
+}

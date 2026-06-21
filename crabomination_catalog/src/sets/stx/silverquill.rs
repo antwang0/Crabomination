@@ -514,21 +514,29 @@ pub fn tenured_inkcaster() -> CardDefinition {
 /// "Sacrifice this creature: Creatures you control gain indestructible
 /// until end of turn."
 ///
-/// Push (modern_decks): front-face only of the MDFC Selfless Glyphweaver
-/// // Deadly Vanity. The back-face mass-sacrifice is too complex (each
-/// opponent picks which creature to keep — no multi-pick decision shape
-/// yet) and is omitted. The front face is a respectable 3-mana 2/3 body
-/// with a one-shot indestructible-all-creatures-EOT activation that
-/// protects the board through a Wrath.
+/// MDFC Selfless Glyphweaver // Deadly Vanity. The back face (Deadly Vanity —
+/// {4}{B}{B}{B} Sorcery: "Each player chooses a creature or planeswalker they
+/// control, then sacrifices the rest.") is wired via
+/// `Effect::EachPlayerKeepsOneSacrificeRest` and castable from hand through
+/// `GameAction::CastSpellBack`.
 ///
-/// The activation is a `sac_cost` activated ability (mirroring Shattered
-/// Acolyte and similar sac-self payoff cards) whose effect grants
-/// Indestructible (EOT) to each creature the controller owns. Because
+/// The front's activation is a `sac_cost` activated ability whose effect
+/// grants Indestructible (EOT) to each creature the controller owns. Because
 /// the source is sacrificed as part of the cost (before resolution), it
 /// won't grant indestructible to itself — matching the printed Oracle
 /// where the sacrificed Glyphweaver is no longer on the battlefield
 /// when the effect resolves.
 pub fn selfless_glyphweaver() -> CardDefinition {
+    let deadly_vanity = CardDefinition {
+        name: "Deadly Vanity",
+        cost: cost(&[generic(4), b(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::EachPlayerKeepsOneSacrificeRest {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+        },
+        ..Default::default()
+    };
     CardDefinition {
         name: "Selfless Glyphweaver",
         cost: cost(&[generic(2), w()]),
@@ -563,6 +571,7 @@ pub fn selfless_glyphweaver() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
+        back_face: Some(Box::new(deadly_vanity)),
         ..Default::default()
     }
 }

@@ -3057,6 +3057,13 @@ pub enum Effect {
     /// nonland permanents they control (auto-pick keeps the highest mana
     /// value of each) and sacrifices the rest (Ajani, Nacatl Avenger's -4).
     SacrificeAllButOnePerType { who: Selector },
+    /// "Each [resolved] player chooses a [`filter`] permanent they control,
+    /// then sacrifices the rest [of their `filter` permanents]" — Deadly
+    /// Vanity (keep one creature or planeswalker). Like
+    /// `SacrificeAllButOnePerType` but scoped to a single filter; the keeper
+    /// is auto-picked as the highest-mana-value match (the same approximation
+    /// the Cataclysm family uses for the "each player chooses" clause).
+    EachPlayerKeepsOneSacrificeRest { who: Selector, filter: SelectionRequirement },
     /// "Wish" — put a card you own matching `filter` from your sideboard
     /// ("outside the game") or from exile into your hand (Karn, the Great
     /// Creator's -2). Chosen via `Decision::ChooseCards` for a `wants_ui`
