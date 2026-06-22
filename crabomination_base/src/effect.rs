@@ -903,6 +903,11 @@ pub enum Predicate {
     /// artifact, enchantment, or token sacrificed) at cast time. Reads
     /// `EffectContext.bargained`, stamped from `CardInstance.bargained`.
     SpellWasBargained,
+    /// CR 702.187 — true iff this spell was cast from a graveyard for its
+    /// Mayhem cost. Reads `EffectContext.cast_via_mayhem`, stamped from
+    /// `CardInstance.cast_via_mayhem`. Gates "if this spell's mayhem cost was
+    /// paid, …" riders (Sandman's Quicksand).
+    SpellWasMayhem,
     /// True if any opponent of `ctx.controller` controls more lands
     /// than `ctx.controller` does. Backed by walking the battlefield
     /// and counting `Land` permanents per seat. Used by catch-up ramp

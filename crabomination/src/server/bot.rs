@@ -1522,6 +1522,27 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
                 castable.push(action);
             }
         }
+        // Harmonize (CR 702.180): cast from the graveyard for the harmonize
+        // cost. The bot doesn't tap a creature to discount (a value call it
+        // can't weigh well); `would_accept` enforces cost / timing.
+        if c.definition.harmonize_cost().is_some() {
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                let (t, extras) =
+                    state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::CastHarmonize {
+                card_id: c.id, tap_creature: None, target, additional_targets, mode: None, x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
     }
 
     // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a

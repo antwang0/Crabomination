@@ -681,6 +681,7 @@ fn graveyard_entry(
         mayhem_cost: card.definition.mayhem_cost().cloned().filter(|_| {
             state.players[seat].discarded_this_turn.contains(&card.id)
         }),
+        harmonize_cost: card.definition.harmonize_cost().cloned(),
     }
 }
 

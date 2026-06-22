@@ -968,6 +968,11 @@ impl GameState {
                 // artifact/enchantment/token sacrificed) at cast time.
                 ctx.bargained
             }
+            Predicate::SpellWasMayhem => {
+                // CR 702.187 — true iff this spell was cast from the graveyard
+                // for its Mayhem cost.
+                ctx.cast_via_mayhem
+            }
             Predicate::CastSpellTargetsSource => {
                 // CR 702.85 — Heroic. The just-cast spell (trigger source,
                 // a card on the stack) targets this trigger's own source.

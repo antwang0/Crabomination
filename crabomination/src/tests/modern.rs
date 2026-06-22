@@ -63090,3 +63090,565 @@ fn sage_of_the_fang_renew_doubles_counters() {
     // Renew exiles Sage from the graveyard.
     assert!(g.exile.iter().any(|c| c.id == sage), "Sage exiled by Renew");
 }
+
+/// Unending Whisper ({U} sorcery) draws a card when cast normally.
+#[test]
+fn unending_whisper_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+    let id = g.add_card_to_hand(0, catalog::unending_whisper());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Unending Whisper");
+    drain_stack(&mut g);
+    // Hand: -1 (spell left) +1 (drawn) = unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card to replace the cast spell");
+}
+
+/// Ureni's Rebuff ({1}{U}) returns a target creature to its owner's hand.
+#[test]
+fn urenis_rebuff_bounces_a_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::urenis_rebuff());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ureni's Rebuff");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "bounced off the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "to its owner's hand");
+}
+
+/// Wild Ride ({R}) gives target creature +3/+0 and haste until end of turn.
+#[test]
+fn wild_ride_pumps_and_grants_haste() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::wild_ride());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(c)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Wild Ride");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!(cp.power, 5, "2 + 3 = 5 power");
+    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+/// Mammoth Bellow ({2}{G}{U}{R}) makes a 5/5 green Elephant token.
+#[test]
+fn mammoth_bellow_makes_a_5_5_elephant() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mammoth_bellow());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mammoth Bellow");
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Elephant");
+    assert!(tok.is_some(), "Elephant token exists");
+    let cp = g.computed_permanent(tok.unwrap().id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "5/5 token");
+}
+
+/// Amazing Spider-Girl enters with Flying and Vigilance.
+#[test]
+fn amazing_spider_girl_has_flying_vigilance() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::amazing_spider_girl());
+    let cp = g.computed_permanent(id).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Flying), "has flying");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "has vigilance");
+    assert_eq!((cp.power, cp.toughness), (5, 4), "5/4");
+}
+
+/// Silk, Web Weaver makes a 1/1 Human Citizen whenever you cast a creature spell.
+#[test]
+fn silk_web_weaver_tokens_on_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silk_web_weaver());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature spell");
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Human Citizen").count();
+    assert_eq!(tokens, 1, "Silk minted a Citizen on the creature cast");
+}
+
+/// Spider-Man India puts a +1/+1 counter on a creature you control and grants
+/// it flying whenever you cast a creature spell.
+#[test]
+fn spider_man_india_counters_on_creature_cast() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spider_man_india());
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: Some(Target::Permanent(buddy)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(buddy).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "buddy got a +1/+1 counter");
+    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&Keyword::Flying), "and flying");
+}
+
+// ── TDM batch 7 tests ─────────────────────────────────────────────────────
+
+/// Nightblade Brigade mobilizes a token when it attacks (and has deathtouch).
+#[test]
+fn nightblade_brigade_mobilizes_and_has_deathtouch() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let b = g.add_card_to_battlefield(0, catalog::nightblade_brigade());
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Deathtouch));
+    g.clear_sickness(b);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: b, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.attacking.len(), 2, "Mobilize 1 added a second attacker");
+}
+
+/// Shock Brigade has menace and mobilizes on attack.
+#[test]
+fn shock_brigade_mobilizes_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let b = g.add_card_to_battlefield(0, catalog::shock_brigade());
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Menace));
+    g.clear_sickness(b);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: b, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.attacking.len(), 2, "Mobilize 1 added a token attacker");
+}
+
+/// Venerated Stormsinger drains 1 whenever a creature you control dies.
+#[test]
+fn venerated_stormsinger_drains_on_creature_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::venerated_stormsinger());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Bolt my own fodder so the full SBA + death-trigger dispatch fires.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let (me, opp) = (g.players[0].life, g.players[1].life);
+    cast_at(&mut g, bolt, Target::Permanent(fodder));
+    assert_eq!(g.players[1].life, opp - 1, "opponent lost 1");
+    assert_eq!(g.players[0].life, me + 1, "you gained 1");
+}
+
+/// Stadium Headliner's sac ability deals damage equal to creatures you control.
+#[test]
+fn stadium_headliner_sac_pings_for_board_count() {
+    let mut g = two_player_game();
+    let head = g.add_card_to_battlefield(0, catalog::stadium_headliner());
+    // Two OTHER creatures survive the sac, so the count at resolution is 2.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: head, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("sac Stadium Headliner");
+    drain_stack(&mut g);
+    // Headliner is sacrificed as a cost, leaving 2 creatures → 2 damage kills the 2/2.
+    assert!(g.battlefield_find(victim).is_none(), "2 damage killed the 2/2");
+}
+
+/// Champion of Dusan's Renew grants a +1/+1 counter and a trample counter.
+#[test]
+fn champion_of_dusan_renew_grants_trample() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let champ = g.add_card_to_graveyard(0, catalog::champion_of_dusan());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: champ, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Renew from graveyard");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Trample),
+        "trample counter granted trample");
+    assert!(g.exile.iter().any(|c| c.id == champ), "Champion exiled by Renew");
+}
+
+/// Sagu Pummeler's Renew puts two +1/+1 counters and a reach counter.
+#[test]
+fn sagu_pummeler_renew_grants_reach() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let sagu = g.add_card_to_graveyard(0, catalog::sagu_pummeler());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sagu, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Renew from graveyard");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Reach));
+}
+
+/// Adorned Crocodile dies into a 2/2 Zombie Druid, and its Renew adds a counter.
+#[test]
+fn adorned_crocodile_dies_into_token_then_renews() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let croc = g.add_card_to_battlefield(0, catalog::adorned_crocodile());
+    g.battlefield_find_mut(croc).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie Druid").count(), 1,
+        "made a Zombie Druid on death");
+    // The Crocodile is now in the graveyard — Renew it.
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: croc, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Renew from graveyard");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Lasyd Prowler's Renew adds +1/+1 counters equal to land cards in graveyard.
+#[test]
+fn lasyd_prowler_renew_scales_with_lands_in_graveyard() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let lasyd = g.add_card_to_graveyard(0, catalog::lasyd_prowler());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lasyd, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Renew from graveyard");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "two land cards in graveyard → two counters");
+}
+
+/// Monk of the Open Hand gets a +1/+1 counter on your second spell each turn.
+#[test]
+fn monk_of_the_open_hand_grows_on_second_spell() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let monk = g.add_card_to_battlefield(0, catalog::monk_of_the_open_hand());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let s1 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s1, Target::Player(1));
+    assert_eq!(g.battlefield_find(monk).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "no counter on first spell");
+    let s2 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s2, Target::Player(1));
+    assert_eq!(g.battlefield_find(monk).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Flurry counter on the second spell");
+}
+
+/// Jeskai Devotee gets +1/+1 on the second spell; its mana ability floats mana.
+#[test]
+fn jeskai_devotee_flurry_and_mana() {
+    let mut g = two_player_game();
+    let dev = g.add_card_to_battlefield(0, catalog::jeskai_devotee());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let s1 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s1, Target::Player(1));
+    let s2 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s2, Target::Player(1));
+    assert_eq!(g.computed_permanent(dev).unwrap().power, 3, "2 +1 from Flurry until EOT");
+    // Mana ability: {1}: add one of U/R/W.
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dev, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("mana ability");
+    assert_eq!(g.players[0].mana_pool.total(), before, "spent one, added one => net unchanged");
+}
+
+/// Wingblade Disciple makes a flying Bird on your second spell.
+#[test]
+fn wingblade_disciple_makes_bird_on_second_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wingblade_disciple());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let s1 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s1, Target::Player(1));
+    let s2 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s2, Target::Player(1));
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bird").count(), 1,
+        "Flurry minted a Bird");
+}
+
+/// Poised Practitioner gets a +1/+1 counter on your second spell.
+#[test]
+fn poised_practitioner_grows_on_second_spell() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest()); // scry needs a library card
+    let monk = g.add_card_to_battlefield(0, catalog::poised_practitioner());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let s1 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s1, Target::Player(1));
+    let s2 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s2, Target::Player(1));
+    assert_eq!(g.battlefield_find(monk).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Devoted Duelist pings each opponent on your second spell.
+#[test]
+fn devoted_duelist_pings_on_second_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::devoted_duelist());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let opp = g.players[1].life;
+    let s1 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s1, Target::Player(1));
+    let s2 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s2, Target::Player(1));
+    // Two Lava Spikes (3 each) = 6, plus Flurry's 1 = 7.
+    assert_eq!(g.players[1].life, opp - 7, "second-spell Flurry pinged for 1 on top of the spells");
+}
+
+// ── TDM batch 8 tests ─────────────────────────────────────────────────────
+
+/// Avenger of the Fallen mobilizes a token per creature card in your graveyard.
+#[test]
+fn avenger_of_the_fallen_mobilizes_per_graveyard_creature() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let av = g.add_card_to_battlefield(0, catalog::avenger_of_the_fallen());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.clear_sickness(av);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: av, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.attacking.len(), 3, "Avenger + 2 Mobilize tokens (2 creature cards in gy)");
+}
+
+/// Dalkovan Packbeasts mobilizes three on attack.
+#[test]
+fn dalkovan_packbeasts_mobilizes_three() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let ox = g.add_card_to_battlefield(0, catalog::dalkovan_packbeasts());
+    g.clear_sickness(ox);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ox, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.attacking.len(), 4, "Ox + 3 Mobilize tokens");
+}
+
+/// Reigning Victor's ETB grants +1/+0 and indestructible until end of turn.
+#[test]
+fn reigning_victor_etb_buffs_and_protects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rv = g.add_card_to_hand(0, catalog::reigning_victor());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rv, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reigning Victor");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "2 + 1 = 3 power");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible");
+}
+
+/// Agent of Kotis' Renew puts two +1/+1 counters on a creature.
+#[test]
+fn agent_of_kotis_renew_two_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let agent = g.add_card_to_graveyard(0, catalog::agent_of_kotis());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: agent, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Renew");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Alchemist's Assistant's Renew grants a lifelink counter.
+#[test]
+fn alchemists_assistant_renew_grants_lifelink() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(0, catalog::alchemists_assistant());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: a, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Renew");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+/// Qarsi Revenant's Renew grants flying, deathtouch, and lifelink.
+#[test]
+fn qarsi_revenant_renew_grants_three_keywords() {
+    let mut g = two_player_game();
+    let q = g.add_card_to_graveyard(0, catalog::qarsi_revenant());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: q, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("Renew");
+    drain_stack(&mut g);
+    let kw = g.computed_permanent(target).unwrap().keywords;
+    assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::Deathtouch) && kw.contains(&Keyword::Lifelink));
+}
+
+/// Constrictor Sage taps and stuns an opponent's creature on ETB.
+#[test]
+fn constrictor_sage_etb_taps_and_stuns() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sage = g.add_card_to_hand(0, catalog::constrictor_sage());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sage, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Constrictor Sage");
+    drain_stack(&mut g);
+    let v = g.battlefield_find(victim).unwrap();
+    assert!(v.tapped, "opponent's creature tapped");
+    assert_eq!(v.counter_count(CounterType::Stun), 1, "stun counter placed");
+}
+
+/// Wayspeaker Bodyguard returns a low-cost permanent card from your graveyard.
+#[test]
+fn wayspeaker_bodyguard_etb_returns_low_cost_permanent() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2 creature
+    let way = g.add_card_to_hand(0, catalog::wayspeaker_bodyguard());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: way, target: Some(Target::Permanent(card)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Wayspeaker Bodyguard");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == card), "returned the Bear to hand");
+}
+
+/// Coordinated Maneuver mode 0 deals damage equal to creatures you control.
+#[test]
+fn coordinated_maneuver_pings_for_board_count() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::coordinated_maneuver());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Coordinated Maneuver mode 0");
+    drain_stack(&mut g);
+    // 2 creatures controlled → 2 damage kills the 2/2.
+    assert!(g.battlefield_find(victim).is_none(), "2 damage killed the 2/2");
+}

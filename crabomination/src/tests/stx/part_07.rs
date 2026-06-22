@@ -2043,6 +2043,7 @@ fn move_counter_transfers_counters_between_permanents() {
         event_amount: 0,
         kicked: false,
         bargained: false,
+        cast_via_mayhem: false,
         entwined: false,
     };
     let effect = Effect::MoveCounter {
@@ -2085,6 +2086,7 @@ fn move_counter_clamps_at_source_pool() {
         event_amount: 0,
         kicked: false,
         bargained: false,
+        cast_via_mayhem: false,
         entwined: false,
     };
     let effect = Effect::MoveCounter {

@@ -7,7 +7,9 @@ use crate::card::{
     EventScope, EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement, Selector,
     StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, flurry, mobilize, target_filtered};
+use crate::effect::shortcut::{
+    dies_mint_token, etb, flurry, mobilize, mobilize_value, target_any, target_filtered,
+};
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
 
@@ -822,6 +824,790 @@ pub fn hardened_tactician() -> CardDefinition {
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Channeled Dragonfire — {R} Sorcery. Deals 2 damage to any target.
+/// Harmonize {5}{R}{R} (CR 702.180 — recast from graveyard, reduce by a tapped
+/// creature's power; exiled after).
+pub fn channeled_dragonfire() -> CardDefinition {
+    CardDefinition {
+        name: "Channeled Dragonfire",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[generic(5), r(), r()]))],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Unending Whisper — {U} Sorcery. Draw a card. Harmonize {5}{U}.
+pub fn unending_whisper() -> CardDefinition {
+    CardDefinition {
+        name: "Unending Whisper",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[generic(5), u()]))],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Ureni's Rebuff — {1}{U} Sorcery. Return target creature to its owner's hand.
+/// Harmonize {5}{U}.
+pub fn urenis_rebuff() -> CardDefinition {
+    CardDefinition {
+        name: "Ureni's Rebuff",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[generic(5), u()]))],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Wild Ride — {R} Sorcery. Target creature gets +3/+0 and gains haste until
+/// end of turn. Harmonize {4}{R}.
+pub fn wild_ride() -> CardDefinition {
+    CardDefinition {
+        name: "Wild Ride",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[generic(4), r()]))],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mammoth Bellow — {2}{G}{U}{R} Sorcery. Create a 5/5 green Elephant creature
+/// token. Harmonize {5}{G}{U}{R}.
+pub fn mammoth_bellow() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Mammoth Bellow",
+        cost: cost(&[generic(2), g(), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[generic(5), g(), u(), r()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Elephant".into(),
+                power: 5,
+                toughness: 5,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Elephant],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+// ── TDM batch 7: Mobilize / Renew / Flurry creatures ──────────────────────
+
+/// Nightblade Brigade — {2}{B} 1/3 Goblin Soldier with Deathtouch and
+/// Mobilize 1. ETB: surveil 1.
+pub fn nightblade_brigade() -> CardDefinition {
+    CardDefinition {
+        name: "Nightblade Brigade",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            mobilize(1),
+            etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shock Brigade — {1}{R} 1/3 Goblin Soldier with Menace and Mobilize 1.
+pub fn shock_brigade() -> CardDefinition {
+    CardDefinition {
+        name: "Shock Brigade",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![mobilize(1)],
+        ..Default::default()
+    }
+}
+
+/// Venerated Stormsinger — {3}{B} 3/3 Orc Cleric with Mobilize 1. Whenever this
+/// or another creature you control dies, each opponent loses 1 life and you
+/// gain 1 life.
+pub fn venerated_stormsinger() -> CardDefinition {
+    CardDefinition {
+        name: "Venerated Stormsinger",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            mobilize(1),
+            // "this or another creature you control dies" — self-death
+            // (`SelfSource`) plus the others (`AnotherOfYours`), since the
+            // death-event actor binding doesn't cover dying-creature control.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: stormsinger_drain(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: stormsinger_drain(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+fn stormsinger_drain() -> Effect {
+    Effect::Drain {
+        from: Selector::Player(PlayerRef::EachOpponent),
+        to: Selector::You,
+        amount: Value::Const(1),
+    }
+}
+
+/// Stadium Headliner — {R} 1/1 Goblin Warrior with Mobilize 1. `{1}{R},
+/// Sacrifice this: It deals damage equal to the number of creatures you control
+/// to target creature.`
+pub fn stadium_headliner() -> CardDefinition {
+    CardDefinition {
+        name: "Stadium Headliner",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![mobilize(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            sac_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Champion of Dusan — {2}{G} 4/2 Human Warrior with Trample. Renew — `{1}{G},
+/// Exile this from your graveyard: Put a +1/+1 counter and a trample counter on
+/// target creature. Sorcery speed.`
+pub fn champion_of_dusan() -> CardDefinition {
+    CardDefinition {
+        name: "Champion of Dusan",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::AddKeywordCounter {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sagu Pummeler — {3}{G} 4/4 Beast with Reach. Renew — `{4}{G}, Exile this from
+/// your graveyard: Put two +1/+1 counters and a reach counter on target
+/// creature. Sorcery speed.`
+pub fn sagu_pummeler() -> CardDefinition {
+    CardDefinition {
+        name: "Sagu Pummeler",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                Effect::AddKeywordCounter {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Reach,
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Adorned Crocodile — {4}{B} 5/3 Crocodile. When it dies, create a 2/2 black
+/// Zombie Druid token. Renew — `{B}, Exile this from your graveyard: Put a
+/// +1/+1 counter on target creature. Sorcery speed.`
+pub fn adorned_crocodile() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Adorned Crocodile",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Crocodile], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        triggered_abilities: vec![dies_mint_token(
+            TokenDefinition {
+                name: "Zombie Druid".into(),
+                power: 2,
+                toughness: 2,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Black],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Zombie, CreatureType::Druid],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            1,
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lasyd Prowler — {2}{G}{G} 5/5 Snake Ranger. ETB: you may mill cards equal to
+/// the number of lands you control. Renew — `{1}{G}, Exile this from your
+/// graveyard: Put X +1/+1 counters on target creature, where X is the number of
+/// land cards in your graveyard. Sorcery speed.`
+pub fn lasyd_prowler() -> CardDefinition {
+    CardDefinition {
+        name: "Lasyd Prowler",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Mill cards equal to the number of lands you control?".into(),
+            body: Box::new(Effect::Mill {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                )),
+            }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Monk of the Open Hand — {W} 1/1 Elf Monk. Flurry: put a +1/+1 counter on it.
+pub fn monk_of_the_open_hand() -> CardDefinition {
+    CardDefinition {
+        name: "Monk of the Open Hand",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![flurry(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jeskai Devotee — {1}{R} 2/2 Orc Monk. Flurry: it gets +1/+1 until end of
+/// turn. `{1}: Add {U}, {R}, or {W}. Activate only once each turn.`
+pub fn jeskai_devotee() -> CardDefinition {
+    CardDefinition {
+        name: "Jeskai Devotee",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![flurry(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            once_per_turn: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(
+                    vec![Color::Blue, Color::Red, Color::White],
+                    Value::Const(1),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wingblade Disciple — {2}{U} 2/2 Human Monk with Flying. Flurry: create a 1/1
+/// white Bird creature token with flying.
+pub fn wingblade_disciple() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Wingblade Disciple",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![flurry(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Bird".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                keywords: vec![Keyword::Flying],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Bird],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Poised Practitioner — {2}{W} 2/3 Human Monk. Flurry: put a +1/+1 counter on
+/// it, then scry 1.
+pub fn poised_practitioner() -> CardDefinition {
+    CardDefinition {
+        name: "Poised Practitioner",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![flurry(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Devoted Duelist — {1}{R} 2/1 Goblin Monk with Haste. Flurry: it deals 1
+/// damage to each opponent.
+pub fn devoted_duelist() -> CardDefinition {
+    CardDefinition {
+        name: "Devoted Duelist",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![flurry(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+// ── TDM batch 8: more Renew / Mobilize / Flurry ───────────────────────────
+
+/// Avenger of the Fallen — {2}{B} 2/4 Human Warrior with Deathtouch and
+/// Mobilize X, where X is the number of creature cards in your graveyard.
+pub fn avenger_of_the_fallen() -> CardDefinition {
+    CardDefinition {
+        name: "Avenger of the Fallen",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![mobilize_value(Value::CardsInGraveyardMatching {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dalkovan Packbeasts — {2}{W} 0/4 Ox with Vigilance and Mobilize 3.
+pub fn dalkovan_packbeasts() -> CardDefinition {
+    CardDefinition {
+        name: "Dalkovan Packbeasts",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ox], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![mobilize(3)],
+        ..Default::default()
+    }
+}
+
+/// Reigning Victor — {2/R}{2/W}{2/B} 3/3 Orc Warrior with Mobilize 1. ETB:
+/// target creature gets +1/+0 and gains indestructible until end of turn.
+pub fn reigning_victor() -> CardDefinition {
+    CardDefinition {
+        name: "Reigning Victor",
+        cost: cost(&[
+            mono_hybrid(2, Color::Red),
+            mono_hybrid(2, Color::White),
+            mono_hybrid(2, Color::Black),
+        ]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            mobilize(1),
+            etb(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Agent of Kotis — {1}{U} 2/1 Human Rogue. Renew — `{3}{U}, Exile this from
+/// your graveyard: Put two +1/+1 counters on target creature. Sorcery speed.`
+pub fn agent_of_kotis() -> CardDefinition {
+    CardDefinition {
+        name: "Agent of Kotis",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Alchemist's Assistant — {1}{B} 2/1 Monkey with Lifelink. Renew — `{1}{B},
+/// Exile this from your graveyard: Put a lifelink counter on target creature.
+/// Sorcery speed.`
+pub fn alchemists_assistant() -> CardDefinition {
+    CardDefinition {
+        name: "Alchemist's Assistant",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Monkey], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Lifelink,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Qarsi Revenant — {1}{B}{B} 3/3 Vampire with Flying, Deathtouch, Lifelink.
+/// Renew — `{2}{B}, Exile this from your graveyard: Put a flying counter, a
+/// deathtouch counter, and a lifelink counter on target creature. Sorcery speed.`
+pub fn qarsi_revenant() -> CardDefinition {
+    CardDefinition {
+        name: "Qarsi Revenant",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddKeywordCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::Flying,
+                    amount: Value::Const(1),
+                },
+                Effect::AddKeywordCounter {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Deathtouch,
+                    amount: Value::Const(1),
+                },
+                Effect::AddKeywordCounter {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Lifelink,
+                    amount: Value::Const(1),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Constrictor Sage — {4}{U} 4/4 Snake Wizard. ETB: tap target creature an
+/// opponent controls and put a stun counter on it. Renew — `{2}{U}, Exile this
+/// from your graveyard: same. Sorcery speed.`
+pub fn constrictor_sage() -> CardDefinition {
+    let tap_and_stun = || {
+        Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ])
+    };
+    CardDefinition {
+        name: "Constrictor Sage",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(tap_and_stun())],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: tap_and_stun(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wayspeaker Bodyguard — {3}{W} 3/4 Orc Monk. ETB: return target nonland
+/// permanent card with mana value 2 or less from your graveyard to your hand.
+/// Flurry: tap target creature an opponent controls.
+pub fn wayspeaker_bodyguard() -> CardDefinition {
+    CardDefinition {
+        name: "Wayspeaker Bodyguard",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InYourGraveyard
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ManaValueAtMost(2))
+                        .and(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Artifact)
+                                .or(SelectionRequirement::Enchantment)
+                                .or(SelectionRequirement::Planeswalker),
+                        ),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            flurry(Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+// ── TDM batch 9: spells + small creatures ─────────────────────────────────
+
+/// Coordinated Maneuver — {1}{W} Instant. Choose one — deal damage equal to the
+/// number of creatures you control to target creature or planeswalker; or
+/// destroy target enchantment.
+pub fn coordinated_maneuver() -> CardDefinition {
+    CardDefinition {
+        name: "Coordinated Maneuver",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                )),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+        ]),
         ..Default::default()
     }
 }

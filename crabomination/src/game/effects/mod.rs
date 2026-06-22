@@ -136,6 +136,10 @@ pub struct EffectContext {
     /// the resolving `CardInstance.bargained` flag; read by
     /// `Predicate::SpellWasBargained`. Defaults to `false`.
     pub bargained: bool,
+    /// True if the resolving spell was cast for its Mayhem cost (CR 702.187).
+    /// Stamped from the resolving `CardInstance.cast_via_mayhem` flag; read by
+    /// `Predicate::SpellWasMayhem`. Defaults to `false`.
+    pub cast_via_mayhem: bool,
     /// True if the resolving spell was entwined (CR 702.41): its
     /// `ChooseMode` runs every mode in order. Defaults to `false`.
     pub entwined: bool,
@@ -157,6 +161,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }
@@ -235,6 +240,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }
@@ -258,6 +264,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }
@@ -280,6 +287,7 @@ impl EffectContext {
             event_amount: 0,
             kicked: false,
             bargained: false,
+            cast_via_mayhem: false,
             entwined: false,
         }
     }

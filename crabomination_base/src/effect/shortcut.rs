@@ -1943,9 +1943,17 @@ pub fn enlist() -> TriggeredAbility {
 /// either way.) An `Attacks / SelfSource` trigger over
 /// [`Effect::CreateTokenAttacking`].
 pub fn mobilize(n: i32) -> TriggeredAbility {
+    mobilize_value(Value::Const(n))
+}
+
+/// Mobilize with a runtime count (CR 702.181) — "Mobilize X, where X is …"
+/// (Avenger of the Fallen: creature cards in your graveyard; Devoted Mardu:
+/// devotion). Same tapped-and-attacking Warrior tokens, sacrificed at end of
+/// combat, but the count is evaluated when the attack trigger resolves.
+pub fn mobilize_value(count: Value) -> TriggeredAbility {
     on_attack(Effect::CreateTokenAttacking {
         who: PlayerRef::You,
-        count: Value::Const(n),
+        count,
         definition: crate::card::TokenDefinition {
             name: "Warrior".into(),
             power: 1,

@@ -892,6 +892,11 @@ pub struct GraveyardCardView {
     /// its owner discarded it this turn. `None` otherwise.
     #[serde(default)]
     pub mayhem_cost: Option<crate::mana::ManaCost>,
+    /// Harmonize cost (CR 702.180) if this card can be cast from the graveyard
+    /// via `GameAction::CastHarmonize` (cost reducible by a tapped creature's
+    /// power). `None` otherwise.
+    #[serde(default)]
+    pub harmonize_cost: Option<crate::mana::ManaCost>,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so

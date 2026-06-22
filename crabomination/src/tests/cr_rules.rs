@@ -3627,6 +3627,134 @@ fn cr_702_187_mayhem_blocked_without_discard_this_turn() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt stays in the graveyard");
 }
 
+/// CR 702.188 — Web-slinging: cast Spider-Man, Web-Slinger for {W} by returning
+/// a tapped creature you control to its owner's hand instead of paying {2}{W}.
+#[test]
+fn cr_702_188_web_slinging_returns_tapped_creature() {
+    let mut g = two_player_game();
+    // A tapped creature to bounce.
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == fodder).unwrap().tapped = true;
+    let spider = g.add_card_to_hand(0, catalog::spider_man_web_slinger());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1); // only {W} — the web-slinging cost
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spider, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("web-sling Spider-Man for {W} + bounce a tapped creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == spider), "Spider-Man resolved onto the battlefield");
+    assert!(g.battlefield_find(fodder).is_none(), "the tapped creature was returned");
+    assert!(g.players[0].hand.iter().any(|c| c.id == fodder), "bounced to its owner's hand");
+}
+
+/// Web-slinging is illegal with no tapped creature to return.
+#[test]
+fn cr_702_188_web_slinging_requires_a_tapped_creature() {
+    let mut g = two_player_game();
+    // An untapped creature doesn't satisfy the return-a-tapped-creature cost.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spider = g.add_card_to_hand(0, catalog::spider_man_web_slinger());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spider, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "no tapped creature → web-slinging rejected");
+}
+
+/// CR 702.187 — the "if this spell's mayhem cost was paid, …" rider. Cast for
+/// the mayhem cost and only opponents' creatures get -2/-2 (Sandman's Quicksand).
+#[test]
+fn cr_702_187_mayhem_rider_branches_on_mayhem_cast() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::sandmans_quicksand());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let mut events = Vec::new();
+    g.discard_card(0, spell, &mut events);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastMayhem {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sandman's Quicksand via Mayhem");
+    drain_stack(&mut g);
+    // Mayhem cast → only the opponent's creature took -2/-2.
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's bear died to -2/-2");
+    assert!(g.battlefield_find(mine).is_some(), "my bear was spared by the rider");
+}
+
+/// Cast normally (from hand), the rider doesn't fire — all creatures get -2/-2.
+#[test]
+fn cr_702_187_mayhem_rider_off_when_cast_normally() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::sandmans_quicksand());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("hard-cast Sandman's Quicksand");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent's bear died");
+    assert!(g.battlefield_find(mine).is_none(), "my bear died too — both swept");
+}
+
+/// CR 702.180 — Harmonize: cast a card from the graveyard for its harmonize
+/// cost, tapping a creature to reduce the cost by its power; the spell is
+/// exiled after resolving.
+#[test]
+fn cr_702_180_harmonize_tap_discount_then_exile() {
+    let mut g = two_player_game();
+    // Channeled Dragonfire (Harmonize {5}{R}{R}) waits in the graveyard.
+    let spell = g.add_card_to_graveyard(0, catalog::channeled_dragonfire());
+    // A 5/5 to tap: {5}{R}{R} − 5 = {R}{R}.
+    let big = g.add_card_to_battlefield(0, catalog::durkwood_baloth());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastHarmonize {
+        card_id: spell,
+        tap_creature: Some(big),
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("cast Channeled Dragonfire via Harmonize for {R}{R}");
+    assert!(g.battlefield_find(big).unwrap().tapped, "the discounting creature is tapped");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 2, "dealt 2 to the opponent");
+    // CR 702.180 exile-after.
+    assert!(g.exile.iter().any(|c| c.id == spell), "Harmonize spell was exiled");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != spell), "not in graveyard");
+}
+
+/// Without tapping a creature, the full harmonize cost must be paid.
+#[test]
+fn cr_702_180_harmonize_no_tap_requires_full_cost() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_graveyard(0, catalog::channeled_dragonfire());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Only {R}{R} available — not enough for the full {5}{R}{R}.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let r = g.perform_action(GameAction::CastHarmonize {
+        card_id: spell, tap_creature: None,
+        target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "can't pay {{5}}{{R}}{{R}} with only {{R}}{{R}} and no tap");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spell), "spell stays in graveyard");
+}
+
 /// Whirlwing Stormbrood's static lets its controller cast sorceries at instant
 /// speed (here: on the opponent's turn with a non-empty stack context).
 #[test]

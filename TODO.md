@@ -3681,15 +3681,23 @@ were stale). See git history for the per-card details.
 - **`Effect::JoinCombatAttacking`** currently attacks the source's defender (else
   the first opponent). Add a chosen-defender/planeswalker variant for cards that
   reanimate "attacking a player or planeswalker of your choice".
-- **Unmodeled TDM keywords:** **Flurry is done** (`shortcut::flurry`). Still open:
-  Harmonize (graveyard recast with a tap-a-creature cost reduction — Channeled
-  Dragonfire; like Mayhem/flashback but with a power-based generic discount), and
-  a conditional self-keyword-while static ("has hexproof if it hasn't dealt damage
-  yet" — Karakyk Guardian; needs a `source-hasn't-dealt-damage` predicate).
-- **Mayhem (CR 702.187) follow-up:** the "if this spell's mayhem cost was paid,
-  …" conditional rider isn't modeled (Mayhem doesn't stamp the spell like
-  kicker). Sandman's Quicksand drops its rider. Add a `SpellWasMayhem`-style mark
-  if more such cards land.
+- **Unmodeled TDM keywords:** **Flurry, Mobilize (+ `mobilize_value` for "Mobilize
+  X"), Renew, Harmonize are done.** Harmonize ships as `Keyword::Harmonize(cost)`
+  + `GameAction::CastHarmonize` (graveyard recast, optional tap-a-creature generic
+  discount, exile-after; bot + graveyard-browser badge). Still open: a conditional
+  self-keyword-while static ("has hexproof if it hasn't dealt damage yet" — Karakyk
+  Guardian; needs a `source-hasn't-dealt-damage` predicate); and **Mardu
+  Thunderkite-style perpetual keyword grants** (perpetual effects aren't modeled).
+- **Web-slinging (CR 702.188) done** via the alternative-cost primitive
+  (`AlternativeCost.mana_cost` + `return_to_hand` of one tapped creature) —
+  Spider-Man, Web-Slinger / Amazing Spider-Girl / Silk / Spider-Man India. Still
+  deferred: the "if this spell was cast using web-slinging" provenance riders
+  (Spiders-Man, Scarlet Spider) — would need a `cast_via_web_slinging` mark like
+  the new `cast_via_mayhem` flag.
+- **Noticed (TDM Renew/Mobilize batches):** Sibsig's Artisan's "perpetually gains
+  this ability" Renew rider and Rot-Curse Rakshasa's "X target creatures get a
+  decayed counter" (multi-target Renew) are deferred — perpetual ability-grants
+  and divided-counter Renew aren't wired.
 - **Highspire Bell-Ringer / "second spell each turn costs {1} less"** — a
   cost-reduction keyed on the second-spell condition; no static for it yet.
 - **Search-by-`ControllerOf(target)`** only resolved through a

@@ -835,6 +835,13 @@ pub enum Keyword {
     /// on `Player.discarded_this_turn`; the spell is exiled if it would leave
     /// the stack (same exile-after tail as flashback).
     Mayhem(crate::mana::ManaCost),
+    /// CR 702.180 — Harmonize `cost`. A static ability that works while the
+    /// card is in a graveyard: "You may cast this card from your graveyard by
+    /// paying [cost] and tapping up to one untapped creature you control rather
+    /// than paying its mana cost; the total cost is reduced by generic mana
+    /// equal to the tapped creature's power." Routed through the flashback
+    /// machinery (`cast_harmonize`); exiled if it would leave the stack.
+    Harmonize(crate::mana::ManaCost),
     /// CR 509.1b — "This creature can't be blocked except by [filter]"
     /// (Signal Pest — "except by artifact creatures and/or creatures with
     /// flying"; Silhana Ledgewalker — "except by creatures with flying").
@@ -2542,6 +2549,12 @@ impl CardDefinition {
             if let Keyword::Mayhem(cost) = kw { Some(cost) } else { None }
         })
     }
+    /// CR 702.180 — the Harmonize cost if this card has `Keyword::Harmonize`.
+    pub fn harmonize_cost(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Harmonize(cost) = kw { Some(cost) } else { None }
+        })
+    }
     pub fn has_equip(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| match kw {
             Keyword::Equip(cost) | Keyword::Reconfigure(cost) => Some(cost),
@@ -2775,6 +2788,10 @@ pub struct CardInstance {
     /// `kicked` flag so that a card with both Kicker and Flashback can
     /// be disambiguated cleanly.
     pub cast_via_flashback: bool,
+    /// CR 702.187 — true if this card was cast from a graveyard for its Mayhem
+    /// cost. Read by `Predicate::SpellWasMayhem` so "if this spell's mayhem cost
+    /// was paid" riders (Sandman's Quicksand) can branch. Cleared off the stack.
+    pub cast_via_mayhem: bool,
     /// True if this card was cast from exile on its current trip through the
     /// stack (suspend/foretell/plot/impulse free or alt-cost casts). Powers
     /// "whenever you cast a spell from exile" payoffs (Nassari, Dean of
@@ -3072,6 +3089,7 @@ impl CardInstance {
             cast_from_hand: false,
             cast_target_was_battlefield: false,
             cast_via_flashback: false,
+            cast_via_mayhem: false,
             cast_from_exile: false,
             may_cast_back_from_graveyard: false,
             chosen_creature_type: None,
@@ -3543,6 +3561,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_via_flashback: bool,
     #[serde(default)]
+    cast_via_mayhem: bool,
+    #[serde(default)]
     cast_from_exile: bool,
     #[serde(default)]
     may_cast_back_from_graveyard: bool,
@@ -3718,6 +3738,7 @@ impl serde::Serialize for CardInstance {
             impending_counters: self.impending_counters,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
+            cast_via_mayhem: self.cast_via_mayhem,
             cast_from_exile: self.cast_from_exile,
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
@@ -3831,6 +3852,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.impending_counters = wire.impending_counters;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
+        c.cast_via_mayhem = wire.cast_via_mayhem;
         c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;

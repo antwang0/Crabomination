@@ -229,12 +229,17 @@ Each a small targeted feature; sweep batch by batch.
   ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize,
   ✅ Exhaust (activate-only-once activated abilities — Camera Launcher),
   ✅ Mayhem (CR 702.187 — `Keyword::Mayhem` + `GameAction::CastMayhem` reusing
-    the flashback exile-after machinery, gated on `Player.discarded_this_turn`),
+    the flashback exile-after machinery, gated on `Player.discarded_this_turn`;
+    "if the mayhem cost was paid" riders via `cast_via_mayhem`/`SpellWasMayhem`),
+  ✅ Harmonize (CR 702.180 — `Keyword::Harmonize` + `GameAction::CastHarmonize`:
+    graveyard recast with optional tap-a-creature generic discount, exile-after),
+  ✅ Web-slinging (CR 702.188 — alt-cost: pay cost + return a tapped creature),
   ✅ Flurry (`shortcut::flurry` — "your second spell each turn" trigger over
     `SpellsCastThisTurnEquals`),
   ✅ Job Select (CR 702.182 — living-weapon-shaped Equipment minting a 1/1 Hero),
   ✅ Renew (graveyard-exile activated ability via `from_graveyard` +
-    `exile_self_cost`), ✅ Seek (CR 701.52 — `Effect::Seek`, random library pick).
+    `exile_self_cost`), ✅ Mobilize / Mobilize X (`shortcut::mobilize`,
+    `mobilize_value`), ✅ Seek (CR 701.52 — `Effect::Seek`, random library pick).
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
   Mentor, Modular, Graft, Outlast, Renown, Bloodthirst, Monstrosity, Devour,
   Amass — all via `shortcut::*` builders.

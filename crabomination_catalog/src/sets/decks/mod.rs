@@ -17,6 +17,7 @@ mod omen;
 mod spells;
 mod survival;
 mod tarkir;
+mod webslinging;
 
 pub use creatures::*;
 pub use gift::*;
@@ -27,3 +28,4 @@ pub use omen::*;
 pub use spells::*;
 pub use survival::*;
 pub use tarkir::*;
+pub use webslinging::*;

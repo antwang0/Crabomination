@@ -1075,6 +1075,10 @@ pub fn graveyard_browser(
             .map(|cv| cv.players[owner].graveyard.iter().map(|c| {
                 let badge = if let Some(fb) = &c.flashback_cost {
                     Some(format!("Flashback {{{}}}", fb.cmc()))
+                } else if let Some(mh) = &c.mayhem_cost {
+                    Some(format!("Mayhem {{{}}}", mh.cmc()))
+                } else if let Some(hm) = &c.harmonize_cost {
+                    Some(format!("Harmonize {{{}}}", hm.cmc()))
                 } else if let Some(db) = &c.disturb_cost {
                     Some(format!("Disturb {{{}}}", db.cmc()))
                 } else if let Some((esc, n)) = &c.escape {

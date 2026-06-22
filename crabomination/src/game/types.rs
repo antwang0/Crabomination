@@ -442,6 +442,20 @@ pub enum GameAction {
     /// mayhem cost, legal only if its owner discarded it this turn. Delegates
     /// to the flashback machinery (exile-after tail included).
     CastMayhem { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// CR 702.180 — cast a graveyard card with `Keyword::Harmonize` for its
+    /// harmonize cost, optionally tapping one untapped creature you control to
+    /// reduce the total cost by generic mana equal to that creature's power.
+    /// Delegates to the flashback machinery (exile-after tail included).
+    CastHarmonize {
+        card_id: CardId,
+        #[serde(default)]
+        tap_creature: Option<CardId>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a graveyard card with `Keyword::Disturb` (CR 702.146) transformed
     /// — the back face goes on the stack — for its disturb cost.
     CastDisturb { card_id: CardId },
@@ -986,6 +1000,7 @@ impl GameAction {
                 | A::CastSpellAlternative { .. }
                 | A::CastFlashback { .. }
                 | A::CastMayhem { .. }
+                | A::CastHarmonize { .. }
                 | A::CastDisturb { .. }
                 | A::CastRetrace { .. }
                 | A::CastEscape { .. }

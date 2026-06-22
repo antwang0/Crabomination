@@ -4577,6 +4577,7 @@ impl GameState {
                     event_amount: 0,
                     kicked: false,
                     bargained: false,
+                    cast_via_mayhem: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
@@ -4839,10 +4840,115 @@ impl GameState {
             mode,
             x_value.unwrap_or(0),
             mana_spent,
+            mayhem,
         )?;
         // Sacrifice/discard events precede the cast events in the log.
         cost_events.append(&mut events);
         Ok(cost_events)
+    }
+
+    /// CR 702.180 — cast a graveyard card for its Harmonize cost, optionally
+    /// tapping one untapped creature you control to reduce the total cost by
+    /// generic mana equal to that creature's power. Same exile-after tail as
+    /// flashback. Models the alternative cost directly (no float-spend UI loop,
+    /// which the simpler graveyard-cast paths also skip).
+    pub(crate) fn cast_harmonize(
+        &mut self,
+        card_id: CardId,
+        tap_creature: Option<CardId>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard[graveyard_pos].clone();
+        if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let harmonize_cost = card
+            .definition
+            .harmonize_cost()
+            .ok_or(GameError::SorcerySpeedOnly)?
+            .clone();
+
+        // Timing: instants at instant speed, the rest at sorcery speed.
+        let must_be_sorcery_speed =
+            !card.definition.is_instant_speed() || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+
+        // CR 702.180b — validate the chosen creature (untapped, yours, a
+        // creature) and read its power for the generic-cost reduction.
+        let tap_power = if let Some(cid) = tap_creature {
+            let c = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == cid)
+                .ok_or(GameError::FlashbackTapInvalid)?;
+            if c.tapped || c.controller != p || !c.definition.is_creature() {
+                return Err(GameError::FlashbackTapInvalid);
+            }
+            self.computed_permanent(cid).map(|c| c.power.max(0) as u32).unwrap_or(0)
+        } else {
+            0
+        };
+
+        if let Some(ref tgt) = target {
+            self.check_target_legality(tgt, p)?;
+        }
+
+        // Build the total cost: harmonize cost (with X), reduced by the tapped
+        // creature's power plus any target-aware cost reductions.
+        let mut cost = if harmonize_cost.has_x() {
+            harmonize_cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            harmonize_cost
+        };
+        let reduction =
+            tap_power + cost_reduction_for_spell_zoned(self, p, &card, target.as_ref(), true);
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
+        apply_spell_cost_floor(self, &mut cost);
+
+        let forced_only = self.players[p].wants_ui;
+        let snapshot = self.snapshot_payment_state(p);
+        let receipt = self.try_pay_after_snapshot_mode(
+            p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
+        )?;
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
+        self.note_cast_payment_riders(&receipt);
+
+        // CR 702.180b — tap the nominated creature as the cost is paid.
+        if let Some(cid) = tap_creature
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid)
+        {
+            c.tapped = true;
+        }
+
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        self.finalize_flashback_cast(
+            p,
+            card_id,
+            graveyard_pos,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            false,
+        )
     }
 
     /// Shared tail for `cast_flashback` and `cast_flashback_tap`:
@@ -4861,12 +4967,16 @@ impl GameState {
         mode: Option<usize>,
         x_value: u32,
         mana_spent: u32,
+        via_mayhem: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         self.entered_from_graveyard_this_turn.insert(card_id);
         card.cast_via_flashback = true;
+        // CR 702.187 — a Mayhem cast stamps the spell so "if the mayhem cost
+        // was paid" riders can branch at resolution (Sandman's Quicksand).
+        card.cast_via_mayhem = via_mayhem;
         let events = vec![
             GameEvent::CardLeftGraveyard { player: p, card_id },
             GameEvent::SpellCast {
@@ -5152,6 +5262,7 @@ impl GameState {
             mode,
             x_value.unwrap_or(0),
             0,
+            false,
         )
     }
 
@@ -5577,6 +5688,7 @@ impl GameState {
                 event_amount: 0,
                 kicked: false,
                 bargained: false,
+                cast_via_mayhem: false,
                     entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
@@ -6382,6 +6494,7 @@ impl GameState {
                     event_amount: 0,
                     kicked: false,
                     bargained: false,
+                    cast_via_mayhem: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
@@ -7651,6 +7764,7 @@ impl GameState {
                 event_amount: 0,
                 kicked: false,
                 bargained: false,
+                cast_via_mayhem: false,
                     entwined: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {

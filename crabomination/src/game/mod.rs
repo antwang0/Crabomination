@@ -5131,6 +5131,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastHarmonize {
+                card_id,
+                tap_creature,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_harmonize(card_id, tap_creature, target, additional_targets, mode, x_value),
             GameAction::CastDisturb { card_id } => self.cast_disturb(card_id),
             GameAction::CastRetrace {
                 card_id,
@@ -6773,6 +6781,7 @@ impl GameState {
                     event_amount,
                     kicked: false,
                     bargained: false,
+                    cast_via_mayhem: false,
                     entwined: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
@@ -8536,6 +8545,7 @@ impl GameState {
         );
         ctx.kicked = card.kicked;
         ctx.bargained = card.bargained;
+        ctx.cast_via_mayhem = card.cast_via_mayhem;
         ctx.entwined = card.entwined;
         // Stamp the resolving spell's identity so source-aware damage
         // replacements (Torbran) can read its controller/colors while the

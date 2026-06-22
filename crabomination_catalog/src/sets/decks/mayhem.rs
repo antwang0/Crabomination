@@ -6,8 +6,8 @@
 //! stack. Tracked in `DECK_FEATURES.md`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, SelectionRequirement,
-    Selector, Subtypes, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, Predicate,
+    SelectionRequirement, Selector, Subtypes, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, ZoneDest};
@@ -108,20 +108,28 @@ pub fn prison_break() -> CardDefinition {
 }
 
 /// Sandman's Quicksand — {1}{B}{B} Sorcery. All creatures get -2/-2 until end
-/// of turn. Mayhem {3}{B}. (The "if the mayhem cost was paid, your opponents'
-/// creatures get an extra -2/-2" rider is dropped — Mayhem doesn't mark the
-/// spell, so the conditional can't be read.)
+/// of turn. If this spell's mayhem cost was paid, only creatures your opponents
+/// control get -2/-2 instead. Mayhem {3}{B}.
 pub fn sandmans_quicksand() -> CardDefinition {
+    let all = Selector::EachPermanent(SelectionRequirement::Creature);
+    let opponents = Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+    );
+    let minus_two = |what: Selector| Effect::PumpPT {
+        what,
+        power: Value::Const(-2),
+        toughness: Value::Const(-2),
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         name: "Sandman's Quicksand",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Mayhem(cost(&[generic(3), b()]))],
-        effect: Effect::PumpPT {
-            what: Selector::EachPermanent(SelectionRequirement::Creature),
-            power: Value::Const(-2),
-            toughness: Value::Const(-2),
-            duration: Duration::EndOfTurn,
+        effect: Effect::If {
+            cond: Predicate::SpellWasMayhem,
+            then: Box::new(minus_two(opponents)),
+            else_: Box::new(minus_two(all)),
         },
         ..Default::default()
     }
