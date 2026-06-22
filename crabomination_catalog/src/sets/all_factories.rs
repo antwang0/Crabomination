@@ -2639,6 +2639,7 @@ static DECKS: &[Factory] = &[
     super::decks::kishla_skimmer,
     super::decks::inevitable_defeat,
     super::decks::magmatic_hellkite,
+    super::decks::hardened_tactician,
     super::decks::skyscanner,
     super::decks::pristine_talisman,
     super::decks::ram_through,

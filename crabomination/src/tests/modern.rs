@@ -62635,3 +62635,22 @@ fn magmatic_hellkite_destroys_nonbasic_and_ramps_stunned_basic() {
     assert!(basic.tapped, "the basic entered tapped");
     assert!(basic.counter_count(CounterType::Stun) >= 1, "with a stun counter");
 }
+
+/// Hardened Tactician sacrifices a token to draw a card.
+#[test]
+fn hardened_tactician_sacs_token_to_draw() {
+    let mut g = two_player_game();
+    let tac = g.add_card_to_battlefield(0, catalog::hardened_tactician());
+    g.clear_sickness(tac);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    // A Treasure token to sacrifice.
+    let tok = g.add_token_to_battlefield(0, &crabomination_base::tokens::treasure_token());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tac, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate sac-token draw");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tok).is_none(), "the token was sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}

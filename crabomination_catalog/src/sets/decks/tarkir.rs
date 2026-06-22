@@ -296,3 +296,26 @@ pub fn magmatic_hellkite() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hardened Tactician — {1}{W}{B} 2/4 Human Warrior. `{1}, Sacrifice a token:
+/// Draw a card.`
+pub fn hardened_tactician() -> CardDefinition {
+    CardDefinition {
+        name: "Hardened Tactician",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((SelectionRequirement::IsToken, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
