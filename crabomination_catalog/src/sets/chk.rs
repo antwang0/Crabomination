@@ -367,6 +367,40 @@ pub fn harsh_deceiver() -> CardDefinition {
     }
 }
 
+/// Kodama of the Center Tree — {4}{G} Legendary Spirit */* (= Spirits you
+/// control). Soulshift X, where X is the number of Spirits you control.
+pub fn kodama_of_the_center_tree() -> CardDefinition {
+    use crate::card::DynamicPt;
+    use crate::effect::{PlayerRef as PR, ZoneDest};
+    let spirits_you_control = SelectionRequirement::Creature
+        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+        .and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Kodama of the Center Tree",
+        cost: cost(&[generic(4), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        dynamic_pt: Some(DynamicPt::CreaturesOfTypeControlled { creature_type: CreatureType::Spirit }),
+        // Soulshift X — return a Spirit from your graveyard whose mana value is
+        // at most the number of Spirits you control (X, read at resolution).
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::MayDo {
+            description: "Soulshift X — return a Spirit from your graveyard".to_string(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InYourGraveyard
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ManaValueAtMostYourCount(Box::new(
+                            spirits_you_control,
+                        ))),
+                ),
+                to: ZoneDest::Hand(PR::You),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Ghost-Lit Raider — {2}{R} Spirit 2/1. {2}{R},{T}: 2 damage to target
 /// creature. Channel — {3}{R}, Discard this card: 4 damage to target creature.
 pub fn ghost_lit_raider() -> CardDefinition {

@@ -3822,3 +3822,32 @@ fn ghost_lit_stalker_channel_discards_four() {
     assert_eq!(g.players[1].hand.len(), p1_hand - 4, "target player discarded four");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == stalker), "Stalker discarded to channel");
 }
+
+/// Kodama of the Center Tree is */* equal to Spirits you control, and its
+/// Soulshift X returns a Spirit with MV <= that count.
+#[test]
+fn kodama_center_tree_cda_and_soulshift_x() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let kodama = g.add_card_to_battlefield(0, catalog::kodama_of_the_center_tree());
+    g.add_card_to_battlefield(0, catalog::lantern_kami());     // Spirit
+    g.add_card_to_battlefield(0, catalog::gibbering_kami());   // Spirit
+    // 3 Spirits (incl. Kodama) → 3/3.
+    let cp = g.computed_permanent(kodama).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "*/* = Spirits you control");
+    // A Spirit (MV 3) in the graveyard is returnable on death (X = 2 after
+    // Kodama leaves, two other Spirits remain).
+    let gy_spirit = g.add_card_to_graveyard(0, catalog::gibbering_kami()); // MV 4
+    let small = g.add_card_to_graveyard(0, catalog::lantern_kami());       // MV 1
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(small)),
+    ]));
+    let mut events = Vec::new();
+    g.sacrifice_one(kodama, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    // MV-1 Spirit is returnable (1 <= 2); MV-4 isn't.
+    assert!(g.players[0].hand.iter().any(|c| c.id == small), "MV<=X Spirit returned");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == gy_spirit), "MV>X Spirit stays");
+}
