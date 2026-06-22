@@ -3660,6 +3660,25 @@ were stale). See git history for the per-card details.
 
 ## New TODO suggestions (push modern_decks)
 
+### Tarkir: Dragonstorm follow-ups (this run)
+- **Omen cycle is partial** — 6 of the Dragon Omen cards ship (`decks::omen`:
+  Marang River / Dirgur Island / Bloomvine / Scavenger / Twinmaw / Disruptive).
+  Scryfall search is firewalled here (only `/cards/named` works), so the
+  remaining Regent/Stormbrood members + commons couldn't be enumerated by name.
+  Re-run the probe once search is reachable and finish the cycle.
+- **`Effect::JoinCombatAttacking`** currently attacks the source's defender (else
+  the first opponent). Add a chosen-defender/planeswalker variant for cards that
+  reanimate "attacking a player or planeswalker of your choice".
+- **Unmodeled TDM keywords noticed:** Harmonize (graveyard recast with a
+  tap-a-creature cost reduction — Channeled Dragonfire), Flurry / "your second
+  spell each turn" gates (Cori Mountain Stalwart, Highspire Bell-Ringer), and a
+  conditional self-keyword-while static ("has hexproof if it hasn't dealt damage
+  yet" — Karakyk Guardian; needs a `source-hasn't-dealt-damage` predicate).
+- **Search-by-`ControllerOf(target)`** only resolved through a
+  `Selector::TargetFiltered{slot}` inside the `ControllerOf` (plain
+  `Selector::Target(0)` came back empty during trigger resolution — Magmatic
+  Hellkite). Worth auditing why `Target(0)` doesn't resolve in that context.
+
 ### Content — Theros Beyond Death (THB) is the active set being filled
 Regenerate the remaining list with `cargo run -p crabomination_catalog
 --example dump_names thb` diffed against a `set:thb` Scryfall name dump. The
