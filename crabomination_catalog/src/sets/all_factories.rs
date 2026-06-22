@@ -2710,6 +2710,8 @@ static DECKS: &[Factory] = &[
     super::decks::constrictor_sage,
     super::decks::wayspeaker_bodyguard,
     super::decks::coordinated_maneuver,
+    super::decks::roamers_routine,
+    super::decks::webspinner_cuff,
     super::decks::skyscanner,
     super::decks::pristine_talisman,
     super::decks::ram_through,

@@ -63652,3 +63652,40 @@ fn coordinated_maneuver_pings_for_board_count() {
     // 2 creatures controlled → 2 damage kills the 2/2.
     assert!(g.battlefield_find(victim).is_none(), "2 damage killed the 2/2");
 }
+
+/// Roamer's Routine fetches a basic land onto the battlefield tapped.
+#[test]
+fn roamers_routine_fetches_land_tapped() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::roamers_routine());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roamer's Routine");
+    drain_stack(&mut g);
+    let land = g.battlefield_find(forest);
+    assert!(land.is_some(), "Forest fetched onto the battlefield");
+    assert!(land.unwrap().tapped, "and it enters tapped");
+}
+
+/// Webspinner Cuff reconfigures onto a creature, granting +1/+4 and reach.
+#[test]
+fn webspinner_cuff_reconfigures_and_buffs() {
+    let mut g = two_player_game();
+    let cuff = g.add_card_to_battlefield(0, catalog::webspinner_cuff());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::Reconfigure { equipment: cuff, target: Some(bear) })
+        .expect("reconfigure Webspinner Cuff onto the bear");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 6), "2/2 + 1/4 = 3/6");
+    assert!(cp.keywords.contains(&Keyword::Reach), "granted reach");
+}

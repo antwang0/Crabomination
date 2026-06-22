@@ -1611,3 +1611,50 @@ pub fn coordinated_maneuver() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TDM batch 10: Harmonize land-ramp + Reconfigure equipment ─────────────
+
+/// Roamer's Routine — {2}{G} Sorcery. Search your library for a basic land card,
+/// put it onto the battlefield tapped, then shuffle. Harmonize {4}{G}.
+pub fn roamers_routine() -> CardDefinition {
+    CardDefinition {
+        name: "Roamer's Routine",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[generic(4), g()]))],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+        ..Default::default()
+    }
+}
+
+/// Webspinner Cuff — {2}{G} 1/4 Artifact Creature — Equipment Spider with Reach.
+/// Equipped creature gets +1/+4 and has reach. Reconfigure {4}.
+pub fn webspinner_cuff() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Webspinner Cuff",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::Reconfigure(cost(&[generic(4)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 4,
+            keywords: vec![Keyword::Reach],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
