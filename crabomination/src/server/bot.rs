@@ -1787,10 +1787,39 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// (Frostwielder, Pain Kami at fixed X) and the "damage equal to its own power"
 /// shape (Kiku, Night's Flower). Targets the highest-power killable opponent
 /// creature; dry-run-gated so cost / sorcery timing / target legality all
-/// bottom out in `would_accept`. Conservative: never points the ability at a
-/// player (no chip damage) and never at the bot's own creatures.
+/// bottom out in `would_accept`. Points the ability at an opponent's face only
+/// when the hit is exactly lethal (reach for the win); otherwise never chips a
+/// player and never targets the bot's own creatures.
 fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
     use crate::effect::{Selector, Value};
+    // Reach for the win first: if a constant-damage "any target" ability is
+    // lethal to an opponent, point it at their face. Only fires when the hit
+    // is actually lethal (life ≤ amount), so it's never a wasted chip ping.
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Effect::DealDamage { to, amount: Value::Const(n) } = &ab.effect else { continue };
+            // Must be an untyped "any target" slot (a creature-only filter
+            // can't be pointed at a player).
+            if !matches!(to, Selector::Target(_)) {
+                continue;
+            }
+            for opp in 0..state.players.len() {
+                if state.same_team(opp, seat) || state.players[opp].life > *n as i32 {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Player(opp)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
     // Opposing creatures, highest computed power first (best removal value).
     let mut foes: Vec<(crate::card::CardId, i32)> = state
         .battlefield
@@ -3163,6 +3192,27 @@ mod tests {
         g.battlefield.retain(|c| c.id != frostling);
         g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
         assert!(pick_removal_ping(&g, 0).is_none(), "won't waste a ping on a survivor");
+    }
+
+    /// The bot points a ping at the opponent's face when it's exactly lethal
+    /// (reach for the win), not at a creature.
+    #[test]
+    fn bot_pings_face_for_lethal() {
+        let mut g = two_player_game();
+        let fw = g.add_card_to_battlefield(0, catalog::frostwielder()); // {T}: 1 dmg any target
+        g.clear_sickness(fw);
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a 2/2 it can't kill
+        g.players[1].life = 1; // lethal to a 1-damage ping
+        let action = pick_removal_ping(&g, 0).expect("bot reaches for the win");
+        match action {
+            GameAction::ActivateAbility { target, .. } => {
+                assert_eq!(target, Some(Target::Player(1)), "ping aimed at the face");
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
+        // Above 1 life it isn't lethal and there's no killable creature → hold.
+        g.players[1].life = 5;
+        assert!(pick_removal_ping(&g, 0).is_none(), "won't chip a non-lethal face");
     }
 
     /// The bot crews a Vehicle with a spare small creature, but won't tap a
