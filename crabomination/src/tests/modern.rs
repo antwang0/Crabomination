@@ -64110,3 +64110,168 @@ fn piercing_exhale_fights_one_sided() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "4 power → 4 damage kills the 4/4");
 }
+
+// ── Monuments / Devotees / misc TDM ─────────────────────────────────────────
+
+/// Jeskai Monument tutors a basic land to hand on ETB.
+#[test]
+fn jeskai_monument_tutors_basic_on_etb() {
+    let mut g = two_player_game();
+    let island = g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(island))]));
+    let id = g.add_card_to_hand(0, catalog::jeskai_monument());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Jeskai Monument");
+    drain_stack(&mut g);
+    // cast (-1) + tutored Island to hand (+1) = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Island"), "Island tutored");
+}
+
+/// Mardu Monument's sac ability mints three Warriors.
+#[test]
+fn mardu_monument_sac_mints_three_warriors() {
+    let mut g = two_player_game();
+    let mon = g.add_card_to_battlefield(0, catalog::mardu_monument());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mon, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate Mardu Monument sac");
+    drain_stack(&mut g);
+    let warriors = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Warrior").count();
+    assert_eq!(warriors, 3, "three Warriors minted");
+    assert!(g.battlefield_find(mon).is_none(), "Monument sacrificed");
+}
+
+/// Abzan Devotee can return itself from the graveyard for {2}{B}.
+#[test]
+fn abzan_devotee_returns_from_graveyard() {
+    let mut g = two_player_game();
+    let dev = g.add_card_to_graveyard(0, catalog::abzan_devotee());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dev, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate graveyard recur");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dev), "Devotee back in hand");
+}
+
+/// Temur Devotee's mana ability adds one of its three colors, once per turn.
+#[test]
+fn temur_devotee_mana_ability_once_per_turn() {
+    let mut g = two_player_game();
+    let dev = g.add_card_to_battlefield(0, catalog::temur_devotee());
+    g.clear_sickness(dev);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dev, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("first activation");
+    // Total mana after spending 1 and adding 1 = still 2.
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+    // Second activation is illegal (once each turn).
+    let second = g.perform_action(GameAction::ActivateAbility {
+        card_id: dev, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    });
+    assert!(second.is_err(), "mana ability is once each turn");
+}
+
+/// Starry-Eyed Skyrider grants flying to another creature on attack.
+#[test]
+fn starry_eyed_skyrider_grants_flying_on_attack() {
+    let mut g = two_player_game();
+    let rider = g.add_card_to_battlefield(0, catalog::starry_eyed_skyrider());
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(rider);
+    g.clear_sickness(buddy);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rider, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&crate::card::Keyword::Flying),
+        "buddy gained flying");
+}
+
+/// Aegis Sculptor grows on upkeep by exiling two graveyard cards.
+#[test]
+fn aegis_sculptor_grows_on_upkeep() {
+    let mut g = two_player_game();
+    let sculptor = g.add_card_to_battlefield(0, catalog::aegis_sculptor());
+    g.add_card_to_graveyard(0, catalog::island());
+    g.add_card_to_graveyard(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).unwrap();
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.computed_permanent(sculptor).unwrap().power, 3, "2/3 + counter = 3 power");
+}
+
+/// Yathan Tombguard draws (and loses 1) when a counter-bearing creature hits.
+#[test]
+fn yathan_tombguard_draws_on_counter_creature_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::yathan_tombguard());
+    let hitter = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(hitter).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(hitter);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hitter, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on combat damage");
+    assert_eq!(g.players[0].life, life_before - 1);
+}
+
+/// Sunpearl Kirin bounces a nonland permanent you control on ETB.
+#[test]
+fn sunpearl_kirin_bounces_your_permanent() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sunpearl_kirin());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sunpearl Kirin");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == other), "bounced the bear to hand");
+}

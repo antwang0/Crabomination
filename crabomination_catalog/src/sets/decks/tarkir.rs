@@ -2427,3 +2427,444 @@ pub fn piercing_exhale() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Monument cycle (ETB basic-land tutor + sorcery-speed sac payoff) ─────────
+
+/// Shared ETB: search your library for one of three basic land types to hand.
+fn monument_etb(a: crate::card::LandType, b: crate::card::LandType, c: crate::card::LandType) -> TriggeredAbility {
+    etb(Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::IsBasicLand.and(
+            SelectionRequirement::HasLandType(a)
+                .or(SelectionRequirement::HasLandType(b))
+                .or(SelectionRequirement::HasLandType(c)),
+        ),
+        to: ZoneDest::Hand(PlayerRef::You),
+    })
+}
+
+fn monument_sac(mana: crate::mana::ManaCost, payoff: Effect) -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        sac_cost: true,
+        sorcery_speed: true,
+        mana_cost: mana,
+        effect: payoff,
+        ..Default::default()
+    }
+}
+
+fn warrior_token() -> crate::card::TokenDefinition {
+    use crate::card::TokenDefinition;
+    TokenDefinition {
+        name: "Warrior".into(),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+        colors: vec![Color::Red],
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace, Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Jeskai Monument — {2} Artifact. ETB: tutor a basic Island/Mountain/Plains.
+/// {1}{U}{R}{W}, {T}, Sacrifice: create two 1/1 white flying Birds.
+pub fn jeskai_monument() -> CardDefinition {
+    use crate::card::{LandType, TokenDefinition};
+    CardDefinition {
+        name: "Jeskai Monument",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![monument_etb(LandType::Island, LandType::Mountain, LandType::Plains)],
+        activated_abilities: vec![monument_sac(
+            cost(&[generic(1), u(), r(), w()]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Bird".into(),
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+                    colors: vec![Color::White],
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    ..Default::default()
+                },
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Mardu Monument — {2} Artifact. ETB: tutor a basic Mountain/Plains/Swamp.
+/// {2}{R}{W}{B}, {T}, Sacrifice: create three 1/1 red Warriors with menace and
+/// haste.
+pub fn mardu_monument() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Mardu Monument",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![monument_etb(LandType::Mountain, LandType::Plains, LandType::Swamp)],
+        activated_abilities: vec![monument_sac(
+            cost(&[generic(2), r(), w(), b()]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: warrior_token(),
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Sultai Monument — {2} Artifact. ETB: tutor a basic Swamp/Forest/Island.
+/// {2}{B}{G}{U}, {T}, Sacrifice: create two 2/2 black Zombie Druids.
+pub fn sultai_monument() -> CardDefinition {
+    use crate::card::{LandType, TokenDefinition};
+    CardDefinition {
+        name: "Sultai Monument",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![monument_etb(LandType::Swamp, LandType::Forest, LandType::Island)],
+        activated_abilities: vec![monument_sac(
+            cost(&[generic(2), b(), g(), u()]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Zombie Druid".into(),
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Zombie, CreatureType::Druid],
+                        ..Default::default()
+                    },
+                    colors: vec![Color::Black],
+                    power: 2,
+                    toughness: 2,
+                    ..Default::default()
+                },
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Temur Monument — {2} Artifact. ETB: tutor a basic Forest/Island/Mountain.
+/// {3}{G}{U}{R}, {T}, Sacrifice: create a 5/5 green Elephant.
+pub fn temur_monument() -> CardDefinition {
+    use crate::card::{LandType, TokenDefinition};
+    CardDefinition {
+        name: "Temur Monument",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![monument_etb(LandType::Forest, LandType::Island, LandType::Mountain)],
+        activated_abilities: vec![monument_sac(
+            cost(&[generic(3), g(), u(), r()]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Elephant".into(),
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+                    colors: vec![Color::Green],
+                    power: 5,
+                    toughness: 5,
+                    ..Default::default()
+                },
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+// ── Devotee cycle ({1}: add one of three colors, once each turn) ────────────
+
+fn devotee_mana(colors: Vec<Color>) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost(&[generic(1)]),
+        once_per_turn: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(colors, Value::Const(1)) },
+        ..Default::default()
+    }
+}
+
+/// Abzan Devotee — {1}{B} 2/2 Dog Cleric. {1}: add W/B/G (once each turn).
+/// {2}{B}: return this from your graveyard to your hand.
+pub fn abzan_devotee() -> CardDefinition {
+    CardDefinition {
+        name: "Abzan Devotee",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            devotee_mana(vec![Color::White, Color::Black, Color::Green]),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), b()]),
+                from_graveyard: true,
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Temur Devotee — {1}{U} 2/2 Defender. {1}: add G/U/R (once each turn).
+pub fn temur_devotee() -> CardDefinition {
+    CardDefinition {
+        name: "Temur Devotee",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![devotee_mana(vec![Color::Green, Color::Blue, Color::Red])],
+        ..Default::default()
+    }
+}
+
+/// Sultai Devotee — {1}{G} 2/2 Deathtouch. {1}: add B/G/U (once each turn).
+pub fn sultai_devotee() -> CardDefinition {
+    CardDefinition {
+        name: "Sultai Devotee",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Snake, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![devotee_mana(vec![Color::Black, Color::Green, Color::Blue])],
+        ..Default::default()
+    }
+}
+
+// ── Other white/blue/black creatures ────────────────────────────────────────
+
+/// Tempest Hawk — {2}{W} 2/2 Bird with flying. Combat damage to a player: you
+/// may search for a card named Tempest Hawk and put it into your hand.
+pub fn tempest_hawk() -> CardDefinition {
+    CardDefinition {
+        name: "Tempest Hawk",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Search for another Tempest Hawk?".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasName("Tempest Hawk".into()),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Starry-Eyed Skyrider — {2}{W} 1/3 Human Scout with flying. On attack, another
+/// target creature you control gains flying until end of turn. Attacking tokens
+/// you control have flying.
+pub fn starry_eyed_skyrider() -> CardDefinition {
+    CardDefinition {
+        name: "Starry-Eyed Skyrider",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            keyword: Keyword::Flying,
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Attacking tokens you control have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::IsToken
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::IsAttacking),
+                ),
+                keyword: Keyword::Flying,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aegis Sculptor — {3}{U} 2/3 Bird Wizard with flying and ward {2}. At the
+/// beginning of your upkeep, you may exile two cards from your graveyard to put
+/// a +1/+1 counter on it.
+pub fn aegis_sculptor() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Aegis Sculptor",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayDo {
+                description: "Exile two cards from your graveyard to grow Aegis Sculptor?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::Take {
+                            inner: Box::new(Selector::EachMatching {
+                                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                                filter: SelectionRequirement::Any,
+                            }),
+                            count: Box::new(Value::Const(2)),
+                        },
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Yathan Tombguard — {2}{B} 2/3 Human Warrior with menace. Whenever a creature
+/// you control with a +1/+1 counter deals combat damage to a player, draw a
+/// card and lose 1 life.
+pub fn yathan_tombguard() -> CardDefinition {
+    CardDefinition {
+        name: "Yathan Tombguard",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                }),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kishla Trawlers — {2}{U} 2/3 Human Citizen. ETB: you may exile a creature
+/// card from your graveyard; when you do, return target instant or sorcery card
+/// from your graveyard to your hand.
+pub fn kishla_trawlers() -> CardDefinition {
+    CardDefinition {
+        name: "Kishla Trawlers",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Exile a creature card from your graveyard to return an instant/sorcery?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::EachMatching {
+                            zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                            filter: SelectionRequirement::Creature,
+                        }),
+                        count: Box::new(Value::Const(1)),
+                    },
+                    to: ZoneDest::Exile,
+                },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::InYourGraveyard.and(
+                            SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        ),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sunpearl Kirin — {1}{W} 2/1 Kirin with flash and flying. ETB: return up to
+/// one other target nonland permanent you control to its owner's hand.
+/// (The "if it was a token, draw a card" rider is omitted — the bounced object
+/// is gone before the rider can read it.)
+pub fn sunpearl_kirin() -> CardDefinition {
+    CardDefinition {
+        name: "Sunpearl Kirin",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kirin], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::Nonland
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        })],
+        ..Default::default()
+    }
+}

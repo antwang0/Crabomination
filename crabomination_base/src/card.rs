@@ -161,6 +161,8 @@ pub enum CreatureType {
     Hero,
     // Tarkir: Dragonstorm (Cunning Coyote).
     Coyote,
+    // Tarkir: Dragonstorm (Sunpearl Kirin).
+    Kirin,
 }
 
 /// Land subtypes (basic land types + others).
