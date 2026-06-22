@@ -359,17 +359,6 @@ fn main() {
         .insert_resource(audit::load_audited_cards())
         .insert_resource(DecisionUiState::default())
         .insert_resource(systems::debug_console::DebugConsoleState::default())
-        // TEMPORARY: live tonemapper + colour-grading scrubber (open with `\`).
-        .init_resource::<systems::render_debug::RenderDebug>()
-        .add_systems(
-            Update,
-            (
-                systems::render_debug::toggle_render_debug,
-                systems::render_debug::handle_debug_buttons,
-                systems::render_debug::sync_render_debug_panel,
-                systems::render_debug::apply_render_debug,
-            ),
-        )
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .init_resource::<systems::game_ui::SurrenderConfirm>()

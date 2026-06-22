@@ -19,7 +19,6 @@ pub mod phase_bar;
 pub mod pt_label;
 pub mod token_badge;
 pub mod quality;
-pub mod render_debug;
 pub mod settings_menu;
 pub mod ui;
 pub mod ui_card_hover;

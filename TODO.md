@@ -2654,17 +2654,26 @@ and has flying" (Dragon's Rage Channeler, Traverse the Ulvenwald-adjacent
 cards) — needs a layer-system static whose application is gated on a
 predicate. DRC isn't implemented yet pending this.
 
-### Client build CAN be verified in the web sandbox (pkg-config shim)
-`crabomination_client` links Bevy, whose `wayland-sys`/`alsa-sys` build
-scripts call `pkg-config` for libs whose runtime `.so`s exist here but whose
-`.pc` files don't. Drop minimal `.pc` shims in a temp dir and point
-`PKG_CONFIG_PATH` at it — then `cargo check/clippy -p crabomination_client`
-works (the libs only need to *link*, not run; we never open a window):
+### Client build CAN be verified in the web sandbox (pkg-config + linker shim)
+`crabomination_client` links Bevy, whose `wayland-sys`/`alsa-sys`/`libudev-sys`
+build scripts call `pkg-config`, and the linker then wants `.so` dev symlinks —
+the runtime `.so.N` files exist here but the `.pc` files and `.so` symlinks
+don't. Since the Bevy 0.18→0.19 bump the toolchain floor is **rustc 1.95**
+(`rustup toolchain install 1.95.0 && rustup override set 1.95.0`). Drop shims +
+symlinks in a temp dir and point both `PKG_CONFIG_PATH` and `LIBRARY_PATH` at
+it (pkgconf 1.8 rejects a `.pc` with no `Description:` field, and 0.19 added
+the `libudev` dep):
 ```sh
 mkdir -p /tmp/pc && cd /tmp/pc
-for m in client cursor egl; do printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: wayland-%s\nVersion: 1.22.0\nLibs: -L${libdir} -lwayland-%s\nCflags:\n' $m $m > wayland-$m.pc; done
-printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: alsa\nVersion: 1.2.0\nLibs: -L${libdir} -lasound\nCflags:\n' > alsa.pc
-PKG_CONFIG_PATH=/tmp/pc cargo clippy -p crabomination_client
+for m in client cursor egl; do printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: wayland-%s\nDescription: shim\nVersion: 1.22.0\nLibs: -L${libdir} -lwayland-%s\nCflags:\n' $m $m > wayland-$m.pc; done
+printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: alsa\nDescription: shim\nVersion: 1.2.0\nLibs: -L${libdir} -lasound\nCflags:\n' > alsa.pc
+printf 'libdir=/usr/lib/x86_64-linux-gnu\nName: libudev\nDescription: shim\nVersion: 250\nLibs: -L${libdir} -ludev\nCflags:\n' > libudev.pc
+ln -sf /usr/lib/x86_64-linux-gnu/libwayland-client.so.0 libwayland-client.so
+ln -sf /usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0 libwayland-cursor.so
+ln -sf /usr/lib/x86_64-linux-gnu/libwayland-egl.so.1 libwayland-egl.so
+ln -sf /usr/lib/x86_64-linux-gnu/libudev.so.1 libudev.so
+ln -sf /usr/lib/x86_64-linux-gnu/libasound.so.2 libasound.so
+PKG_CONFIG_PATH=/tmp/pc LIBRARY_PATH=/tmp/pc cargo clippy -p crabomination_client
 ```
 Runtime/GPU verification (opening a window) still needs the local
 `verifier-client` skill — only compile-checking works headless.
