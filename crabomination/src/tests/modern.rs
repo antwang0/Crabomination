@@ -64045,3 +64045,68 @@ fn desperate_measures_draws_when_target_dies() {
     // cast -1, then draw 2 on death → net +1.
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
 }
+
+// ── Exhale cycle ────────────────────────────────────────────────────────────
+
+/// Caustic Exhale gives a creature -3/-3.
+#[test]
+fn caustic_exhale_shrinks_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::caustic_exhale());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Caustic Exhale");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "-3/-3 kills the 2/2");
+}
+
+/// Dispelling Exhale counters unless they pay {2}; beholding a Dragon raises it
+/// to {4} (so a player with only {2} can't pay).
+#[test]
+fn dispelling_exhale_counters_more_with_dragon() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pearl_lake_warden()); // a Dragon → "beheld"
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(3); // after {1}{G}, 2 left: can pay {2} not {4}
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bears");
+    let exhale = g.add_card_to_hand(0, catalog::dispelling_exhale());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: exhale, target: Some(Target::Permanent(spell)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dispelling Exhale at the bears");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "bears countered (cannot pay 4)");
+}
+
+/// Piercing Exhale: your creature deals damage equal to its power to a target.
+#[test]
+fn piercing_exhale_fights_one_sided() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::piercing_exhale());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(victim)], mode: None, x_value: None,
+    }).expect("cast Piercing Exhale");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "4 power → 4 damage kills the 4/4");
+}

@@ -2297,3 +2297,133 @@ pub fn desperate_measures() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Exhale cycle (TDM "behold a Dragon") ────────────────────────────────────
+//
+// "Behold a Dragon" is an additional cost (choose a Dragon you control or
+// reveal one from hand). We don't model the cast-time reveal; the unconditional
+// half always resolves, and the "if a Dragon was beheld" rider is gated on
+// controlling a Dragon (the common faithful case — hand-reveal is omitted).
+
+/// Returns a predicate true when you control a Dragon (our "beheld" proxy).
+fn beheld_a_dragon() -> Predicate {
+    Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Dragon)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        n: Value::Const(1),
+    }
+}
+
+/// Caustic Exhale — {B} Instant. (Behold a Dragon or pay {1}.) Target creature
+/// gets -3/-3 until end of turn.
+pub fn caustic_exhale() -> CardDefinition {
+    CardDefinition {
+        name: "Caustic Exhale",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Osseous Exhale — {1}{W} Instant. Deal 5 damage to target attacking or
+/// blocking creature. If a Dragon was beheld, you gain 2 life.
+pub fn osseous_exhale() -> CardDefinition {
+    CardDefinition {
+        name: "Osseous Exhale",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                    ),
+                ),
+                amount: Value::Const(5),
+            },
+            Effect::If {
+                cond: beheld_a_dragon(),
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Molten Exhale — {1}{R} Sorcery. Deal 4 damage to target creature or
+/// planeswalker. (Castable as though it had flash if you behold a Dragon.)
+pub fn molten_exhale() -> CardDefinition {
+    CardDefinition {
+        name: "Molten Exhale",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Dispelling Exhale — {1}{U} Instant. Counter target spell unless its
+/// controller pays {2}. If a Dragon was beheld, pays {4} instead.
+pub fn dispelling_exhale() -> CardDefinition {
+    let counter = |amt: u32| Effect::CounterUnlessPaid {
+        what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        mana_cost: cost(&[generic(amt)]),
+        exile: false,
+        extra_generic: None,
+    };
+    CardDefinition {
+        name: "Dispelling Exhale",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: beheld_a_dragon(),
+            then: Box::new(counter(4)),
+            else_: Box::new(counter(2)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Piercing Exhale — {1}{G} Instant. Target creature you control deals damage
+/// equal to its power to target creature or planeswalker. If a Dragon was
+/// beheld, surveil 2.
+pub fn piercing_exhale() -> CardDefinition {
+    CardDefinition {
+        name: "Piercing Exhale",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                },
+                amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                })),
+            },
+            Effect::If {
+                cond: beheld_a_dragon(),
+                then: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
