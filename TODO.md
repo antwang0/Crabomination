@@ -189,6 +189,18 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   wired for `wants_ui` players (AutoDecider takes the first card; a client
   modal + suspend/resume loop is the follow-up).
 
+- ⏳ **Noticed this run (modern_decks Kamigawa/Channel batch):**
+  - **Ghost-Lit Drifter** deferred — its Channel grants flying to *X* target
+    creatures, but `Effect::ApplyToTargets.max_targets` is a fixed `u8`, not a
+    cast-time `Value`. A `Value`-bounded "up to N targets" would unblock it
+    (and tighten Yosei's "up to five permanents that player controls").
+  - **Kitsune Palliator** deferred — "{T}: prevent the next 1 damage to *each*
+    creature and *each* player" needs a mass prevention-shield install
+    (`PreventNextDamage` is single-target today).
+  - **Ravenous (CR 702.156)** models the "draw if X≥5" clause off the resulting
+    +1/+1 counter count; a counter-doubler would shift the threshold vs. printed
+    X. A permanent-remembers-cast-X field would make it exact.
+
 - ⏳ **Noticed this run (prowl / faeries / triggered-mana batch):**
   - **AutoDecider declines all `SearchLibrary` picks** (`Search(None)`) — a
     bot heuristic that takes the first eligible candidate would make
