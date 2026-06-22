@@ -67,6 +67,40 @@ pub fn kodamas_might() -> CardDefinition {
     }
 }
 
+/// Hinder — {1}{U}{U} Instant. Counter target spell; its owner puts it on the
+/// top or bottom of their library instead of the graveyard.
+pub fn hinder() -> CardDefinition {
+    CardDefinition {
+        name: "Hinder",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpellToZone {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            zone: crate::effect::CounteredSpellZone::OwnerLibraryTopOrBottom,
+        },
+        ..Default::default()
+    }
+}
+
+/// Blessed Breath — {W} Instant — Arcane. Target creature you control gains
+/// protection from the color of your choice until end of turn. Splice {W}.
+pub fn blessed_breath() -> CardDefinition {
+    CardDefinition {
+        name: "Blessed Breath",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        subtypes: arcane(),
+        keywords: vec![Keyword::Splice(cost(&[w()]), SpellSubtype::Arcane)],
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 /// Concordant Crossroads — {G} World Enchantment. All creatures have haste.
 pub fn concordant_crossroads() -> CardDefinition {
     CardDefinition {
@@ -310,6 +344,24 @@ pub fn callous_deceiver() -> CardDefinition {
         activated_abilities: deceiver_abilities(Effect::Seq(vec![
             Effect::PumpPT { what: Selector::This, power: Value::Const(1), toughness: Value::Const(0), duration: Duration::EndOfTurn },
             Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+        ])),
+        ..Default::default()
+    }
+}
+
+/// Harsh Deceiver — {3}{W} Spirit 1/4. {2}, reveal-a-land: untap this creature
+/// and it gets +1/+1 until end of turn (once each turn).
+pub fn harsh_deceiver() -> CardDefinition {
+    CardDefinition {
+        name: "Harsh Deceiver",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 4,
+        activated_abilities: deceiver_abilities(Effect::Seq(vec![
+            Effect::Untap { what: Selector::This, up_to: None },
+            Effect::PumpPT { what: Selector::This, power: Value::Const(1), toughness: Value::Const(1), duration: Duration::EndOfTurn },
         ])),
         ..Default::default()
     }

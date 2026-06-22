@@ -3717,3 +3717,63 @@ fn matsu_tribe_sniper_pings_and_locks_flyer() {
     assert!(d.tapped, "flyer tapped");
     assert!(d.skip_next_untap, "flyer won't untap next turn");
 }
+
+/// Harsh Deceiver reveals a land to untap itself and grow +1/+1.
+#[test]
+fn harsh_deceiver_untaps_and_grows_on_land() {
+    let mut g = two_player_game();
+    let deceiver = g.add_card_to_battlefield(0, catalog::harsh_deceiver());
+    g.clear_sickness(deceiver);
+    g.battlefield_find_mut(deceiver).unwrap().tapped = true;
+    let land = g.next_id();
+    g.players[0].add_to_library_top(land, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: deceiver, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate reveal ability");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(deceiver).unwrap().tapped, "untapped itself");
+    let cp = g.computed_permanent(deceiver).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 5), "1/4 +1/+1");
+}
+
+/// Hinder counters a spell to the owner's library instead of the graveyard.
+#[test]
+fn hinder_counters_to_library() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crate::mana::Color::Green, 2);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a creature");
+    let hinder = g.add_card_to_hand(0, catalog::hinder());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hinder, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hinder");
+    drain_stack(&mut g);
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == spell), "not in graveyard");
+    assert!(g.players[1].library.iter().any(|c| c.id == spell), "back in library");
+}
+
+/// Blessed Breath grants protection from a chosen color until end of turn.
+#[test]
+fn blessed_breath_grants_protection() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::blessed_breath());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(crate::mana::Color::Red)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blessed Breath");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Protection(crate::mana::Color::Red)), "protection from red");
+}
