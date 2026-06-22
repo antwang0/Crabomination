@@ -3671,3 +3671,49 @@ fn callous_deceiver_nonland_top_no_bonus() {
     assert_eq!((cp.power, cp.toughness), (1, 3), "no pump on a nonland reveal");
     assert!(!cp.keywords.contains(&Keyword::Flying), "no flying granted");
 }
+
+/// CR 509.1c — Matsu-Tribe Decoy forces a target creature to block it. With the
+/// block requirement set, the defender can't declare zero blocks against it.
+#[test]
+fn cr_509_1c_matsu_tribe_decoy_forces_block() {
+    let mut g = two_player_game();
+    let decoy = g.add_card_to_battlefield(0, catalog::matsu_tribe_decoy());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(decoy);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: decoy, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate must-block ability");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().must_block, Some(decoy), "bear must block Decoy");
+    advance_to(&mut g, crate::game::TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: decoy, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, crate::game::TurnStep::DeclareBlockers);
+    // Declining to block the required attacker is illegal.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![])).is_err(),
+        "must block Decoy if able");
+    g.perform_action(GameAction::DeclareBlockers(vec![(bear, decoy)])).expect("legal block");
+}
+
+/// Matsu-Tribe Sniper pings a flyer for 1 and locks it down (tap + no untap).
+#[test]
+fn matsu_tribe_sniper_pings_and_locks_flyer() {
+    let mut g = two_player_game();
+    let sniper = g.add_card_to_battlefield(0, catalog::matsu_tribe_sniper());
+    let djinn = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // 5/6 flyer
+    g.clear_sickness(sniper);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sniper, ability_index: 0, target: Some(Target::Permanent(djinn)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate ping");
+    drain_stack(&mut g);
+    let d = g.battlefield_find(djinn).unwrap();
+    assert_eq!(d.damage, 1, "1 damage pinged");
+    assert!(d.tapped, "flyer tapped");
+    assert!(d.skip_next_untap, "flyer won't untap next turn");
+}

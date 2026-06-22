@@ -83,6 +83,8 @@ static CHK: &[Factory] = &[
     super::chk::cruel_deceiver,
     super::chk::feral_deceiver,
     super::chk::callous_deceiver,
+    super::chk::matsu_tribe_decoy,
+    super::chk::matsu_tribe_sniper,
     super::chk::glacial_ray,
     super::chk::reach_through_mists,
     super::chk::kodamas_might,

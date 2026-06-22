@@ -984,6 +984,58 @@ pub fn kashi_tribe_reaver() -> CardDefinition {
     }
 }
 
+/// Matsu-Tribe Decoy — {2}{G} Snake Warrior 1/3. {2}{G}: Target creature
+/// blocks this creature this turn if able. Plus the snake combat tap-lock.
+pub fn matsu_tribe_decoy() -> CardDefinition {
+    CardDefinition {
+        name: "Matsu-Tribe Decoy",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior]),
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![snake_tap_lock()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::MustBlockSource {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Matsu-Tribe Sniper — {1}{G} Snake Warrior Archer 1/1. {T}: deal 1 damage to
+/// target creature with flying (and lock it down — its own damage taps + skips
+/// the next untap). Plus the snake combat tap-lock for its combat damage.
+pub fn matsu_tribe_sniper() -> CardDefinition {
+    CardDefinition {
+        name: "Matsu-Tribe Sniper",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior, CreatureType::Archer]),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![snake_tap_lock()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                    ),
+                    amount: Value::Const(1),
+                },
+                Effect::Tap { what: Selector::Target(0) },
+                Effect::SkipNextUntap { what: Selector::Target(0) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Eiganjo Castle — {T}: Add {W}. {2}{W}: Prevent the next 2 damage to a
 /// legendary creature this turn. (Mana half only — the prevention targets a
 /// legendary creature.)

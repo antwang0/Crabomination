@@ -3538,6 +3538,11 @@ pub enum Effect {
     /// Pathfinder ({C}: target creature can't block this creature this turn).
     CantBlockSourceThisTurn { target: Selector },
 
+    /// CR 509.1c — "Target creature blocks `source` this turn if able."
+    /// Sets the target's `must_block` to the ability source (like Provoke
+    /// but without untapping the target). Matsu-Tribe Decoy.
+    MustBlockSource { what: Selector },
+
     /// "Prevent the next N damage that would be dealt to `target` this
     /// turn." (CR 615.7) Pushes a per-target prevention shield consumed
     /// by the non-combat damage path; the shield expires at cleanup.

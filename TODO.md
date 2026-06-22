@@ -138,8 +138,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
     devotion-counter conditional.
   - Kamigawa cards skipped this run for want of a primitive:
-    Matsu-Tribe Decoy / Matsu-Tribe Sniper (a "target creature must block this"
-    grant + tap-and-skip-untap-on-combat-damage); Sokenzan Renegade / Kiyomaro
+    Sokenzan Renegade / Kiyomaro
     (hand-size-gated keyword grants + "player with most cards" predicate);
     Takeno, Samurai General (anthem scaled by each Samurai's bushido total);
     Sachi, Daughter of Seshiro (granting "Shamans you control have {T}: Add

@@ -2659,6 +2659,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MustBlockSource { what } => {
+                // CR 509.1c — force the target to block the source this turn
+                // if able (no untap, unlike Provoke). Matsu-Tribe Decoy.
+                let source = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.definition.is_creature()
+                    {
+                        c.must_block = source;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Explore { who } => {
                 // CR 701.40 — each resolved permanent explores: reveal the
                 // top card of its controller's library; a land goes to hand,

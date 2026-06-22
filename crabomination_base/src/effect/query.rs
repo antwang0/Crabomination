@@ -391,6 +391,7 @@ impl Effect {
             | Effect::RemoveFromCombat { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
+            | Effect::MustBlockSource { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterSpellExileNameLock { what }
@@ -636,6 +637,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileReturnNextEndStep { what }
             | Effect::Provoke { what }
+            | Effect::MustBlockSource { what }
             | Effect::Suspect { what }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
@@ -1556,6 +1558,7 @@ impl Effect {
                 | Effect::Goad { what }
                 | Effect::Detain { what }
                 | Effect::Provoke { what }
+                | Effect::MustBlockSource { what }
                 | Effect::Transform { what }
                 | Effect::Flip { what }
                 | Effect::LoseAllAbilities { what, .. }
