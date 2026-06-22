@@ -3403,6 +3403,29 @@ fn cr_508_3a_alesha_reanimates_tapped_and_attacking() {
     assert!(g.attacking.iter().any(|a| a.attacker == bear), "and joins combat attacking");
 }
 
+/// Skimming Strike (Dirgur Island Dragon's Omen) taps a creature and draws.
+#[test]
+fn omen_skimming_strike_taps_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dragon = g.add_card_to_hand(0, catalog::dirgur_island_dragon());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastOmen {
+        card_id: dragon, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Skimming Strike");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target creature tapped");
+    // -1 (Dragon left hand) +1 draw = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card after tapping");
+    assert!(g.players[0].library.iter().any(|c| c.id == dragon), "Dragon shuffled back");
+}
+
 /// Exude Toxin ({X}{B}{B}, Scavenger Regent's Omen) gives each non-Dragon
 /// creature -X/-X; Dragons are spared.
 #[test]

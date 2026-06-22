@@ -133,6 +133,34 @@ pub fn scavenger_regent() -> CardDefinition {
     }
 }
 
+/// Dirgur Island Dragon — {5}{U} Dragon 4/4, Flying, Ward {2}. Omen —
+/// Skimming Strike {1}{U}: tap up to one target creature, then draw a card.
+pub fn dirgur_island_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Dirgur Island Dragon",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: dragon(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::generic(2))],
+        omen: Some(Box::new(Adventure {
+            name: "Skimming Strike",
+            cost: cost(&[generic(1), u()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    filter: SelectionRequirement::Creature,
+                    effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
 /// Twinmaw Stormbrood — {5}{W} Dragon 5/4, Flying. ETB gain 5 life. Omen —
 /// Charring Bite {1}{R}: deal 5 damage to target creature without flying.
 pub fn twinmaw_stormbrood() -> CardDefinition {

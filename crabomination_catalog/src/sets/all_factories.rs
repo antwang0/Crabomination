@@ -2623,6 +2623,7 @@ static DECKS: &[Factory] = &[
     super::decks::cynical_loner,
     super::decks::kona_rescue_beastie,
     super::decks::marang_river_regent,
+    super::decks::dirgur_island_dragon,
     super::decks::bloomvine_regent,
     super::decks::scavenger_regent,
     super::decks::twinmaw_stormbrood,
