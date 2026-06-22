@@ -58207,6 +58207,80 @@ pub fn mind_spike() -> CardDefinition {
     }
 }
 
+/// The Wandering Emperor — {2}{W}{W} Legendary Planeswalker, loyalty 3, Flash.
+/// May activate her loyalty abilities at instant speed the turn she enters
+/// (`flash_loyalty`). +1: +1/+1 counter on a target creature, it gains first
+/// strike. −1: make a 2/2 white Samurai with vigilance. −2: exile a target
+/// tapped creature, gain 2 life.
+pub fn the_wandering_emperor() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::effect::shortcut::target_filtered;
+    let samurai = TokenDefinition {
+        name: "Samurai".into(),
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Samurai], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Wandering Emperor",
+        cost: cost(&[generic(2), w(), w()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::WanderingEmperor],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        base_loyalty: 3,
+        flash_loyalty: true,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::FirstStrike,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: samurai,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+                        ),
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Skyscanner — {3} 1/1 Thopter artifact creature with flying. ETB: draw a card.
 pub fn skyscanner() -> CardDefinition {
     CardDefinition {

@@ -207,6 +207,8 @@ pub enum PlaneswalkerSubtype {
     Rowan, Will, Lukka,
     // Cube expansion: Wrenn (Wrenn and Six).
     Wrenn,
+    // NEO: The Wandering Emperor.
+    WanderingEmperor,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -1428,6 +1430,11 @@ pub struct CardDefinition {
     /// twice each turn rather than only once." (Urza, Planeswalker.)
     #[serde(default)]
     pub loyalty_twice_each_turn: bool,
+    /// CR 606.3b override — "As long as [this] entered this turn, you may
+    /// activate its loyalty abilities any time you could cast an instant."
+    /// (The Wandering Emperor — pairs with `Keyword::Flash`.)
+    #[serde(default)]
+    pub flash_loyalty: bool,
     /// Optional alternative ("pitch") cost. When `Some`, the player can cast
     /// this spell by paying the alternative cost instead of `cost` — typically
     /// some life and exiling a card from hand matching `exile_filter`.

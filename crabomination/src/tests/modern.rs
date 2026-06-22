@@ -61539,6 +61539,32 @@ fn howl_of_the_hunt_untaps_a_wolf() {
     assert!(!g.battlefield_find(wolf).unwrap().tapped, "Wolf untapped on enter");
 }
 
+/// The Wandering Emperor may activate her loyalty at instant speed the turn she
+/// enters (CR 606.3b), but only that turn.
+#[test]
+fn wandering_emperor_flash_loyalty_window() {
+    let mut g = two_player_game();
+    let emp = g.add_card_to_battlefield(0, catalog::the_wandering_emperor());
+    g.battlefield_find_mut(emp).unwrap().entered_turn = Some(g.turn_number);
+    // An instant-speed window that is NOT sorcery-speed: opponent's upkeep,
+    // emperor's controller holds priority.
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    // −1: make a Samurai — allowed at instant speed the turn she entered.
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: emp, ability_index: 1, target: None, x_value: None,
+    }).expect("instant-speed loyalty the turn she entered");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Samurai"), "made a Samurai");
+    // A later turn: the window is closed, so the same activation is rejected.
+    g.battlefield_find_mut(emp).unwrap().entered_turn = Some(g.turn_number.wrapping_sub(1));
+    g.battlefield_find_mut(emp).unwrap().loyalty_uses_this_turn = 0;
+    assert!(g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: emp, ability_index: 1, target: None, x_value: None,
+    }).is_err(), "no longer instant-speed once it's not the turn she entered");
+}
+
 /// Skyscanner draws a card on entry.
 #[test]
 fn skyscanner_draws_on_etb() {

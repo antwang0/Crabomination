@@ -7007,9 +7007,6 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        if !self.can_cast_sorcery_speed(p) {
-            return Err(GameError::SorcerySpeedOnly);
-        }
         let pos = self
             .battlefield
             .iter()
@@ -7017,6 +7014,15 @@ impl GameState {
             .ok_or(GameError::CardNotOnBattlefield(card_id))?;
         if self.battlefield[pos].controller != p {
             return Err(GameError::NotYourPriority);
+        }
+        // CR 606.3 — loyalty is normally sorcery-speed. CR 606.3b exception:
+        // The Wandering Emperor may activate at instant speed (any time you
+        // could cast an instant — i.e. while holding priority) the turn it
+        // entered. Having priority is implied by reaching this action.
+        let flash_loyalty_window = self.battlefield[pos].definition.flash_loyalty
+            && self.battlefield[pos].entered_turn == Some(self.turn_number);
+        if !flash_loyalty_window && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
         }
         if !self.battlefield[pos].definition.is_planeswalker() {
             return Err(GameError::InvalidTarget);
