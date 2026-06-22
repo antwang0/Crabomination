@@ -2027,6 +2027,14 @@ pub enum Effect {
     /// shuffles." (Both Xs are the same value, as printed.) Lonis, Genetics
     /// Expert.
     RevealOpponentTopPutOntoBattlefield { count: Value, filter: SelectionRequirement },
+    /// "Look at the top `count` cards of your library. You may put a card
+    /// matching `filter` from among them onto the battlefield tapped and
+    /// attacking (joining the current combat); it gains indestructible until
+    /// end of turn. Put the rest on the bottom in a random order." Winota,
+    /// Joiner of Forces. No-op outside combat. Auto-picks the highest-power
+    /// match; the new attacker hits the same defender the triggering creature
+    /// (`trigger_source`) is attacking.
+    LookTopMayDeployAttacking { count: Value, filter: SelectionRequirement },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the
     /// rest on the bottom of your library in a random order." Atraxa, Grand

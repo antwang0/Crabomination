@@ -2602,6 +2602,7 @@ static DECKS: &[Factory] = &[
     super::decks::vivien_monsters_advocate,
     super::decks::mind_spike,
     super::decks::the_wandering_emperor,
+    super::decks::winota_joiner_of_forces,
     super::decks::skyscanner,
     super::decks::pristine_talisman,
     super::decks::ram_through,

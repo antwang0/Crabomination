@@ -58281,6 +58281,41 @@ pub fn the_wandering_emperor() -> CardDefinition {
     }
 }
 
+/// Winota, Joiner of Forces — {2}{R}{W} 4/4 Legendary Human Warrior. Whenever a
+/// non-Human creature you control attacks, look at the top six cards; you may
+/// put a Human creature from among them onto the battlefield tapped and
+/// attacking with indestructible until end of turn; bottom the rest.
+pub fn winota_joiner_of_forces() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    let non_human = SelectionRequirement::Creature
+        .and(SelectionRequirement::HasCreatureType(CreatureType::Human).negate());
+    CardDefinition {
+        name: "Winota, Joiner of Forces",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: non_human,
+                }),
+            effect: Effect::LookTopMayDeployAttacking {
+                count: Value::Const(6),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Skyscanner — {3} 1/1 Thopter artifact creature with flying. ETB: draw a card.
 pub fn skyscanner() -> CardDefinition {
     CardDefinition {

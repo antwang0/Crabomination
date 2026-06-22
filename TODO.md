@@ -1768,8 +1768,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     −2 reveal-until-greater-MV deploy). Vivien, Monsters' Advocate now ships
     (cast-from-top static, +1 token+keyword-counter, −2 lesser-MV tutor via the
     new next-spell `event_amount` wiring).
-  - **Other complex IKO holdouts** (next-run candidates): Winota (attack-trigger
-    coin-flip-free tutor — put-onto-battlefield-attacking + indestructible EOT),
+  - ✅ **Winota, Joiner of Forces** — `Effect::LookTopMayDeployAttacking`
+    (look top six, deploy a Human creature tapped-and-attacking with
+    indestructible EOT, bottom the rest; auto-picks highest power). Test
+    `winota_deploys_human_when_nonhuman_attacks`. Remaining ⏳: a `wants_ui`
+    picker (currently auto-pick) and the "up to one" decline.
+  - **Other complex IKO holdouts** (next-run candidates):
     Kinnan (tap-for-mana doubling + big-creature dig), Quartzwood's faithful
     "any trampler you control" batch trigger, Memory Leak (reveal-hand + exile
     from hand/gy), Sea Serpent (can't-attack-unless-defender-has-Island +

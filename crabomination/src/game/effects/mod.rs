@@ -7207,6 +7207,72 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LookTopMayDeployAttacking { count, filter } => {
+                use crate::game::types::{Attack, AttackTarget};
+                // Only meaningful mid-combat.
+                if self.attacking.is_empty() {
+                    return Ok(());
+                }
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                // Auto-pick the highest-power matching card among those revealed.
+                let pick = revealed
+                    .iter()
+                    .copied()
+                    .filter(|id| {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source)
+                    })
+                    .max_by_key(|id| {
+                        self.players[p].library.iter().find(|c| c.id == *id)
+                            .map(|c| c.definition.power).unwrap_or(0)
+                    });
+                if let Some(id) = pick {
+                    // Attack the defender the triggering creature is attacking,
+                    // else the controller's first opponent.
+                    let target = ctx
+                        .trigger_source
+                        .and_then(|e| e.as_permanent_id())
+                        .and_then(|src| self.attacking.iter().find(|a| a.attacker == src).map(|a| a.target))
+                        .or_else(|| {
+                            (0..self.players.len())
+                                .find(|&q| !self.same_team(q, p))
+                                .map(AttackTarget::Player)
+                        });
+                    let dest = ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(p),
+                        tapped: true,
+                    };
+                    self.move_card_to(id, &dest, ctx, events);
+                    if let Some(target) = target
+                        && self.battlefield.iter().any(|c| c.id == id)
+                    {
+                        self.attacking.push(Attack { attacker: id, target });
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.attacked_this_turn = true;
+                            c.granted_keywords_eot.push(crate::card::Keyword::Indestructible);
+                        }
+                        events.push(GameEvent::AttackerDeclared(id));
+                    }
+                }
+                // Bottom the rest in a random order (CR 401.4).
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    revealed.iter().copied().filter(|id| Some(*id) != pick).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileLibraryExceptBottom { who, keep } => {
                 let keep = self.evaluate_value(keep, ctx).max(0) as usize;
                 for p in self.resolve_players(who, ctx) {

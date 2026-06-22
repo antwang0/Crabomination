@@ -159,6 +159,7 @@ impl Effect {
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,
             Effect::LookTopNDeployPermanentsRestToHand { .. } => false,
+            Effect::LookTopMayDeployAttacking { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::NameCardTargetDiscardsMatching => true,

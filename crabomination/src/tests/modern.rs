@@ -61539,6 +61539,30 @@ fn howl_of_the_hunt_untaps_a_wolf() {
     assert!(!g.battlefield_find(wolf).unwrap().tapped, "Wolf untapped on enter");
 }
 
+/// Winota deploys a Human from the top six tapped-and-attacking (with
+/// indestructible) when a non-Human you control attacks.
+#[test]
+fn winota_deploys_human_when_nonhuman_attacks() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::winota_joiner_of_forces()); // Human, not attacking
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // non-Human attacker
+    g.clear_sickness(bear);
+    let human = g.add_card_to_library(0, catalog::beskir_shieldmate()); // Human in top six
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("non-Human attacks");
+    drain_stack(&mut g);
+    let h = g.battlefield_find(human).expect("Human deployed from library");
+    assert!(h.tapped, "deployed tapped");
+    assert!(g.attacking.iter().any(|a| a.attacker == human), "deployed attacking");
+    assert!(g.computed_permanent(human).unwrap().keywords.contains(&Keyword::Indestructible),
+        "gains indestructible EOT");
+}
+
 /// The Wandering Emperor may activate her loyalty at instant speed the turn she
 /// enters (CR 606.3b), but only that turn.
 #[test]
