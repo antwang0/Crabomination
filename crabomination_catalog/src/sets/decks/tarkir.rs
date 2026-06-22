@@ -2954,3 +2954,197 @@ pub fn snowmelt_stag() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TDM spells batch ────────────────────────────────────────────────────────
+
+/// Knockout Maneuver — {2}{G} Sorcery. Put a +1/+1 counter on target creature
+/// you control, then it deals damage equal to its power to target creature an
+/// opponent controls.
+pub fn knockout_maneuver() -> CardDefinition {
+    CardDefinition {
+        name: "Knockout Maneuver",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rebellious Strike — {1}{W} Instant. Target creature gets +3/+0 until end of
+/// turn. Draw a card.
+pub fn rebellious_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Rebellious Strike",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lightfoot Technique — {1}{W} Instant. Put a +1/+1 counter on target creature;
+/// it gains flying and indestructible until end of turn.
+pub fn lightfoot_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Lightfoot Technique",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Narset's Rebuke — {4}{R} Instant. Deal 5 damage to target creature. Add
+/// {U}{R}{W}. If that creature would die this turn, exile it instead.
+pub fn narsets_rebuke() -> CardDefinition {
+    CardDefinition {
+        name: "Narset's Rebuke",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            // Stamp the finality counter before the damage so a lethal hit
+            // exiles instead of going to the graveyard.
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::Finality,
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Blue, Color::Red, Color::White]),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wail of War — {2}{B} Instant. Choose one — creatures your opponents control
+/// get -1/-1 until end of turn; or return up to two target creature cards from
+/// your graveyard to your hand.
+pub fn wail_of_war() -> CardDefinition {
+    CardDefinition {
+        name: "Wail of War",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bewildering Blizzard — {4}{U}{U} Instant. Draw three cards. Creatures your
+/// opponents control get -3/-0 until end of turn.
+pub fn bewildering_blizzard() -> CardDefinition {
+    CardDefinition {
+        name: "Bewildering Blizzard",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                power: Value::Const(-3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Duty Beyond Death — {1}{W} Instant. As an additional cost, sacrifice a
+/// creature. Creatures you control gain indestructible until end of turn; put a
+/// +1/+1 counter on each creature you control.
+pub fn duty_beyond_death() -> CardDefinition {
+    let your_creatures = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    CardDefinition {
+        name: "Duty Beyond Death",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::GrantKeyword {
+                what: your_creatures(),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddCounter {
+                what: your_creatures(),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}

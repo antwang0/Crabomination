@@ -64335,3 +64335,143 @@ fn snowmelt_stag_counter_stacks_over_base_set() {
     let cp = g.computed_permanent(stag).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 3), "5/2 base + 1/1 counter");
 }
+
+// ── TDM spells batch ────────────────────────────────────────────────────────
+
+/// Knockout Maneuver grows your creature, then it fights an opponent's.
+#[test]
+fn knockout_maneuver_counter_then_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/3
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::knockout_maneuver());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(victim)], mode: None, x_value: None,
+    }).expect("cast Knockout Maneuver");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "3 power kills the 2/2");
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "grew to 3/3");
+}
+
+/// Rebellious Strike pumps +3/+0 and draws.
+#[test]
+fn rebellious_strike_pumps_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::plains()); }
+    let id = g.add_card_to_hand(0, catalog::rebellious_strike());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rebellious Strike");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "2 + 3");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "cast -1, draw +1");
+}
+
+/// Narset's Rebuke deals 5 and exiles the creature if it dies (finality).
+#[test]
+fn narsets_rebuke_burns_and_exiles() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::narsets_rebuke());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Narset's Rebuke");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "5 damage kills the 4/4");
+    assert!(g.exile.iter().any(|c| c.id == victim), "finality counter exiled it");
+    assert_eq!(g.players[0].mana_pool.total(), 3, "added U/R/W");
+}
+
+/// Bewildering Blizzard draws three and shrinks opponents' creatures.
+#[test]
+fn bewildering_blizzard_draws_and_shrinks() {
+    let mut g = two_player_game();
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::bewildering_blizzard());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bewildering Blizzard");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+    assert!(g.computed_permanent(opp).unwrap().power <= 0, "2 - 3 = -1 (treated as 0)");
+}
+
+/// Duty Beyond Death sacrifices one creature, then shields and grows the rest.
+#[test]
+fn duty_beyond_death_sac_then_team_buff() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragon_sniper()); // 1/1 — auto-sacrificed (lowest)
+    let keep = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 → 5/5
+    let id = g.add_card_to_hand(0, catalog::duty_beyond_death());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Duty Beyond Death");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(keep).unwrap().power, 5, "survivor grew");
+    assert!(g.computed_permanent(keep).unwrap().keywords.contains(&crate::card::Keyword::Indestructible));
+}
+
+/// Lightfoot Technique adds a counter and grants flying + indestructible.
+#[test]
+fn lightfoot_technique_buffs_and_protects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::lightfoot_technique());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lightfoot Technique");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "+1/+1 counter");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Flying));
+    assert!(cp.keywords.contains(&crate::card::Keyword::Indestructible));
+}
+
+/// Wail of War mode 0 shrinks the opponent's whole team.
+#[test]
+fn wail_of_war_shrinks_opponents() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::dragon_sniper()); // 1/1 → dies to -1/-1
+    let id = g.add_card_to_hand(0, catalog::wail_of_war());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Wail of War mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "-1/-1 kills the 1/1");
+}
