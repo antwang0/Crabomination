@@ -99,6 +99,12 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Flash-loyalty client affordance.** Engine ships `CardDefinition.flash_loyalty`
+  (CR 606.3b — The Wandering Emperor activates loyalty at instant speed the turn
+  it enters). The client's loyalty-activation affordance should surface those
+  abilities while the flash window is open (any priority), not only at sorcery
+  speed. Engine + server (bot) paths are wired; only the client highlight is a
+  follow-up.
 - ⏳ **Prototype (CR 702.160) follow-ups.** The mechanic + 15 BRO cards ship
   (`CardDefinition.prototype` + `GameAction::CastPrototype`). Client click casts
   the prototype face only when the full cost is unaffordable; a modifier
@@ -1677,6 +1683,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   attacker's pool, auto-tapping mana sources for any shortfall (atomic
   rollback if unpayable); block tax (509.1d) pays the same way per blocking
   player. Tests `cr_508_1g_*`, `cr_509_1d_block_tax_auto_taps_lands`.
+- 🟡 **CR 508.3a — Put onto the battlefield attacking** — `Effect::CreateTokenAttacking`
+  (token attackers — Mobilize/Myriad) and `Effect::LookTopMayDeployAttacking`
+  (deploy a real library card tapped-and-attacking with indestructible EOT,
+  bottom the rest in random order per 401.4 — Winota) both join the current
+  combat by pushing onto `attacking` past the declare-attackers gate. Remaining:
+  a controller's-choice defender pick (currently follows the triggering creature).
 - ✅ **CR 605 — Mana Abilities** — triggered mana abilities (605.1b/605.4a)
   resolve stack-free at the mana-ability fast path via
   `StaticEffect::ExtraManaOnLandTap` (Mana Flare, Vernal Bloom, Wild
