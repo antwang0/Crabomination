@@ -3664,11 +3664,11 @@ were stale). See git history for the per-card details.
 - **Omen cycle is complete** — all 17 Dragon Omen cards ship (`decks::omen`),
   seeking via the new `Effect::Seek` (CR 701.52 random library pick). The cards
   were enumerated from the offline `scripts/.scryfall_cache.json` (36k entries).
-  Two body statics remain approximated and want real engine support: Whirlwing
-  Stormbrood's "cast sorceries/Dragon spells as though they had flash" (needs a
-  `StaticEffect` setting `Player.sorceries_as_flash` while in play) and Pearl
-  Lake Warden's "look at/cast this from the top of your library" (a self-card
-  top-of-library cast permission). Omenpath to Naya (a land/sorcery Omen, not a
+  Whirlwing Stormbrood's "cast sorceries/Dragon spells as though they had flash"
+  is now faithful (reuses `StaticEffect::ControllerSpellsHaveFlash`). One body
+  static remains approximated: Pearl Lake Warden's "look at/cast this from the
+  top of your library" (a self-card top-of-library cast permission; currently
+  just `TopOfLibraryRevealed`). Omenpath to Naya (a land/sorcery Omen, not a
   Dragon) is also unimplemented.
 - **`Effect::JoinCombatAttacking`** currently attacks the source's defender (else
   the first opponent). Add a chosen-defender/planeswalker variant for cards that

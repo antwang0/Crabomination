@@ -3557,3 +3557,25 @@ fn omen_signaling_roar_makes_soldier() {
         .expect("a Soldier token was created");
     assert_eq!((token.definition.power, token.definition.toughness), (2, 2), "2/2 Soldier");
 }
+
+/// Whirlwing Stormbrood's static lets its controller cast sorceries at instant
+/// speed (here: on the opponent's turn with a non-empty stack context).
+#[test]
+fn whirlwing_grants_sorcery_flash_timing() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::whirlwing_stormbrood());
+    // A sorcery in hand that would normally be sorcery-speed-only.
+    let bolt = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // It's the opponent's turn (seat 1 active); seat 0 holds priority.
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Whirlwing's static lets the sorcery be cast at instant speed");
+    assert!(g.stack.iter().any(|si| matches!(si,
+        crate::game::StackItem::Spell { card, .. } if card.id == bolt)),
+        "the sorcery is on the stack");
+}

@@ -508,10 +508,9 @@ pub fn stormshriek_feral() -> CardDefinition {
     }
 }
 
-/// Whirlwing Stormbrood — {4}{U} Dragon 4/3, Flash, Flying. (Its "cast sorceries
-/// and Dragon spells as though they had flash" static is approximated by the
-/// card's own Flash.) Omen — Dynamic Soar {2}{G}: put three +1/+1 counters on
-/// target creature you control.
+/// Whirlwing Stormbrood — {4}{U} Dragon 4/3, Flash, Flying. You may cast sorcery
+/// and Dragon spells as though they had flash. Omen — Dynamic Soar {2}{G}: put
+/// three +1/+1 counters on target creature you control.
 pub fn whirlwing_stormbrood() -> CardDefinition {
     CardDefinition {
         name: "Whirlwing Stormbrood",
@@ -521,6 +520,13 @@ pub fn whirlwing_stormbrood() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "You may cast sorcery and Dragon spells as though they had flash.",
+            effect: StaticEffect::ControllerSpellsHaveFlash {
+                filter: SelectionRequirement::HasCardType(CardType::Sorcery)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+            },
+        }],
         omen: Some(Box::new(Adventure {
             name: "Dynamic Soar",
             cost: cost(&[generic(2), g()]),
