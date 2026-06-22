@@ -367,6 +367,80 @@ pub fn harsh_deceiver() -> CardDefinition {
     }
 }
 
+/// Ghost-Lit Raider — {2}{R} Spirit 2/1. {2}{R},{T}: 2 damage to target
+/// creature. Channel — {3}{R}, Discard this card: 4 damage to target creature.
+pub fn ghost_lit_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Ghost-Lit Raider",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), r()]),
+                effect: Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(2),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), r()]),
+                from_hand: true,
+                discard_self_cost: true,
+                effect: Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(4),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ghost-Lit Stalker — {B} Spirit 1/1. {4}{B},{T}: target player discards two
+/// (sorcery). Channel — {5}{B}{B}, Discard this: target player discards four.
+pub fn ghost_lit_stalker() -> CardDefinition {
+    CardDefinition {
+        name: "Ghost-Lit Stalker",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                mana_cost: cost(&[generic(4), b()]),
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(2),
+                    random: false,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                sorcery_speed: true,
+                from_hand: true,
+                discard_self_cost: true,
+                mana_cost: cost(&[generic(5), b(), b()]),
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(4),
+                    random: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Kodama of the North Tree — {2}{G}{G}{G} Legendary Spirit 6/4. Trample,
 /// Shroud.
 pub fn kodama_of_the_north_tree() -> CardDefinition {

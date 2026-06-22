@@ -3777,3 +3777,48 @@ fn blessed_breath_grants_protection() {
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&Keyword::Protection(crate::mana::Color::Red)), "protection from red");
 }
+
+/// Ghost-Lit Raider's battlefield ping deals 2; its Channel ability from hand
+/// discards the card and deals 4 (CR 702.16).
+#[test]
+fn ghost_lit_raider_ping_and_channel() {
+    let mut g = two_player_game();
+    let raider = g.add_card_to_battlefield(0, catalog::ghost_lit_raider());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(raider);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: raider, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage kills the 2/2");
+    // Channel from hand: discard the card, deal 4 to a fresh creature.
+    let raider2 = g.add_card_to_hand(0, catalog::ghost_lit_raider());
+    let djinn = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // 5/6
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: raider2, ability_index: 1, target: Some(Target::Permanent(djinn)), additional_targets: Vec::new(), x_value: None,
+    }).expect("channel");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(djinn).unwrap().damage, 4, "channel deals 4");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == raider2), "Raider discarded to channel");
+}
+
+/// Ghost-Lit Stalker's Channel makes the target player discard four.
+#[test]
+fn ghost_lit_stalker_channel_discards_four() {
+    let mut g = two_player_game();
+    let stalker = g.add_card_to_hand(0, catalog::ghost_lit_stalker());
+    for _ in 0..4 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    let p1_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stalker, ability_index: 1, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+    }).expect("channel stalker");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), p1_hand - 4, "target player discarded four");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == stalker), "Stalker discarded to channel");
+}
