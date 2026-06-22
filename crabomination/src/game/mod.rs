@@ -4955,6 +4955,16 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_adventure(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastGift {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_with_convoke(
+                card_id, target, additional_targets, mode, x_value, &[], &[],
+                crate::game::actions::CastFlags { gift: true, ..Default::default() },
+            ),
             GameAction::CastAdventureCreature {
                 card_id,
                 target,
@@ -8382,6 +8392,12 @@ impl GameState {
                     .as_ref()
                     .map(|a| a.effect.clone())
                     .unwrap_or(Effect::Noop)
+            } else if card.gift_promised
+                && let Some(gift) = card.definition.gift.as_ref()
+            {
+                // CR 702.165 — the gift was promised: resolve the enhanced
+                // effect (which itself bestows the gift on the opponent).
+                gift.gifted_effect.clone()
             } else if let (Some(half), Some(split)) =
                 (card.split_cast, card.definition.split.as_ref())
             {

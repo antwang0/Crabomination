@@ -3125,7 +3125,7 @@ impl GameState {
         delve_cards: &[CardId],
         flags: CastFlags,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let CastFlags { kicked, buyback, bestow, entwine, room_door } = flags;
+        let CastFlags { kicked, buyback, bestow, entwine, room_door, gift } = flags;
         let p = self.priority.player_with_priority;
 
         if !self.players[p].has_in_hand(card_id) {
@@ -3302,6 +3302,9 @@ impl GameState {
         // CR 702.41 — opt-in Entwine; only sticks when the card has it.
         let entwine = entwine && card.definition.has_entwine().is_some();
         card.entwined = entwine;
+        // CR 702.165 — opt-in Gift; only sticks when the card has it. The
+        // promised gift carries no mana cost, so nothing folds into the cost.
+        card.gift_promised = gift && card.definition.gift.is_some();
         // CR 709.5 — a Room cast remembers which door was cast (reusing the
         // split-cast slot); resolution unlocks that door.
         let room_door = room_door.filter(|_| card.definition.room.is_some());
@@ -3568,29 +3571,35 @@ impl GameState {
         // even when the caster picked mode 1.
         // Multi-target spells (Snow Day, Render Speechless, Crackle with
         // Power) thread additional slots through `additional_targets`.
-        if let Some(ref tgt) = target
-            && let Some(filter) = card
-                .definition
-                .effect
-                .target_filter_for_slot_in_mode_kicked(0, mode, kicked)
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-            && !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
-        {
+        // CR 702.165 — a promised Gift validates (and later resolves) against
+        // its enhanced `gifted_effect`, whose target filter can be broader than
+        // the printed one (Into the Flood Maw: creature → nonland permanent).
+        // Compute the per-slot violation up front (releasing the borrow on
+        // `card`) so a rejected cast can move the card back to hand.
+        let filter_violation = {
+            let target_effect = if card.gift_promised {
+                card.definition.gift.as_ref().map(|g| &g.gifted_effect)
+            } else {
+                None
+            }
+            .unwrap_or(&card.definition.effect);
+            let slot_bad = |slot: u8, tgt: &Target| {
+                target_effect
+                    .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
+                    .map(|f| f.resolve_x(x_value.unwrap_or(0)))
+                    .is_some_and(|filter| {
+                        !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
+                    })
+            };
+            target.as_ref().is_some_and(|tgt| slot_bad(0, tgt))
+                || additional_targets
+                    .iter()
+                    .enumerate()
+                    .any(|(idx, tgt)| slot_bad((idx + 1) as u8, tgt))
+        };
+        if filter_violation {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
-        }
-        for (idx, tgt) in additional_targets.iter().enumerate() {
-            let slot = (idx + 1) as u8;
-            if let Some(filter) = card
-                .definition
-                .effect
-                .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
-                .map(|f| f.resolve_x(x_value.unwrap_or(0)))
-                && !self.evaluate_requirement_static(&filter, tgt, p, Some(card.id))
-            {
-                self.players[p].hand.push(card);
-                return Err(GameError::SelectionRequirementViolated);
-            }
         }
 
         // CR 601.2b — additional cast costs ("As an additional cost to cast
@@ -8516,4 +8525,6 @@ pub(crate) struct CastFlags {
     pub entwine: bool,
     /// CR 709.5 — Room door being cast (`Some(0)` left, `Some(1)` right).
     pub room_door: Option<u8>,
+    /// CR 702.165 — the spell's Gift was promised to an opponent.
+    pub gift: bool,
 }

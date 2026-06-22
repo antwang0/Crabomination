@@ -8,8 +8,9 @@
 //! triggers resolving on the Equipment (CR 702.6e), Prototype (CR 702.160),
 //! Ward—pay-life-equal-to-power (CR 702.21), once-each-turn triggers
 //! (CR 603.3d), Defender + conditional attack override (CR 702.12),
-//! delayed "when you cast your next spell" triggers (CR 603.7e), and counters
-//! ceasing to exist on a zone change (CR 122.2).
+//! delayed "when you cast your next spell" triggers (CR 603.7e), counters
+//! ceasing to exist on a zone change (CR 122.2), Gift (CR 702.165), and
+//! Survival (CR 702.180).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -3273,4 +3274,42 @@ fn cr_702_11e_hexproof_from_black_blocks_only_black() {
     g.players[1].mana_pool.add(Color::White, 1);
     crate::game::cast_at(&mut g, swords, Target::Permanent(knight));
     assert!(g.battlefield_find(knight).is_none(), "white Swords exiled it");
+}
+
+// ── CR 702.165 — Gift ─────────────────────────────────────────────────────────
+
+/// CR 702.165 — promising a Gift bestows the gift on the opponent *before* the
+/// spell's other (enhanced) effects, and broadens the resolution accordingly.
+#[test]
+fn cr_702_165_gift_promised_gives_opponent_and_enhances() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let blast = g.add_card_to_hand(0, catalog::blooming_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastGift {
+        card_id: blast, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blooming Blast with gift");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Treasure"),
+        "opponent received the promised Treasure");
+    assert_eq!(g.players[1].life, 17, "the enhanced effect burned the controller for 3");
+}
+
+// ── CR 702.180 — Survival ──────────────────────────────────────────────────────
+
+/// CR 702.180 — Survival triggers at the controller's second main phase while
+/// the creature is tapped (the intervening-`if`); the untapped case is covered
+/// by `survival_skips_when_untapped`.
+#[test]
+fn cr_702_180_survival_fires_while_tapped_at_second_main() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::cautious_survivor());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "Survival gained 2 life once tapped");
 }

@@ -629,6 +629,22 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   creature"). Daring Waverider's ETB cast-from-graveyard is a separate
   primitive (cast-IS-from-gy-for-free) still ⏳.
 - ⏳ **Bloomburrow follow-ups (noticed this run):**
+  - ✅ **Gift** (CR 702.165) ships (`CardDefinition.gift` + `GameAction::CastGift`
+    + `CardInstance.gift_promised`; `TokenDefinition.tapped`; client right-click
+    promise + `KnownCard.{has_gift,gift_label,gift_needs_target}`). Batch in
+    `decks::gift` + Nocturnal Hunger upgraded. Remaining gift cards need new
+    primitives: Coiling Rebirth (reanimate + 1/1 token-copy), Mind Spiral
+    (draw-N + tap/stun), Pool Resources / Sazacap's Brew (Seek), Cruelclaw's Heist
+    (exile-and-may-cast), Perch Protection (gift an extra turn). Also: the
+    client's legal-target highlight for a promised gift still derives from the
+    *base* effect, so a broadened gift target (Flood Maw's noncreature) isn't
+    highlighted though the server accepts it.
+  - ✅ **Survival** (CR 702.180) ships ("at your second main, if tapped …" —
+    `StepBegins(PostCombatMain)`/`ActivePlayer` + tapped intervening-`if`;
+    `decks::survival`). Remaining Survivors need primitives: Kona (put a
+    permanent from hand onto the battlefield), Wary Zone Guard (enters tapped +
+    perpetual +1/+1), Improvising Aerialist (perpetual flying), Veteran Survivor
+    (exile-with-source count static), Rip / Effie (reveal-N-distinct-powers, seek).
   - **Expend** (CR 700.14) ships (`mana_spent_on_spells_this_turn` +
     `EventKind::Expend` + `Predicate::ExpendReached`; Roughshod Duo). Remaining:
     a `Value::ManaSpentOnSpellsThisTurn` reader for "expend 8" payoffs that

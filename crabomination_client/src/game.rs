@@ -172,6 +172,10 @@ pub struct TargetingState {
     /// eventual submit routes through `CastSplitRight` / `CastSplitFused`.
     /// Set by the half-picker modal.
     pub pending_split: Option<SplitCastChoice>,
+    /// When `true`, the pending cast promises its Gift to an opponent (CR
+    /// 702.165) — the eventual submit routes through `GameAction::CastGift`.
+    /// Set by the right-click "Cast (promise gift)" affordance.
+    pub pending_gift: bool,
 }
 
 /// Which split-card cast shape the half-picker selected.

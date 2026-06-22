@@ -62076,3 +62076,354 @@ fn followed_footsteps_copies_at_upkeep() {
     let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
     assert_eq!(bears, 2, "a token copy of the enchanted Bears was made");
 }
+
+// ── Gift (CR 702.165) ────────────────────────────────────────────────────────
+
+/// Crumb and Get It without its gift only pumps +2/+2 (base resolution).
+#[test]
+fn gift_crumb_base_pumps_only() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::crumb_and_get_it());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Crumb (no gift)");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 4), "pumped to 4/4");
+    assert!(!b.keywords.contains(&crate::card::Keyword::Indestructible), "no gift, no indestructible");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"), "no Food without the gift");
+}
+
+/// Promising Crumb and Get It's gift also grants indestructible and mints the
+/// opponent a Food.
+#[test]
+fn gift_crumb_promised_grants_indestructible_and_food() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::crumb_and_get_it());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Crumb (gift)");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 4), "pumped to 4/4");
+    assert!(b.keywords.contains(&crate::card::Keyword::Indestructible), "gift granted indestructible");
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Food"),
+        "opponent received a Food");
+}
+
+/// Blooming Blast's gift adds 3 damage to the creature's controller and gives
+/// the opponent a Treasure.
+#[test]
+fn gift_blooming_blast_promised_burns_controller() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::blooming_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Blooming Blast (gift)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage killed the 2/2");
+    assert_eq!(g.players[1].life, 17, "controller took 3 from the gift");
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Treasure"),
+        "opponent received a Treasure");
+}
+
+/// Longstalk Brawl's gift puts a +1/+1 counter on your creature (so it wins the
+/// fight) and mints the opponent a tapped Fish.
+#[test]
+fn gift_longstalk_brawl_promised_counter_and_tapped_fish() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());     // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());   // 2/2
+    let spell = g.add_card_to_hand(0, catalog::longstalk_brawl());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None, x_value: None,
+    }).expect("cast Longstalk Brawl (gift)");
+    drain_stack(&mut g);
+    // 3/3 (after the +1/+1 counter) vs 2/2: mine survives, theirs dies.
+    assert!(g.battlefield_find(mine).is_some(), "my 3/3 survived the fight");
+    assert!(g.battlefield_find(theirs).is_none(), "their 2/2 died");
+    let fish = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.name == "Fish")
+        .expect("opponent received a Fish");
+    assert!(fish.tapped, "the gifted Fish entered tapped");
+}
+
+/// Into the Flood Maw's gift broadens the bounce to any nonland permanent.
+#[test]
+fn gift_flood_maw_promised_bounces_noncreature() {
+    let mut g = two_player_game();
+    let tali = g.add_card_to_battlefield(1, catalog::pristine_talisman()); // artifact, noncreature
+    let spell = g.add_card_to_hand(0, catalog::into_the_flood_maw());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Permanent(tali)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Into the Flood Maw (gift)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tali).is_none(), "the artifact was bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Pristine Talisman"),
+        "the artifact returned to its owner's hand");
+}
+
+/// Long River's Pull's gift broadens its counter to any spell (not just
+/// creature spells).
+#[test]
+fn gift_long_rivers_pull_promised_counters_noncreature_spell() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // an instant, not a creature spell
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::long_rivers_pull());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Long River's Pull (gift) counters a noncreature spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the bolt was countered by the gifted Pull");
+}
+
+/// Nocturnal Hunger without its gift destroys the creature but costs 2 life.
+#[test]
+fn gift_nocturnal_hunger_base_costs_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::nocturnal_hunger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Nocturnal Hunger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(g.players[0].life, life - 2, "no gift → lose 2 life");
+}
+
+/// Promising Nocturnal Hunger's gift skips the life loss and feeds a Food.
+#[test]
+fn gift_nocturnal_hunger_promised_no_life_loss() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::nocturnal_hunger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Nocturnal Hunger (gift)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(g.players[0].life, life, "gift → no life loss");
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Food"),
+        "opponent received a Food");
+}
+
+/// Peerless Recycling's gift returns a second permanent card from the graveyard.
+#[test]
+fn gift_peerless_recycling_promised_returns_two() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_graveyard(0, catalog::pristine_talisman());
+    let spell = g.add_card_to_hand(0, catalog::peerless_recycling());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Permanent(c1)),
+        additional_targets: vec![Target::Permanent(c2)], mode: None, x_value: None,
+    }).expect("cast Peerless Recycling (gift)");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == c1)
+        && g.players[0].hand.iter().any(|c| c.id == c2),
+        "both permanent cards returned to hand with the gift");
+}
+
+/// Valley Rally pumps your team; its gift grants first strike to one creature.
+#[test]
+fn gift_valley_rally_promised_grants_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::valley_rally());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Valley Rally (gift)");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 2), "pumped +2/+0");
+    assert!(b.keywords.contains(&Keyword::FirstStrike), "gift granted first strike");
+}
+
+/// Dawn's Truce's gift grants your permanents indestructible too.
+#[test]
+fn gift_dawns_truce_promised_grants_indestructible() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dawns_truce());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dawn's Truce (gift)");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert!(b.keywords.contains(&Keyword::Hexproof), "granted hexproof");
+    assert!(b.keywords.contains(&Keyword::Indestructible), "gift added indestructible");
+}
+
+/// Wildfire Howl's gift adds a 1-damage ping to any target.
+#[test]
+fn gift_wildfire_howl_promised_pings_a_target() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::wildfire_howl());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Wildfire Howl (gift)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "2 to each creature killed the 2/2");
+    assert_eq!(g.players[1].life, 19, "gift pinged the targeted player for 1");
+}
+
+/// Mind Spiral's gift taps and stuns an opponent's creature.
+#[test]
+fn gift_mind_spiral_promised_taps_and_stuns() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::mind_spiral());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastGift {
+        card_id: spell, target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Mind Spiral (gift)");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(theirs).unwrap();
+    assert!(c.tapped, "gift tapped the creature");
+    assert!(c.counters.iter().any(|(k, n)| *k == CounterType::Stun && *n >= 1), "gift stunned it");
+}
+
+// ── Survival (CR 702.180) ────────────────────────────────────────────────────
+
+/// Survival fires at your second main phase only when the creature is tapped.
+#[test]
+fn survival_cautious_survivor_gains_life_when_tapped() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::cautious_survivor());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "Survival gained 2 life (tapped)");
+}
+
+/// Untapped at second main, Survival doesn't trigger.
+#[test]
+fn survival_skips_when_untapped() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cautious_survivor());
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "no Survival trigger while untapped");
+}
+
+/// Kona's Survival cheats a permanent card from hand onto the battlefield.
+#[test]
+fn survival_kona_puts_permanent_from_hand() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::kona_rescue_beastie());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "Survival put the creature onto the battlefield");
+}
+
+/// Cynical Loner's Survival tutors a card from library into the graveyard.
+#[test]
+fn survival_cynical_loner_tutors_into_graveyard() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::cynical_loner());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    let card = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(card))]));
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == card),
+        "Survival tutored the card into the graveyard");
+}
+
+/// Glimmer Seeker's Survival makes a Glimmer token when you control none.
+#[test]
+fn survival_glimmer_seeker_makes_token_without_a_glimmer() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::glimmer_seeker());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Glimmer"),
+        "Survival minted a Glimmer token (you controlled none)");
+}
+
+/// House Cartographer's Survival digs the top card (a land) into hand.
+#[test]
+fn survival_house_cartographer_finds_a_land() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::house_cartographer());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    let land = g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "Survival dug the land into hand");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "exactly one card found");
+}
+
+/// Savior of the Small's Survival returns a small creature from the graveyard.
+#[test]
+fn survival_savior_returns_small_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let surv = g.add_card_to_battlefield(0, catalog::savior_of_the_small());
+    g.battlefield_find_mut(surv).unwrap().tapped = true;
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV2 creature
+    g.fire_step_triggers(TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "Survival returned the small creature to hand");
+}

@@ -147,6 +147,16 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.165 — cast a Gift spell, promising the gift to an opponent: the
+    /// spell resolves its enhanced `gifted_effect`.
+    CastGift {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 715 — cast the creature half of a card that's in exile after going
     /// on an adventure (its `on_adventure` flag is set).
     CastAdventureCreature {
@@ -939,6 +949,7 @@ impl GameAction {
                 | A::CastFaceDown { .. }
                 | A::CastForetold { .. }
                 | A::CastAdventure { .. }
+                | A::CastGift { .. }
                 | A::CastAdventureCreature { .. }
                 | A::CastPrototype { .. }
                 | A::CastMutate { .. }

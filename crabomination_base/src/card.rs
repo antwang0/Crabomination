@@ -87,6 +87,8 @@ pub enum CreatureType {
     Gorgon,
     // Bloomburrow / MKM (Voracious Varmint).
     Varmint,
+    // Bloomburrow Survival creatures (Cautious Survivor, Defiant Survivor).
+    Survivor,
     // Enchantment creature subtype (Enduring Innocence).
     Glimmer,
     // Ninjutsu creature subtype (Fallen Shinobi, etc.).
@@ -1389,6 +1391,10 @@ pub struct TokenDefinition {
     /// mint time survive copies per CR 707.2.
     #[serde(default)]
     pub dynamic_pt: Option<(crate::effect::Value, crate::effect::Value)>,
+    /// CR 508.3a — the token enters tapped (a "tapped <token>" gift / mint).
+    /// Defaults to `false` (enters untapped) via `#[serde(default)]`.
+    #[serde(default)]
+    pub tapped: bool,
 }
 
 // ── Card definition ───────────────────────────────────────────────────────────
@@ -1632,6 +1638,12 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventure: Option<Box<Adventure>>,
+    /// CR 702.165 — Gift. When `Some`, as the spell is cast its controller may
+    /// promise a gift to an opponent (`GameAction::CastGift`); if promised, the
+    /// opponent receives the gift and the spell resolves its enhanced
+    /// `gifted_effect` instead of the printed base `effect`.
+    #[serde(default)]
+    pub gift: Option<Box<Gift>>,
     /// CR 702.160 — Prototype. When `Some`, this colorless artifact creature
     /// may instead be cast for the prototype cost (`GameAction::CastPrototype`),
     /// entering with the prototype's mana cost, color, and size; it keeps its
@@ -1759,6 +1771,19 @@ impl Adventure {
     pub fn is_instant_speed(&self) -> bool {
         self.card_types.contains(&CardType::Instant)
     }
+}
+
+/// CR 702.165 — Gift. The printed spell's base resolution lives in the parent
+/// [`CardDefinition::effect`]; when the gift is promised, the spell resolves
+/// `gifted_effect` (which itself bestows the promised gift on the opponent
+/// before its other effects). `label` is the gift's printed name, for the
+/// client's "Gift a Food / a card / a tapped Fish" prompt.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct Gift {
+    #[serde(with = "crate::static_str_serde")]
+    pub label: crate::static_str_serde::StaticStr,
+    pub gifted_effect: crate::effect::Effect,
 }
 
 /// CR 702.160 — the Prototype alternative cast of a Brothers' War artifact
@@ -2631,6 +2656,9 @@ pub struct CardInstance {
     /// CR 702.41 — true if this spell was cast paying its optional Entwine
     /// cost: its `ChooseMode` runs every mode in order.
     pub entwined: bool,
+    /// CR 702.165 — true if this spell was cast with its Gift promised: on
+    /// resolution it runs `definition.gift.gifted_effect` instead of `effect`.
+    pub gift_promised: bool,
     /// CR 702.103 — true while this permanent is on the battlefield as a
     /// bestowed Aura. It's an Aura (not a creature) for as long as this is
     /// set; cleared by the SBA when the enchanted creature leaves, at which
@@ -2968,6 +2996,7 @@ impl CardInstance {
             spliced_effects: Vec::new(),
             bought_back: false,
             entwined: false,
+            gift_promised: false,
             bestowed: false,
             face_down: false,
             transformed: false,
@@ -3408,6 +3437,9 @@ struct CardInstanceWire {
     /// CR 702.41 entwine flag. `#[serde(default)]` for back-compat.
     #[serde(default)]
     entwined: bool,
+    /// CR 702.165 gift-promised flag. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    gift_promised: bool,
     /// CR 702.103 bestowed flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -3609,6 +3641,7 @@ impl serde::Serialize for CardInstance {
             granted_activated_abilities: self.granted_activated_abilities.clone(),
             bought_back: self.bought_back,
             entwined: self.entwined,
+            gift_promised: self.gift_promised,
             bestowed: self.bestowed,
             face_down: self.face_down,
             unlocked_doors: self.unlocked_doors,
@@ -3694,6 +3727,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_activated_abilities = wire.granted_activated_abilities;
         c.bought_back = wire.bought_back;
         c.entwined = wire.entwined;
+        c.gift_promised = wire.gift_promised;
         c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;
         // CR 708 — restore a face-down permanent: stash the real definition

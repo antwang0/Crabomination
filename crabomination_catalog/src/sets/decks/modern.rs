@@ -31137,14 +31137,31 @@ pub fn take_out_the_trash() -> CardDefinition {
     }
 }
 
-/// Nocturnal Hunger — {2}{B} Instant. Destroy target creature. (The optional
-/// "Gift a Food" rider is dropped — modal gift-promise isn't modeled.)
+/// Nocturnal Hunger — {2}{B} Instant. Gift a Food (CR 702.165). Destroy target
+/// creature; if the gift wasn't promised, you lose 2 life.
 pub fn nocturnal_hunger() -> CardDefinition {
+    let destroy = Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) };
     CardDefinition {
         name: "Nocturnal Hunger",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        // No gift → destroy and lose 2 life.
+        effect: Effect::Seq(vec![
+            destroy.clone(),
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        // CR 702.165 Gift a Food — promising it skips the life loss.
+        gift: Some(Box::new(crate::card::Gift {
+            label: "a Food",
+            gifted_effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::EachOpponent,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::food_token(),
+                },
+                destroy,
+            ]),
+        })),
         ..Default::default()
     }
 }

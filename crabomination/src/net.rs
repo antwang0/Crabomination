@@ -755,6 +755,18 @@ pub struct KnownCard {
     /// single-target cursor can't collect two; it greys the Fused button).
     #[serde(default)]
     pub split_fused_needs_target: bool,
+    /// CR 702.165 — true if this card has Gift. Drives the client's right-click
+    /// "Cast (promise gift)" affordance, which submits `GameAction::CastGift`.
+    #[serde(default)]
+    pub has_gift: bool,
+    /// The gift's printed label ("a Food" / "a card" / "a tapped Fish"), for the
+    /// client's promise prompt. Empty when `has_gift == false`.
+    #[serde(default)]
+    pub gift_label: String,
+    /// True when the gifted (promised) effect carries a targeted slot, so the
+    /// client knows to arm the targeting cursor before submitting `CastGift`.
+    #[serde(default)]
+    pub gift_needs_target: bool,
 }
 
 /// One activated ability as projected for the client.

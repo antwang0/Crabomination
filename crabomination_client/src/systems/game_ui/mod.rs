@@ -3653,6 +3653,7 @@ pub fn handle_game_input(
                         let action = build_pending_cast(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
+                            targeting.pending_gift,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3702,6 +3703,7 @@ pub fn handle_game_input(
                         let action = build_pending_cast(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
+                            targeting.pending_gift,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3764,6 +3766,7 @@ pub fn handle_game_input(
                     let action = build_pending_cast(
                         pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
+                            targeting.pending_gift,
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3822,6 +3825,20 @@ pub fn handle_game_input(
                         r.pay_times.times = 1;
                     } else if cv.splittable_right_hand.contains(&card_id) {
                         r.split_cast.pending = Some(card_id);
+                    } else if k.has_gift {
+                        // CR 702.165 — right-click a Gift card promises its gift
+                        // and casts via `CastGift`. Arm targeting first when the
+                        // gifted effect needs a target; otherwise fire now.
+                        if k.gift_needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card_id);
+                            targeting.pending_gift = true;
+                        } else {
+                            outbox.submit(GameAction::CastGift {
+                                card_id, target: None, additional_targets: vec![],
+                                mode: None, x_value: None,
+                            });
+                        }
                     } else if k.back_face_name.is_some()
                         && !r.flipped_hand.flipped.insert(card_id) {
                             r.flipped_hand.flipped.remove(&card_id);
@@ -4217,7 +4234,15 @@ fn build_pending_cast(
     cast_back: bool,
     pay_times: Option<(u32, crate::game::PayTimesMechanic)>,
     split: Option<crate::game::SplitCastChoice>,
+    gift: bool,
 ) -> GameAction {
+    // CR 702.165 — a promised Gift is its own cast action; it can't combine
+    // with the split / pay-times / back-face shapes.
+    if gift {
+        return GameAction::CastGift {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        };
+    }
     match (split, pay_times) {
         (Some(crate::game::SplitCastChoice::Right), _) => GameAction::CastSplitRight {
             card_id, target, additional_targets: vec![], mode, x_value: None,
@@ -4254,6 +4279,7 @@ fn cancel_targeting(
     targeting.pending_prepare_source = None;
     targeting.pending_pay_times = None;
     targeting.pending_split = None;
+    targeting.pending_gift = false;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

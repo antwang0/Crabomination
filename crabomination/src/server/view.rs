@@ -604,6 +604,18 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 && (card.definition.effect.requires_target()
                     || sp.right.effect.requires_target())
         }),
+        has_gift: card.definition.gift.is_some(),
+        gift_label: card
+            .definition
+            .gift
+            .as_ref()
+            .map(|g| g.label.to_string())
+            .unwrap_or_default(),
+        gift_needs_target: card
+            .definition
+            .gift
+            .as_ref()
+            .is_some_and(|g| g.gifted_effect.requires_target()),
     }
 }
 

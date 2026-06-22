@@ -213,7 +213,13 @@ Each a small targeted feature; sweep batch by batch.
   ✅ Foretell, ✅ Disturb, ✅ Daybound/Nightbound (keywords + day/night +
   502.2 transition + DFC auto-flip), ✅ Decayed, ✅ Blitz, ✅ Casualty, ✅ Connive,
   ✅ Backup, ✅ Bargain, ⏳ Craft, ✅ Disguise/Cloak, ✅ Plot, ✅ Saddle,
-  ⏳ Gift, ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize,
+  ✅ Gift (CR 702.165 — `CardDefinition.gift` + `GameAction::CastGift`; promise
+  the gift and resolve the enhanced `gifted_effect`, incl. target-broadening —
+  Into the Flood Maw, Long River's Pull),
+  ✅ Survival (CR 702.180 — "at your second main phase, if tapped …" as a
+  `StepBegins(PostCombatMain)`/`ActivePlayer` trigger under a tapped
+  intervening-`if`; Bloomburrow Survivor batch),
+  ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize,
   ✅ Exhaust (activate-only-once activated abilities — Camera Launcher).
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
   Mentor, Modular, Graft, Outlast, Renown, Bloodthirst, Monstrosity, Devour,

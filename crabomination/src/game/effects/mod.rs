@@ -5112,7 +5112,7 @@ impl GameState {
                         def.power = pw;
                         def.toughness = tn;
                     }
-                    self.mint_token_onto_battlefield(def, p, false, events);
+                    self.mint_token_onto_battlefield(def, p, definition.tapped, events);
                 }
                 Ok(())
             }
