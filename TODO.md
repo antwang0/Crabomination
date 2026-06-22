@@ -28,6 +28,14 @@ plays its headline pattern):
 - **Tail Swipe** — the "if cast during your main phase, +1/+1 first" rider
   omitted (no cast-phase predicate on the fight).
 - **Optimistic Scavenger** — the "fully unlock a Room" half of Eerie omitted.
+- **Hangar Scrounger** — the Backup *grant* of its tapped-loot ability to the
+  backed-up creature is omitted (the +1/+1 counter still lands).
+- **Bristlebud Farmer** — the attack "sacrifice a Food → mill three, grab a
+  permanent" rider omitted (the ETB two-Food still fires).
+- **Outcaster Greenblade** — the "+1/+1 for each Desert you control" CDA omitted
+  (no Desert-count `DynamicPt`); the ETB basic/Desert tutor ships.
+- **Mizzium Skin** — Overload omitted (base targeted mode ships).
+- **Take the Fall** — the outlaw check uses a controlled-outlaw selector count.
 - Not implemented for want of a mechanic: **Spree** (Insatiable Avarice, Three
   Steps Ahead — cast-time per-mode additional costs), **Intensity** (Static
   Discharge), **Channel** (Touch the Spirit Realm's Channel ability),

@@ -8,7 +8,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_dies, target_filtered};
-use crate::effect::{Duration, PlayerRef};
+use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w};
 
 /// Questing Beast — {2}{G}{G} 4/4 Legendary Beast. Vigilance, deathtouch,
@@ -631,6 +631,448 @@ pub fn optimistic_scavenger() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Frilled Sandwalla — {G} 1/1 Lizard. {1}{G}: +2/+2 until end of turn,
+/// once each turn.
+pub fn frilled_sandwalla() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Frilled Sandwalla",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            once_per_turn: true,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spell Stutter — {1}{U} Instant. Counter target spell unless its controller
+/// pays {2} plus {1} for each Faerie you control.
+pub fn spell_stutter() -> CardDefinition {
+    CardDefinition {
+        name: "Spell Stutter",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(2)]),
+            exile: false,
+            extra_generic: Some(Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Faerie),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Spectral Interference — {1}{U} Instant. Counter target artifact or creature
+/// spell unless its controller pays {4}.
+pub fn spectral_interference() -> CardDefinition {
+    CardDefinition {
+        name: "Spectral Interference",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Artifact)
+                        .or(SelectionRequirement::HasCardType(CardType::Creature)),
+                ),
+            ),
+            mana_cost: cost(&[generic(4)]),
+            exile: false,
+            extra_generic: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Refute — {1}{U}{U} Instant. Counter target spell. Draw a card, then discard.
+pub fn refute() -> CardDefinition {
+    CardDefinition {
+        name: "Refute",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Skullcap Snail — {1}{B} 1/1 Fungus Snail. ETB: target opponent exiles a
+/// card from their hand.
+pub fn skullcap_snail() -> CardDefinition {
+    CardDefinition {
+        name: "Skullcap Snail",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fungus, CreatureType::Snail],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::ExileFromHand {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Aspirant's Ascent — {U} Instant. Target creature gets +1/+3 and gains flying
+/// and toxic 1 until end of turn.
+pub fn aspirants_ascent() -> CardDefinition {
+    CardDefinition {
+        name: "Aspirant's Ascent",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Toxic(1),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Take the Fall — {U} Instant. Target creature gets -1/-0 (or -4/-0 if you
+/// control an outlaw) until end of turn. Draw a card.
+pub fn take_the_fall() -> CardDefinition {
+    let outlaw = SelectionRequirement::Creature
+        .and(SelectionRequirement::ControlledByYou)
+        .and(
+            SelectionRequirement::HasCreatureType(CreatureType::Assassin)
+                .or(SelectionRequirement::HasCreatureType(CreatureType::Mercenary))
+                .or(SelectionRequirement::HasCreatureType(CreatureType::Pirate))
+                .or(SelectionRequirement::HasCreatureType(CreatureType::Rogue))
+                .or(SelectionRequirement::HasCreatureType(CreatureType::Warlock)),
+        );
+    CardDefinition {
+        name: "Take the Fall",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(outlaw),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(-3),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hopeful Vigil — {1}{W} Enchantment. ETB: create a 2/2 white Knight with
+/// vigilance. When it leaves the battlefield, scry 2. {2}{W}: sacrifice it.
+pub fn hopeful_vigil() -> CardDefinition {
+    use crate::card::{ActivatedAbility, TokenDefinition};
+    use crate::mana::Color;
+    let knight = TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Hopeful Vigil",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: knight }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            sac_cost: true,
+            effect: Effect::Noop,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hopeless Nightmare — {B} Enchantment. ETB: each opponent discards a card and
+/// loses 2 life. When it leaves the battlefield, scry 2. {2}{B}: sacrifice it.
+pub fn hopeless_nightmare() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Hopeless Nightmare",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sac_cost: true,
+            effect: Effect::Noop,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hangar Scrounger — {2}{R} 2/1 Dwarf Pilot. Backup 1. Whenever it becomes
+/// tapped, you may discard a card; if you do, draw a card. (The backup-grant
+/// of the loot ability to the backed-up creature is omitted.)
+pub fn hangar_scrounger() -> CardDefinition {
+    let loot = TriggeredAbility {
+        event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+        effect: Effect::MayDo {
+            description: "discard a card, then draw a card".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+        },
+    };
+    CardDefinition {
+        name: "Hangar Scrounger",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::backup(1, vec![]), loot],
+        ..Default::default()
+    }
+}
+
+/// Bristlebud Farmer — {2}{G}{G} 5/5 Plant Druid. Trample. ETB: create two
+/// Food tokens. (The attack "sac a Food → mill three, grab a permanent" rider
+/// is omitted.)
+pub fn bristlebud_farmer() -> CardDefinition {
+    CardDefinition {
+        name: "Bristlebud Farmer",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: crabomination_base::tokens::food_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Outcaster Greenblade — {2}{G} 1/2 Human Mercenary. ETB: search your library
+/// for a basic land or Desert card and put it into your hand. (Its
+/// "+1/+1 for each Desert you control" is omitted.)
+pub fn outcaster_greenblade() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Outcaster Greenblade",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand
+                .or(SelectionRequirement::HasLandType(LandType::Desert)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mizzium Skin — {U} Instant. Target creature you control gets +0/+1 and gains
+/// hexproof until end of turn. (Overload is omitted.)
+pub fn mizzium_skin() -> CardDefinition {
+    CardDefinition {
+        name: "Mizzium Skin",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(0),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Demand Answers — {1}{R} Instant. (As an additional cost, discard a card —
+/// the "sacrifice an artifact" alternative is omitted.) Draw two cards.
+pub fn demand_answers() -> CardDefinition {
+    CardDefinition {
+        name: "Demand Answers",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Boltwave — {R} Sorcery. Deals 3 damage to each opponent.
+pub fn boltwave() -> CardDefinition {
+    CardDefinition {
+        name: "Boltwave",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Strike It Rich — {R} Sorcery. Create a Treasure token. Flashback {2}{R}.
+pub fn strike_it_rich() -> CardDefinition {
+    CardDefinition {
+        name: "Strike It Rich",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), r()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::game::effects::treasure_token(),
+        },
+        ..Default::default()
+    }
+}
+
+/// Brotherhood's End — {1}{R}{R} Sorcery. Choose one — 3 damage to each
+/// creature and planeswalker; or destroy all artifacts with mana value 3 or
+/// less.
+pub fn brotherhoods_end() -> CardDefinition {
+    CardDefinition {
+        name: "Brotherhood's End",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Destroy {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Boon-Bringer Valkyrie — {3}{W}{W} 4/4 Angel Warrior. Flying, first strike,
+/// lifelink. Backup 1 (grants those abilities to the backed-up creature).
+pub fn boon_bringer_valkyrie() -> CardDefinition {
+    CardDefinition {
+        name: "Boon-Bringer Valkyrie",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink],
+        triggered_abilities: vec![crate::effect::shortcut::backup(
+            1,
+            vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink],
+        )],
         ..Default::default()
     }
 }

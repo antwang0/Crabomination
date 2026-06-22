@@ -1,7 +1,7 @@
 //! Functionality tests for the recent-set staples in
 //! `catalog::sets::decks::recent`.
 
-use crate::card::{CounterType, Keyword};
+use crate::card::{CounterType, CreatureType, Keyword};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::types::{Attack, AttackTarget};
@@ -466,4 +466,292 @@ fn optimistic_scavenger_eerie_counter() {
         Some(1),
         "Eerie put a +1/+1 counter on the target"
     );
+}
+
+/// Frilled Sandwalla pumps once per turn.
+#[test]
+fn frilled_sandwalla_once_per_turn_pump() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::frilled_sandwalla());
+    g.clear_sickness(id);
+    for _ in 0..4 { g.players[0].mana_pool.add(Color::Green, 1); }
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("first activation");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "+2/+2 once");
+    // Second activation the same turn is rejected.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).is_err(), "only once each turn");
+}
+
+/// Spectral Interference counters an artifact/creature spell the controller
+/// can't pay {4} for.
+#[test]
+fn spectral_interference_counters_creature() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a creature");
+    let si = g.add_card_to_hand(0, catalog::spectral_interference());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, si, Target::Permanent(spell));
+    assert!(g.battlefield_find(spell).is_none(), "creature spell countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell));
+}
+
+/// Refute counters a spell and loots.
+#[test]
+fn refute_counters_and_loots() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts");
+    g.add_card_to_library(0, catalog::island());
+    let _junk = g.add_card_to_hand(0, catalog::island());
+    let refute = g.add_card_to_hand(0, catalog::refute());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, refute, Target::Permanent(spell));
+    assert!(g.battlefield_find(spell).is_none(), "spell countered");
+}
+
+/// Skullcap Snail strips a card from an opponent's hand to exile.
+#[test]
+fn skullcap_snail_exiles_from_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::forest());
+    let exile_before = g.exile.len();
+    let opp_hand = g.players[1].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::skullcap_snail());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "opponent lost a card from hand");
+    assert!(g.exile.len() > exile_before, "it went to exile");
+}
+
+/// Aspirant's Ascent grants flying and toxic.
+#[test]
+fn aspirants_ascent_grants_flying_toxic() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::aspirants_ascent());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 5), "+1/+3");
+    assert!(c.keywords.contains(&Keyword::Flying));
+    assert!(c.keywords.iter().any(|k| matches!(k, Keyword::Toxic(1))));
+}
+
+/// Take the Fall shrinks a creature more when you control an outlaw.
+#[test]
+fn take_the_fall_outlaw_bonus() {
+    let mut g = two_player_game();
+    // An outlaw (Rogue) of ours.
+    let mut rogue = catalog::grizzly_bears();
+    rogue.subtypes.creature_types = vec![CreatureType::Rogue];
+    g.add_card_to_battlefield(0, rogue);
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let spell = g.add_card_to_hand(0, catalog::take_the_fall());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Permanent(victim));
+    assert_eq!(g.computed_permanent(victim).unwrap().power, 0, "-4/-0 with an outlaw");
+}
+
+/// Hopeful Vigil makes a Knight, and scries when it leaves.
+#[test]
+fn hopeful_vigil_token_and_sac_scry() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    let vigil = g.move_card_to_battlefield_for_test(0, catalog::hopeful_vigil());
+    drain_stack(&mut g);
+    let knights = g.battlefield.iter().filter(|c| c.definition.name == "Knight").count();
+    assert_eq!(knights, 1, "made a Knight on ETB");
+    // Sacrifice it via its own ability → leaves-trigger scries.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: vigil, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sacrifice Hopeful Vigil");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vigil).is_none(), "Hopeful Vigil sacrificed");
+}
+
+/// Hopeless Nightmare drains and discards on ETB.
+#[test]
+fn hopeless_nightmare_discard_and_drain() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.players[1].life = 20;
+    let opp_hand = g.players[1].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::hopeless_nightmare());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "opponent lost 2");
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "opponent discarded");
+}
+
+/// Hangar Scrounger's Backup puts a +1/+1 counter on a creature on ETB.
+#[test]
+fn hangar_scrounger_backup_counter() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ally))]));
+    g.move_card_to_battlefield_for_test(0, catalog::hangar_scrounger());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ally).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "Backup 1 added a counter"
+    );
+}
+
+/// Bristlebud Farmer makes two Food on ETB.
+#[test]
+fn bristlebud_farmer_makes_food() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::bristlebud_farmer());
+    drain_stack(&mut g);
+    let food = g.battlefield.iter().filter(|c| c.definition.name == "Food").count();
+    assert_eq!(food, 2, "two Food tokens");
+}
+
+/// Outcaster Greenblade tutors a basic land to hand on ETB.
+#[test]
+fn outcaster_greenblade_fetches_a_basic() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(None)]));
+    let hand = g.players[0].hand.len();
+    // Script the search to take the forest.
+    let forest = g.players[0].library[0].id;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.move_card_to_battlefield_for_test(0, catalog::outcaster_greenblade());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "fetched a land to hand");
+}
+
+/// Mizzium Skin grants hexproof.
+#[test]
+fn mizzium_skin_grants_hexproof() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::mizzium_skin());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.toughness, 3, "+0/+1");
+    assert!(c.keywords.contains(&Keyword::Hexproof));
+}
+
+/// Demand Answers discards then draws two.
+#[test]
+fn demand_answers_loots_up() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::demand_answers());
+    let _fodder = g.add_card_to_hand(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Demand Answers");
+    drain_stack(&mut g);
+    // -1 cast, -1 discard, +2 draw = net 0 vs captured (which still held the spell).
+    assert_eq!(g.players[0].hand.len(), hand, "discarded one and drew two");
+}
+
+/// Boltwave burns each opponent for 3.
+#[test]
+fn boltwave_burns_each_opponent() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    let spell = g.add_card_to_hand(0, catalog::boltwave());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Boltwave");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "opponent took 3");
+}
+
+/// Strike It Rich mints a Treasure.
+#[test]
+fn strike_it_rich_makes_treasure() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::strike_it_rich());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Strike It Rich");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 1, "made a Treasure");
+}
+
+/// Brotherhood's End mode 0 sweeps creatures for 3.
+#[test]
+fn brotherhoods_end_sweeps_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::brotherhoods_end());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Brotherhood's End");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both 2/2s died");
+}
+
+/// Boon-Bringer Valkyrie's Backup grants flying to the backed-up creature.
+#[test]
+fn boon_bringer_valkyrie_backup_grants_flying() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ally))]));
+    g.move_card_to_battlefield_for_test(0, catalog::boon_bringer_valkyrie());
+    drain_stack(&mut g);
+    let c = g.computed_permanent(ally).unwrap();
+    assert_eq!(c.power, 3, "got a +1/+1 counter");
+    assert!(c.keywords.contains(&Keyword::Flying), "gained flying from Backup");
 }
