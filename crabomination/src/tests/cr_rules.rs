@@ -3403,6 +3403,27 @@ fn cr_508_3a_alesha_reanimates_tapped_and_attacking() {
     assert!(g.attacking.iter().any(|a| a.attacker == bear), "and joins combat attacking");
 }
 
+/// Exude Toxin ({X}{B}{B}, Scavenger Regent's Omen) gives each non-Dragon
+/// creature -X/-X; Dragons are spared.
+#[test]
+fn omen_exude_toxin_spares_dragons() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 non-Dragon
+    let dragon = g.add_card_to_battlefield(1, catalog::bloomvine_regent()); // 4/5 Dragon
+    let regent = g.add_card_to_hand(0, catalog::scavenger_regent());
+    // {X}{B}{B} with X=2 → {2}{B}{B}.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: regent, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Exude Toxin for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the 2/2 non-Dragon died to -2/-2");
+    assert!(g.battlefield_find(dragon).is_some(), "the Dragon was spared");
+}
+
 /// Charring Bite (Twinmaw Stormbrood's Omen) deals 5 to a creature without
 /// flying — enough to kill a ground blocker, while a flyer is not a legal target.
 #[test]

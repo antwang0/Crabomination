@@ -160,7 +160,7 @@ Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 | Card | Location | Missing |
 |---|---|---|
 | ~~Callaphe, Beloved of the Sea~~ ✅ **FIXED** | thb.rs | "{1} tax on opponents' spells targeting your creatures/enchantments" now wired via the existing `StaticEffect::TaxOpponentSpellsTargeting` (the stale doc claimed `extra_cost_for_spell` couldn't read the cast target — Jubilant Skybonder already proved otherwise). Test `callaphe_taxes_opponent_spells_targeting_your_permanents`. |
-| Siona, Captain of the Pyleas | thb.rs:6134 | "Aura becomes attached → make a 1/1 Soldier" (no aura-attach event) |
+| ~~Siona, Captain of the Pyleas~~ ✅ **FIXED** | thb.rs | "Aura becomes attached → make a 1/1 Soldier" — wired via new `GameEvent::AuraAttached`/`EventKind::AuraAttached` (CR 303.4), emitted when an Aura resolves attached; `EventScope::YourControl` requires the host to be a creature you control. Test `siona_makes_a_soldier_when_aura_attaches_to_your_creature`. |
 
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |

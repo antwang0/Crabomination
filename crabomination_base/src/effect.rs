@@ -1265,6 +1265,12 @@ pub enum EventKind {
     /// CR 706.6 — the player rolled one or more dice ("Whenever you roll one
     /// or more dice"). Fires once per roll; matched to `GameEvent::DiceRolled`.
     RolledDice,
+    /// CR 303.4 — an Aura became attached to a permanent. "Whenever an Aura you
+    /// control becomes attached to a creature you control" (`EventScope::
+    /// YourControl` requires the attached-to permanent to be a creature you
+    /// control). The attached-to permanent is the event subject. Matched to
+    /// `GameEvent::AuraAttached`. Siona, Captain of the Pyleas.
+    AuraAttached,
     /// CR 712 — a permanent transformed. Fires once per transformed permanent;
     /// the transforming permanent is the event subject (`EventScope::SelfSource`
     /// for "when this transforms"). Matched to `GameEvent::Transformed`.

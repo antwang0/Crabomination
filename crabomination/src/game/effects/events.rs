@@ -64,10 +64,26 @@ pub(crate) fn event_matches_spec(
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
+        (EventKind::AuraAttached, GameEvent::AuraAttached { .. }) => true,
         _ => false,
     };
     if !kind_ok {
         return false;
+    }
+
+    // CR 303.4 — "Whenever an Aura you control becomes attached to a creature
+    // you control" (Siona). The YourControl scope below gates on the Aura's
+    // controller; here we additionally require the attached-to permanent to be
+    // a creature the trigger's controller controls.
+    if let (EventKind::AuraAttached, GameEvent::AuraAttached { attached_to, .. }) =
+        (&spec.kind, event)
+    {
+        let host_ok = state.battlefield_find(*attached_to).is_some_and(|c| {
+            c.controller == source.controller && c.definition.is_creature()
+        });
+        if !host_ok {
+            return false;
+        }
     }
 
     // BecameTarget has an implicit "the trigger source is the targeted
@@ -435,6 +451,9 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Triggerer` then resolves to its controller (the activating
         // player — Flamescroll Celebrant's "that player").
         GameEvent::AbilityActivated { source } => Some(EntityRef::Permanent(*source)),
+        // Bind TriggerSource to the host the Aura attached to (the "creature
+        // you control" in Siona's payoff).
+        GameEvent::AuraAttached { attached_to, .. } => Some(EntityRef::Permanent(*attached_to)),
         _ => None,
     }
 }
@@ -511,6 +530,9 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         // The activated ability's source — its controller is the actor
         // for YourControl / OpponentControl scope checks (Flamescroll).
         GameEvent::AbilityActivated { source } => Some(*source),
+        // The Aura's controller is the actor — "an Aura YOU control became
+        // attached" gates on the Aura's controller (Siona).
+        GameEvent::AuraAttached { aura, .. } => Some(*aura),
         _ => None,
     }
 }

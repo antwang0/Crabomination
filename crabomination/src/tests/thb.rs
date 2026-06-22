@@ -3629,6 +3629,28 @@ fn siona_finds_an_aura() {
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "Aura put into hand");
 }
 
+/// CR 303.4 — when an Aura Siona's controller owns becomes attached to a
+/// creature they control, Siona makes a 1/1 white Human Soldier.
+#[test]
+fn siona_makes_a_soldier_when_aura_attaches_to_your_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::siona_captain_of_the_pyleas());
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::ichthyomorphosis()); // {2}{U} Aura
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let soldiers_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Human Soldier").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(host)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant your own creature");
+    drain_stack(&mut g);
+    let soldiers_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Human Soldier").count();
+    assert_eq!(soldiers_after, soldiers_before + 1, "Siona minted a Soldier on aura-attach");
+}
+
 /// The client view surfaces an Ichthyomorphosis'd creature's computed Fish
 /// subtype and the lost-all-abilities flag.
 #[test]

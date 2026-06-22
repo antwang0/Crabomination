@@ -6140,8 +6140,8 @@ pub fn callaphe_beloved_of_the_sea() -> CardDefinition {
 
 /// Siona, Captain of the Pyleas — {1}{G}{W} Legendary 2/2 Human Soldier. ETB:
 /// look at the top seven cards, you may put an Aura into your hand, the rest
-/// on the bottom. (The "Aura attaches → make a Soldier" static is dropped —
-/// the engine has no aura-attach event yet; tracked in TODO.md.)
+/// on the bottom. Whenever an Aura you control becomes attached to a creature
+/// you control, create a 1/1 white Human Soldier (CR 303.4, `AuraAttached`).
 pub fn siona_captain_of_the_pyleas() -> CardDefinition {
     CardDefinition {
         name: "Siona, Captain of the Pyleas",
@@ -6154,14 +6154,24 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::LookPickToHand {
-            who: PlayerRef::You,
-            count: Value::Const(7),
-            rest_to_graveyard: false,
-            pick_filter: Some(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
-            take: None,
-            to_battlefield: false,
-        })],
+        triggered_abilities: vec![
+            etb(Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(7),
+                rest_to_graveyard: false,
+                pick_filter: Some(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+                take: None,
+                to_battlefield: false,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AuraAttached, EventScope::YourControl),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: human_soldier_token(),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

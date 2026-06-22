@@ -900,9 +900,6 @@ impl Effect {
             | Effect::MayDo { body, .. }
             | Effect::MayPay { body, .. } => body.prefers_graveyard_target(),
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
-            // Reanimation — "return target creature card … to the battlefield"
-            // (Alesha) wants the graveyard walked for the trigger's auto-target.
-            Effect::Move { to: ZoneDest::Battlefield { .. }, .. } => true,
             // Recasting a target card *from the graveyard* (Efreet Flamepainter,
             // The Dawning Archaic) wants the graveyard walked for the target.
             Effect::CastWithoutPayingImmediate { source_zone, .. } => {

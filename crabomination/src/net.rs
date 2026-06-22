@@ -1907,6 +1907,14 @@ impl From<&GameEvent> for GameEventWire {
                     attached_to: *attached_to,
                 }
             }
+            // CR 303.4 — surfaced to the client as an attachment move (the
+            // Aura→host link); the engine-side trigger is what matters.
+            GameEvent::AuraAttached { aura, attached_to } => {
+                GameEventWire::AttachmentMoved {
+                    attachment: *aura,
+                    attached_to: Some(*attached_to),
+                }
+            }
             GameEvent::VehicleCrewed { vehicle } => {
                 GameEventWire::VehicleCrewed { vehicle: *vehicle }
             }

@@ -1337,6 +1337,10 @@ pub enum GameEvent {
     FirstStrikeDamageResolved,
     TopCardRevealed { player: usize, card_name: &'static str, is_land: bool },
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
+    /// CR 303.4 — an Aura became attached to a permanent (on resolution or via
+    /// a reattach). Drives "whenever an Aura you control becomes attached …"
+    /// triggers (Siona, Captain of the Pyleas).
+    AuraAttached { aura: CardId, attached_to: CardId },
     /// CR 702.122 — a Vehicle was crewed and became an artifact creature
     /// until end of turn.
     VehicleCrewed { vehicle: CardId },

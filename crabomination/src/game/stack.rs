@@ -927,6 +927,13 @@ impl GameState {
                             self.battlefield.iter_mut().find(|c| c.id == card_id)
                     {
                         aura.attached_to = Some(tid);
+                        // CR 303.4 — fire "an Aura you control became attached"
+                        // triggers (Siona). Only for true Auras, not bestowed
+                        // creature spells (which entered as creatures).
+                        if self.battlefield.iter().any(|c| c.id == card_id && c.definition.is_aura())
+                        {
+                            events.push(GameEvent::AuraAttached { aura: card_id, attached_to: tid });
+                        }
                     }
 
                     // Evoke: schedule a self-sacrifice trigger that resolves
