@@ -3673,11 +3673,17 @@ were stale). See git history for the per-card details.
 - **`Effect::JoinCombatAttacking`** currently attacks the source's defender (else
   the first opponent). Add a chosen-defender/planeswalker variant for cards that
   reanimate "attacking a player or planeswalker of your choice".
-- **Unmodeled TDM keywords noticed:** Harmonize (graveyard recast with a
-  tap-a-creature cost reduction — Channeled Dragonfire), Flurry / "your second
-  spell each turn" gates (Cori Mountain Stalwart, Highspire Bell-Ringer), and a
-  conditional self-keyword-while static ("has hexproof if it hasn't dealt damage
+- **Unmodeled TDM keywords:** **Flurry is done** (`shortcut::flurry`). Still open:
+  Harmonize (graveyard recast with a tap-a-creature cost reduction — Channeled
+  Dragonfire; like Mayhem/flashback but with a power-based generic discount), and
+  a conditional self-keyword-while static ("has hexproof if it hasn't dealt damage
   yet" — Karakyk Guardian; needs a `source-hasn't-dealt-damage` predicate).
+- **Mayhem (CR 702.187) follow-up:** the "if this spell's mayhem cost was paid,
+  …" conditional rider isn't modeled (Mayhem doesn't stamp the spell like
+  kicker). Sandman's Quicksand drops its rider. Add a `SpellWasMayhem`-style mark
+  if more such cards land.
+- **Highspire Bell-Ringer / "second spell each turn costs {1} less"** — a
+  cost-reduction keyed on the second-spell condition; no static for it yet.
 - **Search-by-`ControllerOf(target)`** only resolved through a
   `Selector::TargetFiltered{slot}` inside the `ControllerOf` (plain
   `Selector::Target(0)` came back empty during trigger resolution — Magmatic

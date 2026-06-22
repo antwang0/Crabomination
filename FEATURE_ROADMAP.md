@@ -149,8 +149,10 @@ Each unblocks a large swath of cards.
   permissions, anthem stacking incl. disjunctive multi-type lords (Blex);
   devotion-gated god states (`NotCreatureWhileDevotionBelow`) + devotion
   bonuses (`StaticEffect::DevotionBonus` — Altar of the Pantheon, CR 700.5);
-  keyword loss (`LoseKeyword` — Nowhere to Run). Remaining: broader "you may
-  play", devotion-gated non-type states.
+  keyword loss (`LoseKeyword` — Nowhere to Run); live-recompute `GrantKeyword`
+  statics over combat state (`IsAttacking` — Bone-Cairn Butcher's "attacking
+  tokens you control have deathtouch"). Remaining: broader "you may play",
+  devotion-gated non-type states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
 - ✅ **Regeneration shields & "next time" prevention** as proper shields.
 - 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
@@ -225,7 +227,14 @@ Each a small targeted feature; sweep batch by batch.
     counter via the `route_to_graveyard` funnel — the Tarkir Regent/Stormbrood
     Dragon cycle),
   ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize,
-  ✅ Exhaust (activate-only-once activated abilities — Camera Launcher).
+  ✅ Exhaust (activate-only-once activated abilities — Camera Launcher),
+  ✅ Mayhem (CR 702.187 — `Keyword::Mayhem` + `GameAction::CastMayhem` reusing
+    the flashback exile-after machinery, gated on `Player.discarded_this_turn`),
+  ✅ Flurry (`shortcut::flurry` — "your second spell each turn" trigger over
+    `SpellsCastThisTurnEquals`),
+  ✅ Job Select (CR 702.182 — living-weapon-shaped Equipment minting a 1/1 Hero),
+  ✅ Renew (graveyard-exile activated ability via `from_graveyard` +
+    `exile_self_cost`), ✅ Seek (CR 701.52 — `Effect::Seek`, random library pick).
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
   Mentor, Modular, Graft, Outlast, Renown, Bloodthirst, Monstrosity, Devour,
   Amass — all via `shortcut::*` builders.
