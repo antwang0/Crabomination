@@ -24935,6 +24935,15 @@ pub fn bards_bow() -> CardDefinition {
     )
 }
 
+/// Paladin's Arms — {2}{W} Equipment. Job select. Equipped creature gets +2/+1
+/// and has ward {1}. Equip {4}. (The "is a Knight" type-add is dropped.)
+pub fn paladins_arms() -> CardDefinition {
+    job_select_equipment(
+        "Paladin's Arms", cost(&[generic(2), w()]), cost(&[generic(4)]), 2, 1,
+        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
+    )
+}
+
 /// Barbed Batterfist — {1}{R} Equipment. For Mirrodin! Equipped creature gets
 /// +1/-1. Equip {1}.
 pub fn barbed_batterfist() -> CardDefinition {

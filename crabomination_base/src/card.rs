@@ -168,6 +168,8 @@ pub enum CreatureType {
 pub enum LandType {
     Plains, Island, Swamp, Mountain, Forest,
     Desert, Gate, Locus, Mine, Tower, PowerPlant, Urza,
+    // Tarkir: Dragonstorm planeswalking dual lands.
+    Omenpath,
 }
 
 /// Artifact subtypes.

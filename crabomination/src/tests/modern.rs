@@ -62771,6 +62771,57 @@ fn equilibrium_adept_flurry_grants_double_strike() {
         "Flurry grants double strike on the second spell");
 }
 
+/// Prison Break reanimates a creature card with an extra +1/+1 counter.
+#[test]
+fn prison_break_reanimates_with_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::prison_break());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Prison Break");
+    drain_stack(&mut g);
+    let reanimated = g.battlefield_find(bear).expect("bear returned to the battlefield");
+    assert_eq!(reanimated.controller, 0, "under your control");
+    assert_eq!(reanimated.counter_count(CounterType::PlusOnePlusOne), 1, "with a +1/+1 counter");
+}
+
+/// Sandman's Quicksand wraths small creatures with -2/-2.
+#[test]
+fn sandmans_quicksand_minus_two_all() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::sandmans_quicksand());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast(&mut g, spell);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(),
+        "both 2/2s died to -2/-2");
+}
+
+/// Omenpath to Naya taps for one of three colors and enters with Vanishing 4.
+#[test]
+fn omenpath_to_naya_taps_and_vanishes() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::omenpath_to_naya());
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(crate::card::CounterType::Time), 0,
+        "time counters are seeded on ETB, not here in the fixture");
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("tap Omenpath for mana");
+    assert_eq!(g.players[0].mana_pool.total(), before + 1, "added a mana");
+}
+
 /// Marang River Skeleton's {B} regenerate shield saves it from lethal damage.
 #[test]
 fn marang_river_skeleton_regenerates() {

@@ -227,6 +227,31 @@ pub fn disruptive_stormbrood() -> CardDefinition {
     }
 }
 
+/// Omenpath to Naya — Land — Omenpath. Vanishing 4. `{T}: Add {R}, {G}, or {W}.`
+pub fn omenpath_to_naya() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    use crate::effect::ManaPayload;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Omenpath to Naya",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Omenpath], ..Default::default() },
+        keywords: vec![Keyword::Vanishing(4)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(
+                    vec![Color::Red, Color::Green, Color::White],
+                    Value::Const(1),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sagu Wildling — {4}{G} Dragon 3/3, Flying. ETB gain 3 life. Omen — Roost Seek
 /// {G}: search your library for a basic land, put it into your hand, shuffle.
 pub fn sagu_wildling() -> CardDefinition {
