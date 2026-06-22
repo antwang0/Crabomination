@@ -3900,3 +3900,20 @@ fn ghost_lit_warder_counters_unless_paid() {
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (tax unpaid)");
 }
+
+/// Tallowisp's spiritcraft trigger tutors an Aura to hand when you cast a Spirit.
+#[test]
+fn tallowisp_tutors_an_aura_on_spiritcraft() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tallowisp());
+    let aura = g.add_card_to_library(0, catalog::cage_of_hands()); // an Aura
+    g.add_card_to_library(0, catalog::grizzly_bears());            // non-Aura filler
+    let trig = catalog::tallowisp().triggered_abilities[0].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(aura))]));
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        g.battlefield.iter().find(|c| c.definition.name == "Tallowisp").unwrap().id, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "Aura tutored to hand");
+}

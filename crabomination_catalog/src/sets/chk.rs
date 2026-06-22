@@ -367,6 +367,28 @@ pub fn harsh_deceiver() -> CardDefinition {
     }
 }
 
+/// Tallowisp — {1}{W} Spirit 1/3. Whenever you cast a Spirit or Arcane spell,
+/// you may search your library for an Aura card and put it into your hand.
+pub fn tallowisp() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Tallowisp",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasEnchantmentSubtype(
+                crate::card::EnchantmentSubtype::Aura,
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Kodama of the Center Tree — {4}{G} Legendary Spirit */* (= Spirits you
 /// control). Soulshift X, where X is the number of Spirits you control.
 pub fn kodama_of_the_center_tree() -> CardDefinition {
