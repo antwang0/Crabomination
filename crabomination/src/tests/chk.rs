@@ -3628,3 +3628,46 @@ fn devouring_greed_drains_per_spirit() {
     assert_eq!(g.players[1].life, l1 - 6, "opponent loses 2 + 2 per Spirit");
     assert_eq!(g.players[0].life, l0 + 6, "you gain that much");
 }
+
+/// Feral Deceiver's {2} ability: with a land on top of the library, it reveals
+/// and pumps +2/+2 with trample; once per turn.
+#[test]
+fn feral_deceiver_reveals_land_for_pump() {
+    let mut g = two_player_game();
+    let deceiver = g.add_card_to_battlefield(0, catalog::feral_deceiver());
+    g.clear_sickness(deceiver);
+    let land = g.next_id();
+    g.players[0].add_to_library_top(land, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    // ability_index 1 is the {2} reveal ability (index 0 is the {1} look).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: deceiver, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate reveal ability");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(deceiver).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4), "3/2 +2/+2");
+    assert!(cp.keywords.contains(&Keyword::Trample), "gains trample");
+    // Once each turn: a second activation is rejected even with mana.
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: deceiver, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "second activation blocked by once-per-turn");
+}
+
+/// Callous Deceiver gets no bonus when the revealed top card is not a land.
+#[test]
+fn callous_deceiver_nonland_top_no_bonus() {
+    let mut g = two_player_game();
+    let deceiver = g.add_card_to_battlefield(0, catalog::callous_deceiver());
+    g.clear_sickness(deceiver);
+    let nonland = g.next_id();
+    g.players[0].add_to_library_top(nonland, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: deceiver, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate reveal ability");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(deceiver).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 3), "no pump on a nonland reveal");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "no flying granted");
+}

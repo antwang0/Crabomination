@@ -7650,6 +7650,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopThenIf { who, filter, then } => {
+                let mut matched = false;
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name: top.definition.name,
+                        is_land: top.definition.is_land(),
+                    });
+                    if self.evaluate_requirement_on_card(filter, top, ctx.controller) {
+                        matched = true;
+                    }
+                }
+                if matched {
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };

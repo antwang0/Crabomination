@@ -79,6 +79,10 @@ static BRO: &[Factory] = &[
     super::bro::phyrexian_warhorse,
 ];
 static CHK: &[Factory] = &[
+    super::chk::brutal_deceiver,
+    super::chk::cruel_deceiver,
+    super::chk::feral_deceiver,
+    super::chk::callous_deceiver,
     super::chk::glacial_ray,
     super::chk::reach_through_mists,
     super::chk::kodamas_might,

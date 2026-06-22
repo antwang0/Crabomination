@@ -2988,6 +2988,16 @@ pub enum Effect {
     /// step where the put-onto-battlefield clause is handled separately.
     RevealTopCard { who: PlayerRef },
 
+    /// Reveal the top card of `who`'s library; if it matches `filter`, run
+    /// `then`. The card stays on top either way. The CHK "Deceiver" cycle
+    /// (reveal top, if a land then pump/grant the source — Brutal/Cruel/Feral/
+    /// Callous Deceiver).
+    RevealTopThenIf {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        then: Box<Effect>,
+    },
+
     /// Reveal the top card of `who`'s library; if it's a permanent card, put it
     /// onto the battlefield under its owner's control (firing ETB). Otherwise
     /// it stays on top. Chaos Warp.

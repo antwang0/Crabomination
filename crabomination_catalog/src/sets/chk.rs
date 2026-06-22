@@ -215,6 +215,106 @@ pub fn patron_of_the_orochi() -> CardDefinition {
     }
 }
 
+// ── Deceiver cycle ──────────────────────────────────────────────────────────
+// Each: "{1}: Look at the top card of your library." plus a once-per-turn
+// "{2}: Reveal the top card of your library. If it's a land card, this
+// creature [bonus] until end of turn." The reveal-conditional rides the new
+// `Effect::RevealTopThenIf`. Cruel Deceiver's printed "deals damage to a
+// creature, destroy it" grant is modeled as deathtouch (CR 702.2 — same SBA).
+
+fn deceiver_abilities(then: Effect) -> Vec<ActivatedAbility> {
+    vec![
+        ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::LookAtTop { who: PlayerRef::You, amount: Value::Const(1) },
+            ..Default::default()
+        },
+        ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            once_per_turn: true,
+            effect: Effect::RevealTopThenIf {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                then: Box::new(then),
+            },
+            ..Default::default()
+        },
+    ]
+}
+
+/// Brutal Deceiver — {2}{R} Spirit 2/2. {2}, reveal-a-land: +1/+0 + first
+/// strike until end of turn (once each turn).
+pub fn brutal_deceiver() -> CardDefinition {
+    CardDefinition {
+        name: "Brutal Deceiver",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 2,
+        activated_abilities: deceiver_abilities(Effect::Seq(vec![
+            Effect::PumpPT { what: Selector::This, power: Value::Const(1), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+        ])),
+        ..Default::default()
+    }
+}
+
+/// Cruel Deceiver — {1}{B} Spirit 2/1. {2}, reveal-a-land: gains deathtouch
+/// (printed: destroy creatures it damages) until end of turn (once each turn).
+pub fn cruel_deceiver() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Deceiver",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 2,
+        toughness: 1,
+        activated_abilities: deceiver_abilities(Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::Deathtouch,
+            duration: Duration::EndOfTurn,
+        }),
+        ..Default::default()
+    }
+}
+
+/// Feral Deceiver — {3}{G} Spirit 3/2. {2}, reveal-a-land: +2/+2 + trample
+/// until end of turn (once each turn).
+pub fn feral_deceiver() -> CardDefinition {
+    CardDefinition {
+        name: "Feral Deceiver",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 3,
+        toughness: 2,
+        activated_abilities: deceiver_abilities(Effect::Seq(vec![
+            Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+        ])),
+        ..Default::default()
+    }
+}
+
+/// Callous Deceiver — {2}{U} Spirit 1/3. {2}, reveal-a-land: +1/+0 + flying
+/// until end of turn (once each turn).
+pub fn callous_deceiver() -> CardDefinition {
+    CardDefinition {
+        name: "Callous Deceiver",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 3,
+        activated_abilities: deceiver_abilities(Effect::Seq(vec![
+            Effect::PumpPT { what: Selector::This, power: Value::Const(1), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+        ])),
+        ..Default::default()
+    }
+}
+
 /// Kodama of the North Tree — {2}{G}{G}{G} Legendary Spirit 6/4. Trample,
 /// Shroud.
 pub fn kodama_of_the_north_tree() -> CardDefinition {

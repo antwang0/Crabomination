@@ -128,9 +128,6 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
     "tap up to five target permanents that player controls" could be remodeled
     on it (filter `ControlledBy(targetPlayer)`), as could other "up to N" cards
     across sets (Frost Breath, Aether Tradewinds-style multi-bounce, etc.).
-  - Reveal-top-card-if-land conditional bonus (the CHK Deceiver cycle: Brutal /
-    Cruel / Feral / Harsh Deceiver) needs a "reveal top, if land then [effect]"
-    primitive.
   - Pious Kitsune / Eight-and-a-Half-Tails devotion-counter conditional payoff.
   - Yosei taps **up to five** target permanents (modeled as tapping all of the
     target player's board); a true "up to N target permanents that player
@@ -140,9 +137,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   - Genju aura cycle (animate-a-land aura that returns to hand when the
     creature dies), Honden cycle's "Pious Kitsune / Eight-and-a-Half-Tails"
     devotion-counter conditional.
-  - Kamigawa cards skipped this run for want of a primitive: Feral
-    Deceiver / Brutal Deceiver / Callous Deceiver (reveal-top-then-conditional
-    self-pump — needs a "reveal top, branch on its type" effect);
+  - Kamigawa cards skipped this run for want of a primitive:
     Matsu-Tribe Decoy / Matsu-Tribe Sniper (a "target creature must block this"
     grant + tap-and-skip-untap-on-combat-damage); Sokenzan Renegade / Kiyomaro
     (hand-size-gated keyword grants + "player with most cards" predicate);

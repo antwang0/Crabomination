@@ -89,12 +89,7 @@ pub use crabomination_base::tokens::spirit_token;
 
 /// Dig Site Inventory — {W} Sorcery.
 /// "Put a +1/+1 counter on target creature you control. It gains vigilance
-/// until end of turn."
-///
-/// Approximation: the Flashback {W} clause ("you may cast this card from
-/// your graveyard for its flashback cost. Then exile it.") is omitted —
-/// the engine has no cast-from-graveyard pipeline yet. The face-up effect
-/// is wired faithfully.
+/// until end of turn." Flashback {W} via `Keyword::Flashback`.
 pub fn dig_site_inventory() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::effect::Duration;
@@ -304,25 +299,14 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
 
 /// Group Project — {1}{W} Sorcery.
 /// "Create a 2/2 red and white Spirit creature token."
-///
-/// Approximation: the Flashback "Tap three untapped creatures you
-/// control" clause is omitted (the engine has no cast-from-graveyard
-/// pipeline, and the engine has no "tap three creatures as additional
-/// cost" primitive yet). The face-up token-creation half is wired
-/// faithfully.
+/// Flashback—Tap three untapped creatures you control: via
+/// `Keyword::FlashbackTap(3)` + `GameAction::CastFlashbackTap` (taps the
+/// three as the whole cost, casts from gy, exiles after — CR 702.34d).
 pub fn group_project() -> CardDefinition {
     CardDefinition {
         name: "Group Project",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        // Push (modern_decks, batch 83): "Flashback—Tap three untapped
-        // creatures you control" is wired via the new
-        // `Keyword::FlashbackTap(3)` keyword + `GameAction::
-        // CastFlashbackTap` action. The action validates the caller has
-        // listed exactly 3 untapped creatures they control, then taps
-        // them as the entire flashback cost (no mana paid) and casts
-        // the spell out of the graveyard. Routes the resolved spell to
-        // exile via `cast_via_flashback` (CR 702.34d).
         keywords: vec![Keyword::FlashbackTap(3)],
         effect: Effect::CreateToken {
             who: PlayerRef::You,

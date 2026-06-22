@@ -489,6 +489,9 @@ impl Effect {
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }
+            Effect::RevealTopThenIf { who, then, .. } => {
+                player_has_target(who) || then.requires_target()
+            }
             Effect::RevealTopOpponentChoosesToHand { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
             Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),
