@@ -568,10 +568,9 @@ pub fn whirlwing_stormbrood() -> CardDefinition {
     }
 }
 
-/// Pearl Lake Warden — {3}{U} Dragon 4/5, Flying. (Its "you may look at and cast
-/// this while it's the top card of your library" static is approximated by a
-/// play-from-top permission.) Omen — Nesting Instinct {2}{G}: seek a land card
-/// and put it onto the battlefield.
+/// Pearl Lake Warden — {3}{U} Dragon 4/5, Flying. You may look at and cast it
+/// from the top of your library. Omen — Nesting Instinct {2}{G}: seek a land
+/// card and put it onto the battlefield.
 pub fn pearl_lake_warden() -> CardDefinition {
     CardDefinition {
         name: "Pearl Lake Warden",
@@ -581,10 +580,18 @@ pub fn pearl_lake_warden() -> CardDefinition {
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        static_abilities: vec![StaticAbility {
-            description: "You may look at the top card of your library any time.",
-            effect: StaticEffect::TopOfLibraryRevealed,
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may cast Pearl Lake Warden from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: SelectionRequirement::HasName("Pearl Lake Warden".into()),
+                },
+            },
+        ],
         omen: Some(Box::new(Adventure {
             name: "Nesting Instinct",
             cost: cost(&[generic(2), g()]),

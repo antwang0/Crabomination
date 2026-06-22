@@ -291,9 +291,11 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
   post-main insertion (Relentless Assault).
 - 🟡 **"Must/can't attack/block" restrictions** — `Keyword::{CantAttack,CantBlock,
-  AttacksAlone,MustBeBlocked,AllMustBlock,MustAttack,MustBlock}`, Goad. Open:
-  granted must-attack with future-turn duration, multiplayer goad-target clause,
-  cost-to-block (509.1d-f).
+  AttacksAlone,MustBeBlocked,AllMustBlock,MustAttack,MustBlock}`, Goad;
+  power-based evasion (`CantBeBlockedByPowerLess` — Formation Breaker);
+  turn-scoped defender-bypass grant (`AttackDespiteDefenderThisTurn` — Krotiq
+  Nestguard). Open: granted must-attack with future-turn duration, multiplayer
+  goad-target clause, cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ✅ **Goad**, **Lure**, **Provoke**, **Ninjutsu swap**.
 
