@@ -1365,6 +1365,8 @@ static DECKS: &[Factory] = &[
     super::decks::batterskull,
     super::decks::barbed_batterfist,
     super::decks::goldwardens_helm,
+    super::decks::tyrant_guard,
+    super::decks::termagant_swarm,
     super::decks::swiftfoot_boots,
     super::decks::vulshok_morningstar,
     super::decks::bone_saw,

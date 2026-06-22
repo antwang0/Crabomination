@@ -24886,6 +24886,87 @@ pub fn goldwardens_helm() -> CardDefinition {
     for_mirrodin_equipment("Goldwarden's Helm", cost(&[generic(2), w()]), cost(&[generic(1), w()]), 0, 1, vec![])
 }
 
+/// CR 702.156 — Ravenous ETB trigger: "if X is 5 or more, draw a card when it
+/// enters." Modeled by reading the creature's +1/+1 counter count (which equals
+/// X via `enters_with_counters: XFromCost`); a counter-doubler could shift the
+/// threshold vs. printed X — a benign corner.
+fn ravenous_etb() -> TriggeredAbility {
+    use crate::effect::shortcut::etb;
+    etb(Effect::If {
+        cond: crate::card::Predicate::ValueAtLeast(
+            Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+            Value::Const(5),
+        ),
+        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        else_: Box::new(Effect::Noop),
+    })
+}
+
+/// Tyrant Guard — {X}{2}{G} Tyranid 3/3. Ravenous. Shieldwall — Sacrifice this:
+/// creatures you control with +1/+1 counters gain hexproof and indestructible
+/// until end of turn.
+pub fn tyrant_guard() -> CardDefinition {
+    let counter_creatures = Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+    );
+    CardDefinition {
+        name: "Tyrant Guard",
+        cost: cost(&[crate::mana::x(), generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Tyranid], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![ravenous_etb()],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: counter_creatures.clone(), keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword { what: counter_creatures, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Termagant Swarm — {X}{G} Tyranid 0/0. Ravenous. Death Frenzy — when it dies,
+/// create a number of 1/1 green Tyranid tokens equal to its power.
+pub fn termagant_swarm() -> CardDefinition {
+    let tyranid = TokenDefinition {
+        name: "Tyranid".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Tyranid], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Termagant Swarm",
+        cost: cost(&[crate::mana::x(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Tyranid], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![
+            ravenous_etb(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    definition: tyranid,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Swiftfoot Boots — {2} Equipment. Equipped creature has hexproof and haste.
 /// Equip {1}.
 pub fn swiftfoot_boots() -> CardDefinition {

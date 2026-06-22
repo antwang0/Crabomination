@@ -61885,3 +61885,57 @@ fn cr_702_163_for_mirrodin_mints_and_attaches() {
     assert_eq!((cp.power, cp.toughness), (3, 1), "2/2 Rebel wears Barbed Batterfist (+1/-1)");
     assert_eq!(g.battlefield_find(eq).unwrap().attached_to, Some(rebel), "equipment attached to the Rebel");
 }
+
+/// CR 702.156 — Ravenous: Tyrant Guard enters with X +1/+1 counters and draws a
+/// card when X is 5 or more.
+#[test]
+fn cr_702_156_ravenous_counters_and_draw() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_hand(0, catalog::tyrant_guard());
+    let lib = g.next_id();
+    g.players[0].add_to_library_top(lib, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(7); // {X=5}{2}
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: card, target: None, additional_targets: vec![], mode: None, x_value: Some(5),
+    }).expect("cast Tyrant Guard for X=5");
+    drain_stack(&mut g);
+    let gid = g.battlefield.iter().find(|c| c.definition.name == "Tyrant Guard").unwrap().id;
+    let cp = g.computed_permanent(gid).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 8), "3/3 with five +1/+1 counters");
+    // Drew the card (hand had the spell removed, then +1 from Ravenous).
+    assert!(g.players[0].hand.iter().any(|c| c.id == lib), "Ravenous drew the top card at X>=5");
+}
+
+/// Ravenous draws nothing when X is below 5.
+#[test]
+fn ravenous_no_draw_below_five() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_hand(0, catalog::tyrant_guard());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4); // {X=2}{2}
+    g.perform_action(GameAction::CastSpell {
+        card_id: card, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast for X=2");
+    drain_stack(&mut g);
+    let gid = g.battlefield.iter().find(|c| c.definition.name == "Tyrant Guard").unwrap().id;
+    let cp = g.computed_permanent(gid).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "3/3 with two counters");
+    assert!(g.players[0].hand.is_empty(), "no Ravenous draw below X=5");
+}
+
+/// Termagant Swarm's Death Frenzy makes 1/1 tokens equal to its power on death.
+#[test]
+fn termagant_swarm_death_frenzy_spawns_tokens() {
+    let mut g = two_player_game();
+    let swarm = g.add_card_to_battlefield(0, catalog::termagant_swarm());
+    // Give it 3 +1/+1 counters → 3/3.
+    g.battlefield_find_mut(swarm).unwrap().add_counters(crate::card::CounterType::PlusOnePlusOne, 3);
+    let mut events = Vec::new();
+    g.sacrifice_one(swarm, 0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter().filter(|c| c.definition.name == "Tyranid" && c.is_token).count();
+    assert_eq!(tokens, 3, "three 1/1 Tyranid tokens equal to power");
+}

@@ -153,6 +153,8 @@ pub enum CreatureType {
     Reflection,
     // Ikoria Brushwagg (Almighty Brushwagg).
     Brushwagg,
+    // Warhammer 40,000 Tyranids (Ravenous — CR 702.156).
+    Tyranid,
 }
 
 /// Land subtypes (basic land types + others).

@@ -1581,6 +1581,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 702.21 — Ward (discard / life / `WardCost::LifeSourcePower` = source's power — Phyrexian Fleshgorger; `cr_702_21_*`)
 - ✅ CR 702.160 — Prototype (`CardDefinition.prototype` + `GameAction::CastPrototype`; the BRO cycle; `cr_702_160_*`)
 - ✅ CR 702.163 — For Mirrodin! (living-weapon-shaped ETB: mint a 2/2 red Rebel + self-attach — Barbed Batterfist, Goldwarden's Helm; `cr_702_163_*`)
+- ✅ CR 702.156 — Ravenous (`enters_with_counters: XFromCost` + an ETB draw gated on counter-count ≥ 5 — the W40K Tyranids Tyrant Guard / Termagant Swarm; `cr_702_156_*`)
 - ✅ CR 509.1c — must-block grant (`Effect::MustBlockSource`, untap-free Provoke — Matsu-Tribe Decoy; `cr_509_1c_matsu_tribe_decoy_*`)
 - ✅ CR 602.5b — Return-to-hand activation cost
 - ✅ CR 602.5c — "Abilities can't be activated"
