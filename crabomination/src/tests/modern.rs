@@ -62770,3 +62770,68 @@ fn equilibrium_adept_flurry_grants_double_strike() {
     assert!(g.computed_permanent(adept).unwrap().keywords.contains(&Keyword::DoubleStrike),
         "Flurry grants double strike on the second spell");
 }
+
+/// Marang River Skeleton's {B} regenerate shield saves it from lethal damage.
+#[test]
+fn marang_river_skeleton_regenerates() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(0, catalog::marang_river_skeleton());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate regenerate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1,
+        "the regenerate activation stamps a shield");
+}
+
+/// Mox Jasper only taps for mana while you control a Dragon.
+#[test]
+fn mox_jasper_taps_only_with_a_dragon() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_battlefield(0, catalog::mox_jasper());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // No Dragon yet — activation is rejected.
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    });
+    assert!(r.is_err(), "Mox Jasper can't tap without a Dragon");
+    // Add a Dragon → activation succeeds and floats a mana.
+    g.add_card_to_battlefield(0, catalog::bloomvine_regent()); // 4/5 Dragon
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("taps for mana with a Dragon out");
+    assert_eq!(g.players[0].mana_pool.total(), before + 1, "added one mana");
+}
+
+/// Sage of the Fang's Renew (graveyard activation) adds a +1/+1 counter, then
+/// doubles the +1/+1 counters on the target.
+#[test]
+fn sage_of_the_fang_renew_doubles_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let sage = g.add_card_to_graveyard(0, catalog::sage_of_the_fang());
+    // A creature already carrying two +1/+1 counters.
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(target) {
+        c.add_counters(CounterType::PlusOnePlusOne, 2);
+    }
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sage, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Renew from the graveyard");
+    drain_stack(&mut g);
+    // 2 existing + 1 added = 3, doubled = 6.
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 6,
+        "+1/+1 counters: (2+1) doubled to 6");
+    // Renew exiles Sage from the graveyard.
+    assert!(g.exile.iter().any(|c| c.id == sage), "Sage exiled by Renew");
+}

@@ -3,9 +3,9 @@
 //! spells/creatures that ride existing primitives. Tracked in `DECK_FEATURES.md`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement, Selector, StaticAbility,
-    Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement, Selector,
+    StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, flurry, mobilize, target_filtered};
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
@@ -441,6 +441,94 @@ pub fn bone_cairn_butcher() -> CardDefinition {
                 ),
                 keyword: Keyword::Deathtouch,
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Marang River Skeleton — {1}{B} 1/1 Skeleton. `{B}: Regenerate this creature.`
+/// Megamorph {3}{B}.
+pub fn marang_river_skeleton() -> CardDefinition {
+    CardDefinition {
+        name: "Marang River Skeleton",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Megamorph(cost(&[generic(3), b()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mox Jasper — {0} Legendary Artifact. `{T}: Add one mana of any color.
+/// Activate only if you control a Dragon.`
+pub fn mox_jasper() -> CardDefinition {
+    CardDefinition {
+        name: "Mox Jasper",
+        cost: cost(&[]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+                ),
+                n: Value::Const(1),
+            }),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sage of the Fang — {2}{G} 2/2 Human Druid. ETB put a +1/+1 counter on target
+/// creature. Renew — `{3}{G}, Exile this from your graveyard: Put a +1/+1
+/// counter on target creature, then double the number of +1/+1 counters on it.`
+pub fn sage_of_the_fang() -> CardDefinition {
+    CardDefinition {
+        name: "Sage of the Fang",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::DoubleCountersOnEach {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }
