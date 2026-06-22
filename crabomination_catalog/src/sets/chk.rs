@@ -401,6 +401,70 @@ pub fn kodama_of_the_center_tree() -> CardDefinition {
     }
 }
 
+/// Ghost-Lit Redeemer — {W} Spirit 1/1. {W},{T}: gain 2 life. Channel —
+/// {1}{W}, Discard this card: gain 4 life.
+pub fn ghost_lit_redeemer() -> CardDefinition {
+    CardDefinition {
+        name: "Ghost-Lit Redeemer",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[w()]),
+                effect: gain_life(2),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                from_hand: true,
+                discard_self_cost: true,
+                effect: gain_life(4),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ghost-Lit Warder — {1}{U} Spirit 1/1. {3}{U},{T}: counter target spell
+/// unless its controller pays {2}. Channel — {3}{U}, Discard: pay {4}.
+pub fn ghost_lit_warder() -> CardDefinition {
+    let counter_for = |tax: u32| Effect::CounterUnlessPaid {
+        what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        mana_cost: cost(&[generic(tax)]),
+        exile: false,
+        extra_generic: None,
+    };
+    CardDefinition {
+        name: "Ghost-Lit Warder",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: spirit(vec![CreatureType::Spirit]),
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3), u()]),
+                effect: counter_for(2),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), u()]),
+                from_hand: true,
+                discard_self_cost: true,
+                effect: counter_for(4),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Ghost-Lit Raider — {2}{R} Spirit 2/1. {2}{R},{T}: 2 damage to target
 /// creature. Channel — {3}{R}, Discard this card: 4 damage to target creature.
 pub fn ghost_lit_raider() -> CardDefinition {

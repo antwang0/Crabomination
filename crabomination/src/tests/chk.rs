@@ -3851,3 +3851,52 @@ fn kodama_center_tree_cda_and_soulshift_x() {
     assert!(g.players[0].hand.iter().any(|c| c.id == small), "MV<=X Spirit returned");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == gy_spirit), "MV>X Spirit stays");
 }
+
+/// Ghost-Lit Redeemer gains life from the battlefield and from its Channel.
+#[test]
+fn ghost_lit_redeemer_gains_life() {
+    let mut g = two_player_game();
+    let red = g.add_card_to_battlefield(0, catalog::ghost_lit_redeemer());
+    g.clear_sickness(red);
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    let l0 = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: red, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("gain 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 + 2);
+    // Channel from hand: discard, gain 4.
+    let red2 = g.add_card_to_hand(0, catalog::ghost_lit_redeemer());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: red2, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("channel gain 4");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 + 6);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == red2), "discarded to channel");
+}
+
+/// Ghost-Lit Warder counters a spell unless its controller pays the tax.
+#[test]
+fn ghost_lit_warder_counters_unless_paid() {
+    let mut g = two_player_game();
+    let warder = g.add_card_to_battlefield(0, catalog::ghost_lit_warder());
+    g.clear_sickness(warder);
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(crate::mana::Color::Green, 2);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts (no mana left for tax)");
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: warder, ability_index: 0, target: Some(Target::Permanent(spell)), additional_targets: Vec::new(), x_value: None,
+    }).expect("counter unless paid");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (tax unpaid)");
+}

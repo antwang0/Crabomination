@@ -87,6 +87,8 @@ static CHK: &[Factory] = &[
     super::chk::matsu_tribe_sniper,
     super::chk::harsh_deceiver,
     super::chk::kodama_of_the_center_tree,
+    super::chk::ghost_lit_redeemer,
+    super::chk::ghost_lit_warder,
     super::chk::ghost_lit_raider,
     super::chk::ghost_lit_stalker,
     super::chk::hinder,
