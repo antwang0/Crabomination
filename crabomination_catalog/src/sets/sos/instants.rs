@@ -44,24 +44,14 @@ pub fn erode() -> CardDefinition {
 
 /// Harsh Annotation — {1}{W} Instant.
 /// "Destroy target creature. Its controller creates a 1/1 white and black
-/// Inkling creature token with flying."
-///
-/// Approximation: the Inkling token is created under the spell's caster
-/// (`PlayerRef::You`) rather than the target creature's controller — the
-/// engine has no zone-stable controller lookup that survives the destroy
-/// step, and 2-player play makes this only a small power-level trade-off
-/// (you give yourself the token instead of giving it to the player whose
-/// creature you killed). Standard single-target destroy is wired
-/// faithfully.
+/// Inkling creature token with flying." The token goes to the dead
+/// creature's owner via `PlayerRef::OwnerOf` (resolved off LKI;
+/// `place_card_in_dest` walks graveyards if the destroy already moved it).
 pub fn harsh_annotation() -> CardDefinition {
     CardDefinition {
         name: "Harsh Annotation",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        // Inkling token goes to the target creature's owner via
-        // `PlayerRef::OwnerOf(Target(0))`; `place_card_in_dest`
-        // walks graveyards if the destroy step has already moved the
-        // card.
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
