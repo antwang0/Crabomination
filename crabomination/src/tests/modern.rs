@@ -63689,3 +63689,78 @@ fn webspinner_cuff_reconfigures_and_buffs() {
     assert_eq!((cp.power, cp.toughness), (3, 6), "2/2 + 1/4 = 3/6");
     assert!(cp.keywords.contains(&Keyword::Reach), "granted reach");
 }
+
+/// Sarkhan's Triumph tutors a Dragon to hand.
+#[test]
+fn sarkhans_triumph_tutors_a_dragon() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_library(0, catalog::stormscale_scion()); // a Dragon
+    g.add_card_to_library(0, catalog::grizzly_bears()); // non-Dragon padding
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(dragon))]));
+    let id = g.add_card_to_hand(0, catalog::sarkhans_triumph());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sarkhan's Triumph");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dragon), "Dragon tutored to hand");
+}
+
+/// Lotus-Eye Mystics has prowess and returns an enchantment from your graveyard.
+#[test]
+fn lotus_eye_mystics_etb_returns_enchantment() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_graveyard(0, catalog::rancor());
+    let m = g.add_card_to_hand(0, catalog::lotus_eye_mystics());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: Some(Target::Permanent(aura)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lotus-Eye Mystics");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "enchantment returned to hand");
+    assert!(g.computed_permanent(m).unwrap().keywords.contains(&Keyword::Prowess), "has prowess");
+}
+
+/// Winternight Stories nets cards: draw three, discard two.
+#[test]
+fn winternight_stories_draws_three_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::winternight_stories());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len(); // includes the spell
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Winternight Stories");
+    drain_stack(&mut g);
+    // -1 spell, +3 drawn, -2 discarded = net 0 from the starting hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "net hand size unchanged (draw 3, discard 2)");
+}
+
+/// Heritage Reclamation mode 0 destroys a target artifact.
+#[test]
+fn heritage_reclamation_destroys_artifact() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_battlefield(1, catalog::mox_jasper()); // an artifact
+    let id = g.add_card_to_hand(0, catalog::heritage_reclamation());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mox)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Heritage Reclamation mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mox).is_none(), "artifact destroyed");
+}

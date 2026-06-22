@@ -1658,3 +1658,91 @@ pub fn webspinner_cuff() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── TDM batch 11: tutor / prowess / Harmonize draw ────────────────────────
+
+/// Sarkhan's Triumph — {2}{R} Instant. Search your library for a Dragon creature
+/// card, reveal it, put it into your hand, then shuffle.
+pub fn sarkhans_triumph() -> CardDefinition {
+    CardDefinition {
+        name: "Sarkhan's Triumph",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lotus-Eye Mystics — {3}{W} 3/2 Human Monk with Prowess. ETB: return target
+/// enchantment card from your graveyard to your hand.
+pub fn lotus_eye_mystics() -> CardDefinition {
+    CardDefinition {
+        name: "Lotus-Eye Mystics",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::InYourGraveyard.and(SelectionRequirement::Enchantment),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Winternight Stories — {2}{U} Sorcery. Draw three cards, then discard two.
+/// Harmonize {4}{U}. (The "unless you discard a creature card" clause is
+/// approximated as the plain discard-two downside.)
+pub fn winternight_stories() -> CardDefinition {
+    CardDefinition {
+        name: "Winternight Stories",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Harmonize(cost(&[generic(4), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── TDM batch 12: Mobilize / Equipment / modal / landfall enchantment ─────
+
+
+
+/// Heritage Reclamation — {1}{G} Instant. Choose one — destroy target artifact;
+/// or destroy target enchantment; or exile target card from a graveyard, then
+/// draw a card.
+pub fn heritage_reclamation() -> CardDefinition {
+    CardDefinition {
+        name: "Heritage Reclamation",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::InGraveyard),
+                    to: ZoneDest::Exile,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
