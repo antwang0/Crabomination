@@ -61868,3 +61868,20 @@ fn reave_soul_destroys_power_three_or_less() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(small).is_none(), "power-2 creature destroyed");
 }
+
+/// CR 702.163 — For Mirrodin! Barbed Batterfist mints a 2/2 red Rebel and
+/// attaches itself, so the Rebel ends up a 3/1 (+1/-1).
+#[test]
+fn cr_702_163_for_mirrodin_mints_and_attaches() {
+    let mut g = two_player_game();
+    let eq = g.add_card_to_battlefield(0, catalog::barbed_batterfist());
+    g.fire_self_etb_triggers(eq, 0);
+    drain_stack(&mut g);
+    let rebel = g.battlefield.iter()
+        .find(|c| c.definition.name == "Rebel")
+        .map(|c| c.id)
+        .expect("Rebel token minted");
+    let cp = g.computed_permanent(rebel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 1), "2/2 Rebel wears Barbed Batterfist (+1/-1)");
+    assert_eq!(g.battlefield_find(eq).unwrap().attached_to, Some(rebel), "equipment attached to the Rebel");
+}

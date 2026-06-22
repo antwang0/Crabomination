@@ -24827,6 +24827,65 @@ fn simple_equipment(
     }
 }
 
+/// CR 702.163 — For Mirrodin! Build an Equipment that, on ETB, mints a 2/2 red
+/// Rebel token and attaches itself to it (living-weapon-shaped), then carries a
+/// plain `equipped_bonus` (P/T + keywords) and an equip cost.
+fn for_mirrodin_equipment(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    equip: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    use crate::effect::shortcut::etb;
+    let rebel = TokenDefinition {
+        name: "Rebel".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rebel], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(EquipBonus {
+            power,
+            toughness,
+            keywords,
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: rebel },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Barbed Batterfist — {1}{R} Equipment. For Mirrodin! Equipped creature gets
+/// +1/-1. Equip {1}.
+pub fn barbed_batterfist() -> CardDefinition {
+    for_mirrodin_equipment("Barbed Batterfist", cost(&[generic(1), r()]), cost(&[generic(1)]), 1, -1, vec![])
+}
+
+/// Goldwarden's Helm — {2}{W} Equipment. For Mirrodin! Equipped creature gets
+/// +0/+1. Equip {1}{W}.
+pub fn goldwardens_helm() -> CardDefinition {
+    for_mirrodin_equipment("Goldwarden's Helm", cost(&[generic(2), w()]), cost(&[generic(1), w()]), 0, 1, vec![])
+}
+
 /// Swiftfoot Boots — {2} Equipment. Equipped creature has hexproof and haste.
 /// Equip {1}.
 pub fn swiftfoot_boots() -> CardDefinition {

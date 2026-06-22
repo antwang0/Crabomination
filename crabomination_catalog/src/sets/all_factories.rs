@@ -1363,6 +1363,8 @@ static DECKS: &[Factory] = &[
     super::decks::wayfarers_bauble,
     super::decks::guardian_idol,
     super::decks::batterskull,
+    super::decks::barbed_batterfist,
+    super::decks::goldwardens_helm,
     super::decks::swiftfoot_boots,
     super::decks::vulshok_morningstar,
     super::decks::bone_saw,
