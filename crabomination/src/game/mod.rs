@@ -752,6 +752,9 @@ pub struct GameState {
     /// cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub(crate) cant_block_pairs: Vec<(CardId, CardId)>,
+    /// CR 508.1a — creatures granted "can attack this turn as though it didn't
+    /// have defender" (Krotiq Nestguard's activated ability). Cleared at cleanup.
+    pub(crate) attack_despite_defender_this_turn: Vec<CardId>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -1076,6 +1079,7 @@ impl Clone for GameState {
             turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
+            attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             replacement_effects: self.replacement_effects.clone(),
@@ -1207,6 +1211,7 @@ impl GameState {
             turn_scoped_spell_taxes: Vec::new(),
             damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
+            attack_despite_defender_this_turn: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
             replacement_effects: Vec::new(),
@@ -9850,6 +9855,13 @@ pub(crate) fn can_block_attacker_computed(
     // Both sides use layer-computed power (an anthem-pumped Skulk attacker
     // dodges bigger blockers correctly).
     if attacker_kws.contains(&Keyword::Skulk) && blocker_computed.power > attacker_power {
+        return false;
+    }
+    // Formation Breaker (CR 509.1b): creatures with power less than this
+    // creature's power can't block it — the inverse of Skulk.
+    if attacker_kws.contains(&Keyword::CantBeBlockedByPowerLess)
+        && blocker_computed.power < attacker_power
+    {
         return false;
     }
     // Fear (CR 702.36): can only be blocked by artifact creatures and/or

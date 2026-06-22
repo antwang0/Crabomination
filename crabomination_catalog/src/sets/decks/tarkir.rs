@@ -2868,3 +2868,54 @@ pub fn sunpearl_kirin() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Formation Breaker — {1}{G} 2/1 Beast. Creatures with power less than its
+/// power can't block it; gets +1/+2 while you control a creature with a counter.
+pub fn formation_breaker() -> CardDefinition {
+    CardDefinition {
+        name: "Formation Breaker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::CantBeBlockedByPowerLess],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +1/+2 while you control a creature with a counter on it.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Krotiq Nestguard — {2}{G} 4/4 Insect with defender. {2}{G}: it can attack
+/// this turn as though it didn't have defender.
+pub fn krotiq_nestguard() -> CardDefinition {
+    CardDefinition {
+        name: "Krotiq Nestguard",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::AttackDespiteDefenderThisTurn { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

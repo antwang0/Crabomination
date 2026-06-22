@@ -3575,6 +3575,12 @@ pub enum Effect {
     /// Pathfinder ({C}: target creature can't block this creature this turn).
     CantBlockSourceThisTurn { target: Selector },
 
+    /// CR 508.1a — "[creatures] can attack this turn as though they didn't
+    /// have defender." Records the resolved permanents in
+    /// `GameState.attack_despite_defender_this_turn`; cleared at cleanup
+    /// (Krotiq Nestguard's activated ability).
+    AttackDespiteDefenderThisTurn { what: Selector },
+
     /// CR 509.1c — "Target creature blocks `source` this turn if able."
     /// Sets the target's `must_block` to the ability source (like Provoke
     /// but without untapping the target). Matsu-Tribe Decoy.

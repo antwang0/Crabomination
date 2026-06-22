@@ -64275,3 +64275,39 @@ fn sunpearl_kirin_bounces_your_permanent() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == other), "bounced the bear to hand");
 }
+
+/// Formation Breaker (CR 509.1b): creatures with less power can't block it.
+#[test]
+fn formation_breaker_blocks_only_by_equal_or_greater_power() {
+    let mut g = two_player_game();
+    let breaker = g.add_card_to_battlefield(0, catalog::formation_breaker()); // 2/1
+    let weak = g.add_card_to_battlefield(1, catalog::dragon_sniper()); // 1/1, power 1 < 2
+    let strong = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    assert!(!g.blocker_can_block_attacker(weak, breaker), "power-1 creature can't block");
+    assert!(g.blocker_can_block_attacker(strong, breaker), "power-2 creature can block");
+}
+
+/// Krotiq Nestguard (CR 508.1a): its ability lets it attack despite defender.
+#[test]
+fn krotiq_nestguard_can_attack_after_ability() {
+    let mut g = two_player_game();
+    let krotiq = g.add_card_to_battlefield(0, catalog::krotiq_nestguard());
+    g.clear_sickness(krotiq);
+    g.active_player_idx = 0;
+    // Defender isn't a legal attacker at the declare step.
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(!g.legal_attackers(0).contains(&krotiq), "defender can't attack yet");
+    // Activate the ability in the main phase, then return to combat.
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: krotiq, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    }).expect("activate ignore-defender");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(g.legal_attackers(0).contains(&krotiq), "may now attack despite defender");
+}

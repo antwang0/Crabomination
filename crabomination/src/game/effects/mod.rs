@@ -9591,6 +9591,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AttackDespiteDefenderThisTurn { what } => {
+                // CR 508.1a — let the resolved creatures attack despite Defender
+                // for the rest of the turn (Krotiq Nestguard).
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent
+                        && !self.attack_despite_defender_this_turn.contains(&id)
+                    {
+                        self.attack_despite_defender_this_turn.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventNextDamage { target, amount } => {
                 // CR 615.7 — push a "prevent the next N damage to target"
                 // shield consumed by `apply_prevention_shields`.

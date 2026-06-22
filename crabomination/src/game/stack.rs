@@ -1845,6 +1845,7 @@ impl GameState {
         self.search_tax_paid_this_turn.clear();
         self.damage_prevented_sources.clear();
         self.cant_block_pairs.clear();
+        self.attack_despite_defender_this_turn.clear();
         // CR 615 — prevention shields and the "can't be prevented" rider
         // are "this turn" effects; they expire at cleanup too.
         self.prevention_shields.clear();

@@ -865,6 +865,11 @@ pub enum Keyword {
     /// attacker must be blocked by `0` or `>= N` creatures. Enforced in
     /// `declare_blockers`.
     CantBeBlockedExceptByN(u32),
+    /// "Creatures with power less than this creature's power can't block it"
+    /// (Formation Breaker). The inverse of Skulk — gates on the *blocker's*
+    /// computed power being below the attacker's. Enforced in
+    /// `can_block_attacker_computed` (CR 509.1b).
+    CantBeBlockedByPowerLess,
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each

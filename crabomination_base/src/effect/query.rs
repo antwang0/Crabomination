@@ -151,6 +151,7 @@ impl Effect {
             Effect::RevealTopToHandOpponentsLoseMv => false,
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,
+            Effect::AttackDespiteDefenderThisTurn { .. } => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
             // Targets are chosen at resolution (Decision::ChooseCards), so no
             // cast-time target slot is demanded.

@@ -255,7 +255,15 @@ impl GameState {
         use crate::card::Keyword;
         self.battlefield
             .iter()
-            .filter(|c| c.controller == seat && c.can_attack())
+            // Like `can_attack()` but defers the Defender check to the
+            // kws block below, which honors the ignore-defender exception.
+            .filter(|c| {
+                c.controller == seat
+                    && c.definition.is_creature()
+                    && !c.tapped
+                    && !c.has_keyword(&Keyword::CantAttack)
+                    && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
+            })
             .filter(|c| {
                 // Honor layer-granted Defender / can't-attack and the
                 // per-defender attack restriction (Dandân) so the client's
@@ -264,7 +272,9 @@ impl GameState {
                     .computed_permanent(c.id)
                     .map(|cp| cp.keywords.clone())
                     .unwrap_or_else(|| c.definition.keywords.clone());
-                if kws.contains(&Keyword::Defender) || kws.contains(&Keyword::CantAttack) {
+                if (kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(c))
+                    || kws.contains(&Keyword::CantAttack)
+                {
                     return false;
                 }
                 kws.iter().all(|kw| match kw {

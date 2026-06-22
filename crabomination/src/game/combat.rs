@@ -9,6 +9,10 @@ impl GameState {
     /// (Drowsing Tyrannodon).
     pub(crate) fn ignores_defender_for_attack(&self, card: &CardInstance) -> bool {
         use crate::effect::StaticEffect;
+        // CR 508.1a — a turn-scoped grant (Krotiq Nestguard's activated ability).
+        if self.attack_despite_defender_this_turn.contains(&card.id) {
+            return true;
+        }
         let ctx = crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
         card.definition.static_abilities.iter().any(|sa| {
             if let StaticEffect::CanAttackIgnoringDefenderWhile { condition } = &sa.effect {
