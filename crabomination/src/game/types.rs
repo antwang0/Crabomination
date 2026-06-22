@@ -147,6 +147,16 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.183 — cast a card's Omen half from hand for its Omen cost. On
+    /// resolution or counter the card is shuffled into its owner's library.
+    CastOmen {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.165 — cast a Gift spell, promising the gift to an opponent: the
     /// spell resolves its enhanced `gifted_effect`.
     CastGift {
@@ -949,6 +959,7 @@ impl GameAction {
                 | A::CastFaceDown { .. }
                 | A::CastForetold { .. }
                 | A::CastAdventure { .. }
+                | A::CastOmen { .. }
                 | A::CastGift { .. }
                 | A::CastAdventureCreature { .. }
                 | A::CastPrototype { .. }

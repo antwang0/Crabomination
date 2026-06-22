@@ -1378,6 +1378,31 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Omen (CR 702.183): for any hand card with an Omen half that *targets*
+    // something, offer a `CastOmen` candidate (the card shuffles back into the
+    // library on resolution, so the creature is still drawable later).
+    for c in state.players[seat].hand.iter() {
+        let Some(omen) = c.definition.has_omen() else { continue };
+        if !omen.effect.requires_target() {
+            continue;
+        }
+        let (target, additional_targets) =
+            state.auto_targets_for_effect_all_slots(&omen.effect, seat, None);
+        if target.is_none() {
+            continue;
+        }
+        let action = GameAction::CastOmen {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Prototype (CR 702.160): for any hand card with a prototype face, offer
     // a `CastPrototype` candidate. The smaller colored cost is often the only
     // affordable line early; the body's ETB auto-targets through the cast path.
@@ -3635,6 +3660,29 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never cast the adventure half");
+    }
+
+    /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on
+    /// Disruptive Stormbrood) when it can't yet afford the Dragon.
+    #[test]
+    fn bot_casts_omen_half_as_removal() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, catalog::disruptive_stormbrood());
+        // {1}{B}: enough for Petty Revenge, not the {4}{G} creature.
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let mut bot = RandomBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastOmen { card_id, .. } = action {
+                assert_eq!(card_id, id, "bot casts Petty Revenge as removal");
+                let _ = bear;
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never cast the Omen half");
     }
 
     /// CR 702.78 — the bot conspires Burn Trail when it controls two untapped

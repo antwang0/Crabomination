@@ -3313,3 +3313,85 @@ fn cr_702_180_survival_fires_while_tapped_at_second_main() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 2, "Survival gained 2 life once tapped");
 }
+
+// ── CR 702.183 — Omen ──────────────────────────────────────────────────────────
+
+/// CR 702.183 — casting a card's Omen half resolves the Omen effect and shuffles
+/// the card into its owner's library (not the graveyard); the creature stays
+/// available to be drawn and cast later.
+#[test]
+fn cr_702_183_omen_resolves_then_shuffles_into_library() {
+    let mut g = two_player_game();
+    let regent = g.add_card_to_hand(0, catalog::marang_river_regent());
+    // Seed the library so Coil and Catch's draw-three has cards to find.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    // Coil and Catch costs {3}{U}: draw three, discard one.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastOmen {
+        card_id: regent, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Omen half");
+    drain_stack(&mut g);
+    // Net hand: -1 (Regent left) +3 draw -1 discard = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew three, discarded one");
+    // The Regent itself is shuffled back into the library, not the graveyard.
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != regent),
+        "Omen card did not go to the graveyard");
+    assert!(g.players[0].library.iter().any(|c| c.id == regent),
+        "Omen card was shuffled into the library");
+    assert_eq!(g.players[0].library.len(), lib_before - 3 + 1, "three drawn, Regent shuffled in");
+}
+
+/// CR 702.183 — a countered Omen spell shuffles into its owner's library rather
+/// than going to the graveyard.
+#[test]
+fn cr_702_183_countered_omen_shuffles_into_library() {
+    let mut g = two_player_game();
+    let regent = g.add_card_to_hand(0, catalog::bloomvine_regent());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: regent, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Claim Territory");
+    // Lift the spell off the stack as if countered (CR 701.5g → 702.183 instead).
+    let card = match g.stack.pop().expect("Omen spell on the stack") {
+        crate::game::StackItem::Spell { card, .. } => *card,
+        _ => unreachable!("top of stack is the Omen spell"),
+    };
+    assert_eq!(card.id, regent, "Omen spell is on the stack");
+    let mut events = Vec::new();
+    g.route_to_graveyard(card, &mut events);
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != regent),
+        "countered Omen did not hit the graveyard");
+    assert!(g.players[0].library.iter().any(|c| c.id == regent),
+        "countered Omen was shuffled into the library");
+}
+
+/// Charring Bite (Twinmaw Stormbrood's Omen) deals 5 to a creature without
+/// flying — enough to kill a ground blocker, while a flyer is not a legal target.
+#[test]
+fn omen_charring_bite_burns_ground_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let brood = g.add_card_to_hand(0, catalog::twinmaw_stormbrood());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: brood, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Charring Bite at the ground bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "Charring Bite's 5 damage killed the 2/2 bear");
+    assert!(g.players[0].library.iter().any(|c| c.id == brood),
+        "Twinmaw Stormbrood shuffled back after its Omen resolved");
+}

@@ -1365,11 +1365,10 @@ impl GameState {
                         card.definition.cost.cmc() < self.trigger_event_amount_scratch
                     }
                     R::HasCardType(ct) => {
-                        // CR 715 — an adventuring card is its instant/sorcery
-                        // half while on the stack, so report the adventure types.
-                        if card.adventuring {
-                            card.definition.adventure.as_ref()
-                                .map(|a| a.card_types.contains(ct)).unwrap_or(false)
+                        // CR 715 / 702.183 — an Adventure/Omen card is its
+                        // instant/sorcery half on the stack; report those types.
+                        if let Some(half) = card.alt_spell_half() {
+                            half.card_types.contains(ct)
                         } else {
                             card.definition.card_types.contains(ct)
                         }
@@ -1580,11 +1579,10 @@ impl GameState {
                 card.definition.cost.cmc() < self.trigger_event_amount_scratch
             }
             R::HasCardType(ct) => {
-                        // CR 715 — an adventuring card is its instant/sorcery
-                        // half while on the stack, so report the adventure types.
-                        if card.adventuring {
-                            card.definition.adventure.as_ref()
-                                .map(|a| a.card_types.contains(ct)).unwrap_or(false)
+                        // CR 715 / 702.183 — an Adventure/Omen card is its
+                        // instant/sorcery half on the stack; report those types.
+                        if let Some(half) = card.alt_spell_half() {
+                            half.card_types.contains(ct)
                         } else {
                             card.definition.card_types.contains(ct)
                         }

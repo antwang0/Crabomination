@@ -219,6 +219,11 @@ Each a small targeted feature; sweep batch by batch.
   ✅ Survival (CR 702.180 — "at your second main phase, if tapped …" as a
   `StepBegins(PostCombatMain)`/`ActivePlayer` trigger under a tapped
   intervening-`if`; Bloomburrow Survivor batch),
+  ✅ Omen (CR 702.183 — `CardDefinition.omen` + `GameAction::CastOmen` +
+    `CardInstance.omen_casting`; cast the creature card as its instant/sorcery
+    Omen half, which shuffles into the owner's library on resolution *or*
+    counter via the `route_to_graveyard` funnel — the Tarkir Regent/Stormbrood
+    Dragon cycle),
   ✅ Offspring, ✅ Impending, ✅ Ninjutsu, ✅ Embalm / Eternalize,
   ✅ Exhaust (activate-only-once activated abilities — Camera Launcher).
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,

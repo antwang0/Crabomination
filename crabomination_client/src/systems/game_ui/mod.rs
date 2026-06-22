@@ -3654,6 +3654,7 @@ pub fn handle_game_input(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
                             targeting.pending_gift,
+                            targeting.pending_omen,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3704,6 +3705,7 @@ pub fn handle_game_input(
                             pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
                             targeting.pending_gift,
+                            targeting.pending_omen,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3767,6 +3769,7 @@ pub fn handle_game_input(
                         pending_id, Some(target), mode, cast_back, targeting.pending_pay_times,
                             targeting.pending_split,
                             targeting.pending_gift,
+                            targeting.pending_omen,
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3835,6 +3838,20 @@ pub fn handle_game_input(
                             targeting.pending_gift = true;
                         } else {
                             outbox.submit(GameAction::CastGift {
+                                card_id, target: None, additional_targets: vec![],
+                                mode: None, x_value: None,
+                            });
+                        }
+                    } else if k.has_omen && cv.omenable_hand.contains(&card_id) {
+                        // CR 702.183 — right-click an Omen card casts its Omen
+                        // half via `CastOmen`. Arm targeting first when the omen
+                        // effect needs a target; otherwise fire now.
+                        if k.omen_needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card_id);
+                            targeting.pending_omen = true;
+                        } else {
+                            outbox.submit(GameAction::CastOmen {
                                 card_id, target: None, additional_targets: vec![],
                                 mode: None, x_value: None,
                             });
@@ -4235,11 +4252,18 @@ fn build_pending_cast(
     pay_times: Option<(u32, crate::game::PayTimesMechanic)>,
     split: Option<crate::game::SplitCastChoice>,
     gift: bool,
+    omen: bool,
 ) -> GameAction {
     // CR 702.165 — a promised Gift is its own cast action; it can't combine
     // with the split / pay-times / back-face shapes.
     if gift {
         return GameAction::CastGift {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        };
+    }
+    // CR 702.183 — an Omen half is its own cast action.
+    if omen {
+        return GameAction::CastOmen {
             card_id, target, additional_targets: vec![], mode, x_value: None,
         };
     }
@@ -4280,6 +4304,7 @@ fn cancel_targeting(
     targeting.pending_pay_times = None;
     targeting.pending_split = None;
     targeting.pending_gift = false;
+    targeting.pending_omen = false;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

@@ -1638,6 +1638,13 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventure: Option<Box<Adventure>>,
+    /// CR 702.183 — Omen. When `Some`, this creature card also has an
+    /// instant/sorcery "Omen" half that can be cast from hand for the listed
+    /// cost (`GameAction::CastOmen`). On resolution or counter the card is
+    /// shuffled into its owner's library instead of going to the graveyard.
+    /// Reuses the [`Adventure`] shape (name/cost/types/effect).
+    #[serde(default)]
+    pub omen: Option<Box<Adventure>>,
     /// CR 702.165 — Gift. When `Some`, as the spell is cast its controller may
     /// promise a gift to an opponent (`GameAction::CastGift`); if promised, the
     /// opponent receives the gift and the spell resolves its enhanced
@@ -2422,6 +2429,10 @@ impl CardDefinition {
     pub fn has_adventure(&self) -> Option<&Adventure> {
         self.adventure.as_deref()
     }
+    /// CR 702.183 — the Omen half, if this card has Omen.
+    pub fn has_omen(&self) -> Option<&Adventure> {
+        self.omen.as_deref()
+    }
     /// CR 702.160 — the Prototype face, if this card has Prototype.
     pub fn has_prototype(&self) -> Option<&Prototype> {
         self.prototype.as_deref()
@@ -2915,6 +2926,11 @@ pub struct CardInstance {
     /// (`GameAction::CastAdventureCreature`). Cleared once the creature is
     /// cast (or the card otherwise changes zones).
     pub on_adventure: bool,
+    /// CR 702.183 — true while this card is on the stack as its Omen
+    /// (instant/sorcery) half. The resolver runs `definition.omen`'s effect
+    /// instead of the creature body and, on resolution or counter, shuffles the
+    /// card into its owner's library instead of the graveyard.
+    pub omen_casting: bool,
     /// CR 702.160 — true when this card was cast for its Prototype cost, so it
     /// entered with the prototype's mana cost, color, and size. The live
     /// `definition` already carries the applied values; this flag lets a
@@ -2964,6 +2980,25 @@ pub struct CardInstance {
 }
 
 impl CardInstance {
+    /// The instant/sorcery alternate half (Adventure or Omen) this card is
+    /// currently on the stack as, if any. While set, the card resolves down the
+    /// spell path with the half's card types and effect (CR 715 / CR 702.183).
+    pub fn alt_spell_half(&self) -> Option<&Adventure> {
+        if self.adventuring {
+            self.definition.adventure.as_deref()
+        } else if self.omen_casting {
+            self.definition.omen.as_deref()
+        } else {
+            None
+        }
+    }
+
+    /// True while this card is on the stack as an instant/sorcery alternate
+    /// half (Adventure or Omen) — i.e. it resolves as a noncreature spell.
+    pub fn casting_alt_half(&self) -> bool {
+        self.adventuring || self.omen_casting
+    }
+
     pub fn new(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
         let definition = definition.into();
         let summoning_sick = definition.is_creature();
@@ -3048,6 +3083,7 @@ impl CardInstance {
             suspected: false,
             adventuring: false,
             on_adventure: false,
+            omen_casting: false,
             cast_as_prototype: false,
             saddled: false,
             split_cast: None,
@@ -3555,6 +3591,10 @@ struct CardInstanceWire {
     adventuring: bool,
     #[serde(default)]
     on_adventure: bool,
+    /// CR 702.183 Omen marker. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    omen_casting: bool,
     /// CR 702.160 prototype marker. `#[serde(default)]` so older snapshots
     /// load as `false`.
     #[serde(default)]
@@ -3682,6 +3722,7 @@ impl serde::Serialize for CardInstance {
             suspected: self.suspected,
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
+            omen_casting: self.omen_casting,
             cast_as_prototype: self.cast_as_prototype,
             saddled: self.saddled,
             split_cast: self.split_cast,
@@ -3789,6 +3830,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.suspected = wire.suspected;
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;
+        c.omen_casting = wire.omen_casting;
         // CR 702.160 — restore a prototype-cast permanent: the name→factory
         // definition is the full (colorless, big) card, so re-apply the
         // prototype cost/color/size that it entered with.

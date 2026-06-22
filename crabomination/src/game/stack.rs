@@ -690,11 +690,11 @@ impl GameState {
                     }
                 }
 
-                // CR 715 — while on an adventure the card is its instant/
-                // sorcery half, so it resolves down the spell path (and is
-                // exiled, not put onto the battlefield) regardless of its
+                // CR 715 / 702.183 — while cast as its Adventure/Omen half the
+                // card is its instant/sorcery half, so it resolves down the
+                // spell path (not onto the battlefield) regardless of its
                 // creature card type.
-                let is_noncreature = card.adventuring || !card.definition.is_creature();
+                let is_noncreature = card.casting_alt_half() || !card.definition.is_creature();
 
                 // CR 608.2b — an Aura spell re-checks its enchant target as
                 // it tries to resolve; if the target is illegal (gone,
@@ -704,7 +704,7 @@ impl GameState {
                 // are exempt: CR 702.103e resolves them as the creature.
                 if card.definition.is_aura()
                     && !card.bestowed
-                    && !card.adventuring
+                    && !card.casting_alt_half()
                     && let Some(t) = &target
                 {
                     let gone = matches!(t, Target::Permanent(tid)
@@ -727,7 +727,7 @@ impl GameState {
                     }
                 }
 
-                if card.definition.is_permanent() && !card.adventuring {
+                if card.definition.is_permanent() && !card.casting_alt_half() {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the
                     // copied object's ETB triggers (CR 707.5).

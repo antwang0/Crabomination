@@ -374,6 +374,12 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventurable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with an Omen half they could cast right now
+    /// (CR 702.183). Lets the client offer the "cast the Omen" affordance
+    /// distinct from the plain creature cast. Empty off-priority.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub omenable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with a Prototype face they could cast
     /// for the prototype cost right now (CR 702.160). Lets the client offer
     /// "cast for prototype" distinct from the full-cost cast. Empty
@@ -767,6 +773,18 @@ pub struct KnownCard {
     /// client knows to arm the targeting cursor before submitting `CastGift`.
     #[serde(default)]
     pub gift_needs_target: bool,
+    /// CR 702.183 — true if this card has an Omen half. Drives the client's
+    /// right-click "Cast the Omen" affordance (`GameAction::CastOmen`).
+    #[serde(default)]
+    pub has_omen: bool,
+    /// The Omen half's printed name, for the client's prompt/log. Empty when
+    /// `has_omen == false`.
+    #[serde(default)]
+    pub omen_label: String,
+    /// True when the Omen effect carries a targeted slot, so the client knows
+    /// to arm the targeting cursor before submitting `CastOmen`.
+    #[serde(default)]
+    pub omen_needs_target: bool,
 }
 
 /// One activated ability as projected for the client.

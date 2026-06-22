@@ -176,6 +176,10 @@ pub struct TargetingState {
     /// 702.165) — the eventual submit routes through `GameAction::CastGift`.
     /// Set by the right-click "Cast (promise gift)" affordance.
     pub pending_gift: bool,
+    /// When `true`, the pending cast is an Omen half (CR 702.183) — the
+    /// eventual submit routes through `GameAction::CastOmen`. Set by the
+    /// right-click "Cast the Omen" affordance.
+    pub pending_omen: bool,
 }
 
 /// Which split-card cast shape the half-picker selected.

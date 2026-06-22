@@ -2783,6 +2783,68 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.183 — cast a card's Omen half from hand for its Omen cost. The
+    /// card becomes an instant/sorcery spell; on resolution or counter it is
+    /// shuffled into its owner's library instead of going to the graveyard.
+    pub(crate) fn cast_omen(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let omen = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.has_omen().cloned())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // An Omen spell is a noncreature spell — respect a noncreature lock.
+        if self.players[p].cant_cast_noncreature_this_turn {
+            return Err(GameError::CantCastNoncreature);
+        }
+        let must_be_sorcery_speed = !omen.is_instant_speed() || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality_with_source(tgt, p, Some(card_id))?;
+        }
+        let mut cost = if omen.cost.has_x() {
+            omen.cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            omen.cost.clone()
+        };
+        apply_spell_cost_floor(self, &mut cost);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        self.pay_life_cost(p, receipt.side_effects.life_lost);
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        card.cast_from_hand = true;
+        card.cast_from_exile = false;
+        card.omen_casting = true;
+        let mut events = receipt.auto_events;
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            mana_spent,
+        );
+        Ok(events)
+    }
+
     /// CR 715 — cast the creature half of a card that's in exile after going
     /// on an adventure. Pays the card's regular mana cost.
     pub(crate) fn cast_adventure_creature(
@@ -4173,14 +4235,11 @@ impl GameState {
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
-        // CR 715 — when cast as its adventure half the card is an
+        // CR 715 / 702.183 — when cast as its Adventure/Omen half the card is an
         // instant/sorcery spell, not a creature spell, so the spell-type
-        // tallies (Magecraft / Prowess) read the adventure's types.
-        let adv_types = card
-            .adventuring
-            .then(|| card.definition.adventure.as_ref().map(|a| &a.card_types))
-            .flatten();
-        let is_instant_or_sorcery = match adv_types {
+        // tallies (Magecraft / Prowess) read the half's types.
+        let alt_types = card.alt_spell_half().map(|h| &h.card_types);
+        let is_instant_or_sorcery = match alt_types {
             Some(types) => {
                 types.contains(&CardType::Instant) || types.contains(&CardType::Sorcery)
             }
@@ -4194,7 +4253,7 @@ impl GameState {
         if is_instant_or_sorcery {
             self.players[p].instants_or_sorceries_cast_this_turn += 1;
         }
-        if !card.adventuring && card.definition.is_creature() {
+        if !card.casting_alt_half() && card.definition.is_creature() {
             self.players[p].creatures_cast_this_turn += 1;
         }
         // Veil of Summer gate: note when a player casts a blue or black
@@ -4209,7 +4268,7 @@ impl GameState {
         }
         consume_first_spell_tax(self, p);
 
-        let on_cast_triggers = if card.adventuring {
+        let on_cast_triggers = if card.casting_alt_half() {
             Vec::new()
         } else {
             collect_self_cast_triggers(&card)
@@ -4217,7 +4276,7 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value)
             || std::mem::take(&mut self.cast_paid_uncounterable);
 
-        let was_creature_spell = !card.adventuring && card.definition.is_creature();
+        let was_creature_spell = !card.casting_alt_half() && card.definition.is_creature();
         // CR 702.146e — casting a daybound spell while it's neither day nor
         // night makes it day as the spell is put onto the stack.
         let casts_daybound = card.definition.keywords.contains(&Keyword::Daybound);

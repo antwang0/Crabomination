@@ -12,6 +12,7 @@ mod creatures;
 mod gift;
 mod lands;
 mod modern;
+mod omen;
 mod spells;
 mod survival;
 
@@ -19,5 +20,6 @@ pub use creatures::*;
 pub use gift::*;
 pub use lands::*;
 pub use modern::*;
+pub use omen::*;
 pub use spells::*;
 pub use survival::*;

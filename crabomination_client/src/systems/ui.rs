@@ -160,6 +160,7 @@ pub fn update_castable_highlights(
             .chain(cv.foretellable_hand.iter())
             .chain(cv.plottable_hand.iter())
             .chain(cv.adventurable_hand.iter())
+            .chain(cv.omenable_hand.iter())
             .chain(cv.splittable_right_hand.iter())
             .chain(cv.miracle_hand.iter())
             .chain(cv.morphable_hand.iter())

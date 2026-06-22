@@ -854,6 +854,34 @@ impl GameState {
             .collect()
     }
 
+    /// Cards in `caster`'s hand with an Omen half they could cast right now
+    /// (CR 702.183). The probe auto-targets the omen effect.
+    fn omenable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter_map(|c| {
+                let omen = c.definition.has_omen()?;
+                let (target, additional_targets) = if omen.effect.requires_target() {
+                    let (t, extras) =
+                        template.auto_targets_for_effect_all_slots(&omen.effect, caster, None);
+                    t.as_ref()?;
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                let id = c.id;
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastOmen {
+                        card_id: id, target, additional_targets, mode: None, x_value: None,
+                    },
+                )
+                .then_some(id)
+            })
+            .collect()
+    }
+
     /// Split cards in `caster`'s hand whose right half they could cast right
     /// now (CR 709). The probe auto-targets the right half's effect.
     fn splittable_right_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
@@ -955,6 +983,7 @@ impl GameState {
             foretellable: self.foretellable_hand_cards_on(&template, seat),
             plottable: self.plottable_hand_cards_on(&template, seat),
             adventurable: self.adventurable_hand_cards_on(&template, seat),
+            omenable: self.omenable_hand_cards_on(&template, seat),
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             bargainable: self.bargainable_hand_cards_on(&template, seat),
             squadable: self.squadable_hand_cards_on(&template, seat),

@@ -131,6 +131,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         foretellable_hand: affordances.foretellable,
         plottable_hand: affordances.plottable,
         adventurable_hand: affordances.adventurable,
+        omenable_hand: affordances.omenable,
         prototypable_hand: affordances.prototypable,
         splittable_right_hand: affordances.splittable_right,
         activatable_permanents: affordances.activatable_permanents,
@@ -616,6 +617,18 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .gift
             .as_ref()
             .is_some_and(|g| g.gifted_effect.requires_target()),
+        has_omen: card.definition.omen.is_some(),
+        omen_label: card
+            .definition
+            .omen
+            .as_ref()
+            .map(|o| o.name.to_string())
+            .unwrap_or_default(),
+        omen_needs_target: card
+            .definition
+            .omen
+            .as_ref()
+            .is_some_and(|o| o.effect.requires_target()),
     }
 }
 

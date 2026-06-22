@@ -229,6 +229,8 @@ pub struct HandAffordances {
     pub foretellable: Vec<CardId>,
     pub plottable: Vec<CardId>,
     pub adventurable: Vec<CardId>,
+    /// CR 702.183 — hand cards with an Omen half castable right now.
+    pub omenable: Vec<CardId>,
     /// CR 709 — split cards whose **right** half is castable right now.
     pub splittable_right: Vec<CardId>,
     /// CR 702.176 — hand cards with Bargain that are castable right now, so the
@@ -2883,6 +2885,19 @@ impl GameState {
         mut card: crate::card::CardInstance,
         events: &mut Vec<crate::game::GameEvent>,
     ) -> bool {
+        // CR 702.183 — an Omen spell put into the graveyard from the stack
+        // (countered, or fizzled on an illegal target) shuffles into its
+        // owner's library instead.
+        if card.omen_casting {
+            use rand::seq::SliceRandom;
+            let owner = card.owner;
+            card.omen_casting = false;
+            card.spliced_effects.clear();
+            card.counters.clear();
+            self.players[owner].library.push(card);
+            self.players[owner].library.shuffle(&mut rand::rng());
+            return false;
+        }
         // CR 702.47e — splice changes are lost when the spell leaves the stack.
         card.spliced_effects.clear();
         // CR 122.2 — counters don't survive the zone change (replacement
@@ -4955,6 +4970,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_adventure(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastOmen {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_omen(card_id, target, additional_targets, mode, x_value),
             GameAction::CastGift {
                 card_id,
                 target,
@@ -8384,14 +8406,10 @@ impl GameState {
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| {
-            if card.adventuring {
-                // CR 715 — resolve the adventure half's effect, not the
-                // creature body.
-                card.definition
-                    .adventure
-                    .as_ref()
-                    .map(|a| a.effect.clone())
-                    .unwrap_or(Effect::Noop)
+            if let Some(half) = card.alt_spell_half() {
+                // CR 715 / 702.183 — resolve the Adventure/Omen half's effect,
+                // not the creature body.
+                half.effect.clone()
             } else if card.gift_promised
                 && let Some(gift) = card.definition.gift.as_ref()
             {
