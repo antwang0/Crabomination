@@ -438,6 +438,10 @@ pub enum GameAction {
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target>, #[serde(default)] x_value: Option<u32> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// CR 702.187 — cast a graveyard card with `Keyword::Mayhem` for its
+    /// mayhem cost, legal only if its owner discarded it this turn. Delegates
+    /// to the flashback machinery (exile-after tail included).
+    CastMayhem { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// Cast a graveyard card with `Keyword::Disturb` (CR 702.146) transformed
     /// — the back face goes on the stack — for its disturb cost.
     CastDisturb { card_id: CardId },
@@ -981,6 +985,7 @@ impl GameAction {
                 | A::CastSpellDelve { .. }
                 | A::CastSpellAlternative { .. }
                 | A::CastFlashback { .. }
+                | A::CastMayhem { .. }
                 | A::CastDisturb { .. }
                 | A::CastRetrace { .. }
                 | A::CastEscape { .. }

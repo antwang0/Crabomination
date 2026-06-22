@@ -11,6 +11,7 @@
 mod creatures;
 mod gift;
 mod lands;
+mod mayhem;
 mod modern;
 mod omen;
 mod spells;
@@ -20,6 +21,7 @@ mod tarkir;
 pub use creatures::*;
 pub use gift::*;
 pub use lands::*;
+pub use mayhem::*;
 pub use modern::*;
 pub use omen::*;
 pub use spells::*;

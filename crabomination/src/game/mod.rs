@@ -5122,6 +5122,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastMayhem {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
             GameAction::CastDisturb { card_id } => self.cast_disturb(card_id),
             GameAction::CastRetrace {
                 card_id,
@@ -5289,6 +5296,7 @@ impl GameState {
         events.push(GameEvent::CardDiscarded { player: p, card_id });
         self.players[p].cards_discarded_this_turn =
             self.players[p].cards_discarded_this_turn.saturating_add(1);
+        self.players[p].discarded_this_turn.insert(card_id);
         self.cards_discarded_this_resolution += 1;
         *self
             .cards_discarded_per_player_this_resolution

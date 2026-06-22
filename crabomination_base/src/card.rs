@@ -157,6 +157,8 @@ pub enum CreatureType {
     Brushwagg,
     // Warhammer 40,000 Tyranids (Ravenous — CR 702.156).
     Tyranid,
+    // Final Fantasy Job Select Hero token (CR 702.182).
+    Hero,
 }
 
 /// Land subtypes (basic land types + others).
@@ -822,6 +824,13 @@ pub enum Keyword {
     /// `AutoDecider` declines by default (so ordinary bot games are
     /// unaffected); tests pre-float the cost and feed `Bool(true)`.
     Madness(crate::mana::ManaCost),
+    /// CR 702.187 — Mayhem `cost`. A static ability that works while the card
+    /// is in a graveyard: "As long as you discarded this card this turn, you
+    /// may cast it from your graveyard by paying [cost] rather than its mana
+    /// cost." Routed through the flashback machinery (`cast_flashback`), gated
+    /// on `Player.discarded_this_turn`; the spell is exiled if it would leave
+    /// the stack (same exile-after tail as flashback).
+    Mayhem(crate::mana::ManaCost),
     /// CR 509.1b — "This creature can't be blocked except by [filter]"
     /// (Signal Pest — "except by artifact creatures and/or creatures with
     /// flying"; Silhana Ledgewalker — "except by creatures with flying").
@@ -2521,6 +2530,12 @@ impl CardDefinition {
     pub fn madness_cost(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Madness(cost) = kw { Some(cost) } else { None }
+        })
+    }
+    /// CR 702.187 — the Mayhem cost if this card has `Keyword::Mayhem`.
+    pub fn mayhem_cost(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Mayhem(cost) = kw { Some(cost) } else { None }
         })
     }
     pub fn has_equip(&self) -> Option<&ManaCost> {

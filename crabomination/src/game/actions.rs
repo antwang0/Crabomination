@@ -4697,9 +4697,21 @@ impl GameState {
         // cost; same exile-after tail as flashback).
         let jumpstart = card.effective_flashback().is_none()
             && card.definition.keywords.contains(&Keyword::JumpStart);
+        // CR 702.187 — Mayhem: when the card has no flashback/jump-start but a
+        // Mayhem cost, it may be cast from the graveyard for that cost only if
+        // its owner discarded it this turn. Same exile-after tail as flashback.
+        let mayhem = card.effective_flashback().is_none()
+            && !jumpstart
+            && card.definition.mayhem_cost().is_some();
         let flashback_cost = match card.effective_flashback() {
             Some(c) => c.clone(),
             None if jumpstart => card.definition.cost.clone(),
+            None if mayhem => {
+                if !self.players[p].discarded_this_turn.contains(&card_id) {
+                    return Err(GameError::SorcerySpeedOnly);
+                }
+                card.definition.mayhem_cost().unwrap().clone()
+            }
             None => return Err(GameError::SorcerySpeedOnly),
         };
 

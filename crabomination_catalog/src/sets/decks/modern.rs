@@ -24874,6 +24874,67 @@ fn for_mirrodin_equipment(
     }
 }
 
+/// CR 702.182 — Job Select. Build an Equipment that, on ETB, mints a 1/1
+/// colorless Hero token and attaches itself to it, then carries a plain
+/// `equipped_bonus` (P/T + keywords) and an equip cost. (The "equipped creature
+/// is also a [class]" type-add rider is dropped — `EquipBonus` only overrides
+/// types, not adds them.)
+fn job_select_equipment(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    equip: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    use crate::effect::shortcut::etb;
+    let hero = TokenDefinition {
+        name: "Hero".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(EquipBonus {
+            power,
+            toughness,
+            keywords,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: hero },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Monk's Fist — {2} Equipment. Job select. Equipped creature gets +1/+0.
+/// Equip {2}.
+pub fn monks_fist() -> CardDefinition {
+    job_select_equipment("Monk's Fist", cost(&[generic(2)]), cost(&[generic(2)]), 1, 0, vec![])
+}
+
+/// Bard's Bow — {2}{G} Equipment. Job select. Equipped creature gets +2/+2 and
+/// has reach. Equip {6}.
+pub fn bards_bow() -> CardDefinition {
+    job_select_equipment(
+        "Bard's Bow", cost(&[generic(2), g()]), cost(&[generic(6)]), 2, 2, vec![Keyword::Reach],
+    )
+}
+
 /// Barbed Batterfist — {1}{R} Equipment. For Mirrodin! Equipped creature gets
 /// +1/-1. Equip {1}.
 pub fn barbed_batterfist() -> CardDefinition {

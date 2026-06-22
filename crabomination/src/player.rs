@@ -259,6 +259,11 @@ pub struct Player {
     /// Bumped in `discard_card`; reset in `do_untap`.
     #[serde(default)]
     pub cards_discarded_this_turn: u32,
+    /// CR 702.187 — ids of cards this player discarded this turn, so Mayhem
+    /// can offer a graveyard cast only for cards actually discarded this turn.
+    /// Populated in `discard_card`; cleared in `do_untap`.
+    #[serde(default)]
+    pub discarded_this_turn: std::collections::HashSet<crate::card::CardId>,
     /// "[Filter] spells you cast this turn cost {N} less" grants
     /// (`Effect::SpellsCostLessThisTurn` — Urza, Planeswalker's +2).
     /// Each entry applies to every matching spell for the rest of the
@@ -471,6 +476,7 @@ impl Player {
             pending_spell_discounts: Vec::new(),
             turn_spell_discounts: Vec::new(),
             cards_discarded_this_turn: 0,
+            discarded_this_turn: std::collections::HashSet::new(),
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,

@@ -3558,6 +3558,75 @@ fn omen_signaling_roar_makes_soldier() {
     assert_eq!((token.definition.power, token.definition.toughness), (2, 2), "2/2 Soldier");
 }
 
+/// CR 702.182 — Job Select: an Equipment with job select enters, mints a 1/1
+/// Hero token, and attaches itself to it.
+#[test]
+fn cr_702_182_job_select_mints_hero_and_attaches() {
+    let mut g = two_player_game();
+    let fist = g.add_card_to_hand(0, catalog::monks_fist());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fist, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Monk's Fist");
+    drain_stack(&mut g);
+    let hero = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Hero" && c.controller == 0)
+        .expect("a 1/1 Hero token was created");
+    let hero_id = hero.id;
+    assert_eq!((hero.definition.power, hero.definition.toughness), (1, 1), "1/1 Hero");
+    // The Equipment attached itself to the Hero, granting +1/+0 → 2/1.
+    let equip = g.battlefield_find(fist).expect("equipment on battlefield");
+    assert_eq!(equip.attached_to, Some(hero_id), "Monk's Fist attached to the Hero");
+    assert_eq!(g.computed_permanent(hero_id).unwrap().power, 2, "Hero gets +1/+0 from Monk's Fist");
+}
+
+/// CR 702.187 — Mayhem: a card discarded this turn may be cast from the
+/// graveyard for its mayhem cost, then is exiled when it leaves the stack.
+#[test]
+fn cr_702_187_mayhem_casts_discarded_card_then_exiles() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::electros_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Discard the Bolt this turn — that's what unlocks its Mayhem cast.
+    let mut events = Vec::new();
+    g.discard_card(0, bolt, &mut events);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt is in the graveyard");
+    // Pay the Mayhem cost {1}{R} and cast it from the graveyard at the bear.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastMayhem {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Electro's Bolt via Mayhem");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "Bolt's 4 damage killed the 2/2 bear");
+    // CR 702.187 exile-after: the Mayhem spell goes to exile, not the graveyard.
+    assert!(g.exile.iter().any(|c| c.id == bolt), "Mayhem-cast spell was exiled");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != bolt), "not in the graveyard");
+}
+
+/// A Mayhem cast is illegal if the card wasn't discarded this turn.
+#[test]
+fn cr_702_187_mayhem_blocked_without_discard_this_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Bolt sits in the graveyard but was NOT discarded this turn.
+    let bolt = g.add_card_to_graveyard(0, catalog::electros_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let r = g.perform_action(GameAction::CastMayhem {
+        card_id: bolt, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "Mayhem can't cast a card not discarded this turn");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt stays in the graveyard");
+}
+
 /// Whirlwing Stormbrood's static lets its controller cast sorceries at instant
 /// speed (here: on the opponent's turn with a non-empty stack context).
 #[test]

@@ -119,6 +119,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Landcycling(_, _) => "Landcycling",
         Keyword::Typecycling(_) => "Typecycling",
         Keyword::Madness(_) => "Madness",
+        Keyword::Mayhem(_) => "Mayhem",
         Keyword::Morph(_) => "Morph",
         Keyword::Megamorph(_) => "Megamorph",
         Keyword::Disguise(_) => "Disguise",

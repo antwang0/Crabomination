@@ -1617,6 +1617,7 @@ impl GameState {
             pl.silenced_this_turn = false;
             pl.searched_library_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
+            pl.discarded_this_turn.clear();
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters
