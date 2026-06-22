@@ -446,6 +446,124 @@ pub fn bone_cairn_butcher() -> CardDefinition {
     }
 }
 
+/// Sky Skiff — {2} Vehicle 2/3 with Flying. Crew 1.
+pub fn sky_skiff() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Sky Skiff",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Crew(1)],
+        ..Default::default()
+    }
+}
+
+/// Frontline Rush — {R}{W} Instant. Choose one — create two 1/1 red Goblin
+/// creature tokens; or target creature gets +X/+X until end of turn, where X is
+/// the number of creatures you control.
+pub fn frontline_rush() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Frontline Rush",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Goblin".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Goblin],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::CreatureCountControlledBy(PlayerRef::You),
+                toughness: Value::CreatureCountControlledBy(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Severance Priest — {W}{B}{G} 3/3 Djinn Cleric with Deathtouch. ETB exile a
+/// nonland card from a target opponent's hand until this leaves the battlefield.
+pub fn severance_priest() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Severance Priest",
+        cost: cost(&[w(), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::ExileChosenUntilSourceLeaves {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Nonland,
+            return_to: ExileReturnZone::Hand,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Naga Fleshcrafter — {3}{U} 0/0 Snake Shapeshifter. May enter as a copy of a
+/// creature you control. Renew — `{2}{U}, Exile this from your graveyard: Put a
+/// +1/+1 counter on target nonlegendary creature you control.`
+pub fn naga_fleshcrafter() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Naga Fleshcrafter",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            extra_creature_types: vec![CreatureType::Snake, CreatureType::Shapeshifter],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasSupertype(Supertype::Legendary).negate()),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Marang River Skeleton — {1}{B} 1/1 Skeleton. `{B}: Regenerate this creature.`
 /// Megamorph {3}{B}.
 pub fn marang_river_skeleton() -> CardDefinition {

@@ -62771,6 +62771,79 @@ fn equilibrium_adept_flurry_grants_double_strike() {
         "Flurry grants double strike on the second spell");
 }
 
+/// Sky Skiff becomes a creature when crewed by one power.
+#[test]
+fn sky_skiff_crews_to_a_creature() {
+    let mut g = two_player_game();
+    let skiff = g.add_card_to_battlefield(0, catalog::sky_skiff());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 ≥ crew 1
+    g.clear_sickness(bear);
+    assert!(!g.computed_permanent(skiff).unwrap().card_types.contains(&CardType::Creature),
+        "uncrewed Vehicle isn't a creature");
+    g.perform_action(GameAction::Crew { vehicle: skiff, crew_creatures: vec![bear] })
+        .expect("crew Sky Skiff");
+    assert!(g.computed_permanent(skiff).unwrap().card_types.contains(&CardType::Creature),
+        "crewed Sky Skiff is a creature");
+}
+
+/// Frontline Rush's first mode makes two 1/1 red Goblin tokens.
+#[test]
+fn frontline_rush_mode_makes_two_goblins() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::frontline_rush());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Frontline Rush (make Goblins)");
+    drain_stack(&mut g);
+    let goblins = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Goblin" && c.controller == 0).count();
+    assert_eq!(goblins, 2, "two 1/1 Goblin tokens");
+}
+
+/// Severance Priest exiles a card from an opponent's hand until it leaves.
+#[test]
+fn severance_priest_exiles_from_hand_until_it_leaves() {
+    let mut g = two_player_game();
+    let stolen = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let priest = g.add_card_to_hand(0, catalog::severance_priest());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast(&mut g, priest); // resolves the creature + its ETB exile trigger
+    assert!(g.exile.iter().any(|c| c.id == stolen), "opponent's card is exiled");
+    assert!(g.players[1].hand.iter().all(|c| c.id != stolen), "and out of their hand");
+    // When the Priest leaves, the card returns to its owner's hand.
+    g.remove_from_battlefield_to_graveyard_raw(priest);
+    assert!(g.players[1].hand.iter().any(|c| c.id == stolen), "card returns when Priest leaves");
+}
+
+/// Naga Fleshcrafter's Renew adds a +1/+1 counter from the graveyard.
+#[test]
+fn naga_fleshcrafter_renew_adds_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let naga = g.add_card_to_graveyard(0, catalog::naga_fleshcrafter());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: naga, ability_index: 0, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Renew");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "+1/+1 counter from Renew");
+    assert!(g.exile.iter().any(|c| c.id == naga), "Naga exiled by Renew");
+}
+
 /// Prison Break reanimates a creature card with an extra +1/+1 counter.
 #[test]
 fn prison_break_reanimates_with_counter() {
