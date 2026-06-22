@@ -3668,6 +3668,12 @@ were stale). See git history for the per-card details.
   right-click "Cast for Mayhem" entry wired to `GameAction::CastMayhem`
   (mirror the flashback/disturb affordances). The GUI crate can't build in the
   headless cloud env (wayland-sys), so this wasn't verifiable here.
+- **Surface new combat riders in tooltips.** The reminder/ability panel should
+  note `Keyword::CantBeBlockedByPowerLess` (Formation Breaker) and a
+  turn-scoped "can attack despite defender" badge once
+  `attack_despite_defender_this_turn` holds for a permanent (Krotiq Nestguard).
+  Also surface `SetBasePtIf`'s conditional base P/T (Snowmelt Stag) in the
+  hover P/T readout. Unverifiable headless — pair with a desktop session.
 
 ### Tarkir: Dragonstorm follow-ups
 - **Omen cycle is complete** — all 17 Dragon Omen cards ship (`decks::omen`),
@@ -3699,6 +3705,22 @@ were stale). See git history for the per-card details.
   and divided-counter Renew aren't wired.
 - **Highspire Bell-Ringer / "second spell each turn costs {1} less"** — a
   cost-reduction keyed on the second-spell condition; no static for it yet.
+- **Deferred TDM cards (noticed this run, want a primitive):**
+  - **Hundred-Battle Veteran** — "+2/+4 while 3+ different *kinds* of counters
+    among creatures you control" needs a distinct-counter-kind-count predicate;
+    plus cast-from-graveyard-with-finality.
+  - **Sage of the Skies** — "when you cast this, if you've cast another spell
+    this turn, copy this spell" — a cast-trigger conditional `CopySpell` on self.
+  - **Furious Forebear** — "when a creature you control dies while this is in
+    your graveyard, may pay {1}{W} to return it" — a from-graveyard death
+    trigger (source in graveyard, not on battlefield).
+  - **Abzan Monument** — sac payoff mints an X/X Spirit where X = greatest
+    toughness among your creatures; needs a `Value::GreatestToughnessYouControl`
+    (only `GreatestPowerYouControl` selector exists) + create-token-with-Value-PT.
+  - **Behold-a-Dragon (Exhale cycle)** — currently approximated as a
+    Dragon-*control* conditional; the printed cost also lets you *reveal* a
+    Dragon from hand. A faithful additional-cost "behold" + `cast_via_behold`
+    provenance flag would tighten the riders.
 - **Search-by-`ControllerOf(target)`** only resolved through a
   `Selector::TargetFiltered{slot}` inside the `ControllerOf` (plain
   `Selector::Target(0)` came back empty during trigger resolution — Magmatic

@@ -1796,6 +1796,13 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Pump the whole team before combat damage (Bearer of Glory's
+    // "{4}{W}: creatures you control get +1/+1") when the bot has two or more
+    // attacking creatures — the pump pays off on the swing. Dry-run-gated.
+    if let Some(action) = pick_team_pump(state, seat) {
+        return action;
+    }
+
     // As a last resort before passing, sink spare mana into a "{cost}: draw a
     // card" ability when card-starved (Bonders' Enclave, Arch of Orazca-style
     // engines). Dry-run-gated, so cost / activation conditions bottom out in
@@ -1805,6 +1812,63 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
     }
 
     GameAction::PassPriority
+}
+
+/// Activate a team-wide "creatures you control get +N/+N until end of turn"
+/// ability while the bot has two or more attacking creatures, so the pump
+/// connects on the swing. Only positive, no-target, non-sacrifice pumps are
+/// considered; dry-run-gated so cost / timing bottom out in `would_accept`.
+/// True when `req` constrains its subjects to creatures the controller owns
+/// (a `ControlledByYou` clause anywhere in its And/Or tree).
+fn requirement_restricts_to_your_creatures(req: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::ControlledByYou => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_restricts_to_your_creatures(a) || requirement_restricts_to_your_creatures(b)
+        }
+        _ => false,
+    }
+}
+
+fn pick_team_pump(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{Selector, Value};
+    let attackers = state
+        .attacking
+        .iter()
+        .filter(|a| state.battlefield_find(a.attacker).is_some_and(|c| c.controller == seat))
+        .count();
+    if attackers < 2 {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if ab.sac_cost {
+                continue;
+            }
+            let Effect::PumpPT { what: Selector::EachPermanent(req), power: Value::Const(p), .. } =
+                &ab.effect
+            else {
+                continue;
+            };
+            // Only a friendly-team pump (filter restricts to your creatures)
+            // with a real power boost.
+            if *p <= 0 || !requirement_restricts_to_your_creatures(req) {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Activate a bare "{cost}: draw a card" ability (no target, doesn't sacrifice
@@ -3300,6 +3364,31 @@ mod tests {
         // Above 1 life it isn't lethal and there's no killable creature → hold.
         g.players[1].life = 5;
         assert!(pick_removal_ping(&g, 0).is_none(), "won't chip a non-lethal face");
+    }
+
+    /// The bot fires a team-pump ability (Bearer of Glory's {4}{W}) once it has
+    /// two attackers, but holds it with only one.
+    #[test]
+    fn bot_team_pumps_with_multiple_attackers() {
+        let mut g = two_player_game();
+        let bearer = g.add_card_to_battlefield(0, catalog::bearer_of_glory());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bearer);
+        g.clear_sickness(bear);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        // One attacker: not worth the pump.
+        g.attacking = vec![Attack { attacker: bearer, target: AttackTarget::Player(1) }];
+        assert!(pick_team_pump(&g, 0).is_none(), "holds the pump with one attacker");
+        // Two attackers: fire it.
+        g.attacking.push(Attack { attacker: bear, target: AttackTarget::Player(1) });
+        match pick_team_pump(&g, 0).expect("bot pumps the team") {
+            GameAction::ActivateAbility { card_id, .. } => assert_eq!(card_id, bearer),
+            _ => panic!("expected an activate-ability action"),
+        }
     }
 
     /// The bot crews a Vehicle with a spare small creature, but won't tap a
