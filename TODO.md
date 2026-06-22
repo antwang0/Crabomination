@@ -1785,10 +1785,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   - **Glimpse the Cosmos** ships the dig-3-take-1; the "cast from graveyard
     while you control a Giant" rider is dropped — needs a board-conditional
     graveyard-cast permission (conditional flashback) primitive.
-  - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` were
-    added but could not be compile-verified here (the client needs a GPU/Wayland
-    desktop; headless cloud can't build `crabomination_client`). The arms sit
-    before the existing `_ =>` fallbacks, so a stale build still degrades safely.
+  - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` are
+    compile-verified — `crabomination_client` now builds headless via the
+    pkg-config + linker shim recipe above (rustc 1.95, `LIBRARY_PATH=/tmp/pc`).
+    Runtime/GPU verification still needs the local `verifier-client` skill.
   - **Approximations shipped this run** (dropped riders, all noted in the card
     doc comments): Gust of Wind / Tentative Connection / Mythos of Brokkos's
     "spent {X}{Y}" upgrades (no mana-provenance-by-color spend-tracking yet);

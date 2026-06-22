@@ -2992,6 +2992,26 @@ mod tests {
         }
     }
 
+    /// The bot activates The Wandering Emperor's +1 onto its OWN creature
+    /// (a friendly +1/+1 buff), not the opponent's.
+    #[test]
+    fn bot_wandering_emperor_plus_one_targets_own_creature() {
+        let mut g = two_player_game();
+        let emp = g.add_card_to_battlefield(0, catalog::the_wandering_emperor());
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let action = pick_loyalty_ability(&g, 0).expect("bot activates a loyalty ability");
+        match action {
+            GameAction::ActivateLoyaltyAbility { card_id, ability_index, target, .. } => {
+                assert_eq!(card_id, emp);
+                assert_eq!(ability_index, 0, "the +1 (a self-buff) is preferred");
+                assert_eq!(target, Some(Target::Permanent(mine)),
+                    "buffs its own creature, not {theirs:?}");
+            }
+            _ => panic!("expected a loyalty activation"),
+        }
+    }
+
     #[test]
     fn bot_declines_self_costly_optional_trigger() {
         use crate::effect::{Selector, Value};
