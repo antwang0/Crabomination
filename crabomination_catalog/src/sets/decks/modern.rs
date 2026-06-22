@@ -57995,7 +57995,7 @@ pub fn powerstone_fracture() -> CardDefinition {
 }
 
 /// Howl of the Hunt — {2}{G} Aura with Flash. Enchanted creature gets +2/+2 and
-/// has vigilance. (The Wolf/Werewolf untap-on-enter rider is dropped.)
+/// has vigilance; untaps on enter if it's a Wolf or Werewolf.
 pub fn howl_of_the_hunt() -> CardDefinition {
     CardDefinition {
         name: "Howl of the Hunt",
@@ -58010,6 +58010,20 @@ pub fn howl_of_the_hunt() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(SelectionRequirement::Creature),
         },
+        // "When this Aura enters, if enchanted creature is a Wolf or Werewolf,
+        // untap it." Fires after the engine attaches the Aura to its target.
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Wolf)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf)),
+            },
+            then: Box::new(Effect::Untap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                up_to: None,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 2,
@@ -58162,18 +58176,30 @@ pub fn vivien_monsters_advocate() -> CardDefinition {
 }
 
 /// Mind Spike — {B} Sorcery. Target opponent reveals each noncreature, nonland
-/// card; you choose one and they discard it. You lose 2 life. (The "if they
-/// revealed nothing, draw a card" rider is dropped.)
+/// card; you choose one and they discard it (or you draw if they revealed
+/// none). You lose 2 life.
 pub fn mind_spike() -> CardDefinition {
+    let noncreature_nonland =
+        SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature);
     CardDefinition {
         name: "Mind Spike",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
+        // Reveal each noncreature/nonland card; discard one. If none was
+        // revealed, draw instead. You lose 2 life either way.
         effect: Effect::Seq(vec![
-            Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature),
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::EachOpponent,
+                    zone: crate::card::Zone::Hand,
+                    filter: noncreature_nonland.clone(),
+                }),
+                then: Box::new(Effect::DiscardChosen {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(1),
+                    filter: noncreature_nonland,
+                }),
+                else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
             },
             Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
         ]),

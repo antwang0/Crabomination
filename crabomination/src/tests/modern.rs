@@ -61501,6 +61501,44 @@ fn mind_spike_discards_and_costs_life() {
     assert_eq!(g.players[0].life, life - 2, "you lost 2 life");
 }
 
+/// Mind Spike draws you a card when the opponent reveals no noncreature/nonland.
+#[test]
+fn mind_spike_draws_when_nothing_revealed() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // creature — not revealed
+    g.add_card_to_hand(1, catalog::island());        // land — not revealed
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let spell = g.add_card_to_hand(0, catalog::mind_spike());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    let (life, hand, gy) = (g.players[0].life, g.players[0].hand.len(), g.players[1].graveyard.len());
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mind Spike");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy, "nothing eligible to discard");
+    assert_eq!(g.players[0].hand.len(), hand, "drew a card (net: -spell +draw)");
+    assert_eq!(g.players[0].life, life - 2, "you lost 2 life");
+}
+
+/// Howl of the Hunt untaps the enchanted creature if it's a Wolf or Werewolf.
+#[test]
+fn howl_of_the_hunt_untaps_a_wolf() {
+    let mut g = two_player_game();
+    let wolf = g.add_card_to_battlefield(0, catalog::sarulfs_packmate()); // Wolf
+    g.battlefield_find_mut(wolf).unwrap().tapped = true;
+    let aura = g.add_card_to_hand(0, catalog::howl_of_the_hunt());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(wolf)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Howl of the Hunt");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(wolf).unwrap().tapped, "Wolf untapped on enter");
+}
+
 /// Skyscanner draws a card on entry.
 #[test]
 fn skyscanner_draws_on_etb() {

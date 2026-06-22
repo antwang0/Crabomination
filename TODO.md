@@ -1778,10 +1778,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     graveyard using its mutate ability" rider is dropped — `cast_mutate` only
     reads the hand. A `mutate_from_graveyard` flag + a graveyard cast path
     (mirroring `cast_escape`) would finish it.
-  - **Mind Spike** drops the "if they revealed nothing, draw a card" rider;
-    **Howl of the Hunt** drops the Wolf/Werewolf untap-on-enter rider.
   - **Glimpse the Cosmos** ships the dig-3-take-1; the "cast from graveyard
-    while you control a Giant" rider is dropped.
+    while you control a Giant" rider is dropped — needs a board-conditional
+    graveyard-cast permission (conditional flashback) primitive.
   - Client keyword label/tooltip arms for `ProtectionFromManaValueParity` were
     added but could not be compile-verified here (the client needs a GPU/Wayland
     desktop; headless cloud can't build `crabomination_client`). The arms sit
