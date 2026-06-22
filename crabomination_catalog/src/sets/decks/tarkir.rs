@@ -4,11 +4,11 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement, Selector, StaticAbility, Subtypes,
-    TriggeredAbility, Value,
+    EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement, Selector, StaticAbility,
+    Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, mobilize, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect};
+use crate::effect::shortcut::{etb, flurry, mobilize, target_filtered};
+use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
 
 /// Sarkhan's Resolve — {1}{G} Instant. Choose one — target creature gets +3/+3
@@ -293,6 +293,155 @@ pub fn magmatic_hellkite() -> CardDefinition {
             },
             Effect::Destroy { what: target_filtered(opp_land) },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Cori Mountain Stalwart — {1}{R}{W} 3/3 Human Monk. Flurry — when you cast
+/// your second spell each turn, deal 2 damage to each opponent and gain 2 life.
+pub fn cori_mountain_stalwart() -> CardDefinition {
+    CardDefinition {
+        name: "Cori Mountain Stalwart",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![flurry(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Equilibrium Adept — {3}{R} 2/4 Dog Monk. ETB exile the top card; you may
+/// play it until the end of your next turn. Flurry — gains double strike EOT.
+pub fn equilibrium_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Equilibrium Adept",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                uncast_penalty: None,
+            }),
+            flurry(Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Cunning Coyote — {1}{R} 2/2 Coyote with Haste. ETB another target creature
+/// you control gets +1/+1 and gains haste until end of turn. Plot {1}{R}.
+pub fn cunning_coyote() -> CardDefinition {
+    CardDefinition {
+        name: "Cunning Coyote",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Coyote], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        plot_cost: Some(cost(&[generic(1), r()])),
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Monastery Messenger — {2/U}{2/R}{2/W} 2/3 Bird Scout with Flying, Vigilance.
+/// ETB put up to one target noncreature, nonland card from your graveyard on
+/// top of your library.
+pub fn monastery_messenger() -> CardDefinition {
+    CardDefinition {
+        name: "Monastery Messenger",
+        cost: cost(&[
+            mono_hybrid(2, Color::Blue),
+            mono_hybrid(2, Color::Red),
+            mono_hybrid(2, Color::White),
+        ]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::InGraveyard
+                .and(SelectionRequirement::Creature.negate())
+                .and(SelectionRequirement::Land.negate()),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bone-Cairn Butcher — {1}{R}{W}{B} 4/4 Demon with Mobilize 2. Attacking
+/// tokens you control have deathtouch.
+pub fn bone_cairn_butcher() -> CardDefinition {
+    CardDefinition {
+        name: "Bone-Cairn Butcher",
+        cost: cost(&[generic(1), r(), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![mobilize(2)],
+        static_abilities: vec![StaticAbility {
+            description: "Attacking tokens you control have deathtouch.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::IsToken
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::IsAttacking),
+                ),
+                keyword: Keyword::Deathtouch,
+            },
+        }],
         ..Default::default()
     }
 }

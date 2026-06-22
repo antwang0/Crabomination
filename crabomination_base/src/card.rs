@@ -159,6 +159,8 @@ pub enum CreatureType {
     Tyranid,
     // Final Fantasy Job Select Hero token (CR 702.182).
     Hero,
+    // Tarkir: Dragonstorm (Cunning Coyote).
+    Coyote,
 }
 
 /// Land subtypes (basic land types + others).

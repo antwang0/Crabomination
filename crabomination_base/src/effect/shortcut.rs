@@ -641,6 +641,21 @@ pub fn magecraft(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// Flurry (Tarkir: Dragonstorm): "Whenever you cast your second spell each
+/// turn, `effect`." Reuses the `SpellsCastThisTurnEquals` predicate
+/// (already incremented for the current cast at trigger time).
+pub fn flurry(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::SpellsCastThisTurnEquals {
+                who: crate::effect::PlayerRef::You,
+                count: Value::Const(2),
+            },
+        ),
+        effect,
+    }
+}
+
 /// Spiritcraft: "Whenever you cast a Spirit or Arcane spell, `effect`."
 /// (Kamigawa — Teller of Tales, Kami of Fire's Roar.)
 pub fn spiritcraft(effect: Effect) -> TriggeredAbility {

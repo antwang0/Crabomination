@@ -62654,3 +62654,119 @@ fn hardened_tactician_sacs_token_to_draw() {
     assert!(g.battlefield_find(tok).is_none(), "the token was sacrificed");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
 }
+
+/// Flurry (Cori Mountain Stalwart): the trigger fires only on the second spell
+/// you cast each turn — pinging each opponent for 2 and gaining 2 life.
+#[test]
+fn flurry_fires_on_second_spell_each_turn() {
+    let mut g = two_player_game();
+    let stalwart = g.add_card_to_battlefield(0, catalog::cori_mountain_stalwart());
+    let _ = stalwart;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    // First spell of the turn — no Flurry.
+    let bolt1 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    cast_at(&mut g, bolt1, Target::Player(1));
+    assert_eq!(g.players[1].life, opp_life - 3, "only Lava Spike's 3 (no Flurry yet)");
+    assert_eq!(g.players[0].life, my_life, "no lifegain on the first spell");
+    // Second spell — Flurry: +2 to opponent, +2 life to us.
+    let bolt2 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt2, Target::Player(1));
+    assert_eq!(g.players[1].life, opp_life - 3 - 3 - 2, "second Lava Spike (3) + Flurry ping (2)");
+    assert_eq!(g.players[0].life, my_life + 2, "Flurry gains 2 life");
+}
+
+/// Bone-Cairn Butcher grants deathtouch to your attacking tokens (and only
+/// while they attack).
+#[test]
+fn bone_cairn_butcher_grants_attacking_tokens_deathtouch() {
+    use crate::card::Keyword;
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bone_cairn_butcher());
+    let golem = g.add_token_to_battlefield(0, &crabomination_base::tokens::golem_3_3_token());
+    g.clear_sickness(golem);
+    // Not attacking yet → no granted deathtouch.
+    assert!(!g.computed_permanent(golem).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "token has no deathtouch before attacking");
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: golem, target: AttackTarget::Player(1),
+    }])).expect("token attacks");
+    assert!(g.computed_permanent(golem).unwrap().keywords.contains(&Keyword::Deathtouch),
+        "attacking token has deathtouch from Bone-Cairn Butcher");
+}
+
+/// Cunning Coyote's ETB pumps another creature you control and grants it haste.
+#[test]
+fn cunning_coyote_etb_pumps_and_hastes_another() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // summoning-sick 2/2
+    let coyote = g.add_card_to_hand(0, catalog::cunning_coyote());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: coyote, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cunning Coyote");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "bear pumped +1/+1");
+    assert!(cp.keywords.contains(&Keyword::Haste), "bear gains haste");
+}
+
+/// Monastery Messenger's ETB puts a noncreature/nonland graveyard card on top
+/// of your library (and can't grab a creature card).
+#[test]
+fn monastery_messenger_recurs_noncreature_to_library_top() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lava_spike()); // sorcery — legal
+    let _creature = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // illegal target
+    let msgr = g.add_card_to_hand(0, catalog::monastery_messenger());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: msgr, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Monastery Messenger targeting the sorcery");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(bolt),
+        "Lava Spike is on top of the library");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != bolt), "left the graveyard");
+}
+
+/// Equilibrium Adept's Flurry grants it double strike on your second spell.
+#[test]
+fn equilibrium_adept_flurry_grants_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let adept = g.add_card_to_battlefield(0, catalog::equilibrium_adept());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Cast two spells; only the second triggers Flurry.
+    let s1 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s1, Target::Player(1));
+    assert!(!g.computed_permanent(adept).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "no double strike after one spell");
+    let s2 = g.add_card_to_hand(0, catalog::lava_spike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, s2, Target::Player(1));
+    assert!(g.computed_permanent(adept).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "Flurry grants double strike on the second spell");
+}

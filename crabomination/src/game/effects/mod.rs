@@ -1457,7 +1457,11 @@ impl GameState {
                     .iter()
                     .filter(|t| match t {
                         Target::Player(p) => *p < self.players.len(),
-                        Target::Permanent(id) => self.battlefield_find(*id).is_some(),
+                        // Accept any still-locatable card target — not just
+                        // battlefield permanents — so an inner Move can relocate
+                        // a targeted graveyard/exile card (Monastery Messenger's
+                        // "put a card from your graveyard on top of your library").
+                        Target::Permanent(id) => self.find_card_anywhere(*id).is_some(),
                     })
                     .cloned()
                     .collect();

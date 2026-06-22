@@ -3556,10 +3556,12 @@ impl GameState {
             }
         }
         // CR 700.9 — "Modified creatures you control have <keyword>"
-        // (Kodama of the West Tree). `IsModified` needs the live battlefield
-        // (attachments), so filters mentioning it resolve here into a
-        // Specific id list per recompute; `affected_from_requirement` drops
-        // them on the static path, so there's no double application.
+        // (Kodama of the West Tree) and "attacking [tokens] you control have
+        // <keyword>" (Bone-Cairn Butcher). `IsModified` (attachments) and
+        // `IsAttacking` (combat state) both need the live battlefield, so
+        // filters mentioning them resolve here into a Specific id list per
+        // recompute; `affected_from_requirement` drops them on the static
+        // path, so there's no double application.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
                 let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = &sa.effect
@@ -3567,7 +3569,7 @@ impl GameState {
                     continue;
                 };
                 let crate::effect::Selector::EachPermanent(req) = applies_to else { continue };
-                if !requirement_mentions_modified(req) {
+                if !requirement_mentions_modified(req) && !requirement_mentions_attacking(req) {
                     continue;
                 }
                 let ids: Vec<CardId> = self
@@ -9583,6 +9585,21 @@ fn requirement_mentions_modified(req: &SelectionRequirement) -> bool {
             requirement_mentions_modified(a) || requirement_mentions_modified(b)
         }
         R::Not(inner) => requirement_mentions_modified(inner),
+        _ => false,
+    }
+}
+
+/// Whether `req` references the live combat state (`IsAttacking`), so a
+/// `GrantKeyword` static over it must recompute its affected set per layer
+/// pass rather than route through the printed-characteristics walker.
+fn requirement_mentions_attacking(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::IsAttacking => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_attacking(a) || requirement_mentions_attacking(b)
+        }
+        R::Not(inner) => requirement_mentions_attacking(inner),
         _ => false,
     }
 }
