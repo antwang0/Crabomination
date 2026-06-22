@@ -3452,6 +3452,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileChosenFromHandOrGraveyard { who, filter } => {
+                for p in self.resolve_players(who, ctx) {
+                    // Candidates across both zones; auto-pick the highest MV.
+                    let pick = self.players[p].hand.iter()
+                        .chain(self.players[p].graveyard.iter())
+                        .filter(|c| {
+                            self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source)
+                        })
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id);
+                    if let Some(id) = pick {
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileSameNameAsTarget { what } => {
                 // Crumble to Dust / Surgical Extraction: exile the anchor
                 // (battlefield permanent or graveyard card), then exile every

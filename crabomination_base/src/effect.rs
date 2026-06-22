@@ -2229,6 +2229,10 @@ pub enum Effect {
     /// Exile all cards from `who`'s hand (each resolved player). Ashiok's
     /// −10 pairs this with `ExilePlayerGraveyard`.
     ExileHand { who: PlayerRef },
+    /// "You choose a card matching `filter` from `who`'s graveyard or hand
+    /// and exile it." A single cross-zone choice (Memory Leak). Auto-picks
+    /// the highest-mana-value match (a `wants_ui` chooser is a follow-up).
+    ExileChosenFromHandOrGraveyard { who: PlayerRef, filter: SelectionRequirement },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the

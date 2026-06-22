@@ -170,6 +170,7 @@ impl Effect {
             Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::ExileHand { who } => player_has_target(who),
+            Effect::ExileChosenFromHandOrGraveyard { who, .. } => player_has_target(who),
             Effect::DiscardUnlessKind { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }

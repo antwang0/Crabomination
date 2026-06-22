@@ -61589,6 +61589,26 @@ fn wandering_emperor_flash_loyalty_window() {
     }).is_err(), "no longer instant-speed once it's not the turn she entered");
 }
 
+/// Memory Leak exiles a nonland card from the opponent's hand or graveyard
+/// (auto-picks the highest mana value across both zones).
+#[test]
+fn memory_leak_exiles_highest_mv_across_zones() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());          // MV1 in hand
+    let big = g.add_card_to_graveyard(1, catalog::colossal_dreadmaw()); // MV6 in graveyard
+    g.add_card_to_hand(1, catalog::island());                  // land — ineligible
+    let spell = g.add_card_to_hand(0, catalog::memory_leak());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Memory Leak");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == big), "exiled the highest-MV nonland (from the graveyard)");
+}
+
 /// Skyscanner draws a card on entry.
 #[test]
 fn skyscanner_draws_on_etb() {

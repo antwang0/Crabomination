@@ -58316,6 +58316,23 @@ pub fn winota_joiner_of_forces() -> CardDefinition {
     }
 }
 
+/// Memory Leak — {2}{B} Sorcery. Target opponent reveals their hand; you exile a
+/// nonland card from their graveyard or hand. Cycling {1}. (Auto-picks the
+/// highest-MV nonland; a chooser UI is a follow-up.)
+pub fn memory_leak() -> CardDefinition {
+    CardDefinition {
+        name: "Memory Leak",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileChosenFromHandOrGraveyard {
+            who: PlayerRef::Target(0),
+            filter: SelectionRequirement::Nonland,
+        },
+        keywords: vec![Keyword::Cycling(cost(&[generic(1)]))],
+        ..Default::default()
+    }
+}
+
 /// Skyscanner — {3} 1/1 Thopter artifact creature with flying. ETB: draw a card.
 pub fn skyscanner() -> CardDefinition {
     CardDefinition {

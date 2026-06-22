@@ -1785,11 +1785,15 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
     indestructible EOT, bottom the rest; auto-picks highest power). Test
     `winota_deploys_human_when_nonhuman_attacks`. Remaining ⏳: a `wants_ui`
     picker (currently auto-pick) and the "up to one" decline.
+  - ✅ **Memory Leak** — `Effect::ExileChosenFromHandOrGraveyard` (cross-zone
+    exile of a nonland from the target's hand or graveyard; auto-picks highest
+    MV) + Cycling {1}. Test `memory_leak_exiles_highest_mv_across_zones`.
+    Remaining ⏳: a `wants_ui` chooser (currently auto-pick).
   - **Other complex IKO holdouts** (next-run candidates):
     Kinnan (tap-for-mana doubling + big-creature dig), Quartzwood's faithful
-    "any trampler you control" batch trigger, Memory Leak (reveal-hand + exile
-    from hand/gy), Sea Serpent (can't-attack-unless-defender-has-Island +
-    sac-if-no-Islands), Titans' Nest (surveil + restricted exile-for-mana).
+    "any trampler you control" batch trigger, Sea Serpent
+    (can't-attack-unless-defender-has-Island + sac-if-no-Islands), Titans' Nest
+    (surveil + restricted exile-for-mana).
   - **Brokkos, Apex of Forever** ships with mutate+trample; the "cast from
     graveyard using its mutate ability" rider is dropped — `cast_mutate` only
     reads the hand. A `mutate_from_graveyard` flag + a graveyard cast path
