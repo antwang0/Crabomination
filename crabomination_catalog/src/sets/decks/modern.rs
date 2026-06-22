@@ -24967,6 +24967,59 @@ pub fn termagant_swarm() -> CardDefinition {
     }
 }
 
+/// Sunblast Angel — {4}{W}{W} Angel 4/5, Flying. When it enters, destroy all
+/// tapped creatures.
+pub fn sunblast_angel() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Sunblast Angel",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Followed Footsteps — {3}{U}{U} Aura. At the beginning of your upkeep, create
+/// a token that's a copy of the enchanted creature.
+pub fn followed_footsteps() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Followed Footsteps",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: Selector::AttachedTo(Box::new(Selector::This)),
+                extra_creature_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Swiftfoot Boots — {2} Equipment. Equipped creature has hexproof and haste.
 /// Equip {1}.
 pub fn swiftfoot_boots() -> CardDefinition {

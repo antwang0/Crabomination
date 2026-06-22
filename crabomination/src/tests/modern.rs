@@ -61939,3 +61939,33 @@ fn termagant_swarm_death_frenzy_spawns_tokens() {
     let tokens = g.battlefield.iter().filter(|c| c.definition.name == "Tyranid" && c.is_token).count();
     assert_eq!(tokens, 3, "three 1/1 Tyranid tokens equal to power");
 }
+
+/// Sunblast Angel's ETB destroys all tapped creatures (not untapped ones).
+#[test]
+fn sunblast_angel_destroys_tapped_creatures() {
+    let mut g = two_player_game();
+    let tapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let untapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let angel = g.add_card_to_battlefield(0, catalog::sunblast_angel());
+    g.fire_self_etb_triggers(angel, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tapped).is_none(), "tapped creature destroyed");
+    assert!(g.battlefield_find(untapped).is_some(), "untapped creature survives");
+    assert!(g.battlefield_find(angel).is_some(), "the Angel (untapped) survives its own ETB");
+}
+
+/// Followed Footsteps copies the enchanted creature at each of your upkeeps.
+#[test]
+fn followed_footsteps_copies_at_upkeep() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::followed_footsteps());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let trig = catalog::followed_footsteps().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(aura, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "a token copy of the enchanted Bears was made");
+}
