@@ -3660,12 +3660,16 @@ were stale). See git history for the per-card details.
 
 ## New TODO suggestions (push modern_decks)
 
-### Tarkir: Dragonstorm follow-ups (this run)
-- **Omen cycle is partial** — 6 of the Dragon Omen cards ship (`decks::omen`:
-  Marang River / Dirgur Island / Bloomvine / Scavenger / Twinmaw / Disruptive).
-  Scryfall search is firewalled here (only `/cards/named` works), so the
-  remaining Regent/Stormbrood members + commons couldn't be enumerated by name.
-  Re-run the probe once search is reachable and finish the cycle.
+### Tarkir: Dragonstorm follow-ups
+- **Omen cycle is complete** — all 17 Dragon Omen cards ship (`decks::omen`),
+  seeking via the new `Effect::Seek` (CR 701.52 random library pick). The cards
+  were enumerated from the offline `scripts/.scryfall_cache.json` (36k entries).
+  Two body statics remain approximated and want real engine support: Whirlwing
+  Stormbrood's "cast sorceries/Dragon spells as though they had flash" (needs a
+  `StaticEffect` setting `Player.sorceries_as_flash` while in play) and Pearl
+  Lake Warden's "look at/cast this from the top of your library" (a self-card
+  top-of-library cast permission). Omenpath to Naya (a land/sorcery Omen, not a
+  Dragon) is also unimplemented.
 - **`Effect::JoinCombatAttacking`** currently attacks the source's defender (else
   the first opponent). Add a chosen-defender/planeswalker variant for cards that
   reanimate "attacking a player or planeswalker of your choice".

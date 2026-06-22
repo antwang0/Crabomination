@@ -3467,3 +3467,93 @@ fn omen_charring_bite_burns_ground_creature() {
     assert!(g.players[0].library.iter().any(|c| c.id == brood),
         "Twinmaw Stormbrood shuffled back after its Omen resolved");
 }
+
+/// Roost Seek (Sagu Wildling's Omen) tutors a basic land into hand.
+#[test]
+fn omen_roost_seek_tutors_basic_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let wildling = g.add_card_to_hand(0, catalog::sagu_wildling());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Search(Some(forest))],
+    ));
+    g.perform_action(GameAction::CastOmen {
+        card_id: wildling, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roost Seek");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic Forest tutored to hand");
+    assert!(g.players[0].library.iter().any(|c| c.id == wildling), "Sagu Wildling shuffled back");
+}
+
+/// CR 701.52 — Nesting Instinct (Pearl Lake Warden's Omen) *seeks* a land card
+/// at random and puts it onto the battlefield (no player choice of which land).
+#[test]
+fn omen_nesting_instinct_seeks_land_to_battlefield() {
+    let mut g = two_player_game();
+    // Library has only one land among non-land filler, so the random seek must
+    // find that land deterministically.
+    let island = g.add_card_to_library(0, catalog::island());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let warden = g.add_card_to_hand(0, catalog::pearl_lake_warden());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: warden, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Nesting Instinct");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(island).is_some(), "seeked land entered the battlefield");
+    assert!(g.players[0].library.iter().any(|c| c.id == warden), "Pearl Lake Warden shuffled back");
+}
+
+/// Chilling Screech (Runescale Stormbrood's Omen) counters a mana-value-2 spell
+/// but can't target a higher-cost one.
+#[test]
+fn omen_chilling_screech_counters_low_mv_spell() {
+    let mut g = two_player_game();
+    // Opponent casts a 2-mana bear; it's on the stack.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears()); // {1}{G}, MV 2
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts the bear");
+    // We hold the Stormbrood and cast Chilling Screech at the bear spell.
+    let brood = g.add_card_to_hand(0, catalog::runescale_stormbrood());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: brood, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chilling Screech at the MV-2 spell");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "the MV-2 spell was countered");
+    assert!(g.players[0].library.iter().any(|c| c.id == brood), "Runescale Stormbrood shuffled back");
+}
+
+/// Signaling Roar (Riling Dawnbreaker's Omen) mints a 2/2 white Soldier token.
+#[test]
+fn omen_signaling_roar_makes_soldier() {
+    let mut g = two_player_game();
+    let dawn = g.add_card_to_hand(0, catalog::riling_dawnbreaker());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastOmen {
+        card_id: dawn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Signaling Roar");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0)
+        .expect("a Soldier token was created");
+    assert_eq!((token.definition.power, token.definition.toughness), (2, 2), "2/2 Soldier");
+}

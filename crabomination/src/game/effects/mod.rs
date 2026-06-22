@@ -6461,6 +6461,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Seek { who, filter, count, to } => {
+                use rand::seq::IndexedRandom;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let filter = filter.resolve_x(ctx.x_value).resolve_converge(ctx.converged_value);
+                for _ in 0..n {
+                    // CR 701.52a — randomly choose from the matching cards.
+                    let ids: Vec<crate::card::CardId> = self.players[p]
+                        .library
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                        .map(|c| c.id)
+                        .collect();
+                    let Some(&pick) = ids.choose(&mut rand::rng()) else { break };
+                    let Some(idx) = self.players[p].library.iter().position(|c| c.id == pick)
+                    else { break };
+                    let card = self.players[p].library.remove(idx);
+                    self.place_card_in_dest(card, p, to, events);
+                    self.last_moved_cards.push(pick);
+                }
+                Ok(())
+            }
+
             Effect::RedirectSpellTargetToSelf { what } => {
                 let Some(src) = ctx.source else { return Ok(()) };
                 // Locate the targeted spell on the stack.

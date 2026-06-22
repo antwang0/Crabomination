@@ -2083,6 +2083,12 @@ pub enum Effect {
     /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
     /// "search target opponent's library ... exile that card").
     SearchPickedBy { who: PlayerRef, picker: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// CR 701.52 — `who` seeks `count` cards matching `filter`: the engine
+    /// randomly chooses among the matching cards in their library (no
+    /// player choice) and moves each to `to`, then no shuffle is needed
+    /// (the picks are already random). Hidden-information mechanic from
+    /// Tarkir: Dragonstorm (Roost Seek, Nesting Instinct, Divining Dive).
+    Seek { who: PlayerRef, filter: SelectionRequirement, count: Value, to: ZoneDest },
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s hand and graveyard into their library (Day's
