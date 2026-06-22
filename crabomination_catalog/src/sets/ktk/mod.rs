@@ -156,10 +156,12 @@ pub fn lightning_berserker() -> CardDefinition {
 }
 
 /// Alesha, Who Smiles at Death — {2}{R} 3/2 Legendary Human Warrior with
-/// First strike. Dash {1}{R}. (The attack-trigger reanimation of a power-≤2
-/// creature is omitted — no targeted graveyard-to-attacking-battlefield
-/// reanimate primitive yet.)
+/// First strike. Dash {1}{R}. Whenever Alesha attacks, you may pay {W/B}{W/B};
+/// if you do, return target creature card with power 2 or less from your
+/// graveyard to the battlefield tapped and attacking (CR 508.3a).
 pub fn alesha_who_smiles_at_death() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    use crate::mana::{hybrid, Color, ManaCost};
     CardDefinition {
         name: "Alesha, Who Smiles at Death",
         cost: cost(&[generic(2), r()]),
@@ -173,6 +175,27 @@ pub fn alesha_who_smiles_at_death() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         alternative_cost: Some(dash(cost(&[generic(1), r()]))),
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "Return a power-2-or-less creature card, tapped and attacking".into(),
+            mana_cost: ManaCost {
+                symbols: vec![
+                    hybrid(Color::White, Color::Black),
+                    hybrid(Color::White, Color::Black),
+                ],
+            },
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::PowerAtMost(2)),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                Effect::JoinCombatAttacking { what: Selector::LastMoved },
+            ])),
+            else_: None,
+        })],
         ..Default::default()
     }
 }

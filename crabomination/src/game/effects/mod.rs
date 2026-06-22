@@ -5207,6 +5207,44 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::JoinCombatAttacking { what } => {
+                use crate::game::types::{Attack, AttackTarget};
+                // Only meaningful while a combat is in progress.
+                if self.attacking.is_empty() {
+                    return Ok(());
+                }
+                let movers = self.resolve_selector(what, ctx);
+                // Attack the same defender the source is attacking; else the
+                // controller's first opponent.
+                for t in movers {
+                    let Some(id) = t.as_card_id() else { continue };
+                    // Skip if it isn't on the battlefield or is already attacking.
+                    let Some(controller) = self.battlefield_find(id).map(|c| c.controller) else {
+                        continue;
+                    };
+                    if self.attacking.iter().any(|a| a.attacker == id) {
+                        continue;
+                    }
+                    let target = ctx
+                        .source
+                        .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+                        .map(|a| a.target)
+                        .or_else(|| {
+                            (0..self.players.len())
+                                .find(|&q| !self.same_team(q, controller))
+                                .map(AttackTarget::Player)
+                        });
+                    let Some(target) = target else { continue };
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                        c.tapped = true;
+                        c.attacked_this_turn = true;
+                    }
+                    self.attacking.push(Attack { attacker: id, target });
+                    events.push(GameEvent::AttackerDeclared(id));
+                }
+                Ok(())
+            }
+
             Effect::Myriad => {
                 use crate::game::types::{Attack, AttackTarget};
                 // Source must currently be attacking a player.

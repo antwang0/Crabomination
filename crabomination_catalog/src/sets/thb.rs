@@ -6111,10 +6111,12 @@ pub fn deathbellow_war_cry() -> CardDefinition {
 }
 
 /// Callaphe, Beloved of the Sea — {1}{U}{U} Legendary Enchantment Creature —
-/// Demigod, */3. Power equals your devotion to blue. (The "your permanents
-/// tax opponents' targeted spells {1} more" static is dropped — `extra_cost_
-/// for_spell` can't yet read a cast's chosen target; tracked in TODO.md.)
+/// Demigod, */3. Power equals your devotion to blue. Creatures and enchantments
+/// you control have "Spells your opponents cast that target this permanent cost
+/// {1} more" (`StaticEffect::TaxOpponentSpellsTargeting`, CR 118).
 pub fn callaphe_beloved_of_the_sea() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Callaphe, Beloved of the Sea",
         cost: cost(&[generic(1), u(), u()]),
@@ -6124,6 +6126,14 @@ pub fn callaphe_beloved_of_the_sea() -> CardDefinition {
         power: 0,
         toughness: 3,
         dynamic_pt: Some(DynamicPt::DevotionTo { color: Color::Blue, base_t: 3 }),
+        static_abilities: vec![StaticAbility {
+            description: "Spells opponents cast targeting your creatures/enchantments cost {1} more.",
+            effect: StaticEffect::TaxOpponentSpellsTargeting {
+                target_filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Enchantment),
+                amount: 1,
+            },
+        }],
         ..Default::default()
     }
 }

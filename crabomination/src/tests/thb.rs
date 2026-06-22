@@ -3597,6 +3597,23 @@ fn callaphe_power_is_devotion_to_blue() {
     assert_eq!(g.computed_permanent(c).unwrap().power, 3, "devotion to blue = 3");
 }
 
+/// CR 118 — Callaphe taxes opponents' spells that target your creatures or
+/// enchantments by {1}; your own spells and untargeted/other targets are free.
+#[test]
+fn callaphe_taxes_opponent_spells_targeting_your_permanents() {
+    use crate::game::actions::extra_cost_for_spell;
+    let mut g = two_player_game();
+    let callaphe = g.add_card_to_battlefield(0, catalog::callaphe_beloved_of_the_sea());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt_id = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt = g.players[1].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
+    let at_mine = crate::game::Target::Permanent(callaphe);
+    let at_theirs = crate::game::Target::Permanent(opp_bear);
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_mine)), 1, "opponent taxed targeting Callaphe");
+    assert_eq!(extra_cost_for_spell(&g, 1, &bolt, Some(&at_theirs)), 0, "their own creature untaxed");
+    assert_eq!(extra_cost_for_spell(&g, 0, &bolt, Some(&at_mine)), 0, "your own spells untaxed");
+}
+
 /// Siona digs seven for an Aura to hand.
 #[test]
 fn siona_finds_an_aura() {

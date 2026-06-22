@@ -3375,6 +3375,34 @@ fn cr_702_183_countered_omen_shuffles_into_library() {
         "countered Omen was shuffled into the library");
 }
 
+// ── CR 508.3a — put onto the battlefield attacking ─────────────────────────────
+
+/// CR 508.3a — Alesha's attack trigger reanimates a power-≤2 creature card
+/// *tapped and attacking* via `Effect::JoinCombatAttacking`.
+#[test]
+fn cr_508_3a_alesha_reanimates_tapped_and_attacking() {
+    let mut g = two_player_game();
+    let alesha = g.add_card_to_battlefield(0, catalog::alesha_who_smiles_at_death());
+    g.clear_sickness(alesha);
+    // A 2/2 bear in the graveyard is a legal reanimate target (power ≤ 2).
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Accept the optional "pay {W/B}{W/B}" trigger (AutoDecider declines by default).
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(
+        [crate::decision::DecisionAnswer::Bool(true)],
+    ));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // Float {W}{W} to pay the {W/B}{W/B} attack trigger.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: alesha, target: AttackTarget::Player(1),
+    }])).expect("Alesha attacks");
+    drain_stack(&mut g);
+    let reanimated = g.battlefield_find(bear).expect("bear returned to the battlefield");
+    assert!(reanimated.tapped, "reanimated creature enters tapped (CR 508.3a)");
+    assert!(g.attacking.iter().any(|a| a.attacker == bear), "and joins combat attacking");
+}
+
 /// Charring Bite (Twinmaw Stormbrood's Omen) deals 5 to a creature without
 /// flying — enough to kill a ground blocker, while a flyer is not a legal target.
 #[test]

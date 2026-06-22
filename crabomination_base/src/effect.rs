@@ -2477,6 +2477,14 @@ pub enum Effect {
         #[serde(default)]
         cleanup: AttackingTokenCleanup,
     },
+    /// CR 508.3a — put the resolved permanent(s) into the current combat
+    /// tapped and attacking, bypassing the declare-attackers timing/sickness
+    /// gates. Each joins attacking the same defender the effect's source is
+    /// attacking (else the controller's first opponent). No-op outside combat.
+    /// Composes with a preceding `Move … → Battlefield { tapped: true }` to
+    /// reanimate a creature "tapped and attacking" (Alesha, Who Smiles at Death,
+    /// via `Selector::LastMoved`).
+    JoinCombatAttacking { what: Selector },
     /// Myriad (CR 702.115): for each opponent of the source's controller
     /// other than the player the source is attacking, create a token that's
     /// a copy of the source, tapped and attacking that opponent. The copies
