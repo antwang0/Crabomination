@@ -62427,3 +62427,101 @@ fn survival_savior_returns_small_creature_from_graveyard() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear),
         "Survival returned the small creature to hand");
 }
+
+// ── Tarkir: Dragonstorm (non-Omen) ──────────────────────────────────────────
+
+/// Sarkhan's Resolve mode 0 pumps a creature +3/+3.
+#[test]
+fn sarkhans_resolve_pumps_chosen_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::sarkhans_resolve());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast +3/+3 mode");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(bear).unwrap();
+    assert_eq!((s.power(), s.toughness()), (5, 5), "+3/+3 applied");
+}
+
+/// Sarkhan's Resolve mode 1 destroys a flyer.
+#[test]
+fn sarkhans_resolve_destroys_a_flyer() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer
+    let spell = g.add_card_to_hand(0, catalog::sarkhans_resolve());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(flyer)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast destroy-flyer mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_none(), "the flyer was destroyed");
+}
+
+/// Dragonback Lancer's Mobilize 1 makes a tapped, attacking Warrior token.
+#[test]
+fn dragonback_lancer_mobilizes_on_attack() {
+    let mut g = two_player_game();
+    let lancer = g.add_card_to_battlefield(0, catalog::dragonback_lancer());
+    g.clear_sickness(lancer);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lancer, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let attackers = g.attacking.len();
+    assert_eq!(attackers, 2, "Mobilize 1 added a second attacker");
+}
+
+/// Sibsig Appraiser draws one of the top two and bins the other.
+#[test]
+fn sibsig_appraiser_picks_one_bins_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    let sibsig = g.add_card_to_battlefield(0, catalog::sibsig_appraiser());
+    g.fire_self_etb_triggers(sibsig, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one card to hand");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 1, "the other to graveyard");
+}
+
+/// Defibrillating Current deals 4 (kills a 4-toughness creature) and gains 2.
+#[test]
+fn defibrillating_current_burns_and_gains() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let spell = g.add_card_to_hand(0, catalog::defibrillating_current());
+    g.players[0].mana_pool.add_colorless(6); // {2/R}{2/W}{2/B} paid as generic
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Defibrillating Current");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "4 damage killed the 4/4");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
+}
+
+/// Mardu Devotee's once-per-turn ability adds one R/W/B mana.
+#[test]
+fn mardu_devotee_taps_for_one_of_three_colors() {
+    let mut g = two_player_game();
+    let dev = g.add_card_to_battlefield(0, catalog::mardu_devotee());
+    g.clear_sickness(dev);
+    g.players[0].mana_pool.add_colorless(1); // pay the {1}
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dev, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate mana ability");
+    drain_stack(&mut g);
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.total() + pool.restricted_total(), 1, "produced one mana from the activation");
+}
