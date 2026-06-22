@@ -446,6 +446,106 @@ pub fn bone_cairn_butcher() -> CardDefinition {
     }
 }
 
+/// Auroral Procession — {G}{U} Instant. Return target card from your graveyard
+/// to your hand.
+pub fn auroral_procession() -> CardDefinition {
+    CardDefinition {
+        name: "Auroral Procession",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::InGraveyard),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ironpaw Aspirant — {1}{W} 1/2 Cat Warrior. ETB put a +1/+1 counter on target
+/// creature.
+pub fn ironpaw_aspirant() -> CardDefinition {
+    CardDefinition {
+        name: "Ironpaw Aspirant",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stormplain Detainment — {2}{W} Enchantment. ETB exile target nonland
+/// permanent an opponent controls until this enchantment leaves the battlefield.
+pub fn stormplain_detainment() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Stormplain Detainment",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Permanent
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Strategic Betrayal — {1}{B} Sorcery. Target opponent exiles a creature they
+/// control and their graveyard. (Modeled as a sacrifice edict — the creature
+/// dies, then the graveyard wipe exiles it along with the rest.)
+pub fn strategic_betrayal() -> CardDefinition {
+    CardDefinition {
+        name: "Strategic Betrayal",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Target(0),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::ExileAllGraveyards { filter: None, opponents_only: true },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sonic Shrieker — {2}{R}{W}{B} 4/4 Dragon with Flying. ETB deal 2 damage to
+/// any target and gain 2 life. (The "if a player was dealt damage, they discard"
+/// rider is dropped — the headline drain is modeled.)
+pub fn sonic_shrieker() -> CardDefinition {
+    CardDefinition {
+        name: "Sonic Shrieker",
+        cost: cost(&[generic(2), r(), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Sky Skiff — {2} Vehicle 2/3 with Flying. Crew 1.
 pub fn sky_skiff() -> CardDefinition {
     use crate::card::ArtifactSubtype;

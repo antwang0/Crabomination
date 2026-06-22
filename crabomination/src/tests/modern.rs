@@ -62771,6 +62771,99 @@ fn equilibrium_adept_flurry_grants_double_strike() {
         "Flurry grants double strike on the second spell");
 }
 
+/// Auroral Procession returns a graveyard card to hand.
+#[test]
+fn auroral_procession_returns_card_to_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::auroral_procession());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Auroral Procession");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bear returned to hand");
+}
+
+/// Ironpaw Aspirant's ETB adds a +1/+1 counter to a creature.
+#[test]
+fn ironpaw_aspirant_etb_adds_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cat = g.add_card_to_hand(0, catalog::ironpaw_aspirant());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: cat, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ironpaw Aspirant");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "+1/+1 counter placed");
+}
+
+/// Stormplain Detainment exiles an opponent's permanent until it leaves.
+#[test]
+fn stormplain_detainment_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let oring = g.add_card_to_hand(0, catalog::stormplain_detainment());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast(&mut g, oring);
+    assert!(g.battlefield_find(victim).is_none(), "opponent's creature is exiled");
+    g.remove_from_battlefield_to_graveyard_raw(oring);
+    assert!(g.battlefield_find(victim).is_some(), "creature returns when the enchantment leaves");
+}
+
+/// Strategic Betrayal forces an opponent to lose a creature and exiles their
+/// graveyard.
+#[test]
+fn strategic_betrayal_edicts_and_exiles_graveyard() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gy_card = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let spell = g.add_card_to_hand(0, catalog::strategic_betrayal());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Player(1));
+    assert!(g.battlefield_find(creature).is_none(), "opponent lost a creature");
+    assert!(g.exile.iter().any(|c| c.id == gy_card), "their graveyard was exiled");
+}
+
+/// Sonic Shrieker's ETB pings any target for 2 and gains 2 life.
+#[test]
+fn sonic_shrieker_etb_drains() {
+    let mut g = two_player_game();
+    let shrieker = g.add_card_to_hand(0, catalog::sonic_shrieker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let opp = g.players[1].life;
+    let me = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: shrieker, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sonic Shrieker at the opponent's face");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "2 damage to the opponent");
+    assert_eq!(g.players[0].life, me + 2, "gained 2 life");
+}
+
 /// Sky Skiff becomes a creature when crewed by one power.
 #[test]
 fn sky_skiff_crews_to_a_creature() {
