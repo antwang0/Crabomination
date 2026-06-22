@@ -62525,3 +62525,113 @@ fn mardu_devotee_taps_for_one_of_three_colors() {
     let pool = &g.players[0].mana_pool;
     assert_eq!(pool.total() + pool.restricted_total(), 1, "produced one mana from the activation");
 }
+
+/// Sibsig Host mills three from each player on ETB.
+#[test]
+fn sibsig_host_mills_each_player_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    for _ in 0..5 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let gy0 = g.players[0].graveyard.len();
+    let gy1 = g.players[1].graveyard.len();
+    let host = g.add_card_to_battlefield(0, catalog::sibsig_host());
+    g.fire_self_etb_triggers(host, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 3, "you milled 3");
+    assert_eq!(g.players[1].graveyard.len(), gy1 + 3, "opponent milled 3");
+}
+
+/// Stormscale Scion anthems other Dragons you control but not itself or non-Dragons.
+#[test]
+fn stormscale_scion_buffs_other_dragons() {
+    let mut g = two_player_game();
+    let scion = g.add_card_to_battlefield(0, catalog::stormscale_scion());
+    let other_dragon = g.add_card_to_battlefield(0, catalog::bloomvine_regent()); // 4/5 Dragon
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // non-Dragon
+    assert_eq!(g.computed_permanent(other_dragon).unwrap().power, 5, "other Dragon +1/+1");
+    assert_eq!(g.computed_permanent(scion).unwrap().power, 4, "Scion does not buff itself");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "non-Dragon unaffected");
+}
+
+/// Roilmage's Trick weakens opponents' creatures by the converge count and draws.
+#[test]
+fn roilmages_trick_converge_weakens_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::roilmages_trick());
+    // Pay {3}{U} with two colors (U + R count toward converge = 2).
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roilmage's Trick");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 0, "-2/-0 from two colors");
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card (net 0 after the cast)");
+}
+
+/// Kishla Skimmer draws when a card leaves your graveyard on your turn (once).
+#[test]
+fn kishla_skimmer_draws_on_graveyard_departure() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kishla_skimmer());
+    let gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    let hand_before = g.players[0].hand.len();
+    // Simulate the card leaving your graveyard on your turn.
+    let _ = gy;
+    let events = vec![GameEvent::CardLeftGraveyard { player: 0, card_id: gy }];
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Kishla drew on the graveyard departure");
+}
+
+/// Inevitable Defeat exiles a nonland permanent, drains 3, and gains 3.
+#[test]
+fn inevitable_defeat_exiles_and_swings_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::inevitable_defeat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Inevitable Defeat");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "target exiled");
+    assert_eq!(g.players[1].life, life1 - 3, "controller lost 3");
+    assert_eq!(g.players[0].life, life0 + 3, "you gained 3");
+    assert!(g.battlefield_find(spell).is_none());
+}
+
+/// Magmatic Hellkite destroys an opponent's nonbasic land and ramps them a
+/// stunned basic.
+#[test]
+fn magmatic_hellkite_destroys_nonbasic_and_ramps_stunned_basic() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Opponent controls a nonbasic land and has a basic in library.
+    let nonbasic = g.add_card_to_battlefield(1, catalog::mishras_factory());
+    let forest = g.add_card_to_library(1, catalog::forest());
+    let hellkite = g.add_card_to_battlefield(0, catalog::magmatic_hellkite());
+    // The dispossessed opponent finds the basic.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.fire_self_etb_triggers(hellkite, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(nonbasic).is_none(), "nonbasic land destroyed");
+    let basic = g.battlefield.iter().find(|c| c.controller == 1 && c.definition.is_land());
+    let basic = basic.expect("opponent ramped a basic");
+    assert!(basic.tapped, "the basic entered tapped");
+    assert!(basic.counter_count(CounterType::Stun) >= 1, "with a stun counter");
+}

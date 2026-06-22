@@ -3,12 +3,13 @@
 //! spells/creatures that ride existing primitives. Tracked in `DECK_FEATURES.md`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword,
-    SelectionRequirement, Selector, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, Predicate, SelectionRequirement, Selector, StaticAbility, Subtypes,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, mobilize, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef};
-use crate::mana::{cost, g, generic, mono_hybrid, u, w, Color};
+use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect};
+use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
 
 /// Sarkhan's Resolve — {1}{G} Instant. Choose one — target creature gets +3/+3
 /// until end of turn; or destroy target creature with flying.
@@ -128,6 +129,170 @@ pub fn mardu_devotee() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Sibsig Host — {4}{B} 2/6 Zombie. ETB: each player mills three cards.
+pub fn sibsig_host() -> CardDefinition {
+    CardDefinition {
+        name: "Sibsig Host",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 6,
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(3),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stormscale Scion — {4}{R}{R} 4/4 Dragon with Flying and Storm. Other Dragons
+/// you control get +1/+1.
+pub fn stormscale_scion() -> CardDefinition {
+    CardDefinition {
+        name: "Stormscale Scion",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Storm],
+        static_abilities: vec![StaticAbility {
+            description: "Other Dragons you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Roilmage's Trick — {3}{U} Instant. Converge — creatures your opponents
+/// control get -X/-0 until end of turn, where X is the number of colors of mana
+/// spent to cast this spell. Draw a card.
+pub fn roilmages_trick() -> CardDefinition {
+    CardDefinition {
+        name: "Roilmage's Trick",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                power: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::ConvergedValue)),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kishla Skimmer — {G}{U} 2/2 Bird Scout with Flying. Whenever a card leaves
+/// your graveyard during your turn, draw a card (only once each turn).
+pub fn kishla_skimmer() -> CardDefinition {
+    CardDefinition {
+        name: "Kishla Skimmer",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                kind: EventKind::CardLeftGraveyard,
+                scope: EventScope::YourControl,
+                filter: Some(Predicate::IsTurnOf(PlayerRef::You)),
+                once_per_turn: true,
+                per_subject_cap: None,
+                actor_is_opponent: false,
+            },
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Inevitable Defeat — {1}{R}{W}{B} Instant that can't be countered. Exile
+/// target nonland permanent; its controller loses 3 life and you gain 3 life.
+pub fn inevitable_defeat() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Inevitable Defeat",
+        cost: cost(&[generic(1), r(), w(), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(3),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Nonland),
+                to: ZoneDest::Exile,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Magmatic Hellkite — {2}{R}{R} 4/5 Dragon with Flying. ETB: destroy target
+/// nonbasic land an opponent controls; its controller searches for a basic land
+/// and puts it onto the battlefield tapped with a stun counter on it.
+pub fn magmatic_hellkite() -> CardDefinition {
+    use crate::card::{CounterType, Supertype};
+    use crate::effect::ZoneDest;
+    let opp_land = SelectionRequirement::Land
+        .and(SelectionRequirement::HasSupertype(Supertype::Basic).negate())
+        .and(SelectionRequirement::ControlledByOpponent);
+    let basic = SelectionRequirement::Land.and(SelectionRequirement::HasSupertype(Supertype::Basic));
+    CardDefinition {
+        name: "Magmatic Hellkite",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            // The land's controller ramps a stunned basic before the land is
+            // destroyed, so `ControllerOf(target)` still resolves to them; the
+            // net effect matches the printed "destroy, then its controller…".
+            Effect::SearchUpToN {
+                who: PlayerRef::ControllerOf(Box::new(target_filtered(opp_land.clone()))),
+                filter: basic,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::ControllerOf(Box::new(target_filtered(opp_land.clone()))),
+                    tapped: true,
+                },
+                count: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: Selector::LastMoved,
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+            Effect::Destroy { what: target_filtered(opp_land) },
+        ]))],
         ..Default::default()
     }
 }
