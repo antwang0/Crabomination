@@ -2762,6 +2762,7 @@ static DECKS: &[Factory] = &[
     super::decks::sunpearl_kirin,
     super::decks::formation_breaker,
     super::decks::krotiq_nestguard,
+    super::decks::snowmelt_stag,
     super::decks::skyscanner,
     super::decks::pristine_talisman,
     super::decks::ram_through,

@@ -3811,6 +3811,35 @@ impl GameState {
                 }
             }
         }
+        // "As long as [condition], this creature has base power and toughness
+        // P/T." (`StaticEffect::SetBasePtIf`) — a live layer-7b set (Snowmelt
+        // Stag). +N/+M and counters still stack on top per CR 613.7c/f.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::SetBasePtIf { condition, power, toughness } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                if !self.evaluate_predicate(condition, &ctx) {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::SetValue),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::SetPowerToughness(*power, *toughness),
+                });
+            }
+        }
         // "All [filter] have 'This gets +P/+T as long as [condition]'"
         // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
         // evaluated per matching permanent with that permanent's controller
@@ -9463,6 +9492,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PumpSelfIf — needs live predicate evaluation; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpSelfIf { .. }
+            // SetBasePtIf — live conditional base-P/T set, resolved in
+            // `gather_continuous_effects`.
+            | StaticEffect::SetBasePtIf { .. }
             // GrantPumpSelfIf — per-subject predicate, resolved in
             // `gather_continuous_effects`.
             | StaticEffect::GrantPumpSelfIf { .. }

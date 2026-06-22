@@ -2919,3 +2919,38 @@ pub fn krotiq_nestguard() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Snowmelt Stag — {3}{U} 2/5 Elemental Elk with vigilance. During your turn it
+/// has base power and toughness 5/2. {5}{U}{U}: it can't be blocked this turn.
+pub fn snowmelt_stag() -> CardDefinition {
+    CardDefinition {
+        name: "Snowmelt Stag",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Elk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, this creature has base power and toughness 5/2.",
+            effect: StaticEffect::SetBasePtIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 5,
+                toughness: 2,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), u(), u()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

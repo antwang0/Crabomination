@@ -64311,3 +64311,27 @@ fn krotiq_nestguard_can_attack_after_ability() {
     g.priority.player_with_priority = 0;
     assert!(g.legal_attackers(0).contains(&krotiq), "may now attack despite defender");
 }
+
+/// Snowmelt Stag (CR 613.7b / 208): base P/T becomes 5/2 only on your turn.
+#[test]
+fn snowmelt_stag_sets_base_pt_on_your_turn() {
+    let mut g = two_player_game();
+    let stag = g.add_card_to_battlefield(0, catalog::snowmelt_stag());
+    g.active_player_idx = 0;
+    let cp = g.computed_permanent(stag).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 2), "5/2 during your turn");
+    g.active_player_idx = 1;
+    let cp = g.computed_permanent(stag).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 5), "printed 2/5 on opp turn");
+}
+
+/// A +1/+1 counter stacks on top of Snowmelt Stag's base-P/T set (CR 613.7c/f).
+#[test]
+fn snowmelt_stag_counter_stacks_over_base_set() {
+    let mut g = two_player_game();
+    let stag = g.add_card_to_battlefield(0, catalog::snowmelt_stag());
+    g.battlefield_find_mut(stag).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.active_player_idx = 0;
+    let cp = g.computed_permanent(stag).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 3), "5/2 base + 1/1 counter");
+}

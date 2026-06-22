@@ -80,6 +80,12 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
     },
+    /// "As long as [condition], this creature has base power and toughness
+    /// P/T." The base-P/T-setting sibling of `PumpSelfIf` — installs a live
+    /// layer-7b `SetPowerToughness` while the predicate holds (counters and
+    /// +N/+M still stack on top per CR 613.7c/f). Snowmelt Stag
+    /// ("During your turn, this creature has base power and toughness 5/2").
+    SetBasePtIf { condition: Predicate, power: i32, toughness: i32 },
     /// "This creature can attack as though it didn't have defender as long as
     /// [condition]." A self-static gating defender-bypass on a live predicate
     /// (controller as context). Drowsing Tyrannodon ("…as long as you control
