@@ -676,6 +676,11 @@ fn graveyard_entry(
             crate::card::Keyword::Disturb(c) => Some(c.clone()),
             _ => None,
         }),
+        // CR 702.187 — Mayhem is castable only if this seat discarded the card
+        // this turn (the same gate `cast_flashback` enforces).
+        mayhem_cost: card.definition.mayhem_cost().cloned().filter(|_| {
+            state.players[seat].discarded_this_turn.contains(&card.id)
+        }),
     }
 }
 
@@ -2705,5 +2710,22 @@ mod tests {
             view.exile.iter().any(|e| e.encoded_on == Some(bear)),
             "exile view surfaces the cipher carrier"
         );
+    }
+
+    /// CR 702.187 — the graveyard view only flags a Mayhem cost once the owner
+    /// has discarded that card this turn.
+    #[test]
+    fn graveyard_view_surfaces_mayhem_only_after_discard() {
+        let mut g = two_player_game();
+        let bolt = g.add_card_to_graveyard(0, catalog::electros_bolt());
+        // In the graveyard but not discarded this turn → no affordance.
+        let v0 = project(&g, 0);
+        let e0 = v0.players[0].graveyard.iter().find(|c| c.id == bolt).expect("bolt in graveyard view");
+        assert!(e0.mayhem_cost.is_none(), "no Mayhem affordance before a discard");
+        // Mark it discarded this turn → the affordance surfaces.
+        g.players[0].discarded_this_turn.insert(bolt);
+        let v1 = project(&g, 0);
+        let e1 = v1.players[0].graveyard.iter().find(|c| c.id == bolt).expect("bolt in graveyard view");
+        assert_eq!(e1.mayhem_cost.as_ref().map(|c| c.cmc()), Some(2), "the mayhem cost surfaced");
     }
 }

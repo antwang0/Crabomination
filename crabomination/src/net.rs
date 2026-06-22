@@ -887,6 +887,11 @@ pub struct GraveyardCardView {
     /// the graveyard via `GameAction::CastDisturb`. `None` otherwise.
     #[serde(default)]
     pub disturb_cost: Option<crate::mana::ManaCost>,
+    /// Mayhem cost (CR 702.187) if this card is *currently* castable from the
+    /// graveyard via `GameAction::CastMayhem` — i.e. it has a mayhem cost and
+    /// its owner discarded it this turn. `None` otherwise.
+    #[serde(default)]
+    pub mayhem_cost: Option<crate::mana::ManaCost>,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so

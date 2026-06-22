@@ -1501,6 +1501,27 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
                 castable.push(action);
             }
         }
+        // Mayhem (CR 702.187): if the card was discarded this turn and has a
+        // mayhem cost, offer a graveyard cast for it. `would_accept` enforces
+        // the discarded-this-turn gate, cost, and timing.
+        if c.definition.mayhem_cost().is_some() {
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                let (t, extras) =
+                    state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::CastMayhem {
+                card_id: c.id, target, additional_targets, mode: None, x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
     }
 
     // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a
@@ -3660,6 +3681,31 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never cast the adventure half");
+    }
+
+    /// CR 702.187 — the bot recasts a card discarded this turn from its
+    /// graveyard for the mayhem cost (Electro's Bolt as removal).
+    #[test]
+    fn bot_casts_mayhem_spell_from_graveyard() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let bolt = g.add_card_to_hand(0, catalog::electros_bolt());
+        // Discard the Bolt this turn so its Mayhem cast is legal.
+        let mut events = Vec::new();
+        g.discard_card(0, bolt, &mut events);
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let mut bot = RandomBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastMayhem { card_id, .. } = action {
+                assert_eq!(card_id, bolt, "bot recasts Electro's Bolt via Mayhem");
+                let _ = bear;
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never cast the Mayhem spell");
     }
 
     /// CR 702.183 — the bot casts an Omen half as removal (Petty Revenge on

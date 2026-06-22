@@ -3660,6 +3660,14 @@ were stale). See git history for the per-card details.
 
 ## New TODO suggestions (push modern_decks)
 
+### Client GUI follow-ups
+- **Mayhem cast affordance.** `GraveyardCardView.mayhem_cost` now surfaces a
+  castable Mayhem cost (only after the card was discarded this turn) and the bot
+  enumerates `CastMayhem`. The client GUI graveyard browser still needs a
+  right-click "Cast for Mayhem" entry wired to `GameAction::CastMayhem`
+  (mirror the flashback/disturb affordances). The GUI crate can't build in the
+  headless cloud env (wayland-sys), so this wasn't verifiable here.
+
 ### Tarkir: Dragonstorm follow-ups
 - **Omen cycle is complete** — all 17 Dragon Omen cards ship (`decks::omen`),
   seeking via the new `Effect::Seek` (CR 701.52 random library pick). The cards
