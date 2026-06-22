@@ -446,6 +446,57 @@ pub fn bone_cairn_butcher() -> CardDefinition {
     }
 }
 
+/// Salt Road Patrol — {3}{W} 2/5 Human Scout. Outlast {1}{W}.
+pub fn salt_road_patrol() -> CardDefinition {
+    use crate::effect::shortcut::outlast;
+    CardDefinition {
+        name: "Salt Road Patrol",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        activated_abilities: vec![outlast(cost(&[generic(1), w()]))],
+        ..Default::default()
+    }
+}
+
+/// Twin-Silk Spider — {2}{G} 1/2 Spider with Reach. ETB create a 1/2 green
+/// Spider creature token with reach.
+pub fn twin_silk_spider() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Twin-Silk Spider",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Spider".into(),
+                power: 1,
+                toughness: 2,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                keywords: vec![Keyword::Reach],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Spider],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
 /// Auroral Procession — {G}{U} Instant. Return target card from your graveyard
 /// to your hand.
 pub fn auroral_procession() -> CardDefinition {

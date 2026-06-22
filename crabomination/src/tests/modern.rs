@@ -62771,6 +62771,44 @@ fn equilibrium_adept_flurry_grants_double_strike() {
         "Flurry grants double strike on the second spell");
 }
 
+/// Salt Road Patrol's Outlast puts a +1/+1 counter on itself.
+#[test]
+fn salt_road_patrol_outlast_adds_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let patrol = g.add_card_to_battlefield(0, catalog::salt_road_patrol());
+    g.clear_sickness(patrol);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: patrol, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate Outlast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(patrol).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Outlast adds a +1/+1 counter");
+    assert!(g.battlefield_find(patrol).unwrap().tapped, "and taps the creature");
+}
+
+/// Twin-Silk Spider's ETB makes a 1/2 Spider token with reach.
+#[test]
+fn twin_silk_spider_makes_a_spider_token() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let spider = g.add_card_to_hand(0, catalog::twin_silk_spider());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast(&mut g, spider);
+    let tok = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Spider" && c.controller == 0)
+        .expect("Spider token created");
+    assert_eq!((tok.definition.power, tok.definition.toughness), (1, 2), "1/2 token");
+    assert!(tok.definition.keywords.contains(&Keyword::Reach), "with reach");
+}
+
 /// Auroral Procession returns a graveyard card to hand.
 #[test]
 fn auroral_procession_returns_card_to_hand() {

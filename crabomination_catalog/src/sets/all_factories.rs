@@ -2660,6 +2660,8 @@ static DECKS: &[Factory] = &[
     super::decks::frontline_rush,
     super::decks::severance_priest,
     super::decks::naga_fleshcrafter,
+    super::decks::salt_road_patrol,
+    super::decks::twin_silk_spider,
     super::decks::auroral_procession,
     super::decks::ironpaw_aspirant,
     super::decks::stormplain_detainment,
