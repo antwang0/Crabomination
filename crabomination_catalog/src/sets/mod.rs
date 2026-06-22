@@ -262,6 +262,18 @@ pub fn dual_land_with(
     }
 }
 
+/// Enters-tapped tri-land that taps for any of three colors (the Khans
+/// "wedge" cycle — Sandsteppe Citadel et al.). Untyped (matching the print).
+pub fn tri_land(name: &'static str, a: Color, b: Color, c: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(a), tap_add(b), tap_add(c)],
+        triggered_abilities: vec![etb_tap()],
+        ..Default::default()
+    }
+}
+
 pub mod all_factories;
 pub mod akh;
 pub mod all;

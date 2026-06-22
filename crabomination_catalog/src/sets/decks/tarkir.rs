@@ -8,7 +8,7 @@ use crate::card::{
     StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    dies_mint_token, etb, flurry, mobilize, mobilize_value, target_any, target_filtered,
+    dies_mint_token, etb, flurry, mobilize, mobilize_value, on_attack, target_any, target_filtered,
 };
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
@@ -1746,3 +1746,554 @@ pub fn heritage_reclamation() -> CardDefinition {
     }
 }
 
+
+// ── TDM batch: simple commons/uncommons riding existing primitives ──────────
+
+/// Dragon Sniper — {G} 1/1 Human Archer with vigilance, reach, deathtouch.
+pub fn dragon_sniper() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon Sniper",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Twin Bolt — {1}{R} Instant. 2 damage divided as you choose among one or two
+/// targets.
+pub fn twin_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Twin Bolt",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(2),
+            filter: SelectionRequirement::Any,
+            max_targets: 2,
+        },
+        ..Default::default()
+    }
+}
+
+/// Cruel Truths — {3}{B} Instant. Surveil 2, then draw two cards. You lose 2 life.
+pub fn cruel_truths() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Truths",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Iceridge Serpent — {4}{U} 3/3 Serpent. ETB: return target creature an
+/// opponent controls to its owner's hand.
+pub fn iceridge_serpent() -> CardDefinition {
+    CardDefinition {
+        name: "Iceridge Serpent",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Loxodon Battle Priest — {4}{W} 3/5 Elephant Cleric. At the beginning of
+/// combat on your turn, put a +1/+1 counter on another target creature you
+/// control.
+pub fn loxodon_battle_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Loxodon Battle Priest",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Worthy Cost — {B} Sorcery. As an additional cost, sacrifice a creature.
+/// Exile target creature or planeswalker.
+pub fn worthy_cost() -> CardDefinition {
+    CardDefinition {
+        name: "Worthy Cost",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                to: ZoneDest::Exile,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bearer of Glory — {1}{W} 2/1 Human Soldier. During your turn it has first
+/// strike. {4}{W}: creatures you control get +1/+1 until end of turn.
+pub fn bearer_of_glory() -> CardDefinition {
+    CardDefinition {
+        name: "Bearer of Glory",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, this creature has first strike.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), w()]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Undergrowth Leopard — {1}{G} 2/2 Cat with vigilance. {1}, Sacrifice this:
+/// destroy target artifact or enchantment.
+pub fn undergrowth_leopard() -> CardDefinition {
+    CardDefinition {
+        name: "Undergrowth Leopard",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Summit Intimidator — {3}{R} 4/3 Yeti with reach. ETB: target creature can't
+/// block this turn.
+pub fn summit_intimidator() -> CardDefinition {
+    CardDefinition {
+        name: "Summit Intimidator",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Yeti], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::CantBlock,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Underfoot Underdogs — {2}{R} 1/2 Goblin Warrior. ETB: create a 1/1 red
+/// Goblin. {1}, {T}: target creature you control with power 2 or less can't be
+/// blocked this turn.
+pub fn underfoot_underdogs() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Underfoot Underdogs",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Goblin".into(),
+                card_types: vec![CardType::Creature],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Goblin],
+                    ..Default::default()
+                },
+                colors: vec![Color::Red],
+                power: 1,
+                toughness: 1,
+                ..Default::default()
+            },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtMost(2)),
+                ),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rescue Leopard — {2}{R} 4/2 Cat. Whenever it becomes tapped, you may discard
+/// a card. If you do, draw a card.
+pub fn rescue_leopard() -> CardDefinition {
+    CardDefinition {
+        name: "Rescue Leopard",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Discard a card to draw a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Salt Road Packbeast — {5}{W} 4/3 Beast with affinity for creatures. ETB:
+/// draw a card.
+pub fn salt_road_packbeast() -> CardDefinition {
+    CardDefinition {
+        name: "Salt Road Packbeast",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        affinity_filter: Some(SelectionRequirement::Creature),
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Humbling Elder — {U} 1/2 Human Monk with flash. ETB: target creature an
+/// opponent controls gets -2/-0 until end of turn.
+pub fn humbling_elder() -> CardDefinition {
+    CardDefinition {
+        name: "Humbling Elder",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Unsparing Boltcaster — {2}{R} 3/3 Ogre Wizard. ETB: deal 5 damage to target
+/// creature an opponent controls that was dealt damage this turn.
+pub fn unsparing_boltcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Unsparing Boltcaster",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::DealtDamageThisTurn),
+            ),
+            amount: Value::Const(5),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Shocking Sharpshooter — {1}{R} 1/3 Human Archer with reach. Whenever another
+/// creature you control enters, deal 1 damage to target opponent.
+pub fn shocking_sharpshooter() -> CardDefinition {
+    CardDefinition {
+        name: "Shocking Sharpshooter",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Veteran Ice Climber — {1}{U} 1/3 Human Scout with vigilance that can't be
+/// blocked. Whenever it attacks, up to one target player mills cards equal to
+/// its power.
+pub fn veteran_ice_climber() -> CardDefinition {
+    CardDefinition {
+        name: "Veteran Ice Climber",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Unblockable],
+        triggered_abilities: vec![on_attack(Effect::Mill {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Trade Route Envoy — {3}{G} 4/3 Dog Soldier. ETB: draw a card if you control a
+/// creature with a counter on it; otherwise put a +1/+1 counter on this.
+pub fn trade_route_envoy() -> CardDefinition {
+    CardDefinition {
+        name: "Trade Route Envoy",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            else_: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Attuned Hunter — {2}{G} 3/3 Human Ranger with trample. Whenever one or more
+/// cards leave your graveyard during your turn, put a +1/+1 counter on it.
+pub fn attuned_hunter() -> CardDefinition {
+    CardDefinition {
+        name: "Attuned Hunter",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragonologist — {2}{U} 1/3 Human Wizard. ETB: look at the top six cards;
+/// you may put an instant, sorcery, or Dragon card from among them into your
+/// hand, rest on the bottom in a random order. Untapped Dragons you control
+/// have hexproof.
+pub fn dragonologist() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonologist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(6),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+            ),
+            take: None,
+            to_battlefield: false,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Untapped Dragons you control have hexproof.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Dragon)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Untapped),
+                ),
+                keyword: Keyword::Hexproof,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Arashin Sunshield — {3}{W} 3/4 Human Warrior. ETB: exile up to two target
+/// cards from a single graveyard. {W}, {T}: tap target creature.
+pub fn arashin_sunshield() -> CardDefinition {
+    CardDefinition {
+        name: "Arashin Sunshield",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ExileUpToNFromGraveyards { count: Value::Const(2) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[w()]),
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Desperate Measures — {B} Instant. Target creature gets +1/-1 until end of
+/// turn. When it dies this turn, draw two cards.
+pub fn desperate_measures() -> CardDefinition {
+    CardDefinition {
+        name: "Desperate Measures",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::WhenTargetDiesThisTurn {
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                slot: 0,
+            },
+        ]),
+        ..Default::default()
+    }
+}

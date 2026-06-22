@@ -9,6 +9,7 @@
 use super::super::{
     dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
     fastland_etb_conditional_tap, painland, shockland_pay_two_or_tap, tap_add, tap_add_colorless,
+    tri_land,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
@@ -1460,6 +1461,28 @@ pub fn thornwood_falls() -> CardDefinition {
 pub fn wind_scarred_crag() -> CardDefinition {
     dual_land_with("Wind-Scarred Crag", LandType::Mountain, LandType::Plains,
         Color::Red, Color::White, vec![etb_tap_then_gain_one()])
+}
+
+// ── Khans wedge tri-lands (enters tapped, taps for three colors) ────────────
+
+pub fn sandsteppe_citadel() -> CardDefinition {
+    tri_land("Sandsteppe Citadel", Color::White, Color::Black, Color::Green)
+}
+
+pub fn mystic_monastery() -> CardDefinition {
+    tri_land("Mystic Monastery", Color::Blue, Color::Red, Color::White)
+}
+
+pub fn opulent_palace() -> CardDefinition {
+    tri_land("Opulent Palace", Color::Black, Color::Green, Color::Blue)
+}
+
+pub fn nomad_outpost() -> CardDefinition {
+    tri_land("Nomad Outpost", Color::Red, Color::White, Color::Black)
+}
+
+pub fn frontier_bivouac() -> CardDefinition {
+    tri_land("Frontier Bivouac", Color::Green, Color::Blue, Color::Red)
 }
 
 /// Restless Anchorage — W/U. `{1}{W}{U}`: 2/3 flying Bird. Whenever it

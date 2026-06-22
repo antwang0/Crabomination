@@ -63764,3 +63764,284 @@ fn heritage_reclamation_destroys_artifact() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(mox).is_none(), "artifact destroyed");
 }
+
+// ── TDM batch (lands + commons) ─────────────────────────────────────────────
+
+/// Sandsteppe Citadel enters tapped and taps for W, B, or G.
+#[test]
+fn sandsteppe_citadel_enters_tapped_tri_color() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_hand(0, catalog::sandsteppe_citadel());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    let l = g.battlefield_find(land).expect("on battlefield");
+    assert!(l.tapped, "tri-land enters tapped");
+    assert_eq!(l.definition.activated_abilities.len(), 3, "taps for three colors");
+}
+
+/// Twin Bolt deals 2 damage split among up to two targets.
+#[test]
+fn twin_bolt_divides_two_damage() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::twin_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast Twin Bolt across two targets");
+    drain_stack(&mut g);
+    // 1 damage each leaves both 2/2 bears alive but marked.
+    assert_eq!(g.battlefield_find(a).unwrap().damage, 1);
+    assert_eq!(g.battlefield_find(b).unwrap().damage, 1);
+}
+
+/// Cruel Truths surveils, draws two, and loses 2 life.
+#[test]
+fn cruel_truths_draws_two_loses_two() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::swamp()); }
+    let id = g.add_card_to_hand(0, catalog::cruel_truths());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cruel Truths");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "cast -1, draw +2");
+    assert_eq!(g.players[0].life, life_before - 2);
+}
+
+/// Iceridge Serpent bounces an opponent's creature on ETB.
+#[test]
+fn iceridge_serpent_bounces_on_etb() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::iceridge_serpent());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Iceridge Serpent");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "ETB bounced the bear");
+}
+
+/// Worthy Cost sacrifices a creature and exiles a target.
+#[test]
+fn worthy_cost_sacs_then_exiles() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::worthy_cost());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Worthy Cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert!(g.exile.iter().any(|c| c.id == target), "target exiled");
+}
+
+/// Bearer of Glory has first strike only on its controller's turn.
+#[test]
+fn bearer_of_glory_first_strike_on_your_turn() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::bearer_of_glory());
+    g.active_player_idx = 0;
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::FirstStrike), "first strike on your turn");
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::FirstStrike), "no first strike on opp turn");
+}
+
+/// Undergrowth Leopard sacrifices itself to destroy an artifact.
+#[test]
+fn undergrowth_leopard_sacs_to_destroy_artifact() {
+    let mut g = two_player_game();
+    let leopard = g.add_card_to_battlefield(0, catalog::undergrowth_leopard());
+    let mox = g.add_card_to_battlefield(1, catalog::mox_jasper());
+    g.clear_sickness(leopard);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: leopard, ability_index: 0,
+        target: Some(Target::Permanent(mox)), additional_targets: vec![], x_value: None,
+    }).expect("activate sac ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mox).is_none(), "artifact destroyed");
+    assert!(g.battlefield_find(leopard).is_none(), "leopard sacrificed");
+}
+
+/// Summit Intimidator stops a creature from blocking on ETB.
+#[test]
+fn summit_intimidator_grants_cant_block() {
+    let mut g = two_player_game();
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::summit_intimidator());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Summit Intimidator");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&crate::card::Keyword::CantBlock), "target can't block");
+}
+
+/// Underfoot Underdogs mints a Goblin token on ETB.
+#[test]
+fn underfoot_underdogs_mints_goblin() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::underfoot_underdogs());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Underfoot Underdogs");
+    drain_stack(&mut g);
+    let goblins = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Goblin").count();
+    assert_eq!(goblins, 1, "one 1/1 Goblin minted");
+}
+
+/// Salt Road Packbeast's affinity reduces its cost by creatures you control.
+#[test]
+fn salt_road_packbeast_affinity_reduces_cost() {
+    let mut g = two_player_game();
+    // Two creatures → {5}{W} becomes {3}{W}.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::plains()); }
+    let id = g.add_card_to_hand(0, catalog::salt_road_packbeast());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("affinity discounts to {3}{W}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "packbeast resolved");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "ETB drew a card");
+}
+
+/// Humbling Elder weakens an opponent's creature on ETB.
+#[test]
+fn humbling_elder_shrinks_opp_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::humbling_elder());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Humbling Elder (flash)");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(victim).unwrap().power, 0, "bear at -2/-0 → 0 power");
+}
+
+/// Unsparing Boltcaster only burns a creature already dealt damage this turn.
+#[test]
+fn unsparing_boltcaster_burns_damaged_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.battlefield_find_mut(victim).unwrap().dealt_damage_this_turn = true;
+    let id = g.add_card_to_hand(0, catalog::unsparing_boltcaster());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Unsparing Boltcaster");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "5 damage finished the angel");
+}
+
+/// Veteran Ice Climber mills on attack equal to its power.
+#[test]
+fn veteran_ice_climber_mills_on_attack() {
+    let mut g = two_player_game();
+    let climber = g.add_card_to_battlefield(0, catalog::veteran_ice_climber()); // 1/3
+    g.clear_sickness(climber);
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let gy_before = g.players[1].graveyard.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: climber, target: AttackTarget::Player(1),
+    }])).expect("declare attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 1, "milled 1 (power)");
+}
+
+/// Dragonologist grants untapped Dragons you control hexproof.
+#[test]
+fn dragonologist_grants_dragon_hexproof() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragonologist());
+    let dragon = g.add_card_to_battlefield(0, catalog::pearl_lake_warden()); // a Dragon
+    assert!(g.computed_permanent(dragon).unwrap().keywords.contains(&crate::card::Keyword::Hexproof), "untapped Dragon hexproof");
+    g.battlefield_find_mut(dragon).unwrap().tapped = true;
+    assert!(!g.computed_permanent(dragon).unwrap().keywords.contains(&crate::card::Keyword::Hexproof), "tapped Dragon loses it");
+}
+
+/// Trade Route Envoy draws when you control a counter-bearing creature.
+#[test]
+fn trade_route_envoy_draws_with_counter_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::trade_route_envoy());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Trade Route Envoy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "ETB drew a card");
+}
+
+/// Desperate Measures grows-then-shrinks a creature and draws on its death.
+#[test]
+fn desperate_measures_draws_when_target_dies() {
+    let mut g = two_player_game();
+    // A 1/1 dies to the -1 toughness.
+    let pit = g.add_card_to_battlefield(0, catalog::dragon_sniper()); // 1/1
+    for _ in 0..3 { g.add_card_to_library(0, catalog::swamp()); }
+    let id = g.add_card_to_hand(0, catalog::desperate_measures());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(pit)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Desperate Measures");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pit).is_none(), "1/1 dies to +1/-1");
+    // cast -1, then draw 2 on death → net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
+}
