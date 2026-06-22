@@ -1804,7 +1804,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                 continue;
             }
             for opp in 0..state.players.len() {
-                if state.same_team(opp, seat) || state.players[opp].life > *n as i32 {
+                if state.same_team(opp, seat) || state.players[opp].life > *n {
                     continue;
                 }
                 let action = GameAction::ActivateAbility {

@@ -61896,7 +61896,6 @@ fn cr_702_156_ravenous_counters_and_draw() {
     g.players[0].add_to_library_top(lib, catalog::grizzly_bears());
     g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
     g.players[0].mana_pool.add_colorless(7); // {X=5}{2}
-    let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: card, target: None, additional_targets: vec![], mode: None, x_value: Some(5),
     }).expect("cast Tyrant Guard for X=5");

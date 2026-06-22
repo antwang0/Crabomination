@@ -1942,14 +1942,13 @@ impl GameState {
                 .contains(&crate::card::Keyword::Changeling);
             for sa in &src.definition.static_abilities {
                 match &sa.effect {
-                    StaticEffect::ChosenTypeEntersWithCounter { kind } => {
+                    StaticEffect::ChosenTypeEntersWithCounter { kind }
                         if src
                             .chosen_creature_type
                             .is_some_and(|ct| entering_types.contains(&ct) || changeling)
-                        {
+                        => {
                             specs.push(*kind);
                         }
-                    }
                     StaticEffect::TypeEntersWithCounter { creature_type, kind }
                         if entering_types.contains(creature_type) || changeling =>
                     {
@@ -9849,11 +9848,10 @@ pub(crate) fn can_block_attacker_computed(
     // attacker's filter keywords.
     for kw in attacker_kws {
         match kw {
-            Keyword::CantBeBlockedExceptBy(filter) => {
-                if !blocker_matches_block_filter(blocker, blocker_computed, filter) {
+            Keyword::CantBeBlockedExceptBy(filter)
+                if !blocker_matches_block_filter(blocker, blocker_computed, filter) => {
                     return false;
                 }
-            }
             Keyword::CantBeBlockedBy(filter)
                 if blocker_matches_block_filter(blocker, blocker_computed, filter) =>
             {

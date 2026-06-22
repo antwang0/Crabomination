@@ -418,14 +418,13 @@ pub fn companion_restriction_met(
 
     // Deck-wide clauses first.
     match rule {
-        CompanionRule::DeckSizeAtLeastOverMinimum(extra) => {
-            if (deck.len() as u32) < min_deck_size + extra {
+        CompanionRule::DeckSizeAtLeastOverMinimum(extra)
+            if (deck.len() as u32) < min_deck_size + extra => {
                 return Err(DeckError::CompanionRestriction {
                     companion: companion.name,
                     card_name: "deck size",
                 });
             }
-        }
         CompanionRule::Singleton => {
             let mut seen: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
             for c in deck {
