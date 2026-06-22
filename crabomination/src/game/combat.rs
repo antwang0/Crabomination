@@ -2142,11 +2142,14 @@ impl GameState {
         // Phase 1.5: walk all battlefield permanents for `YourControl`-scope
         // combat-damage triggers. This handles "whenever a creature you
         // control deals combat damage to a player" listeners (e.g.,
-        // Quandrix Echocrasher b171). The listener's controller must
-        // match the attacker's controller.
+        // Quandrix Echocrasher b171, Enduring Curiosity). The listener's
+        // controller must match the attacker's controller. The source itself
+        // counts ("a creature you control" includes the dealer) — its
+        // `YourControl` trigger isn't gathered in Phase 1 (SelfSource-only),
+        // so it would otherwise never fire.
         if let Some(atk_ctrl) = attacker_controller {
             for c in &self.battlefield {
-                if c.id == source || c.controller != atk_ctrl {
+                if c.controller != atk_ctrl {
                     continue;
                 }
                 for t in &c.definition.triggered_abilities {

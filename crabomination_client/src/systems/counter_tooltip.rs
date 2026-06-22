@@ -590,6 +590,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantBeBlockedExceptByN(_) => "Can't be blocked except by that many or more creatures.",
         K::CantBeBlockedExceptBy(_) => "Can only be blocked by creatures matching the named quality.",
         K::CantBeBlockedBy(_) => "Can't be blocked by creatures matching the named quality.",
+        K::CantBeBlockedByPowerLess => "Can't be blocked by creatures with less power than it.",
+        K::CantBeBlockedByPowerAtMost(_) => "Can't be blocked by creatures with that much power or less.",
         K::Changeling => "Is every creature type.",
         K::Flash => "You may cast it any time you could cast an instant.",
         K::Flanking => "Creatures without flanking blocking it get -1/-1 until end of turn.",
@@ -806,6 +808,8 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBeBlockedBy(_) => "Can't be blocked by certain creatures".into(),
         K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature".into(),
         K::CantBeBlockedExceptByN(n) => format!("Can't be blocked except by {n} or more creatures"),
+        K::CantBeBlockedByPowerLess => "Can't be blocked by creatures with less power".into(),
+        K::CantBeBlockedByPowerAtMost(n) => format!("Can't be blocked by creatures with power {n} or less"),
         K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
         K::Suspend(n, cost) => format!("Suspend {n}—{}", cost.summary()),
         // Cost/count-bearing keywords that otherwise fell through to the raw

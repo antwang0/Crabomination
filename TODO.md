@@ -8,6 +8,32 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 outranks everything else in this file** — its P0 tier is game-deciding or
 state-corrupting in ordinary play.
 
+## Discovered follow-ups — `decks::recent` batch
+
+Card riders deliberately approximated/omitted this batch (each card otherwise
+plays its headline pattern):
+- **The Ring tempts you / Ring-bearer** (LTR) — not yet modeled; see
+  FEATURE_ROADMAP Tier 4. Per-player ring level (1–4) + designated Ring-bearer
+  with cumulative attack/blocked/combat-damage granted abilities.
+- **Vaultborn Tyrant** — the death token-copy "is an artifact in addition" is
+  dropped (`CreateTokenCopyOf` has no `extra_card_types`; add one to fix).
+- **Questing Beast** — "combat damage by your creatures can't be prevented" and
+  the deals-damage-→-planeswalker redirect riders omitted.
+- **The Necrobloom** — the 7-different-named-lands Zombie upgrade and the
+  "lands in your graveyard have dredge 2" grant omitted.
+- **Lightning Axe / Demand Answers** — modal additional costs ("discard OR pay
+  {5}" / "sac an artifact OR discard") collapsed to the discard branch, taken at
+  resolution (Deadly-Dispute style). A general modal-additional-cost layer would
+  make these faithful.
+- **Tail Swipe** — the "if cast during your main phase, +1/+1 first" rider
+  omitted (no cast-phase predicate on the fight).
+- **Optimistic Scavenger** — the "fully unlock a Room" half of Eerie omitted.
+- Not implemented for want of a mechanic: **Spree** (Insatiable Avarice, Three
+  Steps Ahead — cast-time per-mode additional costs), **Intensity** (Static
+  Discharge), **Channel** (Touch the Spirit Realm's Channel ability),
+  **Hardened Scales** (a +1/+1-counter-addition replacement static),
+  **Galvanic Discharge** (pay-any-amount-of-energy damage).
+
 ## Engine correctness audit — 2026-06-11
 
 Five-reviewer deep pass over the engine core (`game/mod.rs`, `effects/`,

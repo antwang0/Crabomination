@@ -32,6 +32,14 @@ least one test in `crabomination/src/tests/modern.rs`.
 All Modern-supplement cards are wired (including Karn, Scion of Urza and
 Tezzeret, Cruel Captain, on real oracle text).
 
+`catalog::sets::decks::recent` adds recent-set staples (MH3/BLB/DSK/OTJ/FDN/…)
+— Questing Beast, Vaultborn Tyrant, Emberheart Challenger, Eldrazi Linebreaker,
+Beza, No More Lies, Tyvar's Stand, Stock Up, Gird for Battle, … each with a
+test in `tests/recent.rs`. This batch added the fixed-threshold evasion keyword
+`CantBeBlockedByPowerAtMost`, fixed `YourControl` combat-damage triggers firing
+for the dealing creature itself, and the `AnOpponentHasMoreCardsInHand`
+predicate.
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

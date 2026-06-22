@@ -239,7 +239,10 @@ Each a small targeted feature; sweep batch by batch.
   ✅ Job Select (CR 702.182 — living-weapon-shaped Equipment minting a 1/1 Hero),
   ✅ Renew (graveyard-exile activated ability via `from_graveyard` +
     `exile_self_cost`), ✅ Mobilize / Mobilize X (`shortcut::mobilize`,
-    `mobilize_value`), ✅ Seek (CR 701.52 — `Effect::Seek`, random library pick).
+    `mobilize_value`), ✅ Seek (CR 701.52 — `Effect::Seek`, random library pick),
+    ⏳ **The Ring tempts you / Ring-bearer** (LTR — per-player ring level 1–4 +
+    designated Ring-bearer with cumulative level abilities; needs new state, an
+    evasion keyword, and attack/blocked/combat-damage granted triggers).
 - **Counter / +1+1 matters:** ✅ Proliferate, Bolster, Adapt, Training, Evolve,
   Mentor, Modular, Graft, Outlast, Renown, Bloodthirst, Monstrosity, Devour,
   Amass — all via `shortcut::*` builders.
@@ -292,7 +295,8 @@ Each a small targeted feature; sweep batch by batch.
   post-main insertion (Relentless Assault).
 - 🟡 **"Must/can't attack/block" restrictions** — `Keyword::{CantAttack,CantBlock,
   AttacksAlone,MustBeBlocked,AllMustBlock,MustAttack,MustBlock}`, Goad;
-  power-based evasion (`CantBeBlockedByPowerLess` — Formation Breaker);
+  power-based evasion (`CantBeBlockedByPowerLess` — Formation Breaker;
+  fixed-threshold `CantBeBlockedByPowerAtMost(n)` — Questing Beast);
   turn-scoped defender-bypass grant (`AttackDespiteDefenderThisTurn` — Krotiq
   Nestguard). Open: granted must-attack with future-turn duration, multiplayer
   goad-target clause, cost-to-block (509.1d-f).

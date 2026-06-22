@@ -31,6 +31,9 @@ mod tests;
 #[path = "../tests/modern.rs"]
 mod tests_modern;
 #[cfg(test)]
+#[path = "../tests/recent.rs"]
+mod tests_recent;
+#[cfg(test)]
 #[path = "../tests/sos.rs"]
 mod tests_sos;
 #[cfg(test)]
@@ -9894,6 +9897,13 @@ pub(crate) fn can_block_attacker_computed(
     if attacker_kws.contains(&Keyword::CantBeBlockedByPowerLess)
         && blocker_computed.power < attacker_power
     {
+        return false;
+    }
+    // Questing Beast (CR 509.1b): can't be blocked by creatures with power N
+    // or less — a fixed threshold, not relative to the attacker's power.
+    if attacker_kws.iter().any(|k| {
+        matches!(k, Keyword::CantBeBlockedByPowerAtMost(n) if blocker_computed.power <= *n as i32)
+    }) {
         return false;
     }
     // Fear (CR 702.36): can only be blocked by artifact creatures and/or

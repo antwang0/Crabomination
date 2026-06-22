@@ -94,6 +94,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantBeBlockedExceptBy(_) | CantBeBlockedBy(_) => "Eva",
         // "Can't be blocked by more than one creature" (anti-gang-block).
         CantBeBlockedByMoreThanOne => "1Blk",
+        // Power-gated evasion — "can't be blocked by creatures with power
+        // less than this" (Formation Breaker) / "power N or less" (Questing
+        // Beast).
+        CantBeBlockedByPowerLess | CantBeBlockedByPowerAtMost(_) => "Eva",
         MustBeBlocked => "Lure",
         // "Attacks each combat if able" (Impending Doom, The Akroan War II) —
         // a board-relevant combat compulsion.

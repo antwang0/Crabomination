@@ -870,6 +870,11 @@ pub enum Keyword {
     /// computed power being below the attacker's. Enforced in
     /// `can_block_attacker_computed` (CR 509.1b).
     CantBeBlockedByPowerLess,
+    /// "Can't be blocked by creatures with power N or less" (Questing Beast —
+    /// N=2). Fixed-threshold cousin of `CantBeBlockedByPowerLess`; gates on the
+    /// blocker's computed power being `<= N`. Enforced in
+    /// `can_block_attacker_computed`.
+    CantBeBlockedByPowerAtMost(u32),
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each

@@ -9,8 +9,11 @@
 //! Ward—pay-life-equal-to-power (CR 702.21), once-each-turn triggers
 //! (CR 603.3d), Defender + conditional attack override (CR 702.12),
 //! delayed "when you cast your next spell" triggers (CR 603.7e), counters
-//! ceasing to exist on a zone change (CR 122.2), Gift (CR 702.165), and
-//! Survival (CR 702.180).
+//! ceasing to exist on a zone change (CR 122.2), Gift (CR 702.165),
+//! Survival (CR 702.180), the fixed-threshold power block restriction
+//! (CR 509.1b — Questing Beast), "lose half your life, rounded up"
+//! (CR 120.6), and "up to N target" spells accepting fewer targets
+//! (CR 601.2c).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -3775,4 +3778,69 @@ fn whirlwing_grants_sorcery_flash_timing() {
     assert!(g.stack.iter().any(|si| matches!(si,
         crate::game::StackItem::Spell { card, .. } if card.id == bolt)),
         "the sorcery is on the stack");
+}
+
+// ── CR 120.6 — "loses half their life, rounded up" ─────────────────────────────
+
+/// A "lose half your life, rounded up" effect rounds an odd total upward
+/// (CR 120.6 / 119.5). Unstoppable Slasher's combat trigger drives it.
+#[test]
+fn cr_120_6_lose_half_life_rounds_up() {
+    let mut g = two_player_game();
+    let slasher = g.add_card_to_battlefield(0, catalog::unstoppable_slasher());
+    g.clear_sickness(slasher);
+    g.players[1].life = 15;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: slasher, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    // 15 - 2 (combat) = 13; half rounded up = 7; 13 - 7 = 6.
+    assert_eq!(g.players[1].life, 6, "odd life halved and rounded up");
+}
+
+// ── CR 509.1b — fixed-threshold "can't be blocked by power N or less" ──────────
+
+/// CR 509.1b — Questing Beast's evasion gates on the blocker's *computed*
+/// power against a fixed threshold (2), not the attacker's power.
+#[test]
+fn cr_509_1b_power_threshold_block_restriction() {
+    let mut g = two_player_game();
+    let qb = g.add_card_to_battlefield(0, catalog::questing_beast());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // power 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // power 4
+    assert!(!g.blocker_can_block_attacker(small, qb), "power-2 blocker is illegal");
+    assert!(g.blocker_can_block_attacker(big, qb), "power-4 blocker is legal");
+}
+
+// ── CR 601.2c — "up to N target" spells accept fewer targets ───────────────────
+
+/// CR 601.2c — a "put a +1/+1 counter on each of up to two target creatures"
+/// spell (Gird for Battle) is legal with a single target and still resolves.
+#[test]
+fn cr_601_2c_up_to_two_targets_accepts_one() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::gird_for_battle());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with a single target");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "the single chosen creature got its counter"
+    );
 }

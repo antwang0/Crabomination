@@ -923,6 +923,10 @@ pub enum Predicate {
     /// creatures. Linvala, the Preserver's second ETB ("if an opponent
     /// controls more creatures than you, create a 3/3 Angel").
     AnOpponentControlsMoreCreatures,
+    /// True if any opponent of `ctx.controller` has strictly more cards in
+    /// hand. Beza, the Bounding Spring's "draw a card if an opponent has more
+    /// cards in hand than you".
+    AnOpponentHasMoreCardsInHand,
     /// True when exactly one creature is attacking this combat — the
     /// CR 702.83a "attacks alone" condition that gates Exalted. Read
     /// from `GameState.attacking.len() == 1`. Outside a combat with

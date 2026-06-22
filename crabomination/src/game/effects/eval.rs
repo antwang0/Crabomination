@@ -1052,6 +1052,13 @@ impl GameState {
                         && count_creatures(i, self) > your_creatures
                 })
             }
+            Predicate::AnOpponentHasMoreCardsInHand => {
+                let you = ctx.controller;
+                let your_hand = self.players[you].hand.len();
+                self.players.iter().enumerate().any(|(i, p)| {
+                    i != you && !p.eliminated && !self.same_team(i, you) && p.hand.len() > your_hand
+                })
+            }
             Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
             Predicate::RevoltActive { who } => self

@@ -949,15 +949,25 @@ fn decide_self_discard(
         .iter()
         .filter(|c| c.controller == seat && c.definition.is_land())
         .count();
+    // We want about five total land sources; only that many lands in hand are
+    // "needed". Excess lands are pitched before spells even while mana-light —
+    // holding a fistful of duplicate lands shouldn't cost us our spells, and a
+    // flooded bot (≥5 in play) pitches every spare land first.
+    let mut lands_still_wanted = 5usize.saturating_sub(lands_in_play);
     // Score each offered card — LOWER is pitched sooner.
     let mut scored: Vec<(i64, crate::card::CardId)> = hand
         .iter()
         .filter_map(|(id, _)| {
             let card = state.players[seat].hand.iter().find(|c| c.id == *id)?;
             let score = if card.definition.is_land() {
-                // Surplus lands are worth the least; a land we still need is
-                // worth the most.
-                if lands_in_play >= 5 { -100 } else { 1_000 }
+                // Keep lands up to the buffer; surplus lands are worth the
+                // least so they're pitched first.
+                if lands_still_wanted > 0 {
+                    lands_still_wanted -= 1;
+                    1_000
+                } else {
+                    -100
+                }
             } else {
                 // Among spells, keep the cheap (castable) ones; pitch the
                 // most expensive first.
@@ -5036,6 +5046,31 @@ mod stack_response_tests {
                     "unblockable attacker swings past a bigger blocker");
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// With only a couple of lands in play but a fistful of duplicate lands in
+    /// hand, a forced discard pitches a surplus land rather than a real spell.
+    #[test]
+    fn bot_discard_pitches_surplus_land_not_a_spell() {
+        let mut g = two_player_game();
+        // 2 lands in play → wants ~4 more; a 5th land in hand is surplus.
+        for _ in 0..2 { g.add_card_to_battlefield(0, catalog::forest()); }
+        let mut hand: Vec<(crate::card::CardId, String)> = Vec::new();
+        for _ in 0..5 {
+            let id = g.add_card_to_hand(0, catalog::forest());
+            hand.push((id, "Forest".to_string()));
+        }
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        hand.push((bear, "Grizzly Bears".to_string()));
+        let ans = decide_self_discard(&g, 0, &hand, 1);
+        match ans {
+            crate::decision::DecisionAnswer::Discard(ids) => {
+                assert_eq!(ids.len(), 1);
+                let pitched = g.players[0].hand.iter().find(|c| c.id == ids[0]).unwrap();
+                assert!(pitched.definition.is_land(), "pitched a surplus land, kept the spell");
+            }
+            other => panic!("expected Discard, got {:?}", other),
         }
     }
 }
