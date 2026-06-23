@@ -562,6 +562,61 @@ pub fn bloodcrazed_socialite() -> CardDefinition {
     }
 }
 
+/// Intrepid Adversary — {1}{W} 3/1 Human Scout. Lifelink. ETB pay {1}{W} any
+/// number of times for that many valor counters; creatures you control get
+/// +1/+1 for each valor counter on it. (The any-number ETB payment is modeled
+/// as Multikicker — paid at cast time — which is functionally identical here.)
+pub fn intrepid_adversary() -> CardDefinition {
+    use crate::card::{CounterType, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Intrepid Adversary",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink, Keyword::Multikicker(cost(&[generic(1), w()]))],
+        enters_with_counters: Some((CounterType::Valor, Value::TimesKicked)),
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1 for each valor counter on this creature.",
+            effect: StaticEffect::PumpPTPerCounterOnSource {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::Valor,
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloodthirsty Adversary — {1}{R} 2/2 Vampire. Haste. ETB pay {2}{R} any
+/// number of times for that many +1/+1 counters (modeled as Multikicker). The
+/// "exile up to that many I/S of MV ≤3 from your graveyard and copy them" value
+/// rider is deferred (TODO.md).
+pub fn bloodthirsty_adversary() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Bloodthirsty Adversary",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Multikicker(cost(&[generic(2), r()]))],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::TimesKicked)),
+        ..Default::default()
+    }
+}
+
 /// Diregraf Scavenger — {3}{B} 2/3 Zombie Bear. Deathtouch. ETB exile up to
 /// one target card from a graveyard; if a creature card was exiled this way,
 /// each opponent loses 2 life and you gain 2.

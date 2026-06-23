@@ -116,9 +116,13 @@ Real cards confirmed absent, deferred for want of a mechanic:
   whole DSK/BLB Class cycle) — need a Class type with sorcery-speed pay-to-
   level-up (CR 714-adjacent) layering on abilities per level band. `level_bands`
   exists for Leveler *creatures* only. Roadmap Tier 3 "Classes/Cases/Backgrounds".
-- **Intrepid Adversary** (and the MID/VOW Adversary cycle) — needs a "pay {cost}
-  any number of times" repeatable ETB payment plus a counter-scaled team anthem
-  (`+1/+1 for each valor counter on this`). Neither primitive exists.
+- **Adversary cycle** — the "pay {cost} any number of times" ETB payment is
+  modeled as **Multikicker** (paid at cast, functionally identical for these).
+  Intrepid Adversary ✅ (`CounterType::Valor` + `PumpPTPerCounterOnSource` team
+  anthem) and Bloodthirsty Adversary ✅ (kick-scaled +1/+1) ship. Remaining:
+  Bloodthirsty's "exile up to that many I/S of MV ≤3 from your graveyard and
+  copy them, cast free" value rider; the other three Adversaries (Dauntless,
+  Quilled, Spineless) still want their kick-scaled payoffs.
 - **Valgavoth, Terror Eater** — Ward—Sac 3 ships (`WardCost::SacrificePermanents`),
   but the opponent-graveyard→exile replacement and "play exiled cards paying life
   = MV" recursion engine are unbuilt.

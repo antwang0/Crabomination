@@ -5050,3 +5050,35 @@ fn diregraf_scavenger_no_drain_on_noncreature() {
     assert_eq!(g.players[1].life, 20, "no drain");
     assert_eq!(g.players[0].life, 20, "no gain");
 }
+
+/// Intrepid Adversary's valor anthem scales the whole team by its valor
+/// counters; its enters-with spec reads the multikicker count.
+#[test]
+fn intrepid_adversary_valor_anthem_scales() {
+    use crate::card::CounterType;
+    use crate::effect::Value;
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let adv = g.add_card_to_battlefield(0, catalog::intrepid_adversary()); // 3/1
+    // Two valor counters (as if kicked twice).
+    g.battlefield_find_mut(adv).unwrap().counters.insert(CounterType::Valor, 2);
+    // +2/+2 to every creature you control, including Intrepid Adversary itself.
+    assert_eq!(g.computed_permanent(ally).map(|c| (c.power, c.toughness)), Some((4, 4)));
+    assert_eq!(g.computed_permanent(adv).map(|c| (c.power, c.toughness)), Some((5, 3)));
+    // Counter count drives the multikicker-fed enters-with spec.
+    assert_eq!(
+        catalog::intrepid_adversary().enters_with_counters,
+        Some((CounterType::Valor, Value::TimesKicked))
+    );
+}
+
+/// Bloodthirsty Adversary has haste, multikicker, and a kick-scaled +1/+1 spec.
+#[test]
+fn bloodthirsty_adversary_multikicker_counters() {
+    use crate::card::CounterType;
+    use crate::effect::Value;
+    let d = catalog::bloodthirsty_adversary();
+    assert!(d.keywords.contains(&Keyword::Haste));
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Multikicker(_))));
+    assert_eq!(d.enters_with_counters, Some((CounterType::PlusOnePlusOne, Value::TimesKicked)));
+}

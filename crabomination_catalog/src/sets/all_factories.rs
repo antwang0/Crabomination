@@ -2727,6 +2727,8 @@ static DECKS: &[Factory] = &[
     super::decks::predators_howl,
     super::decks::ardenvale_tactician,
     super::decks::bloodcrazed_socialite,
+    super::decks::intrepid_adversary,
+    super::decks::bloodthirsty_adversary,
     super::decks::diregraf_scavenger,
     super::decks::gut_true_soul_zealot,
     super::decks::vampires_kiss,

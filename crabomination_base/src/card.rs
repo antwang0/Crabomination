@@ -346,6 +346,10 @@ pub enum CounterType {
     /// Oil counter — a generic resource counter on Phyrexian permanents,
     /// spent by activated abilities (Glistener Seer, Migloz).
     Oil,
+    /// Valor counter — the MID/VOW Adversary cycle's "pay-any-number-of-times"
+    /// counter, scaling a `PumpPTPerCounterOnSource` team anthem (Intrepid
+    /// Adversary).
+    Valor,
 }
 
 /// Every zone a card can occupy.
