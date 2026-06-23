@@ -12,6 +12,18 @@ state-corrupting in ordinary play.
 
 Card riders deliberately approximated/omitted this batch (each card otherwise
 plays its headline pattern):
+- **Screaming Nemesis** — the "that player can't gain life for the rest of the
+  game" rider is omitted (needs a permanent per-player lifegain lock; only the
+  turn-scoped `Effect::LifeGainLockThisTurn` exists). The damage-redirect ships.
+- **Lumbering Worldwagon / `*`-power Vehicles** — want a `DynamicPt` whose
+  *power* tracks a count (lands controlled) while *toughness* stays fixed;
+  `LandsControlled` sets both. A `BasePtWithDynamicPower` variant would unblock.
+- **Tarrian's Soulcleaver** — equip-granted "whenever another artifact/creature
+  is put into a graveyard, counter the equipped creature" needs an
+  `EquipBonus.triggered_abilities` entry keyed on a non-SelfSource gy-put event;
+  unbuilt.
+- **Cache Grab** — "mill four, then put a permanent card milled this way into
+  your hand" wants a mill-then-pick-from-milled primitive; unbuilt.
 - **`Effect::VillainousChoice` / `Effect::TimeTravel` UI** — both resolve via a
   bot heuristic (lesser-self-harm option / advance own suspended cards); per-
   object UI prompting for a `wants_ui` player is a follow-up. No real card wires

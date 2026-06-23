@@ -264,7 +264,7 @@ pub(crate) fn event_matches_spec(
                 .or_else(|| state.died_card_snapshots.get(&target).map(|c| c.controller))
                 // A creature that left without dying is gone from every zone;
                 // its last controller rides the event (Dour Port-Mage).
-                .or_else(|| match event {
+                .or(match event {
                     GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
                     _ => None,
                 });
