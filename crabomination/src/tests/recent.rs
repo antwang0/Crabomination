@@ -2818,3 +2818,40 @@ fn cogwork_wrestler_etb_shrinks_foe() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(foe).map(|c| c.power), Some(1), "-2/-0 applied");
 }
+
+/// Crocodile of the Crossing puts a -1/-1 counter on a creature you control.
+#[test]
+fn crocodile_of_the_crossing_etb_counter() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.move_card_to_battlefield_for_test(0, catalog::crocodile_of_the_crossing());
+    drain_stack(&mut g);
+    // Auto-target picks a creature you control; with two, either works — assert
+    // the total -1/-1 counters on your board is 1.
+    let total: u32 = g.battlefield.iter().filter(|c| c.controller == 0)
+        .map(|c| c.counters.get(&CounterType::MinusOneMinusOne).copied().unwrap_or(0)).sum();
+    assert_eq!(total, 1);
+    let _ = mine;
+}
+
+/// Topiary Stomper ramps a basic land onto the battlefield tapped.
+#[test]
+fn topiary_stomper_ramps() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    g.move_card_to_battlefield_for_test(0, catalog::topiary_stomper());
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before + 1, "fetched a basic onto the battlefield");
+}
+
+/// Bakersbane Duo makes a Food on entry.
+#[test]
+fn bakersbane_duo_makes_food() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::bakersbane_duo());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"));
+}

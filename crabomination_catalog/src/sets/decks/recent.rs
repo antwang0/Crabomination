@@ -4613,3 +4613,84 @@ pub fn cogwork_wrestler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Crocodile of the Crossing — {3}{G} 5/4 Crocodile. Haste. When it enters, put
+/// a -1/-1 counter on target creature you control.
+pub fn crocodile_of_the_crossing() -> CardDefinition {
+    CardDefinition {
+        name: "Crocodile of the Crossing",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Crocodile], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::MinusOneMinusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Topiary Stomper — {1}{G}{G} 4/4 Plant Dinosaur. Vigilance. When it enters,
+/// search your library for a basic land and put it onto the battlefield tapped.
+/// (The "can't attack or block unless you control seven or more lands"
+/// restriction is omitted.)
+pub fn topiary_stomper() -> CardDefinition {
+    CardDefinition {
+        name: "Topiary Stomper",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bakersbane Duo — {1}{G} 2/2 Squirrel Raccoon. When it enters, create a Food
+/// token. Whenever you expend 4, it gets +1/+1 until end of turn.
+pub fn bakersbane_duo() -> CardDefinition {
+    CardDefinition {
+        name: "Bakersbane Duo",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Raccoon],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::food_token(),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Expend, EventScope::YourControl)
+                    .with_filter(Predicate::ExpendReached(4)),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
