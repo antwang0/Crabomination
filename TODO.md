@@ -12,6 +12,17 @@ state-corrupting in ordinary play.
 
 Card riders deliberately approximated/omitted this batch (each card otherwise
 plays its headline pattern):
+- **`Effect::VillainousChoice` / `Effect::TimeTravel` UI** — both resolve via a
+  bot heuristic (lesser-self-harm option / advance own suspended cards); per-
+  object UI prompting for a `wants_ui` player is a follow-up. No real card wires
+  VillainousChoice yet (Sycorax Commander, Ensnared by the Mara want it).
+- **Leaves-the-battlefield-without-dying trigger** — no event yet, so Dour
+  Port-Mage's draw rider and Three Tree Scribe are omitted/unbuilt. A
+  `GameEvent::LeftBattlefieldWithoutDying` would unblock both.
+- **Krydle of Baldur's Gate** — the attack pay-{2}-for-unblockable rider is
+  omitted (wants a `MayPay`-on-attack); the combat-damage drain ships.
+- **Thornplate Intimidator** — its "target opponent" Punisher is modeled as
+  each opponent (1v1-faithful; multiplayer hits all opponents).
 - **The Ring tempts you / Ring-bearer** (LTR) — not yet modeled; see
   FEATURE_ROADMAP Tier 4. Per-player ring level (1–4) + designated Ring-bearer
   with cumulative attack/blocked/combat-damage granted abilities.
