@@ -317,8 +317,11 @@ Each a small targeted feature; sweep batch by batch.
   power-based evasion (`CantBeBlockedByPowerLess` — Formation Breaker;
   fixed-threshold `CantBeBlockedByPowerAtMost(n)` — Questing Beast);
   turn-scoped defender-bypass grant (`AttackDespiteDefenderThisTurn` — Krotiq
-  Nestguard). Open: granted must-attack with future-turn duration, multiplayer
-  goad-target clause, cost-to-block (509.1d-f).
+  Nestguard); count-gated attack+block (`CantAttackOrBlockUnlessYouControlCount`
+  — Topiary Stomper's "unless you control seven or more lands", honored in
+  combat, affordances, bot, and the legal-blocker gate). Open: granted
+  must-attack with future-turn duration, multiplayer goad-target clause,
+  cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ✅ **Goad**, **Lure**, **Provoke**, **Ninjutsu swap**.
 

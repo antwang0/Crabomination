@@ -5004,6 +5004,23 @@ impl GameState {
         {
             return false;
         }
+        // "Can't block unless you control N+ [filter]" (Topiary Stomper).
+        if let Some((req, min)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
+            Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min } => {
+                Some((filter.clone(), *min))
+            }
+            _ => None,
+        }) {
+            let owner = blocker.controller;
+            let n = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == owner && self.evaluate_requirement_on_card(&req, c, owner))
+                .count();
+            if (n as u32) < min {
+                return false;
+            }
+        }
         let atk_cp = computed.iter().find(|c| c.id == attacker_id);
         let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
         let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);

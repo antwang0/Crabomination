@@ -1861,6 +1861,15 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
+- ⏳ **Per-color mana-spent tracking** (unblocks Adamant, CR 702.137; and any
+  "if N mana of one color was spent" rider). `ConvergedValue` tracks *distinct*
+  colors but not per-color counts; `mana_spent` is a bare `u32`. Thread a
+  per-color breakdown from `PaymentReceipt` (`pool_before` − post-pay pool) onto
+  the spell stack item + `EffectContext`, then add `Predicate::ManaSpentOfColorAtLeast`.
+- ⏳ **Missing keyword mechanics:** Ripple (CR 702.20 — reveal-top-N, cast
+  same-named free), Haunt (CR 702.55), Sunburst-on-noncreature charge counters
+  (the +1/+1 creature path ships via `Value::ConvergedValue`).
+
 - ✅ **Mutate (CR 702.140).** Shipped: `CardDefinition.mutate: Option<ManaCost>`,
   `GameAction::CastMutate { card_id, target, on_top }`, `CardInstance.mutate_stack`
   (component cards top-to-bottom; live `definition` = union of the top card's

@@ -2890,6 +2890,20 @@ fn topiary_stomper_needs_seven_lands_to_attack() {
         .expect("seven lands → can attack");
 }
 
+/// Topiary Stomper can't block until you control seven lands either.
+#[test]
+fn topiary_stomper_needs_seven_lands_to_block() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let stomper = g.add_card_to_battlefield(0, catalog::topiary_stomper());
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    assert!(!g.blocker_can_block_attacker(stomper, attacker), "six lands → can't block");
+    g.add_card_to_battlefield(0, catalog::forest());
+    assert!(g.blocker_can_block_attacker(stomper, attacker), "seven lands → can block");
+}
+
 /// Palace Familiar draws a card when it dies.
 #[test]
 fn palace_familiar_dies_draws() {
