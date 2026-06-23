@@ -212,6 +212,99 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Helpful Hunter — {1}{W} 1/1 Cat. When it enters, draw a card.
+pub fn helpful_hunter() -> CardDefinition {
+    CardDefinition {
+        name: "Helpful Hunter",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Sunshower Druid — {G} 0/2 Frog Druid. When it enters, put a +1/+1 counter on
+/// target creature and you gain 1 life.
+pub fn sunshower_druid() -> CardDefinition {
+    CardDefinition {
+        name: "Sunshower Druid",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Treetop Snarespinner — {3}{G} 1/4 Spider. Reach, deathtouch. {2}{G}: Put a
+/// +1/+1 counter on target creature you control. Activate only as a sorcery.
+pub fn treetop_snarespinner() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Treetop Snarespinner",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Coruscation Mage — {1}{R} 2/2 Otter Wizard. Offspring {2}. Whenever you cast
+/// a noncreature spell, this deals 1 damage to each opponent.
+pub fn coruscation_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Coruscation Mage",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Offspring(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Thornplate Intimidator — {3}{B} 4/3 Rat Rogue. Offspring {3}. When it
 /// enters, each opponent loses 3 life unless they sacrifice a nonland permanent
 /// or discard a card. (Modeled as each opponent; printed targets one.)

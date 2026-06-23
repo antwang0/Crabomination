@@ -44,6 +44,58 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Helpful Hunter draws on entry.
+#[test]
+fn helpful_hunter_draws_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let h = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::helpful_hunter());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h + 1);
+}
+
+/// Sunshower Druid's ETB grows a creature and gains a life.
+#[test]
+fn sunshower_druid_counter_and_lifegain() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].life = 20;
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::sunshower_druid().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].life, 21);
+}
+
+/// Coruscation Mage pings each opponent; its trigger gates on noncreature spells.
+#[test]
+fn coruscation_mage_pings_each_opponent() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::coruscation_mage());
+    g.players[1].life = 20;
+    let ab = catalog::coruscation_mage().triggered_abilities[0].clone();
+    assert!(matches!(ab.event.filter, Some(crate::card::Predicate::CastSpellMatches(_))));
+    let ctx = crate::game::effects::EffectContext::for_trigger(mage, 0, None, 0);
+    g.resolve_effect(&ab.effect, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 19, "each opponent took 1");
+}
+
+/// Treetop Snarespinner has reach + deathtouch and a sorcery-speed grow.
+#[test]
+fn treetop_snarespinner_keywords_and_grow() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let spider = catalog::treetop_snarespinner();
+    assert!(spider.keywords.contains(&Keyword::Reach) && spider.keywords.contains(&Keyword::Deathtouch));
+    assert!(spider.activated_abilities[0].sorcery_speed);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&spider.activated_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// Thornplate Intimidator's ETB makes the opponent dodge by discarding rather
 /// than losing 3 life.
 #[test]
