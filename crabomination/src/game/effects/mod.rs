@@ -4274,6 +4274,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnTopCreatureFromGraveyard { who } => {
+                use crate::card::CardType;
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // The source itself (e.g. Mistmoon Griffin, which "exiles it,
+                // then returns the top creature card") is excluded so it never
+                // raises itself.
+                let top = self.players[seat]
+                    .graveyard
+                    .iter()
+                    .rev()
+                    .find(|c| {
+                        c.definition.card_types.contains(&CardType::Creature)
+                            && Some(c.id) != ctx.source
+                    })
+                    .map(|c| c.id);
+                if let Some(id) = top {
+                    let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(seat), tapped: false };
+                    let ret_ctx = EffectContext::for_ability(id, seat, None);
+                    self.move_card_to(id, &dest, &ret_ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::Transform { what } => {
                 // CR 712 — toggle each targeted DFC permanent to its other face
                 // in place (same object: counters / tapped / attachments persist).

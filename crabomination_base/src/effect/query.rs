@@ -213,6 +213,7 @@ impl Effect {
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::ReturnSelfTappedWithCounters { .. } => false,
+            Effect::ReturnTopCreatureFromGraveyard { .. } => false,
             Effect::Transform { what } => sel_has_target(what),
             Effect::Flip { what } => sel_has_target(what),
             Effect::Meld { .. } => false,

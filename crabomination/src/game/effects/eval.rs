@@ -184,6 +184,18 @@ impl GameState {
                 powers.dedup();
                 powers.len() as i32
             }
+            Value::TotalToughnessControlled => {
+                let ids: Vec<_> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                ids.iter()
+                    .filter_map(|id| self.computed_permanent(*id))
+                    .map(|cp| cp.toughness.max(0))
+                    .sum()
+            }
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
             Value::MaxGraveyardSize => self
                 .players

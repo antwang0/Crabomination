@@ -463,6 +463,9 @@ pub enum Value {
     /// controls. Backs Golden Ratio's "draw a card for each different
     /// power among creatures you control."
     DistinctPowerYouControl,
+    /// Total (computed) toughness of all creatures the controller controls.
+    /// Betor, Kin to All's tiered end-step check (10/20/40).
+    TotalToughnessControlled,
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"
@@ -2187,6 +2190,10 @@ pub enum Effect {
     /// from its owner's graveyard (Unstoppable Slasher — two stun counters).
     /// No-op if the source isn't in a graveyard.
     ReturnSelfTappedWithCounters { kind: crate::card::CounterType, amount: u32 },
+    /// "Return the top creature card of `who`'s graveyard to the battlefield."
+    /// Top = most recently put into the graveyard (Mistmoon Griffin). No-op if
+    /// the graveyard holds no creature card.
+    ReturnTopCreatureFromGraveyard { who: PlayerRef },
     /// CR 712 — Transform the targeted double-faced permanent(s): swap each to
     /// its other face in place (same object, keeping counters / tapped state /
     /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event

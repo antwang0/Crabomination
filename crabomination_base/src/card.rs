@@ -43,7 +43,7 @@ pub enum CreatureType {
     Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari, Dauthi,
     Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm,
     Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Shaman, Druid,
-    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown,
+    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph, Demigod,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,

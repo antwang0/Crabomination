@@ -2096,3 +2096,554 @@ pub fn goldvein_pick() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Tarkir: Dragonstorm + recent-set batch (claude/modern_decks) ─────────────
+
+/// Boulderborn Dragon — {5} Artifact Dragon 3/3. Flying, vigilance; attacks →
+/// surveil 1.
+pub fn boulderborn_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Boulderborn Dragon",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Scales of Shale — {2}{B} Instant. Affinity for Lizards. Target creature gets
+/// +2/+0 and gains lifelink and indestructible until end of turn.
+pub fn scales_of_shale() -> CardDefinition {
+    CardDefinition {
+        name: "Scales of Shale",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        affinity_filter: Some(
+            SelectionRequirement::HasCreatureType(CreatureType::Lizard)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sunset Strikemaster — {1}{R} 3/1 Human Monk. {T}: Add {R}. {2}{R}, {T},
+/// Sacrifice this: it deals 6 damage to target creature with flying.
+pub fn sunset_strikemaster() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Sunset Strikemaster",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(crate::mana::Color::Red, Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), r()]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                    ),
+                    amount: Value::Const(6),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wardens of the Cycle — {1}{B}{G}{G} 3/4 Elf Warlock. Morbid — at your end
+/// step, if a creature died this turn, gain 2 life, or draw a card and lose 1.
+pub fn wardens_of_the_cycle() -> CardDefinition {
+    CardDefinition {
+        name: "Wardens of the Cycle",
+        cost: cost(&[generic(1), b(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) },
+                then: Box::new(Effect::ChooseMode(vec![
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                        Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                    ]),
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Roiling Dragonstorm — {1}{U} Enchantment. ETB: draw two, then discard a
+/// card. When a Dragon you control enters, return this to its owner's hand.
+pub fn roiling_dragonstorm() -> CardDefinition {
+    CardDefinition {
+        name: "Roiling Dragonstorm",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+                    }),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Stormcatch Mentor — {U}{R} 1/1 Otter Wizard. Haste, prowess; instant and
+/// sorcery spells you cast cost {1} less.
+pub fn stormcatch_mentor() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Stormcatch Mentor",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste, Keyword::Prowess],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gurmag Drowner — {3}{U} 2/4 Snake Wizard. Exploit; when it exploits a
+/// creature, look at the top four cards, put one into your hand, the rest on
+/// the bottom.
+pub fn gurmag_drowner() -> CardDefinition {
+    CardDefinition {
+        name: "Gurmag Drowner",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![crate::effect::shortcut::exploit(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: None,
+            take: None,
+            to_battlefield: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Temur Battlecrier — {G}{U}{R} 4/3 Orc Ranger. Spells you cast cost {1} less
+/// for each creature you control with power 4 or greater. (The "during your
+/// turn" gate is approximated as always-on.)
+pub fn temur_battlecrier() -> CardDefinition {
+    CardDefinition {
+        name: "Temur Battlecrier",
+        cost: cost(&[g(), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        affinity_filter: Some(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::PowerAtMost(3).negate())
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        ..Default::default()
+    }
+}
+
+/// Nullpriest of Oblivion — {1}{B} 2/1 Vampire Cleric. Kicker {3}{B}. Lifelink,
+/// menace. ETB, if kicked: return target creature card from your graveyard to
+/// the battlefield.
+pub fn nullpriest_of_oblivion() -> CardDefinition {
+    CardDefinition {
+        name: "Nullpriest of Oblivion",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink, Keyword::Menace, Keyword::Kicker(cost(&[generic(3), b()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::InYourGraveyard),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ureni, the Song Unending — {5}{G}{U}{R} 10/10 Spirit Dragon. Flying,
+/// protection from white and from black. ETB: deal X damage divided as you
+/// choose among any number of target creatures/planeswalkers opponents control,
+/// where X is the number of lands you control.
+pub fn ureni_the_song_unending() -> CardDefinition {
+    use crate::card::CardType as CT;
+    CardDefinition {
+        name: "Ureni, the Song Unending",
+        cost: cost(&[generic(5), g(), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 10,
+        toughness: 10,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Protection(crate::mana::Color::White),
+            Keyword::Protection(crate::mana::Color::Black),
+        ],
+        triggered_abilities: vec![etb(Effect::DealDamageDivided {
+            total: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ))),
+            filter: (SelectionRequirement::Creature
+                .or(SelectionRequirement::HasCardType(CT::Planeswalker)))
+            .and(SelectionRequirement::ControlledByOpponent),
+            max_targets: 10,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Elspeth, Storm Slayer — {3}{W}{W} Legendary Planeswalker. Tokens you create
+/// are doubled. +1: make a 1/1 Soldier. 0: +1/+1 on each creature you control,
+/// they gain flying until your next turn. −3: destroy target creature an
+/// opponent controls with mana value 3 or greater.
+pub fn elspeth_storm_slayer() -> CardDefinition {
+    use crate::card::{
+        LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, StaticEffect, TokenDefinition,
+    };
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Elspeth, Storm Slayer",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Elspeth],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        static_abilities: vec![StaticAbility {
+            description: "If one or more tokens would be created under your control, twice that many are created instead.",
+            effect: StaticEffect::DoubleTokens,
+        }],
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: soldier },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        ),
+                        keyword: Keyword::Flying,
+                        duration: Duration::UntilNextTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent)
+                            .and(SelectionRequirement::ManaValueAtLeast(3)),
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Betor, Kin to All — {2}{W}{B}{G} 5/7 Spirit Dragon. Flying. At your end step:
+/// if your creatures' total toughness ≥10 draw a card; then ≥20 untap each
+/// creature you control; then ≥40 each opponent loses half their life, rounded
+/// up.
+pub fn betor_kin_to_all() -> CardDefinition {
+    CardDefinition {
+        name: "Betor, Kin to All",
+        cost: cost(&[generic(2), w(), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 7,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::TotalToughnessControlled, Value::Const(10)),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::TotalToughnessControlled, Value::Const(20)),
+                    then: Box::new(Effect::Untap {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        ),
+                        up_to: None,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::TotalToughnessControlled, Value::Const(40)),
+                    then: Box::new(Effect::LoseHalfLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        rounded_up: true,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mistmoon Griffin — {3}{W} 2/2 Griffin. Flying. When it dies, return the top
+/// creature card of your graveyard to the battlefield.
+pub fn mistmoon_griffin() -> CardDefinition {
+    CardDefinition {
+        name: "Mistmoon Griffin",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_dies(Effect::ReturnTopCreatureFromGraveyard {
+            who: PlayerRef::You,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dalek Squadron — {2}{B} 3/3 Artifact Dalek. Menace, myriad.
+pub fn dalek_squadron() -> CardDefinition {
+    CardDefinition {
+        name: "Dalek Squadron",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dalek], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Myriad,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Perennation — {3}{W}{B}{G} Sorcery. Return target permanent card from your
+/// graveyard to the battlefield with a hexproof counter and an indestructible
+/// counter on it.
+pub fn perennation() -> CardDefinition {
+    CardDefinition {
+        name: "Perennation",
+        cost: cost(&[generic(3), w(), b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Permanent
+                        .and(SelectionRequirement::InYourGraveyard),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Karakyk Guardian — {3}{G}{U}{R} 6/5 Dragon. Flying, vigilance, trample.
+/// (Its conditional hexproof-while-it-hasn't-dealt-damage rider is omitted —
+/// no lifetime damage-dealt tracking yet.)
+pub fn karakyk_guardian() -> CardDefinition {
+    CardDefinition {
+        name: "Karakyk Guardian",
+        cost: cost(&[generic(3), g(), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Sarkhan, Soul Aflame — {1}{U}{R} 2/4 Human Shaman. Dragon spells you cast
+/// cost {1} less. Whenever a Dragon you control enters, you may have Sarkhan
+/// become a copy of it until end of turn. (The copy keeps the Dragon's name —
+/// the printed "name stays Sarkhan" override is approximated.)
+pub fn sarkhan_soul_aflame() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Sarkhan, Soul Aflame",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Dragon spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+                amount: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+                }),
+            effect: Effect::MayDo {
+                description: "have Sarkhan become a copy of that Dragon until end of turn".into(),
+                body: Box::new(Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: Selector::TriggerSource,
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}

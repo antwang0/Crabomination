@@ -1467,6 +1467,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Suspect { .. } => "Suspect",
         Effect::Ascend { .. } => "Ascend",
         Effect::ReturnSelfTappedWithCounters { .. } => "Return tapped with counters",
+        Effect::ReturnTopCreatureFromGraveyard { .. } => "Reanimate top creature",
         _ => "Activate",
     }
 }
