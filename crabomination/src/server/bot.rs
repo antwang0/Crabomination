@@ -717,6 +717,26 @@ pub(crate) fn optional_trigger_beneficial(state: &GameState, source: CardId, des
             }
         }
     }
+    // Exploit (CR 702.105 — "Exploit: sacrifice a creature?"): the body is a
+    // Sacrifice that the generic self-cost screen would always decline. Accept
+    // it when the controller has a spare creature to feed it — a token, or the
+    // exploiter is one of several creatures so it can sacrifice the weakest (or
+    // itself for a strong ETB payoff). Card advantage off a token is a clean win.
+    if description.starts_with("Exploit") {
+        let ctrl = state.battlefield.iter().find(|c| c.id == source).map(|c| c.controller);
+        if let Some(seat) = ctrl {
+            let creatures: Vec<&crate::card::CardInstance> = state
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == seat && c.definition.is_creature())
+                .collect();
+            let has_token = creatures.iter().any(|c| c.is_token);
+            // Accept with a sacrificial token, or when there's more than one
+            // creature so we don't have to give up the exploiter itself.
+            return has_token || creatures.len() > 1;
+        }
+        return false;
+    }
     // Take it unless the body is self-costly; default to taking when the
     // body can't be introspected (most "you may" on your own permanents is
     // upside).
@@ -5099,5 +5119,20 @@ mod stack_response_tests {
             }
             other => panic!("expected Discard, got {:?}", other),
         }
+    }
+
+    /// The bot accepts an exploit trigger when it has a spare creature (here a
+    /// second body), instead of always declining the sacrifice.
+    #[test]
+    fn bot_takes_exploit_with_a_spare_creature() {
+        let mut g = two_player_game();
+        let drowner = g.add_card_to_battlefield(0, catalog::gurmag_drowner());
+        // No other creature → keep it (would have to sacrifice itself; allowed
+        // only by a >1 count, so a lone exploiter declines).
+        assert!(!optional_trigger_beneficial(&g, drowner, "Exploit — sacrifice a creature?"),
+            "lone exploiter with nothing to spare declines");
+        g.add_card_to_battlefield(0, catalog::grizzly_bears()); // a spare body
+        assert!(optional_trigger_beneficial(&g, drowner, "Exploit — sacrifice a creature?"),
+            "with a spare creature the bot exploits for value");
     }
 }
