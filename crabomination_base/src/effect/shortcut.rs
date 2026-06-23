@@ -2214,6 +2214,29 @@ pub fn ingest() -> TriggeredAbility {
     }
 }
 
+/// Recover (CR 702.58): "When a creature is put into your graveyard from the
+/// battlefield, you may pay [cost]. If you do, return this card from your
+/// graveyard to your hand. Otherwise, exile this card." A
+/// `CreatureDied / FromYourGraveyard` trigger that fires while this card sits
+/// in its owner's graveyard; the `MayPay` gate returns it to hand on payment
+/// or exiles it on decline.
+pub fn recover(cost: crate::mana::ManaCost) -> TriggeredAbility {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    use crate::effect::ZoneDest;
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::FromYourGraveyard),
+        effect: Effect::MayPay {
+            description: "Recover".into(),
+            mana_cost: cost,
+            body: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: Some(Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Exile })),
+        },
+    }
+}
+
 /// Outlast (CR 702.97) — the activated ability "{cost}, {T}: Put a
 /// +1/+1 counter on this creature. Activate only as a sorcery." Returns
 /// the `ActivatedAbility`; pass the (already mana-loaded) cost in.

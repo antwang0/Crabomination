@@ -282,7 +282,10 @@ Each a small targeted feature; sweep batch by batch.
 - **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,
   Miracle, Bloodrush, Unleash, Scavenge, Transmute, Bestow, Tribute, Offering
   (CR 702.48 — `AlternativeCost.offering` + `ManaCost::reduce_by_cost`; the
-  Kamigawa Patron cycle). Spiritcraft "cast a Spirit or Arcane spell" triggers
+  Kamigawa Patron cycle), ✅ Recover (CR 702.58 — `shortcut::recover`: a
+  `CreatureDied / FromYourGraveyard` trigger gating a `MayPay` that returns the
+  card from the graveyard or exiles it; Coldsnap I/S in `decks::recent`).
+  Spiritcraft "cast a Spirit or Arcane spell" triggers
   ride `SelectionRequirement::HasSpellSubtype` + `shortcut::spiritcraft`.
 
 ## Tier 5 — Mana & cost system

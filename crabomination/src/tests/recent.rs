@@ -2676,3 +2676,37 @@ fn goblin_surveyor_max_speed_gated_ability() {
         speed: 4,
     }));
 }
+
+// ── Recover (CR 702.58) ─────────────────────────────────────────────────────
+
+/// Recover returns the card to hand when its cost is paid as a creature dies.
+#[test]
+fn recover_returns_to_hand_when_paid() {
+    let mut g = two_player_game();
+    let gh = g.add_card_to_graveyard(0, catalog::suns_bounty());
+    // Pre-float the {1}{W} recover cost and accept the MayPay prompt.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut evs = g.remove_to_graveyard_with_triggers(bear);
+    evs.push(GameEvent::CreatureDied { card_id: bear });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == gh), "recovered to hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == gh));
+}
+
+/// Declining recover (no mana) exiles the card.
+#[test]
+fn recover_exiles_when_declined() {
+    let mut g = two_player_game();
+    let gh = g.add_card_to_graveyard(0, catalog::icefall());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut evs = g.remove_to_graveyard_with_triggers(bear);
+    evs.push(GameEvent::CreatureDied { card_id: bear });
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gh), "unpaid recover exiles the card");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == gh));
+}

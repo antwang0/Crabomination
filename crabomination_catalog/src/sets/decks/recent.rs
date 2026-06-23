@@ -7,7 +7,7 @@ use crate::card::{
     Keyword, MayPlayDuration, Predicate, Selector, SelectionRequirement, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, on_dies, target_filtered};
+use crate::effect::shortcut::{etb, on_dies, recover, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w};
 
@@ -4359,6 +4359,71 @@ pub fn gastal_thrillseeker() -> CardDefinition {
                 keywords: vec![Keyword::Deathtouch, Keyword::Haste],
             },
         }],
+        ..Default::default()
+    }
+}
+
+// ── Recover (Coldsnap, CR 702.58) ───────────────────────────────────────────
+
+/// Grim Harvest — {1}{B} Instant. Return target creature card from your
+/// graveyard to your hand. Recover {2}{B}. (The main effect's graveyard zone
+/// filter is dropped per the Disentomb convention.)
+pub fn grim_harvest() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Harvest",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        triggered_abilities: vec![recover(cost(&[generic(2), b()]))],
+        ..Default::default()
+    }
+}
+
+/// Sun's Bounty — {1}{W} Instant. You gain 4 life. Recover {1}{W}.
+pub fn suns_bounty() -> CardDefinition {
+    CardDefinition {
+        name: "Sun's Bounty",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        triggered_abilities: vec![recover(cost(&[generic(1), w()]))],
+        ..Default::default()
+    }
+}
+
+/// Icefall — {2}{R}{R} Sorcery. Destroy target artifact or land. Recover {R}{R}.
+pub fn icefall() -> CardDefinition {
+    CardDefinition {
+        name: "Icefall",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Land),
+            ),
+        },
+        triggered_abilities: vec![recover(cost(&[r(), r()]))],
+        ..Default::default()
+    }
+}
+
+/// Resize — {1}{G} Instant. Target creature gets +3/+3 until end of turn.
+/// Recover {1}{G}.
+pub fn resize() -> CardDefinition {
+    CardDefinition {
+        name: "Resize",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(3),
+            toughness: Value::Const(3),
+            duration: Duration::EndOfTurn,
+        },
+        triggered_abilities: vec![recover(cost(&[generic(1), g()]))],
         ..Default::default()
     }
 }
