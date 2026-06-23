@@ -770,7 +770,13 @@ fn project_permanent(
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
-            card.definition.is_creature()
+            // Creatures and Vehicles (CR 208.3 noncreature P/T — a `*`-power
+            // Vehicle like Lumbering Worldwagon shifts with the board) both
+            // carry a P/T box; flag it when the live value differs from base.
+            let has_pt_box = card.definition.is_creature()
+                || card.definition.subtypes.artifact_subtypes
+                    .contains(&crate::card::ArtifactSubtype::Vehicle);
+            has_pt_box
                 && (cp_power != card.definition.base_power()
                     || cp_toughness != card.definition.base_toughness())
         },
@@ -2775,5 +2781,18 @@ mod tests {
         let v1 = project(&g, 0);
         let e1 = v1.players[0].graveyard.iter().find(|c| c.id == bolt).expect("bolt in graveyard view");
         assert_eq!(e1.mayhem_cost.as_ref().map(|c| c.cmc()), Some(2), "the mayhem cost surfaced");
+    }
+
+    /// CR 208.3 — a noncreature `*`-power Vehicle surfaces its live power and is
+    /// flagged `pt_modified` once the board pushes it off its printed base.
+    #[test]
+    fn vehicle_dynamic_power_surfaces_in_view() {
+        let mut g = two_player_game();
+        let wagon = g.add_card_to_battlefield(0, catalog::lumbering_worldwagon());
+        for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+        let view = project(&g, 0);
+        let pv = view.battlefield.iter().find(|p| p.id == wagon).expect("wagon in view");
+        assert_eq!(pv.power, 3, "power = lands controlled");
+        assert!(pv.pt_modified, "noncreature Vehicle flagged as P/T-modified");
     }
 }
