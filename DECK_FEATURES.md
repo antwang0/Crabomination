@@ -42,6 +42,13 @@ predicate. Later batches added the card-intrinsic target-conditional cost
 reduction (`self_cost_reduction_if_target` — Ride's End's "{3} less if it
 targets a tapped permanent"), made the bot prefer paying Offspring, and wired
 the client right-click "cast with Kicker/Offspring" path (`CastSpellKicked`).
+An Innistrad (MID/VOW) batch added **Coven** (`Predicate::CovenActive` +
+`coven_active` view field + "✸ coven" HUD chip), the **day/night transition
+trigger** (`EventKind::DayNightChanged` — Brimstone Vandal), the **shares-card-
+type** trigger (`Predicate::SharesCardTypeWithExiledBySource` — Cemetery
+Gatekeeper/Protector), bound `CardMilled`'s trigger subject to the milled card,
+taught `MoveAllCounters` to read a dead source's death-LKI counters, and fixed
+`fire_spell_cast_triggers` to honor `once_per_turn` (Whispering Wizard).
 
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief

@@ -92,6 +92,31 @@ plays its headline pattern):
   right-click "cast with the optional cost" path now works (`CastSpellKicked`),
   but surfacing the cost (a `kicker_cost_label` on `KnownCard`) is a follow-up.
 
+## Discovered follow-ups — MID/VOW batch (modern_decks)
+
+Riders deliberately approximated/omitted while shipping the Innistrad batch
+(each card otherwise plays its headline pattern):
+- **Sacrifice-as-a-reflexive-cost** ("you may sacrifice X; if you do, …") — no
+  primitive that gates a reflexive effect on a *successful optional sacrifice*.
+  Blocks Bloodcrazed Socialite's attack `+2/+2` (omitted), Gut True Soul
+  Zealot's attack-sac→Skeleton (unbuilt). A `MayPay { sacrifice, then }` layer
+  would cover both.
+- **Disturb-into-Aura back faces** — Binding Geist // Spectral Binding,
+  Mischievous Catgeist // Catlike Curiosity, Dorothea // Dorothea's Retribution
+  all disturb into an *Aura* (not a creature). Needs the disturb cast path to
+  route an enchant-creature target like a normal Aura cast.
+- **Diregraf Scavenger** — the "if a creature card was exiled this way" rider on
+  its ETB graveyard-exile needs tracking what `ExileTaggedWithSource` exiled
+  this resolution; shipped the exile, omitted the conditional drain.
+- **Olivia, Crimson Bride** — the reanimated creature's "when you don't control a
+  legendary Vampire, exile this" rider is omitted (needs a granted
+  count-gated delayed exile).
+- **Henrika Domnathi** — begin-combat "choose one that hasn't been chosen
+  before" needs per-source mode-history tracking across turns.
+- **Gisa, Glorious Resurrector / Toxrill** — opponent-creature-dies→exile-under-
+  you replacement + upkeep mass-reanimate-with-decayed (Gisa) and slime-counter
+  team-shrink (Toxrill) both want new replacement/counter machinery.
+
 ## Discovered follow-ups — missing-card sweep (modern_decks)
 
 Real cards confirmed absent, deferred for want of a mechanic:
