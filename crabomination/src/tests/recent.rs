@@ -44,6 +44,39 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Druid of the Spade grows and gains trample only while you control a token.
+#[test]
+fn druid_of_the_spade_token_conditional() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let druid = g.add_card_to_battlefield(0, catalog::druid_of_the_spade());
+    let base = g.computed_permanent(druid).unwrap();
+    assert_eq!((base.power, base.toughness), (2, 3));
+    assert!(!base.keywords.contains(&Keyword::Trample));
+    // Mint a token → condition holds.
+    let tok = crate::card::TokenDefinition {
+        name: "Rabbit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![crate::card::CardType::Creature],
+        ..Default::default()
+    };
+    g.add_token_to_battlefield(0, &tok);
+    let buffed = g.computed_permanent(druid).unwrap();
+    assert_eq!((buffed.power, buffed.toughness), (4, 3));
+    assert!(buffed.keywords.contains(&Keyword::Trample));
+}
+
+/// Persistent Marshstalker grows by each other Rat you control.
+#[test]
+fn persistent_marshstalker_rat_lord() {
+    let mut g = two_player_game();
+    let stalker = g.add_card_to_battlefield(0, catalog::persistent_marshstalker());
+    assert_eq!(g.computed_permanent(stalker).unwrap().power, 3, "no other Rats");
+    g.add_card_to_battlefield(0, catalog::persistent_marshstalker()); // another Rat
+    assert_eq!(g.computed_permanent(stalker).unwrap().power, 4, "+1 for the other Rat");
+}
+
 /// Nightbird's Clutches stops up to two creatures from blocking and has flashback.
 #[test]
 fn nightbirds_clutches_grants_cant_block() {

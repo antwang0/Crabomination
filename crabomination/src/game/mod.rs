@@ -3848,12 +3848,20 @@ impl GameState {
                 else {
                     continue;
                 };
+                // Source-aware evaluation so an `OtherThanSource` filter
+                // ("each *other* Rat you control" — Persistent Marshstalker)
+                // excludes this permanent itself.
                 let count = self
                     .battlefield
                     .iter()
                     .filter(|c| {
                         c.controller == card.controller
-                            && self.evaluate_requirement_on_card(filter, c, card.controller)
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                card.controller,
+                                Some(card.id),
+                            )
                     })
                     .count() as i32;
                 if count == 0 {

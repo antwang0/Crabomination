@@ -212,6 +212,62 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Persistent Marshstalker — {1}{B} 3/1 Rat Berserker. Gets +1/+0 for each
+/// other Rat you control. (Its threshold attack-recursion is omitted.)
+pub fn persistent_marshstalker() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Persistent Marshstalker",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+0 for each other Rat you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Rat)
+                    .and(SelectionRequirement::OtherThanSource),
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Druid of the Spade — {2}{G} 2/3 Rabbit Druid. As long as you control a
+/// token, it gets +2/+0 and has trample.
+pub fn druid_of_the_spade() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Druid of the Spade",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control a token, this creature gets +2/+0 and has trample.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::IsToken.and(SelectionRequirement::ControlledByYou),
+                )),
+                power: 2,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Nightbird's Clutches — {1}{R} Sorcery. Up to two target creatures can't
 /// block this turn. Flashback {3}{R}.
 pub fn nightbirds_clutches() -> CardDefinition {

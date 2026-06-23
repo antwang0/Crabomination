@@ -2699,6 +2699,8 @@ static DECKS: &[Factory] = &[
     super::decks::repeating_barrage,
     super::decks::nightbirds_clutches,
     super::decks::get_out,
+    super::decks::druid_of_the_spade,
+    super::decks::persistent_marshstalker,
     super::decks::helpful_hunter,
     super::decks::sunshower_druid,
     super::decks::treetop_snarespinner,
