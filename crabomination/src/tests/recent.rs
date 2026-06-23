@@ -2866,3 +2866,26 @@ fn spire_mangler_pumps_a_flyer() {
     // Auto-target picks a controlled flyer; total power gain on your flyers is 2.
     assert_eq!(g.computed_permanent(flyer).map(|c| c.power), Some(6));
 }
+
+/// Topiary Stomper can't attack until you control seven lands.
+#[test]
+fn topiary_stomper_needs_seven_lands_to_attack() {
+    let mut g = two_player_game();
+    let stomper = g.add_card_to_battlefield(0, catalog::topiary_stomper());
+    g.clear_sickness(stomper);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    // Six lands → still can't attack.
+    assert!(!g.legal_attackers(0).contains(&stomper));
+    assert!(g
+        .declare_attackers(vec![Attack { attacker: stomper, target: AttackTarget::Player(1) }])
+        .is_err());
+    // Seventh land lifts the restriction.
+    g.add_card_to_battlefield(0, catalog::forest());
+    assert!(g.legal_attackers(0).contains(&stomper));
+    g.declare_attackers(vec![Attack { attacker: stomper, target: AttackTarget::Player(1) }])
+        .expect("seven lands → can attack");
+}

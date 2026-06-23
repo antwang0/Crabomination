@@ -4636,10 +4636,9 @@ pub fn crocodile_of_the_crossing() -> CardDefinition {
     }
 }
 
-/// Topiary Stomper — {1}{G}{G} 4/4 Plant Dinosaur. Vigilance. When it enters,
-/// search your library for a basic land and put it onto the battlefield tapped.
-/// (The "can't attack or block unless you control seven or more lands"
-/// restriction is omitted.)
+/// Topiary Stomper — {1}{G}{G} 4/4 Plant Dinosaur. Vigilance. Can't attack or
+/// block unless you control seven or more lands. When it enters, search your
+/// library for a basic land and put it onto the battlefield tapped.
 pub fn topiary_stomper() -> CardDefinition {
     CardDefinition {
         name: "Topiary Stomper",
@@ -4651,7 +4650,13 @@ pub fn topiary_stomper() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Vigilance],
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::CantAttackOrBlockUnlessYouControlCount {
+                filter: Box::new(SelectionRequirement::Land),
+                min: 7,
+            },
+        ],
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,

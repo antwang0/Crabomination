@@ -207,6 +207,25 @@ impl GameState {
                         return Err(GameError::CannotAttack(id));
                     }
                 }
+                // "Can't attack unless you control N+ [filter]" (Topiary
+                // Stomper — seven or more lands).
+                if let Some((req, min)) = computed_kw(id).iter().find_map(|kw| match kw {
+                    Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min } => {
+                        Some((filter.clone(), *min))
+                    }
+                    _ => None,
+                }) {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p && self.evaluate_requirement_on_card(&req, c, p)
+                        })
+                        .count();
+                    if (n as u32) < min {
+                        return Err(GameError::CannotAttack(id));
+                    }
+                }
                 // "Even number of counters" gate (Sab-Sunen). Zero is even.
                 if computed_kw(id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
                     && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
@@ -578,6 +597,24 @@ impl GameState {
                 && blocker.counters.values().sum::<u32>() % 2 != 0
             {
                 return Err(GameError::CannotBlock(blocker_id));
+            }
+
+            // "Can't block unless you control N+ [filter]" (Topiary Stomper).
+            if let Some((req, min)) = kws_of(blocker_id).iter().find_map(|kw| match kw {
+                Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min } => {
+                    Some((filter.clone(), *min))
+                }
+                _ => None,
+            }) {
+                let owner = blocker.controller;
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == owner && self.evaluate_requirement_on_card(&req, c, owner))
+                    .count();
+                if (n as u32) < min {
+                    return Err(GameError::CannotBlock(blocker_id));
+                }
             }
 
             let attacker = self

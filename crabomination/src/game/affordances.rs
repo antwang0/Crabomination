@@ -297,6 +297,16 @@ impl GameState {
                     Keyword::CantAttackOrBlockUnlessEvenCounters => {
                         c.counters.values().sum::<u32>() % 2 == 0
                     }
+                    Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min } => {
+                        self.battlefield
+                            .iter()
+                            .filter(|p| {
+                                p.controller == seat
+                                    && self.evaluate_requirement_on_card(filter, p, seat)
+                            })
+                            .count() as u32
+                            >= *min
+                    }
                     _ => true,
                 })
             })

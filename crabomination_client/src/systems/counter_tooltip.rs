@@ -696,6 +696,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackUnlessCastCreatureThisTurn => "Can't attack unless you cast a creature spell this turn.",
         K::CanAttackOnlyIfYouControl(_) => "Can attack only if you control a matching permanent.",
         K::CantAttackOrBlockUnlessEvenCounters => "Can't attack or block unless it has an even number of counters on it.",
+        K::CantAttackOrBlockUnlessYouControlCount { .. } => "Can't attack or block unless you control enough matching permanents.",
         K::CantBeCounteredIfXAtLeast(_) => "Can't be countered if X was paid at or above the named amount.",
         _ => return None,
     })
@@ -808,6 +809,8 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Offspring(cost) => format!("Offspring {}", cost.summary()),
         K::CantAttackOrBlockUnlessEvenCounters =>
             "Can't attack or block unless it has an even number of counters".into(),
+        K::CantAttackOrBlockUnlessYouControlCount { min, .. } =>
+            format!("Can't attack or block unless you control {min} or more matching permanents"),
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),
         K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),

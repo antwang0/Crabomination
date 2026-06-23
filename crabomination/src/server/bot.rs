@@ -228,6 +228,25 @@ impl Bot for RandomBot {
                                                 Keyword::CantAttackOrBlockUnlessEvenCounters => {
                                                     c.counters.values().sum::<u32>() % 2 == 0
                                                 }
+                                                Keyword::CantAttackOrBlockUnlessYouControlCount {
+                                                    filter,
+                                                    min,
+                                                } => {
+                                                    state
+                                                        .battlefield
+                                                        .iter()
+                                                        .filter(|d| {
+                                                            d.controller == c.controller
+                                                                && state.evaluate_requirement_on_card(
+                                                                    filter,
+                                                                    d,
+                                                                    c.controller,
+                                                                )
+                                                        })
+                                                        .count()
+                                                        as u32
+                                                        >= *min
+                                                }
                                                 _ => true,
                                             })
                                     })

@@ -766,6 +766,14 @@ pub enum Keyword {
     /// creature's own controller. Lovestruck Beast ("can't attack unless you
     /// control a 1/1 creature").
     CanAttackOnlyIfYouControl(Box<SelectionRequirement>),
+    /// "This creature can't attack or block unless you control [N] or more
+    /// [filter]." Count-based variant of `CanAttackOnlyIfYouControl`, enforced
+    /// on both the attack and block side against the bearer's controller.
+    /// Topiary Stomper ("…unless you control seven or more lands").
+    CantAttackOrBlockUnlessYouControlCount {
+        filter: Box<SelectionRequirement>,
+        min: u32,
+    },
     /// CR 702.166 — Offspring [cost]. An optional additional cast cost; if
     /// paid, the creature's ETB mints a 1/1 token copy of it. Reuses the
     /// Kicker pipeline (`has_kicker` returns this cost, `SpellWasKicked` gates
