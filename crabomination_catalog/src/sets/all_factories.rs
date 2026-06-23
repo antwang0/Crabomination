@@ -2760,6 +2760,7 @@ static DECKS: &[Factory] = &[
     super::decks::dazzling_denial,
     super::decks::cori_mountain_monastery,
     super::decks::mistrise_village,
+    super::decks::bloodletter_of_aclazotz,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,

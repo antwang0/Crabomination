@@ -1794,3 +1794,28 @@ fn cori_mountain_monastery_impulse() {
     drain_stack(&mut g);
     assert!(g.exile.len() > exile_before, "exiled the top card for later play");
 }
+
+/// Bloodletter of Aclazotz doubles an opponent's life loss during your turn.
+#[test]
+fn bloodletter_doubles_opponent_life_loss() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bloodletter_of_aclazotz());
+    g.active_player_idx = 0; // your turn
+    let opp = g.players[1].life;
+    // A Skirmish Rhino drains the opponent 2 → doubled to 4.
+    g.move_card_to_battlefield_for_test(0, catalog::skirmish_rhino());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 4, "opponent's 2 life loss doubled to 4");
+}
+
+/// Off your turn the doubling doesn't apply.
+#[test]
+fn bloodletter_inactive_off_your_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bloodletter_of_aclazotz());
+    g.active_player_idx = 1; // opponent's turn
+    let opp = g.players[1].life;
+    g.move_card_to_battlefield_for_test(0, catalog::skirmish_rhino());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "no doubling when it isn't your turn");
+}

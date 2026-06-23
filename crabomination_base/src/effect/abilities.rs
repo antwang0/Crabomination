@@ -298,6 +298,11 @@ pub enum StaticEffect {
     /// `apply_prevention_shields` bypasses all shields while any source on the
     /// battlefield has this. Sulfuric Vortex, Sunspine Lynx, Everlasting Torment.
     DamageCantBePrevented,
+    /// CR 614 — "If an opponent would lose life during your turn, they lose
+    /// twice that much life instead." (Bloodletter of Aclazotz.) A life-loss
+    /// doubling replacement scoped to the source controller's turn and their
+    /// opponents; consulted by `adjust_life`.
+    OpponentLifeLossDoubledDuringYourTurn,
     /// CR 615.12 (scoped) — combat damage dealt by creatures the source's
     /// controller controls can't be prevented (Questing Beast). Bypasses
     /// prevention shields only for damage whose source is a creature that

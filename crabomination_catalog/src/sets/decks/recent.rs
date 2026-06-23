@@ -2906,3 +2906,26 @@ fn land_tapped_unless(type_a: crate::card::LandType, type_b: crate::card::LandTy
         },
     }
 }
+
+/// Bloodletter of Aclazotz — {1}{B}{B}{B} 2/4 Vampire Demon. Flying. If an
+/// opponent would lose life during your turn, they lose twice that much instead.
+pub fn bloodletter_of_aclazotz() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Bloodletter of Aclazotz",
+        cost: cost(&[generic(1), b(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "If an opponent would lose life during your turn, they lose twice that much life instead.",
+            effect: StaticEffect::OpponentLifeLossDoubledDuringYourTurn,
+        }],
+        ..Default::default()
+    }
+}

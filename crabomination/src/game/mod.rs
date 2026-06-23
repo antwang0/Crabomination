@@ -1577,6 +1577,14 @@ impl GameState {
         if delta < 0 && self.player_cannot_lose_life_now(seat) {
             return self.effective_life(seat);
         }
+        // CR 614 — Bloodletter of Aclazotz: an opponent losing life during the
+        // Bloodletter controller's turn loses twice that much instead. Applied
+        // after the cannot-lose drop so a locked player still loses nothing.
+        let delta = if delta < 0 && self.life_loss_doubled_now(seat) {
+            delta.saturating_mul(2)
+        } else {
+            delta
+        };
         let team_idx = self
             .teams
             .iter()
@@ -3016,6 +3024,20 @@ impl GameState {
                 .static_abilities
                 .iter()
                 .any(|sa| matches!(sa.effect, StaticEffect::DamageCantBePrevented))
+        })
+    }
+
+    /// CR 614 — True if `seat`'s life loss should be doubled right now: it's an
+    /// opponent of a player who controls an `OpponentLifeLossDoubledDuringYourTurn`
+    /// permanent and it's that controller's turn (Bloodletter of Aclazotz).
+    pub fn life_loss_doubled_now(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|src| {
+            src.controller == self.active_player_idx
+                && !self.same_team(seat, src.controller)
+                && src.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::OpponentLifeLossDoubledDuringYourTurn)
+                })
         })
     }
 
@@ -9545,6 +9567,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // Questing Beast — consulted directly in `apply_prevention_shields`;
             // no layer effect.
             | StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+            // Bloodletter — consulted in `adjust_life` via `life_loss_doubled_now`;
+            // no layer effect.
+            | StaticEffect::OpponentLifeLossDoubledDuringYourTurn
             // ManaProductionDoubled / Tripled — consulted at mana-ability
             // resolution via `mana_production_multiplier_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled
