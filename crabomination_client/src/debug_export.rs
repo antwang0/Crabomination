@@ -198,6 +198,7 @@ mod tests {
                 cannot_gain_life: false,
                 commander_damage_taken: vec![],
                 team: 0,
+                coven_active: false,
             }],
             battlefield: vec![],
             stack: vec![],

@@ -64,6 +64,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Speed (CR 702.179 — "Start your engines!") — a Aetherdrift racing
         // crimson that brightens toward max speed.
         StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Coven (Innistrad) — a witchy moonlit green: 3+ creatures, distinct powers.
+        StatChipKind::Coven => (Color::srgba(0.14, 0.30, 0.20, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -87,6 +89,7 @@ pub(super) enum StatChipKind {
     Fog,
     TopCard,
     Speed,
+    Coven,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -589,6 +592,11 @@ pub fn update_player_stats_chips(
         // CR 700.6 city's blessing — surfaced once the viewer is blessed.
         if p.has_city_blessing {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Blessing, "✦ blessed".to_string());
+        }
+        // Innistrad Coven — lit when this player controls 3+ creatures with
+        // different powers, so coven-gated payoffs are online.
+        if p.coven_active {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Coven, "✸ coven".to_string());
         }
         // CR 119.7 — warn when this player can't gain life (Sunspine Lynx, Erebos).
         if p.cannot_gain_life {

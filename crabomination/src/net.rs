@@ -625,6 +625,12 @@ pub struct PlayerView {
     /// seat-order seating when every team reads as the same default).
     #[serde(default)]
     pub team: usize,
+    /// Innistrad "Coven" — true when this player controls three or more
+    /// creatures with different powers, so coven-gated abilities are online.
+    /// Surfaced so UIs can show a "Coven" badge and light up coven payoffs.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub coven_active: bool,
 }
 
 /// One source-commander's combat-damage tally against a player (CR 903.10a).

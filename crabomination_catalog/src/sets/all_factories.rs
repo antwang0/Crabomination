@@ -2717,6 +2717,8 @@ static DECKS: &[Factory] = &[
     super::decks::skaab_wrangler,
     super::decks::blood_petal_celebrant,
     super::decks::dreadhound,
+    super::decks::olivia_crimson_bride,
+    super::decks::covetous_castaway,
     super::decks::geistwave,
     super::decks::adamant_will,
     super::decks::bladestitched_skaab,

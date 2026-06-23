@@ -407,6 +407,16 @@ fn project_player(
     let has_prevention_shield = prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Player(player_seat));
+    // Coven — three or more controlled creatures with different (computed) powers.
+    let coven_active = {
+        let powers: std::collections::HashSet<i32> = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player_seat && c.definition.is_creature())
+            .filter_map(|c| state.computed_permanent(c.id).map(|cp| cp.power))
+            .collect();
+        powers.len() >= 3
+    };
     PlayerView {
         seat: player_seat,
         name: player.name.clone(),
@@ -479,6 +489,7 @@ fn project_player(
         cannot_gain_life,
         commander_damage_taken,
         team,
+        coven_active,
     }
 }
 

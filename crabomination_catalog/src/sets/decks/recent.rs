@@ -269,6 +269,83 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Olivia, Crimson Bride — {4}{B}{R} 3/4 Legendary Vampire Noble. Flying,
+/// haste. Whenever Olivia attacks, return target creature card from a graveyard
+/// to the battlefield tapped and attacking. (The legendary-Vampire exile rider
+/// is omitted.)
+pub fn olivia_crimson_bride() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Olivia, Crimson Bride",
+        cost: cost(&[generic(4), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            Effect::JoinCombatAttacking { what: Selector::LastMoved },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Covetous Castaway // Ghostly Castigator — {1}{U} 1/3 Human. When it dies,
+/// mill three. Disturb {3}{U}{U} into a 3/4 flying Spirit whose ETB may shuffle
+/// up to three target cards from your graveyard into your library.
+pub fn covetous_castaway() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    let castigator = CardDefinition {
+        name: "Ghostly Castigator",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Shuffle up to three target cards from your graveyard into your library".into(),
+            body: Box::new(Effect::Move {
+                what: Selector::Take {
+                    inner: Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    }),
+                    count: Box::new(Value::Const(3)),
+                },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: crate::effect::LibraryPosition::Shuffled,
+                },
+            }),
+        })],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Covetous Castaway",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Disturb(cost(&[generic(3), u(), u()]))],
+        triggered_abilities: vec![on_dies(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
+        back_face: Some(Box::new(castigator)),
+        ..Default::default()
+    }
+}
+
 /// Geistwave — {1}{U} Instant. Return target nonland permanent to its owner's
 /// hand. If you controlled that permanent, draw a card.
 pub fn geistwave() -> CardDefinition {

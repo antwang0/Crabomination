@@ -4679,3 +4679,40 @@ fn slogurk_grows_and_returns_lands() {
     let lands_in_hand = g.players[0].hand.iter().filter(|c| c.definition.is_land()).count();
     assert!(lands_in_hand >= 3, "returned up to three lands, got {lands_in_hand}");
 }
+
+/// Olivia, Crimson Bride reanimates a creature tapped and attacking on attack.
+#[test]
+fn olivia_reanimates_on_attack() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let olivia = g.add_card_to_battlefield(0, catalog::olivia_crimson_bride());
+    g.clear_sickness(olivia);
+    let dead = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: olivia, target: AttackTarget::Player(1),
+    }])).expect("Olivia attacks");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(dead).expect("angel reanimated");
+    assert!(back.tapped, "reanimated tapped");
+    assert!(g.attacking.iter().any(|a| a.attacker == dead), "joined combat attacking");
+}
+
+/// Covetous Castaway mills three when it dies; its disturb back is the Spirit.
+#[test]
+fn covetous_castaway_dies_mills_three() {
+    let mut g = two_player_game();
+    let cc = g.add_card_to_battlefield(0, catalog::covetous_castaway());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::mountain()); }
+    let gy0 = g.players[0].graveyard.len();
+    g.battlefield_find_mut(cc).unwrap().damage = 5;
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    // Castaway in gy + three milled = +4.
+    assert!(g.players[0].graveyard.len() >= gy0 + 3, "milled three on death");
+    let def = catalog::covetous_castaway();
+    assert_eq!(def.back_face.as_ref().unwrap().name, "Ghostly Castigator");
+}

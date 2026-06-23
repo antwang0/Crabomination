@@ -273,7 +273,10 @@ Each a small targeted feature; sweep batch by batch.
 - **Resource systems:** ✅ Energy ({E} pool + HUD chip; Kaladesh set; energy-gated
   mana abilities); ⏳ Experience counters → actually **✅** (`CounterType::
   Experience`); ✅ Poison/Toxic, Devotion, Ascend/city's blessing; ✅ Monarch;
-  ✅ Day/Night (502.2 turn-based transition + Daybound/Nightbound DFC auto-flip);
+  ✅ Day/Night (502.2 turn-based transition + Daybound/Nightbound DFC auto-flip
+  + `EventKind::DayNightChanged` "day becomes night / night becomes day"
+  triggers — Brimstone Vandal); ✅ Coven (`Predicate::CovenActive` — 3+ creatures
+  with different powers; HUD "✸ coven" chip);
   ✅ **Speed / "Start your engines!"** (CR 702.179 — `Player.speed` 0–4,
   `Keyword::StartYourEngines`, life-loss increment, `Predicate::SpeedAtLeast`
   for "Max speed —"; DFT batch in `decks::recent`); ⏳ Ring-bearer.
