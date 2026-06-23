@@ -2929,3 +2929,74 @@ pub fn bloodletter_of_aclazotz() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Touch the Spirit Realm — {2}{W} Enchantment. ETB: exile up to one target
+/// artifact or creature until this leaves. (The Channel discard-mode is omitted.)
+pub fn touch_the_spirit_realm() -> CardDefinition {
+    use crate::card::{CardType as CT, ExileReturnZone};
+    CardDefinition {
+        name: "Touch the Spirit Realm",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::HasCardType(CT::Artifact)),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sonar Strike — {1}{W} Instant. Deals 4 damage to target attacking, blocking,
+/// or tapped creature; gain 3 life if you control a Bat.
+pub fn sonar_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Sonar Strike",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::IsAttacking
+                            .or(SelectionRequirement::IsBlocking)
+                            .or(SelectionRequirement::Tapped),
+                    ),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Bat)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Aerie Auxiliary — {3}{W} 3/3 Bird Soldier. Flying. ETB: support 2 (put a
+/// +1/+1 counter on each of up to two other target creatures).
+pub fn aerie_auxiliary() -> CardDefinition {
+    CardDefinition {
+        name: "Aerie Auxiliary",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(crate::effect::shortcut::support(2))],
+        ..Default::default()
+    }
+}

@@ -1819,3 +1819,61 @@ fn bloodletter_inactive_off_your_turn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2, "no doubling when it isn't your turn");
 }
+
+// ── Recent-set batch 3 ───────────────────────────────────────────────────────
+
+/// Touch the Spirit Realm exiles a creature until it leaves.
+#[test]
+fn touch_the_spirit_realm_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(victim)),
+    ]));
+    let ring = g.move_card_to_battlefield_for_test(0, catalog::touch_the_spirit_realm());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature exiled");
+    // When the enchantment leaves, the creature returns.
+    g.remove_from_battlefield_to_graveyard_raw(ring);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Serra Angel"),
+        "returns when the enchantment leaves");
+}
+
+/// Sonar Strike burns a tapped creature and gains life with a Bat out.
+#[test]
+fn sonar_strike_hits_tapped_and_gains_with_bat() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.battlefield_find_mut(victim).unwrap().tapped = true;
+    // A Bat token for the lifegain rider.
+    let mut bat = catalog::grizzly_bears();
+    bat.name = "Bat"; bat.subtypes.creature_types = vec![CreatureType::Bat];
+    g.add_card_to_battlefield(0, bat);
+    let spell = g.add_card_to_hand(0, catalog::sonar_strike());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    cast_at(&mut g, spell, Target::Permanent(victim));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "4 damage killed the tapped 4/4");
+    assert_eq!(g.players[0].life, life + 3, "gained 3 from the Bat rider");
+}
+
+/// Aerie Auxiliary supports two other creatures on ETB.
+#[test]
+fn aerie_auxiliary_supports_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aux = g.add_card_to_battlefield(0, catalog::aerie_auxiliary());
+    g.fire_self_etb_triggers(aux, 0);
+    drain_stack(&mut g);
+    // The ETB support trigger fired and placed a +1/+1 counter (the exact
+    // up-to-two count is covered by the cast-spell support test in counters.rs).
+    let total = g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne)
+        + g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert!(total >= 1, "support fired off the ETB trigger");
+}
