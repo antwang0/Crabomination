@@ -5236,3 +5236,281 @@ pub fn seismic_mage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Etched Oracle — {4} 0/0 artifact Wizard. Sunburst; "{1}, Remove four +1/+1
+/// counters from this creature: Target player draws three cards."
+pub fn etched_oracle() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Etched Oracle",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 4)),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skyreach Manta — {5} 0/0 artifact Fish. Sunburst; flying.
+pub fn skyreach_manta() -> CardDefinition {
+    CardDefinition {
+        name: "Skyreach Manta",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Digester — {3} 2/1 artifact Phyrexian Construct with infect.
+pub fn phyrexian_digester() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Digester",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Infect],
+        ..Default::default()
+    }
+}
+
+/// Blackcleave Goblin — {3}{B} 2/1 Phyrexian Goblin Zombie with haste and infect.
+pub fn blackcleave_goblin() -> CardDefinition {
+    CardDefinition {
+        name: "Blackcleave Goblin",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin, CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste, Keyword::Infect],
+        ..Default::default()
+    }
+}
+
+/// Essence Depleter — {2}{B} 2/3 Eldrazi Drone. Devoid; "{1}{C}: Target opponent
+/// loses 1 life and you gain 1 life."
+pub fn essence_depleter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Essence Depleter",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), colorless(1)]),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stormclaw Rager — {1}{B}{R} 2/2 Ogre Warrior. "{1}, Sacrifice another creature
+/// or artifact: Put a +1/+1 counter on this creature and draw a card. Activate
+/// only as a sorcery."
+pub fn stormclaw_rager() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Stormclaw Rager",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sorcery_speed: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wave Elemental — {2}{U}{U} 2/3 Elemental. "{U}, {T}, Sacrifice this creature:
+/// Tap up to three target creatures without flying."
+pub fn wave_elemental() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Wave Elemental",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::TapUpToValue {
+                count: Value::Const(3),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasKeyword(
+                        Keyword::Flying,
+                    )))),
+                skip_untap: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shipwreck Moray — {3}{U} 0/5 Fish. When it enters, you get four energy. "Pay
+/// {E}: This creature gets +2/-2 until end of turn."
+pub fn shipwreck_moray() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Shipwreck Moray",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        power: 0,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(4)))],
+        activated_abilities: vec![ActivatedAbility {
+            energy_cost: 1,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Argothian Sprite — {1}{G} 2/2 Faerie. Can't be blocked by artifact creatures;
+/// "{7}: Put two +1/+1 counters on this creature."
+pub fn argothian_sprite() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Argothian Sprite",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::HasCardType(
+            CardType::Artifact,
+        )))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7)]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nadier's Nightblade — {2}{B} 1/3 Elf Warrior. Whenever a token you control
+/// leaves the battlefield, each opponent loses 1 life and you gain 1 life.
+pub fn nadiers_nightblade() -> CardDefinition {
+    CardDefinition {
+        name: "Nadier's Nightblade",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::IsToken,
+                }),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gnarlroot Pallbearer — {4}{G}{G} 5/5 Treefolk Druid. Trample; when it enters,
+/// target creature gets +X/+X until end of turn, where X is the number of
+/// creature cards in your graveyard.
+pub fn gnarlroot_pallbearer() -> CardDefinition {
+    let gy_creatures = Value::CardsInGraveyardMatching {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::Creature,
+    };
+    CardDefinition {
+        name: "Gnarlroot Pallbearer",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: gy_creatures.clone(),
+            toughness: gy_creatures,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}

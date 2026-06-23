@@ -3181,3 +3181,165 @@ fn seismic_mage_destroys_land() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "land destroyed");
 }
+
+/// Etched Oracle enters with a +1/+1 counter per color of mana spent (Sunburst).
+#[test]
+fn etched_oracle_sunburst_counters() {
+    let mut g = two_player_game();
+    let oracle = g.add_card_to_hand(0, catalog::etched_oracle()); // {4}
+    // Pay the generic {4} with W, U, B + 1 colorless → 3 distinct colors.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: oracle,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Etched Oracle castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(oracle).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3, "3 colors → 3 counters");
+}
+
+/// Skyreach Manta has flying and Sunburst counters.
+#[test]
+fn skyreach_manta_flying_sunburst() {
+    let d = catalog::skyreach_manta();
+    assert!(d.keywords.contains(&Keyword::Flying));
+    assert!(d.enters_with_counters.is_some(), "Sunburst counter spec present");
+}
+
+/// Phyrexian Digester and Blackcleave Goblin both carry infect.
+#[test]
+fn infect_creatures_have_infect() {
+    assert!(catalog::phyrexian_digester().keywords.contains(&Keyword::Infect));
+    let bg = catalog::blackcleave_goblin();
+    assert!(bg.keywords.contains(&Keyword::Infect) && bg.keywords.contains(&Keyword::Haste));
+}
+
+/// Essence Depleter drains an opponent for 1 with its colorless ability.
+#[test]
+fn essence_depleter_drains() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let dep = g.add_card_to_battlefield(0, catalog::essence_depleter());
+    g.clear_sickness(dep);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dep,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.players[0].life, 21);
+    // Devoid: the creature is colorless despite its black cost.
+    assert!(catalog::essence_depleter().keywords.contains(&Keyword::Devoid));
+}
+
+/// Stormclaw Rager grows and draws when you sacrifice another permanent.
+#[test]
+fn stormclaw_rager_sac_grows_and_draws() {
+    let mut g = two_player_game();
+    let rager = g.add_card_to_battlefield(0, catalog::stormclaw_rager());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.step = TurnStep::PostCombatMain;
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rager,
+        ability_index: 0,
+        target: Some(Target::Permanent(fodder)),
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("sac ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rager).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+/// Wave Elemental taps up to three non-flyers on sacrifice.
+#[test]
+fn wave_elemental_taps_nonflyers() {
+    let mut g = two_player_game();
+    let elem = g.add_card_to_battlefield(0, catalog::wave_elemental());
+    g.clear_sickness(elem);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // The "up to three" picks are made at resolution via a ChooseCards decision.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elem,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("tap ability activates");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+    assert!(g.battlefield_find(elem).is_none(), "Wave Elemental sacrificed");
+}
+
+/// Shipwreck Moray gets four energy on ETB.
+#[test]
+fn shipwreck_moray_makes_energy() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::shipwreck_moray());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 4, "ETB grants four energy");
+}
+
+/// Argothian Sprite can't be blocked by artifact creatures.
+#[test]
+fn argothian_sprite_evades_artifacts() {
+    let mut g = two_player_game();
+    let sprite = g.add_card_to_battlefield(0, catalog::argothian_sprite());
+    let artifact_blocker = g.add_card_to_battlefield(1, catalog::phyrexian_digester()); // artifact creature
+    let normal_blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(!g.blocker_can_block_attacker(artifact_blocker, sprite), "artifact can't block");
+    assert!(g.blocker_can_block_attacker(normal_blocker, sprite), "non-artifact can");
+}
+
+/// Nadier's Nightblade drains each opponent when a token you control leaves.
+#[test]
+fn nadiers_nightblade_drains_on_token_leave() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    g.add_card_to_battlefield(0, catalog::nadiers_nightblade());
+    // Make a token, then destroy it.
+    g.move_card_to_battlefield_for_test(0, catalog::bears_companion());
+    drain_stack(&mut g);
+    let bear = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Bear").unwrap().id;
+    // Lethal damage → SBA dispatches CreatureDied, firing the watcher.
+    g.battlefield_find_mut(bear).unwrap().damage = 4;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent lost 1");
+    assert_eq!(g.players[0].life, 21, "you gained 1");
+}
+
+/// Gnarlroot Pallbearer pumps a creature by your graveyard's creature count.
+#[test]
+fn gnarlroot_pallbearer_scales_with_graveyard() {
+    let mut g = two_player_game();
+    // Seed two creature cards in the graveyard.
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(target))]));
+    g.move_card_to_battlefield_for_test(0, catalog::gnarlroot_pallbearer());
+    drain_stack(&mut g);
+    // 2 creatures in gy → +2/+2 → 4/4.
+    assert_eq!(g.computed_permanent(target).map(|c| c.power), Some(4));
+}
