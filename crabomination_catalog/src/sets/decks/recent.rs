@@ -269,6 +269,44 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Dreadhound — {4}{B}{B} 6/6 Demon Dog. ETB mill three. Whenever a creature
+/// dies or a creature card is put into a graveyard from a library, each
+/// opponent loses 1 life.
+pub fn dreadhound() -> CardDefinition {
+    let drain_each_opp = || Effect::LoseLife {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Dreadhound",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon, CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![
+            etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+                effect: drain_each_opp(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardMilled, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    },
+                ),
+                effect: drain_each_opp(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Mask of Avacyn — {2} Equipment. Equipped creature gets +1/+2 and has
 /// hexproof. Equip {3}.
 pub fn mask_of_avacyn() -> CardDefinition {

@@ -4485,3 +4485,45 @@ fn falkenrath_pit_fighter_gated_on_opp_life_loss() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed a Vampire");
 }
+
+/// Mill the top card of player `p`'s library (graveyard + CardMilled event),
+/// then dispatch the resulting triggers — a focused test fixture.
+fn mill_top(g: &mut GameState, p: usize) {
+    let card = g.players[p].library.remove(0);
+    let cid = card.id;
+    g.players[p].graveyard.push(card);
+    let evs = vec![GameEvent::CardMilled { player: p, card_id: cid }];
+    g.dispatch_triggers_for_events(&evs);
+}
+
+/// Dreadhound drains each opponent when a creature dies or a creature is milled.
+#[test]
+fn dreadhound_drains_on_death_and_mill() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dreadhound());
+    let opp = g.players[1].life;
+    // A creature dying drains the opponent (full SBA + death-trigger dispatch).
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().damage = 5;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "creature death drained opp");
+    // Milling a creature card from library drains again.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    mill_top(&mut g, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "milled creature drained opp");
+}
+
+/// Dreadhound does not drain when a noncreature card is milled.
+#[test]
+fn dreadhound_ignores_noncreature_mill() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dreadhound());
+    let opp = g.players[1].life;
+    g.add_card_to_library(0, catalog::lightning_bolt()); // instant
+    mill_top(&mut g, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp, "noncreature mill: no drain");
+}

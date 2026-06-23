@@ -451,8 +451,12 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Lorehold the Historian's miracle grant relies on this.
         GameEvent::CardDrawn { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CardDiscarded { card_id, .. } => Some(EntityRef::Card(*card_id)),
-        GameEvent::CardMilled { player, .. }
-        | GameEvent::LifeGained { player, .. }
+        // Bind TriggerSource to the milled card (now in a graveyard) so filter
+        // predicates can introspect it ("a creature card put into a graveyard
+        // from a library" — Dreadhound). SelfSource milled triggers match by
+        // id in the scope check, so this rebind doesn't affect them.
+        GameEvent::CardMilled { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::LifeGained { player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::EnergyGained { player, .. }

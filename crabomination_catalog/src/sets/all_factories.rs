@@ -2716,6 +2716,7 @@ static DECKS: &[Factory] = &[
     super::decks::hungry_ridgewolf,
     super::decks::skaab_wrangler,
     super::decks::blood_petal_celebrant,
+    super::decks::dreadhound,
     super::decks::mask_of_avacyn,
     super::decks::stormchaser_drake,
     super::decks::falkenrath_pit_fighter,
