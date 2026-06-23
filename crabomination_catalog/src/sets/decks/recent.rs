@@ -1576,6 +1576,128 @@ pub fn stitched_assistant() -> CardDefinition {
 }
 
 
+/// Burn the Accursed — {4}{R} Instant. Deals 5 damage to target creature and 2
+/// to its controller; if it would die this turn, exile it instead.
+pub fn burn_the_accursed() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Burn the Accursed",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fortify — {2}{W} Instant. Choose one — creatures you control get +2/+0, or
+/// +0/+2, until end of turn.
+pub fn fortify() -> CardDefinition {
+    let team = Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Fortify",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT { what: team.clone(), power: Value::Const(2), toughness: Value::Const(0), duration: Duration::EndOfTurn },
+            Effect::PumpPT { what: team, power: Value::Const(0), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lambholt Harrier — {1}{R} 2/2 Wolf. {3}{R}: target creature can't block this
+/// turn.
+pub fn lambholt_harrier() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Lambholt Harrier",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crash the Ramparts — {2}{G} Instant. Target creature gets +3/+3 and gains
+/// trample until end of turn.
+pub fn crash_the_ramparts() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Crash the Ramparts",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Markov Purifier — {1}{W}{B} 2/3 Vampire Cleric. Lifelink. At your end step,
+/// if you gained life this turn, you may pay {2} to draw a card.
+pub fn markov_purifier() -> CardDefinition {
+    CardDefinition {
+        name: "Markov Purifier",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(1),
+            }),
+            effect: Effect::MayPay {
+                description: "Pay {2} to draw a card?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
 /// life. Create two Blood tokens.
 pub fn vampires_kiss() -> CardDefinition {

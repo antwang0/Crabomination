@@ -5541,3 +5541,75 @@ fn defenestrate_kills_grounded_only() {
         &Target::Permanent(flyer), 0, None));
 }
 
+
+/// Burn the Accursed burns a creature (exiling it) and pings its controller.
+#[test]
+fn burn_the_accursed_damage_and_exile() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&catalog::burn_the_accursed().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.exile.iter().any(|c| c.id == victim), "5 damage killed and exiled the 4/4");
+    assert_eq!(g.players[1].life, 18, "controller took 2");
+}
+
+/// Fortify's two modes pump the team's power or toughness.
+#[test]
+fn fortify_modal_team_pump() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&catalog::fortify().effect, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(a).map(|c| (c.power, c.toughness)), Some((4, 2)), "+2/+0");
+}
+
+/// Lambholt Harrier stops a creature from blocking.
+#[test]
+fn lambholt_harrier_cant_block() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ab = catalog::lambholt_harrier().activated_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&ab, &ctx).unwrap();
+    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Crash the Ramparts pumps +3/+3 and grants trample.
+#[test]
+fn crash_the_ramparts_pump_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::crash_the_ramparts().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Markov Purifier draws at end step (paying {2}) only when you gained life.
+#[test]
+fn markov_purifier_end_step_draw() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let mp = catalog::markov_purifier();
+    let pred = mp.triggered_abilities[0].event.filter.clone().unwrap();
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.players[0].life_gained_this_turn = 0;
+    assert!(!g.evaluate_predicate(&pred, &ctx), "no draw without lifegain");
+    g.players[0].life_gained_this_turn = 3;
+    assert!(g.evaluate_predicate(&pred, &ctx), "gated on lifegain");
+    // The paid draw works when mana is floated.
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.resolve_effect(&mp.triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "paid two to draw");
+}
