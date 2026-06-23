@@ -6109,3 +6109,103 @@ pub fn light_up_the_night() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tyrant's Scorn — {U}{B} Instant. Destroy a creature with mana value 3 or
+/// less; or return target creature to its owner's hand.
+pub fn tyrants_scorn() -> CardDefinition {
+    CardDefinition {
+        name: "Tyrant's Scorn",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fang of Shigeki — {G} 1/1 Snake Ninja Enchantment Creature with deathtouch.
+pub fn fang_of_shigeki() -> CardDefinition {
+    CardDefinition {
+        name: "Fang of Shigeki",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Ninja],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+
+
+
+/// Lifecraft Cavalry — {4}{G} 4/4 Elf Warrior with trample. Revolt — enters
+/// with two +1/+1 counters if a permanent left the battlefield under your
+/// control this turn.
+pub fn lifecraft_cavalry() -> CardDefinition {
+    CardDefinition {
+        name: "Lifecraft Cavalry",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Workshop Warchief — {3}{G}{G} 5/3 Rhino Warrior with trample. ETB gain 3
+/// life; dies → make a 4/4 green Rhino Warrior. Blitz {4}{G}{G}.
+pub fn workshop_warchief() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let rhino = TokenDefinition {
+        name: "Rhino".into(), power: 4, toughness: 4,
+        card_types: vec![CardType::Creature], colors: vec![crate::mana::Color::Green],
+        keywords: vec![Keyword::Trample],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino, CreatureType::Warrior],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Workshop Warchief",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        alternative_cost: Some(crate::effect::shortcut::blitz(cost(&[generic(4), g(), g()]))),
+        triggered_abilities: vec![
+            etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            on_dies(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: rhino }),
+        ],
+        ..Default::default()
+    }
+}

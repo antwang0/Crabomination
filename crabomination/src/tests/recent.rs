@@ -3802,3 +3802,59 @@ fn light_up_the_night_hits_creature_for_x_plus_one() {
     // X=3 → 3+1 = 4 damage kills the 4/4.
     assert!(g.battlefield_find(v).is_none(), "X+1 = 4 killed the 4/4");
 }
+
+/// Tyrant's Scorn destroys a small creature (mode 0).
+#[test]
+fn tyrants_scorn_destroys_small_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let s = g.add_card_to_hand(0, catalog::tyrants_scorn());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: s, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "destroyed the MV-2 creature");
+}
+
+/// Fang of Shigeki is a 1/1 deathtouch enchantment creature.
+#[test]
+fn fang_of_shigeki_is_deathtouch_enchantment_creature() {
+    let def = catalog::fang_of_shigeki();
+    assert!(def.card_types.contains(&crate::card::CardType::Enchantment));
+    assert!(def.card_types.contains(&crate::card::CardType::Creature));
+    assert!(def.keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Lifecraft Cavalry enters with two +1/+1 counters when revolt is active.
+#[test]
+fn lifecraft_cavalry_revolt_counters() {
+    let mut g = two_player_game();
+    // No revolt: enters as a plain 4/4.
+    let plain = g.move_card_to_battlefield_for_test(0, catalog::lifecraft_cavalry());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(plain).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    // A permanent left under your control this turn → revolt.
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_to_graveyard_with_triggers(token);
+    let revolted = g.move_card_to_battlefield_for_test(0, catalog::lifecraft_cavalry());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(revolted).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "entered with two counters under revolt");
+}
+
+/// Workshop Warchief gains 3 life on entry and leaves a Rhino when it dies.
+#[test]
+fn workshop_warchief_etb_life_and_dies_token() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let wc = g.move_card_to_battlefield_for_test(0, catalog::workshop_warchief());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "ETB gained 3 life");
+    let evs = g.remove_to_graveyard_with_triggers(wc);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Rhino"),
+        "dies trigger made a Rhino");
+}
