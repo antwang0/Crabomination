@@ -3923,3 +3923,79 @@ fn archangel_of_wrath_kicked_twice_burns_four() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 4, "two ETB triggers each dealt 2");
 }
+
+/// Ascendant Packleader enters with a counter when you control an MV-4 permanent.
+#[test]
+fn ascendant_packleader_revolt_style_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // MV 5 permanent
+    let pl = g.move_card_to_battlefield_for_test(0, catalog::ascendant_packleader());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pl).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "entered with a counter (MV-4+ permanent present)");
+}
+
+/// Persistent Specimen returns itself from the graveyard for {2}{B}.
+#[test]
+fn persistent_specimen_returns_from_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::persistent_specimen());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("graveyard ability");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(id).expect("returned to battlefield");
+    assert!(back.tapped, "returned tapped");
+}
+
+/// Wedding Invitation draws on ETB and makes a creature unblockable.
+#[test]
+fn wedding_invitation_etb_draw_and_unblockable() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let inv = g.move_card_to_battlefield_for_test(0, catalog::wedding_invitation());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "ETB drew a card");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: inv, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+    }).expect("sac ability");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
+/// Unlucky Witness exiles two cards on death and grants a may-play.
+#[test]
+fn unlucky_witness_dies_impulse() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
+    let id = g.add_card_to_battlefield(0, catalog::unlucky_witness());
+    let evs = g.remove_to_graveyard_with_triggers(id);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().filter(|c| c.owner == 0 && c.may_play_until.is_some()).count();
+    assert_eq!(exiled, 2, "exiled two cards playable");
+}
+
+/// Squee makes a tapped, attacking Goblin when it attacks, and has Escape.
+#[test]
+fn squee_attacks_makes_goblin_and_has_escape() {
+    let def = catalog::squee_dubious_monarch();
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Escape(_, 4))), "Escape exiling four");
+    let mut g = two_player_game();
+    let squee = g.add_card_to_battlefield(0, catalog::squee_dubious_monarch());
+    g.clear_sickness(squee);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: squee, target: AttackTarget::Player(1),
+    }])).expect("Squee attacks");
+    drain_stack(&mut g);
+    let gob = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Goblin");
+    assert!(gob.is_some_and(|c| c.tapped), "made a tapped Goblin on attack");
+}

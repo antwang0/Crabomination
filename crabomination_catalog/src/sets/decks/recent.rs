@@ -6348,3 +6348,150 @@ pub fn archangel_of_wrath() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ascendant Packleader — {G} 2/1 Wolf. Enters with a +1/+1 counter if you
+/// control a permanent with mana value 4+; gains a counter when you cast a
+/// spell with mana value 4 or greater.
+pub fn ascendant_packleader() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Ascendant Packleader",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::ManaValueAtLeast(4),
+                }),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellMatches(SelectionRequirement::ManaValueAtLeast(4))),
+                effect: Effect::AddCounter {
+                    what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Persistent Specimen — {B} 1/1 Skeleton. {2}{B}: Return this from your
+/// graveyard to the battlefield tapped.
+pub fn persistent_specimen() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Persistent Specimen",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_graveyard: true,
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wedding Invitation — {2} Artifact. ETB draw a card. {T}, Sacrifice: target
+/// creature can't be blocked this turn; if it's a Vampire it also gains lifelink.
+pub fn wedding_invitation() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CreatureType};
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Wedding Invitation",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Vampire),
+                    },
+                    then: Box::new(Effect::GrantKeyword {
+                        what: Selector::Target(0), keyword: Keyword::Lifelink, duration: Duration::EndOfTurn,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unlucky Witness — {R} 1/1 Human Citizen. When it dies, exile the top two
+/// cards of your library; until your next end step, you may play one of them.
+pub fn unlucky_witness() -> CardDefinition {
+    CardDefinition {
+        name: "Unlucky Witness",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Citizen], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            duration: MayPlayDuration::EndOfControllersNextTurn,
+            pay_any_color: false,
+            uncast_penalty: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Squee, Dubious Monarch — {2}{R} 2/2 Legendary Goblin Noble. Haste. Attacks →
+/// make a tapped, attacking 1/1 Goblin. Escape {3}{R}, exile four other cards.
+pub fn squee_dubious_monarch() -> CardDefinition {
+    let goblin = crate::card::TokenDefinition {
+        name: "Goblin".into(), power: 1, toughness: 1,
+        card_types: vec![CardType::Creature], colors: vec![crate::mana::Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Squee, Dubious Monarch",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin, CreatureType::Noble], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Escape(cost(&[generic(3), r()]), 4)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: goblin,
+                cleanup: crate::effect::AttackingTokenCleanup::None,
+            },
+        }],
+        ..Default::default()
+    }
+}
