@@ -587,6 +587,15 @@ impl GameState {
                     }
                     EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
                 }),
+            Predicate::EntityMatchesAny { what, filter } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .any(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller, ctx.source)
+                    }
+                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                }),
             Predicate::LifeGainedThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

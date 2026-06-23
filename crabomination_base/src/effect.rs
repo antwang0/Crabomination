@@ -627,6 +627,11 @@ pub enum Predicate {
     CurrentStepIs(crate::turn_step::TurnStep),
     /// The given entity's properties match the filter.
     EntityMatches { what: Selector, filter: SelectionRequirement },
+    /// At least one entity the selector resolves to matches the filter
+    /// (false when the selector is empty — unlike `EntityMatches`, which is
+    /// vacuously true). Gates "if a [creature] card was exiled this way, …"
+    /// over an optional ("up to one") target — Diregraf Scavenger.
+    EntityMatchesAny { what: Selector, filter: SelectionRequirement },
     /// `who` has gained at least `at_least` total life this turn.
     /// Backed by `Player.life_gained_this_turn`. Used by Strixhaven's
     /// **Infusion** rider — "If you gained life this turn, …".
@@ -1655,6 +1660,22 @@ pub enum Effect {
         mana_cost: crate::mana::ManaCost,
         body: Box<Effect>,
         /// Runs when the cost was declined or unpayable ("if you don't, …").
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+
+    /// "You may sacrifice [count] [filter]. If you do, [then]." — the
+    /// reflexive sacrifice cost (Bloodcrazed Socialite's attack +2/+2,
+    /// Gut, True Soul Zealot's attack-sac → Skeleton). Asks the controller
+    /// yes/no (gated on owning a legal candidate); on yes, the weakest
+    /// non-source matching permanent(s) are sacrificed (the cost is almost
+    /// always a token, so the auto-pick is faithful) and `then` runs.
+    MaySacrifice {
+        description: String,
+        filter: SelectionRequirement,
+        count: Value,
+        then: Box<Effect>,
+        /// Runs if the cost was declined or no legal sacrifice existed.
         #[serde(default)]
         else_: Option<Box<Effect>>,
     },

@@ -96,18 +96,10 @@ plays its headline pattern):
 
 Riders deliberately approximated/omitted while shipping the Innistrad batch
 (each card otherwise plays its headline pattern):
-- **Sacrifice-as-a-reflexive-cost** ("you may sacrifice X; if you do, …") — no
-  primitive that gates a reflexive effect on a *successful optional sacrifice*.
-  Blocks Bloodcrazed Socialite's attack `+2/+2` (omitted), Gut True Soul
-  Zealot's attack-sac→Skeleton (unbuilt). A `MayPay { sacrifice, then }` layer
-  would cover both.
 - **Disturb-into-Aura back faces** — Binding Geist // Spectral Binding,
   Mischievous Catgeist // Catlike Curiosity, Dorothea // Dorothea's Retribution
   all disturb into an *Aura* (not a creature). Needs the disturb cast path to
   route an enchant-creature target like a normal Aura cast.
-- **Diregraf Scavenger** — the "if a creature card was exiled this way" rider on
-  its ETB graveyard-exile needs tracking what `ExileTaggedWithSource` exiled
-  this resolution; shipped the exile, omitted the conditional drain.
 - **Olivia, Crimson Bride** — the reanimated creature's "when you don't control a
   legendary Vampire, exile this" rider is omitted (needs a granted
   count-gated delayed exile).

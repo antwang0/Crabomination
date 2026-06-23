@@ -1381,6 +1381,49 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MaySacrifice {
+                description,
+                filter,
+                count,
+                then,
+                else_,
+            } => {
+                // Reflexive sacrifice cost: ask yes/no (only when the
+                // controller actually has a legal sacrifice), then sacrifice
+                // the weakest non-source matching permanent(s) and run `then`.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let source_id = ctx.source;
+                let candidates = self.sacrifice_candidates(ctx.controller, filter, source_id);
+                if n == 0 || candidates.len() < n {
+                    if let Some(e) = else_ {
+                        self.run_effect(e, ctx, events)?;
+                    }
+                    return Ok(());
+                }
+                let source = source_id.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    description.clone(),
+                    source,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if yes {
+                    let ids = self.auto_pick_sacrifices(&candidates, n, source_id, false, false);
+                    for id in ids {
+                        self.sacrifice_one(id, ctx.controller, events);
+                    }
+                    self.run_effect(then, ctx, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::DealDamage { to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }

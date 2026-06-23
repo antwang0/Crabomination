@@ -525,8 +525,9 @@ pub fn ardenvale_tactician() -> CardDefinition {
 }
 
 /// Bloodcrazed Socialite — {3}{B} 3/3 Vampire. Menace. ETB create a Blood
-/// token. (The attack "sacrifice a Blood for +2/+2" rider is omitted.)
+/// token. Attacks → may sacrifice a Blood; if you do, it gets +2/+2.
 pub fn bloodcrazed_socialite() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
     CardDefinition {
         name: "Bloodcrazed Socialite",
         cost: cost(&[generic(3), b()]),
@@ -535,11 +536,118 @@ pub fn bloodcrazed_socialite() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Menace],
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: crabomination_base::tokens::blood_token(),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::blood_token(),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MaySacrifice {
+                    description: "Sacrifice a Blood token? (Bloodcrazed Socialite gets +2/+2)".into(),
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                    count: Value::Const(1),
+                    then: Box::new(Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(2),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    }),
+                    else_: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Diregraf Scavenger — {3}{B} 2/3 Zombie Bear. Deathtouch. ETB exile up to
+/// one target card from a graveyard; if a creature card was exiled this way,
+/// each opponent loses 2 life and you gain 2.
+pub fn diregraf_scavenger() -> CardDefinition {
+    CardDefinition {
+        name: "Diregraf Scavenger",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Bear],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Exile {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+            },
+            Effect::If {
+                cond: Predicate::EntityMatchesAny {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::Creature,
+                },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(2),
+                    },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Gut, True Soul Zealot — {2}{R} 2/2 Legendary Goblin Shaman. Whenever you
+/// attack, you may sacrifice another creature or artifact; if you do, create a
+/// 4/1 black Skeleton with menace, tapped and attacking. (Choose-a-Background
+/// commander clause is cosmetic and omitted.)
+pub fn gut_true_soul_zealot() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let skeleton = TokenDefinition {
+        name: "Skeleton".into(),
+        power: 4,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Menace],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Gut, True Soul Zealot",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice another creature or artifact? (create a 4/1 Skeleton, tapped and attacking)".into(),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::OtherThanSource),
+                count: Value::Const(1),
+                then: Box::new(Effect::CreateTokenAttacking {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: skeleton,
+                    cleanup: crate::effect::AttackingTokenCleanup::None,
+                }),
+                else_: None,
+            },
+        }],
         ..Default::default()
     }
 }

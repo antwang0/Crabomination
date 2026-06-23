@@ -254,6 +254,10 @@ impl Effect {
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
             Effect::MayPay { body, .. } => body.requires_target(),
+            Effect::MaySacrifice { then, else_, .. } => {
+                then.requires_target()
+                    || else_.as_ref().is_some_and(|e| e.requires_target())
+            }
             Effect::Process { then, .. } => then.requires_target(),
             Effect::CollectEvidence { amount, then } => {
                 value_has_target(amount) || then.requires_target()

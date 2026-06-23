@@ -4954,3 +4954,99 @@ fn training_creatures_wired() {
     assert!(catalog::gryff_rider().keywords.contains(&Keyword::Flying));
     assert!(catalog::apprentice_sharpshooter().keywords.contains(&Keyword::Reach));
 }
+
+/// Bloodcrazed Socialite's attack trigger sacrifices a Blood for +2/+2.
+#[test]
+fn bloodcrazed_socialite_sacs_blood_for_pump() {
+    let mut g = two_player_game();
+    let soc = g.add_card_to_battlefield(0, catalog::bloodcrazed_socialite());
+    // Mint a Blood token via the ETB.
+    let etb = catalog::bloodcrazed_socialite().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(soc, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Blood"), "blood made");
+    // Accept the reflexive sacrifice → +2/+2.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let atk = catalog::bloodcrazed_socialite().triggered_abilities[1].effect.clone();
+    g.resolve_effect(&atk, &ctx).unwrap();
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Blood"), "blood sacrificed");
+    assert_eq!(g.battlefield_find(soc).unwrap().power(), 5, "got +2/+2");
+}
+
+/// Declining the reflexive sacrifice leaves the Blood and the body unchanged.
+#[test]
+fn bloodcrazed_socialite_declines_sacrifice() {
+    let mut g = two_player_game();
+    let soc = g.add_card_to_battlefield(0, catalog::bloodcrazed_socialite());
+    let etb = catalog::bloodcrazed_socialite().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(soc, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let atk = catalog::bloodcrazed_socialite().triggered_abilities[1].effect.clone();
+    g.resolve_effect(&atk, &ctx).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Blood"), "blood kept");
+    assert_eq!(g.battlefield_find(soc).unwrap().power(), 3, "no pump");
+}
+
+/// Gut, True Soul Zealot's attack trigger sacrifices another creature to mint a
+/// 4/1 Skeleton tapped and attacking.
+#[test]
+fn gut_sacs_creature_for_attacking_skeleton() {
+    let mut g = two_player_game();
+    let gut = g.add_card_to_battlefield(0, catalog::gut_true_soul_zealot());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(gut);
+    g.clear_sickness(fodder);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: gut,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed (not Gut)");
+    assert!(g.battlefield_find(gut).is_some(), "Gut survives — only another sacrifices");
+    let skel = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Skeleton");
+    let skel = skel.expect("Skeleton token minted");
+    assert_eq!((skel.power(), skel.toughness()), (4, 1));
+    assert!(skel.tapped, "skeleton tapped");
+    let sid = skel.id;
+    assert!(g.attacking.iter().any(|a| a.attacker == sid), "skeleton attacking");
+}
+
+/// Diregraf Scavenger drains when a creature card is exiled from a graveyard.
+#[test]
+fn diregraf_scavenger_drains_on_creature_exile() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears()); // creature card
+    let etb = catalog::diregraf_scavenger().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.exile.iter().any(|c| c.id == dead), "creature card exiled");
+    assert_eq!(g.players[1].life, 18, "opponent lost 2");
+    assert_eq!(g.players[0].life, 22, "you gained 2");
+}
+
+/// Exiling a noncreature card from a graveyard skips Diregraf Scavenger's drain.
+#[test]
+fn diregraf_scavenger_no_drain_on_noncreature() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let spell = g.add_card_to_graveyard(1, catalog::lightning_bolt()); // instant
+    let etb = catalog::diregraf_scavenger().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    ctx.targets = vec![Target::Permanent(spell)];
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.exile.iter().any(|c| c.id == spell), "noncreature exiled");
+    assert_eq!(g.players[1].life, 20, "no drain");
+    assert_eq!(g.players[0].life, 20, "no gain");
+}
