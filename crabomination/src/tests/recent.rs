@@ -5154,3 +5154,109 @@ fn vampire_socialite_counters_when_opp_lost_life() {
     assert_eq!(g.battlefield_find(other).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(), Some(1));
     assert_eq!(g.battlefield_find(soc).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
+
+/// Sigarda's Imprisonment locks the enchanted creature out of combat.
+#[test]
+fn sigardas_imprisonment_locks_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = catalog::sigardas_imprisonment();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(victim)];
+    // Put the aura on the battlefield, then resolve its attach effect.
+    let aura_id = g.add_card_to_battlefield(0, aura);
+    let attach = catalog::sigardas_imprisonment().effect.clone();
+    let mut actx = crate::game::effects::EffectContext::for_ability(aura_id, 0, None);
+    actx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&attach, &actx).unwrap();
+    let cp = g.computed_permanent(victim).unwrap();
+    assert!(cp.keywords.contains(&Keyword::CantAttack) && cp.keywords.contains(&Keyword::CantBlock));
+}
+
+/// Vampire Spawn drains 2 on entry.
+#[test]
+fn vampire_spawn_drains_two() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let etb = catalog::vampire_spawn().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(0), 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!((g.players[0].life, g.players[1].life), (22, 18));
+}
+
+/// Wedding Security sacrifices a Blood for a counter and a card.
+#[test]
+fn wedding_security_sacs_blood_for_counter_and_card() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let ws = g.add_card_to_battlefield(0, catalog::wedding_security());
+    g.add_card_to_library(0, catalog::island());
+    // Make a Blood token directly.
+    g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let atk = catalog::wedding_security().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(ws, 0, None, 0);
+    g.resolve_effect(&atk, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(ws).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(), Some(1));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
+/// Falcon Abomination makes a decayed Zombie on entry.
+#[test]
+fn falcon_abomination_makes_decayed_zombie() {
+    let mut g = two_player_game();
+    let etb = catalog::falcon_abomination().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(0), 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    let z = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Zombie").unwrap();
+    assert!(z.definition.keywords.contains(&Keyword::Decayed));
+}
+
+/// Militia Rallier can't be declared as the lone attacker (CR 508.0).
+#[test]
+fn militia_rallier_cant_attack_alone() {
+    let mut g = two_player_game();
+    let mr = g.add_card_to_battlefield(0, catalog::militia_rallier());
+    g.clear_sickness(mr);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let r = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: mr,
+        target: AttackTarget::Player(1),
+    }]));
+    assert!(r.is_err(), "lone CantAttackAlone attack rejected");
+}
+
+/// With a partner, Militia Rallier is a legal attacker; its attack trigger
+/// untaps a target creature.
+#[test]
+fn militia_rallier_attacks_with_partner_and_untaps() {
+    let mut g = two_player_game();
+    let mr = g.add_card_to_battlefield(0, catalog::militia_rallier());
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mr);
+    g.clear_sickness(buddy);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: mr, target: AttackTarget::Player(1) },
+        Attack { attacker: buddy, target: AttackTarget::Player(1) },
+    ])).expect("attacks with a partner");
+    // The untap trigger itself: tap a creature and resolve the effect at it.
+    let tapped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let untap = catalog::militia_rallier().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(mr, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(tapped)];
+    g.resolve_effect(&untap, &ctx).unwrap();
+    assert!(!g.battlefield_find(tapped).unwrap().tapped, "untapped the target");
+}
+

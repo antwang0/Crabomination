@@ -728,6 +728,10 @@ pub enum Keyword {
     /// a batch that declares this creature alongside any other attacker is
     /// rejected.
     AttacksAlone,
+    /// CR 508.0 — "This creature can't attack alone" (Militia Rallier,
+    /// Cemetery Gatekeeper-era). Enforced in `declare_attackers`: a batch
+    /// where this is the *only* attacker is rejected.
+    CantAttackAlone,
     /// CR 508.1a restriction — "This creature can't attack unless you've cast
     /// a creature spell this turn" (Goblin Cohort, Goblin War Strike-era
     /// aggro). Enforced in `declare_attackers` against the controller's

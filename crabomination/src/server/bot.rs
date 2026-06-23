@@ -406,6 +406,17 @@ impl Bot for RandomBot {
                         })
                         .map(|c| c.id)
                         .collect();
+                    // CR 508.0 — drop a lone attacker that can't attack alone
+                    // (Militia Rallier): a single-attacker batch with
+                    // CantAttackAlone would be rejected, costing the bot its
+                    // whole combat. Only matters when it's the sole attacker.
+                    if attackers.len() == 1
+                        && state
+                            .computed_permanent(attackers[0])
+                            .is_some_and(|cp| cp.keywords.contains(&Keyword::CantAttackAlone))
+                    {
+                        attackers.clear();
+                    }
                     // Find opponent planeswalkers in loyalty-ascending
                     // order. The bot will redirect attacks at PWs whose
                     // current loyalty is at-or-below our total attacking

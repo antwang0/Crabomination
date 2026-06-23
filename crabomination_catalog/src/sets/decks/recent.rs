@@ -885,6 +885,137 @@ pub fn vampire_socialite() -> CardDefinition {
     }
 }
 
+/// Sigarda's Imprisonment — {2}{W} Aura. Enchanted creature can't attack or
+/// block. {4}{W}: exile enchanted creature and create a Blood token.
+pub fn sigardas_imprisonment() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Sigarda's Imprisonment",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+            ..Default::default()
+        }),
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(4), w()]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    to: ZoneDest::Exile,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::blood_token(),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vampire Spawn — {2}{B} 2/3 Vampire. ETB each opponent loses 2 life and you
+/// gain 2.
+pub fn vampire_spawn() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain;
+    CardDefinition {
+        name: "Vampire Spawn",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb_drain(2)],
+        ..Default::default()
+    }
+}
+
+/// Wedding Security — {3}{B}{B} 4/4 Vampire Soldier. Attacks → may sacrifice a
+/// Blood; if you do, put a +1/+1 counter on it and draw a card.
+pub fn wedding_security() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType};
+    CardDefinition {
+        name: "Wedding Security",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice a Blood token? (+1/+1 counter and draw)".into(),
+                filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                count: Value::Const(1),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Falcon Abomination — {2}{U} 2/2 Zombie Bird. Flying. ETB create a 2/2 black
+/// Zombie with decayed.
+pub fn falcon_abomination() -> CardDefinition {
+    CardDefinition {
+        name: "Falcon Abomination",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: decayed_zombie_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Militia Rallier — {2}{W} 3/3 Human Soldier. Can't attack alone. Attacks →
+/// untap target creature.
+pub fn militia_rallier() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Militia Rallier",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::CantAttackAlone],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Untap { what: target_filtered(SelectionRequirement::Creature), up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
 /// life. Create two Blood tokens.
 pub fn vampires_kiss() -> CardDefinition {

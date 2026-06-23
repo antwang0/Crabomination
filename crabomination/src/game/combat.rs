@@ -97,6 +97,19 @@ impl GameState {
             }
         }
 
+        // CR 508.0 — "can't attack alone" (Militia Rallier). A lone attacker
+        // carrying CantAttackAlone makes the batch illegal.
+        if attacks.len() == 1 {
+            let computed_pre = self.compute_battlefield();
+            if computed_pre
+                .iter()
+                .find(|c| c.id == attacks[0].attacker)
+                .is_some_and(|c| c.keywords.contains(&Keyword::CantAttackAlone))
+            {
+                return Err(GameError::CannotAttack(attacks[0].attacker));
+            }
+        }
+
         let mut events = vec![];
         // Per CR 506.5, the Attacks trigger filter must be evaluated
         // post-batch, so we carry the optional filter alongside each
