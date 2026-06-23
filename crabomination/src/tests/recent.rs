@@ -1674,3 +1674,123 @@ fn sarkhan_soul_aflame_cheapens_dragons() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(dragon).is_some(), "Dragon resolved at the discount");
 }
+
+// ── Recent-set batch 2 ───────────────────────────────────────────────────────
+
+/// Skirmish Rhino drains each opponent and gains you life.
+#[test]
+fn skirmish_rhino_drains_on_etb() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let opp = g.players[1].life;
+    g.move_card_to_battlefield_for_test(0, catalog::skirmish_rhino());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 2");
+    assert_eq!(g.players[1].life, opp - 2, "opponent lost 2");
+}
+
+/// Rabid Gnaw pumps your creature, which bites an opponent's.
+#[test]
+fn rabid_gnaw_bites() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::rabid_gnaw());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Rabid Gnaw");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "3 damage from the pumped biter killed the 2/2");
+    assert!(g.battlefield_find(mine).is_some(), "the biter took none");
+}
+
+/// Reckless Lackey sacrifices for a card and a Treasure.
+#[test]
+fn reckless_lackey_sacrifices_for_value() {
+    let mut g = two_player_game();
+    let lackey = g.add_card_to_battlefield(0, catalog::reckless_lackey());
+    g.clear_sickness(lackey);
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lackey, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for value");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lackey).is_none(), "sacrificed itself");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0
+        && c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure)),
+        "made a Treasure");
+}
+
+/// Lunar Convocation drains at end step when you gained life.
+#[test]
+fn lunar_convocation_drains_on_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lunar_convocation());
+    g.players[0].life_gained_this_turn = 3;
+    g.active_player_idx = 0;
+    let opp = g.players[1].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "each opponent lost 1 after lifegain");
+}
+
+/// Dazzling Denial counters a spell whose controller can't pay the {2} tax.
+#[test]
+fn dazzling_denial_counters_when_unpaid() {
+    let mut g = two_player_game();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1); // exactly enough for Bolt, nothing spare
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Bolt");
+    g.priority.player_with_priority = 0;
+    let denial = g.add_card_to_hand(0, catalog::dazzling_denial());
+    cast_at(&mut g, denial, Target::Permanent(bolt));
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered (couldn't pay {{2}})");
+    assert_eq!(g.players[0].life, 20, "Bolt didn't resolve");
+}
+
+/// Mistrise Village enters tapped without the right basics, untapped with them.
+#[test]
+fn mistrise_village_conditional_tap() {
+    let mut g = two_player_game();
+    let v1 = g.move_card_to_battlefield_for_test(0, catalog::mistrise_village());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(v1).unwrap().tapped, "enters tapped with no Mountain/Forest");
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let v2 = g.move_card_to_battlefield_for_test(0, catalog::mistrise_village());
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(v2).unwrap().tapped, "enters untapped with a Mountain out");
+}
+
+/// Cori Mountain Monastery impulse-exiles the top card for later play.
+#[test]
+fn cori_mountain_monastery_impulse() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::cori_mountain_monastery());
+    g.add_card_to_battlefield(0, catalog::plains()); // so it isn't relevant; we just need mana
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let exile_before = g.exile.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("impulse");
+    drain_stack(&mut g);
+    assert!(g.exile.len() > exile_before, "exiled the top card for later play");
+}

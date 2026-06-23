@@ -2647,3 +2647,262 @@ pub fn sarkhan_soul_aflame() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Recent-set batch 2 (claude/modern_decks) ─────────────────────────────────
+
+/// Skirmish Rhino — {W}{B}{G} 3/4 Rhino. Trample. ETB: each opponent loses 2
+/// life and you gain 2 life.
+pub fn skirmish_rhino() -> CardDefinition {
+    CardDefinition {
+        name: "Skirmish Rhino",
+        cost: cost(&[w(), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rhino], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Rabid Gnaw — {1}{R} Instant. Target creature you control gets +1/+0 until end
+/// of turn, then deals damage equal to its power to target creature you don't
+/// control.
+pub fn rabid_gnaw() -> CardDefinition {
+    CardDefinition {
+        name: "Rabid Gnaw",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Reckless Lackey — {R} 1/2 Goblin Pirate. First strike, haste. {2}{R},
+/// Sacrifice this: draw a card and create a Treasure token.
+pub fn reckless_lackey() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Reckless Lackey",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lunar Convocation — {W}{B} Enchantment. At your end step: if you gained life
+/// this turn, each opponent loses 1 life; if you also lost life this turn,
+/// create a 1/1 black Bat with flying.
+pub fn lunar_convocation() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let bat = TokenDefinition {
+        name: "Bat".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Lunar Convocation",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::LifeGainedThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(1),
+                    },
+                    then: Box::new(Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::All(vec![
+                        Predicate::LifeGainedThisTurnAtLeast {
+                            who: PlayerRef::You,
+                            at_least: Value::Const(1),
+                        },
+                        Predicate::PlayerLostLifeThisTurn { who: PlayerRef::You },
+                    ]),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: bat,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dazzling Denial — {1}{U} Instant. Counter target spell unless its controller
+/// pays {2} — or {4} instead if you control a Bird.
+pub fn dazzling_denial() -> CardDefinition {
+    CardDefinition {
+        name: "Dazzling Denial",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Bird)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::CounterUnlessPaid {
+                what: Selector::Target(0),
+                mana_cost: cost(&[generic(4)]),
+                exile: false,
+                extra_generic: None,
+            }),
+            else_: Box::new(Effect::CounterUnlessPaid {
+                what: Selector::Target(0),
+                mana_cost: cost(&[generic(2)]),
+                exile: false,
+                extra_generic: None,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cori Mountain Monastery — Land. Enters tapped unless you control a Plains or
+/// an Island. {T}: Add {R}. {3}{R}, {T}: exile the top card of your library;
+/// you may play it until the end of your next turn.
+pub fn cori_mountain_monastery() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Cori Mountain Monastery",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![land_tapped_unless(LandType::Plains, LandType::Island)],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(crate::mana::Color::Red, Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3), r()]),
+                tap_cost: true,
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    duration: MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    uncast_penalty: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mistrise Village — Land. Enters tapped unless you control a Mountain or a
+/// Forest. {T}: Add {U}. {U}, {T}: your spells can't be countered this turn.
+/// (The printed "next spell" scope is approximated as all your spells.)
+pub fn mistrise_village() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Mistrise Village",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![land_tapped_unless(LandType::Mountain, LandType::Forest)],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(crate::mana::Color::Blue, Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                tap_cost: true,
+                effect: Effect::GrantSpellsUncounterableThisTurn { who: Selector::You },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// "Enters tapped unless you control a land of `type_a` or `type_b`" — the
+/// check-land ETB conditional reused by recent dual-color utility lands.
+fn land_tapped_unless(type_a: crate::card::LandType, type_b: crate::card::LandType) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(type_a)
+                        .or(SelectionRequirement::HasLandType(type_b))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::Noop),
+            else_: Box::new(Effect::Tap { what: Selector::This }),
+        },
+    }
+}
