@@ -3695,3 +3695,110 @@ fn reputable_merchant_counters_on_etb_and_death() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "death counter");
 }
+
+/// Withering Torment destroys a creature and the caster loses 2 life.
+#[test]
+fn withering_torment_kills_and_drains_caster() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wt = g.add_card_to_hand(0, catalog::withering_torment());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wt,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Withering Torment castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature destroyed");
+    assert_eq!(g.players[0].life, life - 2, "caster lost 2 life");
+}
+
+/// Voltage Surge deals 2 normally, 4 when an artifact is sacrificed.
+#[test]
+fn voltage_surge_base_and_boosted() {
+    // Base: AutoDecider declines the optional sacrifice → 2 damage.
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let vs = g.add_card_to_hand(0, catalog::voltage_surge());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: vs,
+        target: Some(Target::Permanent(v)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Voltage Surge castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(v).map(|c| c.damage), Some(2), "2 damage, no sac");
+
+    // Boosted: accept the sacrifice → 4 damage kills the 4/4.
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_battlefield(0, catalog::ornithopter()); // an artifact to sac
+    let vs = g.add_card_to_hand(0, catalog::voltage_surge());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: vs,
+        target: Some(Target::Permanent(v)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Voltage Surge castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(v).is_none(), "4 damage killed the 4/4");
+}
+
+/// Corpse Appraiser exiles a graveyard creature and digs a card into hand.
+#[test]
+fn corpse_appraiser_exiles_and_digs() {
+    let mut g = two_player_game();
+    let gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::corpse_appraiser());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gy), "exiled the gy creature");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "dug a card to hand");
+}
+
+/// The Wandering Rescuer gives other tapped creatures you control hexproof.
+#[test]
+fn wandering_rescuer_grants_tapped_hexproof() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_wandering_rescuer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Untapped: no hexproof.
+    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof));
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+        "tapped creature gains hexproof");
+}
+
+/// Light Up the Night deals X+1 to a creature.
+#[test]
+fn light_up_the_night_hits_creature_for_x_plus_one() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let spell = g.add_card_to_hand(0, catalog::light_up_the_night());
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(v)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("castable for {3}{R}");
+    drain_stack(&mut g);
+    // X=3 → 3+1 = 4 damage kills the 4/4.
+    assert!(g.battlefield_find(v).is_none(), "X+1 = 4 killed the 4/4");
+}

@@ -5954,3 +5954,158 @@ pub fn reputable_merchant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Withering Torment — {2}{B} Instant. Destroy target creature or enchantment;
+/// you lose 2 life.
+pub fn withering_torment() -> CardDefinition {
+    CardDefinition {
+        name: "Withering Torment",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Voltage Surge — {R} Instant. You may sacrifice an artifact as an additional
+/// cost; deals 2 damage to target creature or planeswalker, or 4 if you did.
+/// (The additional cost is taken at resolution — a `MayDo` sacrifice.)
+pub fn voltage_surge() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Voltage Surge",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::MayDo {
+                description: "Sacrifice an artifact for extra damage".into(),
+                body: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Artifact,
+                }),
+            },
+            Effect::If {
+                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(4),
+                }),
+                else_: Box::new(Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Corpse Appraiser — {U}{B}{R} 3/3 Vampire Rogue. ETB exile a creature card
+/// from a graveyard, then dig three (one to hand, the rest to your graveyard).
+/// (The "only if a card was exiled" gate is approximated — the dig is
+/// unconditional.)
+pub fn corpse_appraiser() -> CardDefinition {
+    CardDefinition {
+        name: "Corpse Appraiser",
+        cost: cost(&[u(), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::EachPlayer,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Exile,
+            },
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// The Wandering Rescuer — {3}{W}{W} 3/4 Legendary Human Samurai Noble. Flash,
+/// Convoke, Double strike. Other tapped creatures you control have hexproof.
+pub fn the_wandering_rescuer() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "The Wandering Rescuer",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Samurai, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flash, Keyword::Convoke, Keyword::DoubleStrike],
+        static_abilities: vec![StaticAbility {
+            description: "Other tapped creatures you control have hexproof.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::Tapped)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Hexproof,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Light Up the Night — {X}{R} Sorcery. Deals X damage to any target — X+1 if
+/// that target is a creature or planeswalker. (Flashback via remove-loyalty is
+/// omitted — no loyalty-removal alt-cost primitive.)
+pub fn light_up_the_night() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Light Up the Night",
+        cost: cost(&[crate::mana::x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::XFromCost,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                },
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
