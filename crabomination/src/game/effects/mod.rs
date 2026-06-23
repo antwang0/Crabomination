@@ -2015,6 +2015,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TimeTravel { who } => {
+                let Some(p) = self
+                    .resolve_selector(&Selector::Player(who.clone()), ctx)
+                    .into_iter()
+                    .find_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                else {
+                    return Ok(());
+                };
+                // Suspended cards p owns in exile → remove a time counter (cast
+                // sooner); removal-to-zero casts via the suspend funnel.
+                let suspended: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.owner == p && c.counter_count(CounterType::Time) > 0)
+                    .map(|c| c.id)
+                    .collect();
+                for id in suspended {
+                    let mut evs = self.remove_suspend_time_counter(id);
+                    events.append(&mut evs);
+                }
+                // Permanents p controls with time counters → add one (vanishing
+                // lives longer).
+                let perms: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.counter_count(CounterType::Time) > 0)
+                    .map(|c| c.id)
+                    .collect();
+                for id in perms {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.add_counters(CounterType::Time, 1);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: id,
+                            counter_type: CounterType::Time,
+                            count: 1,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PayEnergyOrElse { amount, otherwise } => {
                 // CR 107.16 — "sacrifice/return unless you pay {E}…". Pay when
                 // able (AutoDecider keeps the permanent); otherwise resolve the

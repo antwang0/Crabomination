@@ -4067,3 +4067,47 @@ fn cr_701_55_villainous_choice_takes_impossible_option_to_dodge() {
     g.resolve_effect(&choice, &ctx).unwrap();
     assert_eq!(g.players[1].life, 20, "dodged via the impossible sacrifice option");
 }
+
+// ── CR 614.16 — counter-placement replacement ordering ───────────────────────
+
+/// CR 614.16 / 616.1 — Hardened Scales (additive +1) and a Doubling-Counters
+/// permanent both replace a +1/+1 placement; the additive applies before the
+/// doubling: a 1-counter placement becomes (1+1)*2 = 4.
+#[test]
+fn cr_614_16_additive_then_doubling_counter_replacement() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    g.add_card_to_battlefield(0, catalog::witherbloom_pestseed()); // DoubleCounters
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(1),
+    }, &ctx).unwrap();
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        4,
+        "(1 + Hardened Scales) * Doubling = 4"
+    );
+}
+
+// ── CR 701.56 — Time travel ──────────────────────────────────────────────────
+
+/// CR 701.56a — time traveling removes a time counter from a suspended card the
+/// player owns (the bot heuristic advances its own suspended spells).
+#[test]
+fn cr_701_56_time_travel_advances_own_suspended_card() {
+    use crate::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::durkwood_baloth()); // Suspend 5—{G}
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    let before = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
+    assert_eq!(before, 5);
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::TimeTravel { who: PlayerRef::You }, &ctx).unwrap();
+    let after = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
+    assert_eq!(after, 4, "one time counter removed");
+}

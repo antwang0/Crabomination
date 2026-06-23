@@ -1768,6 +1768,13 @@ pub enum Effect {
     /// `ActivatedAbility` — the player commits by activating, and the
     /// energy is consumed when the ability resolves.
     PayEnergy { amount: u32, then: Box<Effect> },
+    /// CR 701.56 — `who` time travels: for each permanent they control and each
+    /// suspended card they own (in exile) with one or more time counters, they
+    /// may add or remove a time counter. The bot heuristic removes one from
+    /// each suspended card (so it's cast sooner) and adds one to each permanent
+    /// with time counters (vanishing — so it lives longer). UI per-object
+    /// choice is a follow-up.
+    TimeTravel { who: PlayerRef },
     /// "You may pay any amount of {E}; deal that much damage to `to`"
     /// (Galvanic Discharge). The controller spends energy at resolution; the
     /// bot heuristic pays exactly lethal to a creature target (its remaining

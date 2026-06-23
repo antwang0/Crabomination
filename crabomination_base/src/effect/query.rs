@@ -592,6 +592,7 @@ impl Effect {
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } => then.requires_target(),
             Effect::PayAnyEnergyDealDamage { to } => sel_has_target(to),
+            Effect::TimeTravel { who } => player_has_target(who),
             Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,

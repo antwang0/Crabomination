@@ -141,7 +141,8 @@ Each unblocks a large swath of cards.
   *and* abilities (CR 702.16c — `ability_target_has_protection`) across color /
   creatures / creature-type (Kitsune Riftwalker, Yawgmoth, Baneslayer) /
   spell-subtype / **multicolored** (`ProtectionFromMulticolored` — Stonecoil
-  Serpent). Remaining: "target each", protection-from-color combat re-check.
+  Serpent), and combat damage (CR 702.16e — `damage_prevented_by_protection`
+  on both attacker→blocker and blocker→attacker). Remaining: "target each".
 - 🟡 **Continuous-effect breadth:** layer-3 text-changing ✅ (Trait Doctoring);
   land-type statics ✅ (Blood Moon, Urborg). Remaining: CDA corners, full
   text-box swaps, "becomes a copy of" layer interaction.
@@ -245,6 +246,11 @@ Each a small targeted feature; sweep batch by batch.
   ✅ Renew (graveyard-exile activated ability via `from_graveyard` +
     `exile_self_cost`), ✅ Mobilize / Mobilize X (`shortcut::mobilize`,
     `mobilize_value`), ✅ Seek (CR 701.52 — `Effect::Seek`, random library pick),
+    ✅ Time Travel (CR 701.56 — `Effect::TimeTravel`: removes time counters from
+    the player's suspended cards / adds to vanishing permanents; bot heuristic,
+    per-object UI choice is a follow-up),
+    ✅ Villainous Choice (CR 701.55 — `Effect::VillainousChoice`: each chooser
+    in APNAP order takes the lesser-self-harm option; impossible options dodge),
     ⏳ **The Ring tempts you / Ring-bearer** (LTR — per-player ring level 1–4 +
     designated Ring-bearer with cumulative level abilities; needs new state, an
     evasion keyword, and attack/blocked/combat-damage granted triggers).
