@@ -2034,6 +2034,40 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
             }
         }
     }
+    // Opposing planeswalkers, highest loyalty first — a constant-damage "any
+    // target" ability that's lethal to the loyalty removes the threat.
+    let mut walkers: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_planeswalker())
+        .map(|c| (c.id, c.counter_count(crate::card::CounterType::Loyalty) as i32))
+        .collect();
+    walkers.sort_by_key(|(_, loy)| std::cmp::Reverse(*loy));
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Effect::DealDamage { to, amount: Value::Const(n) } = &ab.effect else { continue };
+            // Any target slot that could point at a planeswalker (would_accept
+            // re-checks the filter).
+            if !matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. }) {
+                continue;
+            }
+            for (walker, loy) in &walkers {
+                if *n < *loy {
+                    continue;
+                }
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(*walker)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
     None
 }
 
@@ -3313,6 +3347,27 @@ mod tests {
             panic!("expected a Discard answer");
         };
         assert_eq!(ids, vec![land], "a flooded bot pitches the surplus land");
+    }
+
+    /// A lethal constant-damage ping ability aims at an opposing planeswalker
+    /// whose loyalty it can finish off.
+    #[test]
+    fn bot_pings_lethal_opposing_planeswalker() {
+        let mut g = two_player_game();
+        let tim = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer()); // {T}: 1 dmg any target
+        g.clear_sickness(tim);
+        let walker = g.add_card_to_battlefield(1, catalog::vivien_reid());
+        // Knock the walker down to 1 loyalty so a 1-damage ping is lethal.
+        let inst = g.battlefield_find_mut(walker).unwrap();
+        inst.counters.insert(crate::card::CounterType::Loyalty, 1);
+        let action = pick_removal_ping(&g, 0).expect("bot should ping the walker");
+        match action {
+            GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. } => {
+                assert_eq!(card_id, tim);
+                assert_eq!(t, walker, "aimed at the 1-loyalty planeswalker");
+            }
+            other => panic!("unexpected action: {other:?}"),
+        }
     }
 
     /// Free, fixed-payload mana rocks like Sol Ring should be picked up by

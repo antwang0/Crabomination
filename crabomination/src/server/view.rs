@@ -451,7 +451,26 @@ fn project_player(
             .collect(),
         commanders: player.commanders.clone(),
         eliminated: player.eliminated,
-        emblems: player.emblems.iter().map(|e| e.name.clone()).collect(),
+        // Emblem label = source name plus any static-ability text, so the UI
+        // can show what an anthem emblem (Vivien Reid's −8) actually does
+        // rather than just its name. Triggered-only emblems keep the bare name.
+        emblems: player
+            .emblems
+            .iter()
+            .map(|e| {
+                if e.statics.is_empty() {
+                    e.name.clone()
+                } else {
+                    let text = e
+                        .statics
+                        .iter()
+                        .map(|s| s.description)
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    format!("{} — {}", e.name, text)
+                }
+            })
+            .collect(),
         has_prevention_shield,
         devotion,
         is_monarch,
@@ -2659,6 +2678,30 @@ mod tests {
         });
         let view = project(&state, 0);
         assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);
+    }
+
+    #[test]
+    fn project_surfaces_static_emblem_ability_text() {
+        use crate::card::StaticAbility;
+        use crate::effect::{Selector, StaticEffect};
+        let mut state = two_player_game();
+        state.players[0].emblems.push(crate::player::Emblem {
+            name: "Vivien Reid".into(),
+            triggered: vec![],
+            statics: vec![StaticAbility {
+                description: "Creatures you control get +2/+2.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::This,
+                    power: 2,
+                    toughness: 2,
+                },
+            }],
+        });
+        let view = project(&state, 0);
+        assert_eq!(
+            view.players[0].emblems,
+            vec!["Vivien Reid — Creatures you control get +2/+2.".to_string()]
+        );
     }
 
     #[test]

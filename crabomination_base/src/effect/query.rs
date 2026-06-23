@@ -1465,6 +1465,7 @@ impl Effect {
                 | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
+                Effect::PayAnyEnergyDealDamage { to } => sel_find(to, slot),
                 // Each of slots 0..max_targets carries the divide filter, so
                 // the cast/auto-target machinery collects "up to N targets".
                 Effect::DealDamageDivided { filter, max_targets, .. }
