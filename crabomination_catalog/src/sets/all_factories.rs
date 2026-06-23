@@ -805,6 +805,7 @@ static DECKS: &[Factory] = &[
     super::decks::rofellos_llanowar_emissary,
     super::decks::biorhythm,
     super::decks::karn_scion_of_urza,
+    super::decks::vivien_reid,
     super::decks::tezzeret_cruel_captain,
     super::decks::cruel_somnophage,
     super::decks::pentad_prism,

@@ -8895,6 +8895,7 @@ pub fn chandra_torch_of_defiance() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Chandra, Torch of Defiance".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
                         effect: Effect::DealDamage {

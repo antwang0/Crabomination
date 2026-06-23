@@ -4460,6 +4460,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Professor Dellian Fel".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
                         effect: Effect::LoseLife {

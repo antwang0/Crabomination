@@ -13997,6 +13997,37 @@ fn tezzeret_minus_seven_emblem_buffs_and_animates_artifact() {
     assert_eq!((view.power, view.toughness), (3, 3), "0/0 Robot + three +1/+1 = 3/3");
 }
 
+/// Vivien Reid's -8 emblem anthem (+2/+2, vigilance/trample/indestructible)
+/// applies to creatures the emblem's owner controls via the static-emblem path.
+#[test]
+fn vivien_reid_minus_eight_emblem_anthems_your_creatures() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let viv = g.add_card_to_battlefield(0, catalog::vivien_reid());
+    g.battlefield_find_mut(viv).unwrap().add_counters(CounterType::Loyalty, 3); // 5+3 = 8
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: None,
+        card_id: viv,
+        ability_index: 2,
+        target: None,
+    }).expect("Vivien -8");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].emblems.len(), 1, "emblem created");
+
+    let cp = g.compute_battlefield();
+    let mine = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((mine.power, mine.toughness), (4, 4), "your creature gets +2/+2");
+    assert!(mine.keywords.contains(&Keyword::Vigilance));
+    assert!(mine.keywords.contains(&Keyword::Trample));
+    assert!(mine.keywords.contains(&Keyword::Indestructible));
+    // Opponent's creature is unaffected.
+    let theirs = cp.iter().find(|c| c.id == foe).unwrap();
+    assert_eq!((theirs.power, theirs.toughness), (2, 2), "opponent unbuffed");
+}
+
 #[test]
 fn balefire_dragon_combat_damage_burns_each_opp_creature() {
     let mut g = two_player_game();

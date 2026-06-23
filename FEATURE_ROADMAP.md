@@ -202,7 +202,9 @@ Each unblocks a large swath of cards.
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
   Disguise/Cloak edge cases (both core paths ship — see Tier 4).
 - ⏳ **Ante / conspiracy / dungeon / sticker / attraction** zones (novelty only).
-- ✅ **Emblems** as command-zone objects — `Player.emblems` + `CreateEmblem`.
+- ✅ **Emblems** as command-zone objects — `Player.emblems` + `CreateEmblem`,
+  carrying both triggered and **static (anthem) abilities** (Vivien Reid's −8;
+  synthesized into continuous effects in `gather_continuous_effects`).
 - ⏳ **Sideboard zone** + "from outside the game" (wishes, companions).
 
 ## Tier 4 — Keyword & ability mechanics (the long tail)

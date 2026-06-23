@@ -2655,6 +2655,7 @@ mod tests {
         state.players[0].emblems.push(crate::player::Emblem {
             name: "Professor Dellian Fel".into(),
             triggered: vec![],
+            statics: vec![],
         });
         let view = project(&state, 0);
         assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);

@@ -25,6 +25,12 @@ pub struct Emblem {
     pub name: String,
     /// Abilities the emblem grants its owner.
     pub triggered: Vec<crate::effect::TriggeredAbility>,
+    /// Static abilities the emblem grants its owner (anthem-style emblems —
+    /// Vivien Reid's −8 "Creatures you control get +2/+2 …"). Synthesized into
+    /// continuous effects in `gather_continuous_effects`. Defaults to empty for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub statics: Vec<crate::card::StaticAbility>,
 }
 
 /// CR 702.50 — a resolved Epic spell, snapshotted for the per-upkeep copy.

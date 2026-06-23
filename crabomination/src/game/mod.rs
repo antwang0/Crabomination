@@ -3400,6 +3400,42 @@ impl GameState {
             }
             all_effects.extend(effects);
         }
+        // CR 114 — static-ability emblems (Vivien Reid's −8 anthem). Emblems
+        // have no battlefield object, so synthesize a CardInstance per emblem
+        // (controller = owner) and reuse `static_ability_to_effects`. The
+        // source id sits in a high sentinel range so it can't collide with a
+        // real card; the duration is remapped to `Indefinite` since emblems
+        // never leave the command zone.
+        for (seat, player) in self.players.iter().enumerate() {
+            for (ei, emblem) in player.emblems.iter().enumerate() {
+                if emblem.statics.is_empty() {
+                    continue;
+                }
+                let synth_def = crate::card::CardDefinition {
+                    name: "Emblem",
+                    static_abilities: emblem.statics.clone(),
+                    ..Default::default()
+                };
+                let sid = CardId(u32::MAX - (seat as u32 * 256 + ei as u32));
+                let mut synth = CardInstance::new(sid, synth_def, seat);
+                synth.controller = seat;
+                for mut e in static_ability_to_effects(&synth, sid.0 as u64) {
+                    e.duration = EffectDuration::Indefinite;
+                    if let AffectedPermanents::AllOpponents {
+                        source_controller,
+                        friendly_seats,
+                        ..
+                    } = &mut e.affected
+                        && friendly_seats.is_empty()
+                    {
+                        let mut seats = self.teammates(*source_controller);
+                        seats.push(*source_controller);
+                        *friendly_seats = seats;
+                    }
+                    all_effects.push(e);
+                }
+            }
+        }
         // CR 702.6 — Equipment attachment statics. Each Equipment with a
         // live `attached_to` link and an `equipped_bonus` confers +P/+T
         // (layer 7c) and keyword grants (layer 6) on the creature it's

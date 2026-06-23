@@ -10423,12 +10423,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CreateEmblem { who, name, triggered } => {
+            Effect::CreateEmblem { who, name, triggered, statics } => {
                 for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
                     if let EntityRef::Player(p) = ent {
                         self.players[p].emblems.push(crate::player::Emblem {
                             name: name.clone(),
                             triggered: triggered.clone(),
+                            statics: statics.clone(),
                         });
                     }
                 }

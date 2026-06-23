@@ -7876,6 +7876,110 @@ pub fn karn_scion_of_urza() -> CardDefinition {
     }
 }
 
+/// Vivien Reid — {3}{G}{G} Legendary Planeswalker — Vivien. 5 loyalty.
+/// **+1**: Look at the top four cards; you may reveal a creature or land card
+/// and put it into your hand, rest on the bottom.
+/// **-3**: Destroy target artifact, enchantment, or creature with flying.
+/// **-8**: You get an emblem with "Creatures you control get +2/+2 and have
+/// vigilance, trample, and indestructible."
+pub fn vivien_reid() -> CardDefinition {
+    use crate::card::{
+        Keyword, LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, StaticEffect, Supertype as Sup,
+    };
+    CardDefinition {
+        name: "Vivien Reid",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Vivien],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                x_cost: false,
+                loyalty_cost: 1,
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                    ),
+                    take: None,
+                    to_battlefield: false,
+                },
+            },
+            LoyaltyAbility {
+                x_cost: false,
+                loyalty_cost: -3,
+                effect: Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Enchantment)
+                            .or(SelectionRequirement::Creature
+                                .and(SelectionRequirement::HasKeyword(Keyword::Flying))),
+                    ),
+                },
+            },
+            LoyaltyAbility {
+                x_cost: false,
+                loyalty_cost: -8,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Vivien Reid".into(),
+                    triggered: vec![],
+                    statics: vec![
+                        StaticAbility {
+                            description: "Creatures you control get +2/+2.",
+                            effect: StaticEffect::PumpPT {
+                                applies_to: Selector::EachPermanent(
+                                    SelectionRequirement::Creature
+                                        .and(SelectionRequirement::ControlledByYou),
+                                ),
+                                power: 2,
+                                toughness: 2,
+                            },
+                        },
+                        StaticAbility {
+                            description: "Creatures you control have vigilance.",
+                            effect: StaticEffect::GrantKeyword {
+                                applies_to: Selector::EachPermanent(
+                                    SelectionRequirement::Creature
+                                        .and(SelectionRequirement::ControlledByYou),
+                                ),
+                                keyword: Keyword::Vigilance,
+                            },
+                        },
+                        StaticAbility {
+                            description: "Creatures you control have trample.",
+                            effect: StaticEffect::GrantKeyword {
+                                applies_to: Selector::EachPermanent(
+                                    SelectionRequirement::Creature
+                                        .and(SelectionRequirement::ControlledByYou),
+                                ),
+                                keyword: Keyword::Trample,
+                            },
+                        },
+                        StaticAbility {
+                            description: "Creatures you control have indestructible.",
+                            effect: StaticEffect::GrantKeyword {
+                                applies_to: Selector::EachPermanent(
+                                    SelectionRequirement::Creature
+                                        .and(SelectionRequirement::ControlledByYou),
+                                ),
+                                keyword: Keyword::Indestructible,
+                            },
+                        },
+                    ],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Tezzeret, Cruel Captain — {3} Legendary Planeswalker — Tezzeret. 4 loyalty.
 /// Whenever an artifact you control enters, put a loyalty counter on Tezzeret.
 /// **0**: Untap target artifact or creature. If it's an artifact creature,
@@ -7951,6 +8055,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Tezzeret, Cruel Captain".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(
                             EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
@@ -25365,6 +25470,7 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Liliana, the Last Hope".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(
                             EventKind::StepBegins(crate::game::TurnStep::End),
@@ -25424,6 +25530,7 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Teferi, Hero of Dominaria".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
                         effect: Effect::Exile {
@@ -34205,6 +34312,7 @@ pub fn wrenn_and_six() -> CardDefinition {
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Wrenn and Six".into(),
+                    statics: vec![],
                     triggered: vec![TriggeredAbility {
                         event: EventSpec::new(
                             EventKind::StepBegins(crate::game::TurnStep::Upkeep),

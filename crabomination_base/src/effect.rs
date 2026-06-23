@@ -3550,7 +3550,15 @@ pub enum Effect {
     /// dispatcher walks each player's emblems). Used by planeswalker
     /// ultimates — Professor Dellian Fel's -6, the upkeep-draw / end-step
     /// emblems, etc.
-    CreateEmblem { who: PlayerRef, name: String, triggered: Vec<TriggeredAbility> },
+    CreateEmblem {
+        who: PlayerRef,
+        name: String,
+        #[serde(default)]
+        triggered: Vec<TriggeredAbility>,
+        /// Static (anthem) abilities the emblem grants — Vivien Reid's −8.
+        #[serde(default)]
+        statics: Vec<crate::card::StaticAbility>,
+    },
 
     /// "[Player] wins the game." Used by Approach of the Second Sun's
     /// second-cast win condition, Coalition Victory, Test of Endurance,
