@@ -2711,6 +2711,8 @@ static DECKS: &[Factory] = &[
     super::decks::sungold_sentinel,
     super::decks::bladebrand,
     super::decks::halana_and_alena,
+    super::decks::welcoming_vampire,
+    super::decks::cruel_witness,
     super::decks::burnout_bashtronaut,
     super::decks::swiftwing_assailant,
     super::decks::risen_necroregent,

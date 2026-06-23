@@ -222,6 +222,53 @@ pub fn halana_and_alena() -> CardDefinition {
     }
 }
 
+/// Welcoming Vampire — {2}{W} 2/3 Vampire. Flying. Whenever one or more other
+/// creatures you control with power 2 or less enter, draw a card. Once each turn.
+pub fn welcoming_vampire() -> CardDefinition {
+    CardDefinition {
+        name: "Welcoming Vampire",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+                })
+                .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cruel Witness — {2}{U}{U} 3/3 Bird Horror. Flying. Whenever you cast a
+/// noncreature spell, surveil 1.
+pub fn cruel_witness() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Witness",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Questing Beast — {2}{G}{G} 4/4 Legendary Beast. Vigilance, deathtouch,
 /// haste; can't be blocked by creatures with power 2 or less; combat damage
 /// dealt by creatures you control can't be prevented. (The planeswalker-redirect
