@@ -212,6 +212,73 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Intrepid Rabbit — {2}{W} 3/2 Rabbit Soldier. Offspring {1}. When it enters,
+/// target creature you control gets +1/+1 until end of turn.
+pub fn intrepid_rabbit() -> CardDefinition {
+    CardDefinition {
+        name: "Intrepid Rabbit",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Offspring(cost(&[generic(1)]))],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Marauding Brinefang — {5}{U}{U} 6/7 Dinosaur. Ward {3}. Islandcycling {2}.
+pub fn marauding_brinefang() -> CardDefinition {
+    use crate::card::{LandType, WardCost};
+    CardDefinition {
+        name: "Marauding Brinefang",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 6,
+        toughness: 7,
+        keywords: vec![
+            Keyword::Ward(WardCost::Mana(cost(&[generic(3)]))),
+            Keyword::Typecycling(Box::new((
+                cost(&[generic(2)]),
+                SelectionRequirement::HasLandType(LandType::Island),
+            ))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Crystal Barricade — {1}{W} 0/4 Wall. Defender; you have hexproof. (The
+/// prevent-noncombat-damage-to-your-other-creatures rider is omitted.)
+pub fn crystal_barricade() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Crystal Barricade",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        static_abilities: vec![StaticAbility {
+            description: "You have hexproof.",
+            effect: StaticEffect::ControllerHasHexproof,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Persistent Marshstalker — {1}{B} 3/1 Rat Berserker. Gets +1/+0 for each
 /// other Rat you control. (Its threshold attack-recursion is omitted.)
 pub fn persistent_marshstalker() -> CardDefinition {

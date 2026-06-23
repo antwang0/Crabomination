@@ -44,6 +44,40 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Intrepid Rabbit's ETB pumps a creature you control and it has Offspring.
+#[test]
+fn intrepid_rabbit_etb_pump() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let r = catalog::intrepid_rabbit();
+    assert!(r.keywords.iter().any(|k| matches!(k, Keyword::Offspring(_))));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&r.triggered_abilities[0].effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+/// Marauding Brinefang has Ward {3} and Islandcycling.
+#[test]
+fn marauding_brinefang_ward_and_islandcycling() {
+    use crate::card::Keyword;
+    let b = catalog::marauding_brinefang();
+    assert!(b.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))));
+    assert!(b.keywords.iter().any(|k| matches!(k, Keyword::Typecycling(_))));
+    assert_eq!((b.power, b.toughness), (6, 7));
+}
+
+/// Crystal Barricade gives its controller hexproof.
+#[test]
+fn crystal_barricade_grants_controller_hexproof() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crystal_barricade());
+    // Player 0 can't be targeted by an opponent now.
+    assert!(g.player_has_static_hexproof(0), "controller has hexproof");
+}
+
 /// Druid of the Spade grows and gains trample only while you control a token.
 #[test]
 fn druid_of_the_spade_token_conditional() {
