@@ -1959,3 +1959,36 @@ fn glistener_seer_oil_scry() {
     assert_eq!(g.battlefield_find(seer).unwrap().counter_count(CounterType::Oil), 2, "spent one oil");
     assert!(g.battlefield_find(seer).unwrap().tapped, "tapped for the ability");
 }
+
+/// Vengeful Bloodwitch drains when a creature you control dies.
+#[test]
+fn vengeful_bloodwitch_drains_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vengeful_bloodwitch());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let opp = g.players[1].life;
+    // Kill the fodder through the full damage→SBA→dispatch path.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(fodder)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the fodder");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "opponent lost 1");
+    assert_eq!(g.players[0].life, life + 1, "you gained 1");
+}
+
+/// Hulking Raptor ramps two green at your first main phase and has Ward {2}.
+#[test]
+fn hulking_raptor_ramps_and_wards() {
+    let mut g = two_player_game();
+    let rap = g.add_card_to_battlefield(0, catalog::hulking_raptor());
+    assert!(g.battlefield_find(rap).unwrap().definition.keywords.iter()
+        .any(|k| matches!(k, Keyword::Ward(_))), "has Ward");
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "added two green");
+}

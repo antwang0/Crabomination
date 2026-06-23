@@ -3103,3 +3103,55 @@ pub fn glistener_seer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vengeful Bloodwitch — {1}{B} 1/1 Vampire Warlock. Whenever this or another
+/// creature you control dies, an opponent loses 1 life and you gain 1.
+pub fn vengeful_bloodwitch() -> CardDefinition {
+    CardDefinition {
+        name: "Vengeful Bloodwitch",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hulking Raptor — {2}{G}{G} 5/3 Dinosaur. Ward {2}. At your first main phase,
+/// add {G}{G}.
+pub fn hulking_raptor() -> CardDefinition {
+    use crate::card::WardCost;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Hulking Raptor",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(WardCost::generic(2))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::PreCombatMain),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(crate::mana::Color::Green, Value::Const(2)),
+            },
+        }],
+        ..Default::default()
+    }
+}
