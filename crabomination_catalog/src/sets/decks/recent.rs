@@ -269,6 +269,93 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Hungry Ridgewolf — {1}{R} 2/2 Wolf. As long as you control another Wolf or
+/// Werewolf, it gets +1/+0 and has trample.
+pub fn hungry_ridgewolf() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Hungry Ridgewolf",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "While you control another Wolf or Werewolf: +1/+0 and trample.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Wolf)
+                            .or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf))
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 0,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skaab Wrangler — {1}{U} 2/1 Human Wizard. Tap three untapped creatures you
+/// control: Tap target creature.
+pub fn skaab_wrangler() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Skaab Wrangler",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((SelectionRequirement::Creature, 3)),
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blood Petal Celebrant — {1}{R} 2/1 Vampire. First strike while attacking.
+/// When it dies, create a Blood token.
+pub fn blood_petal_celebrant() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Blood Petal Celebrant",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Has first strike as long as it's attacking.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsAttacking,
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+            },
+        }],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Questing Beast — {2}{G}{G} 4/4 Legendary Beast. Vigilance, deathtouch,
 /// haste; can't be blocked by creatures with power 2 or less; combat damage
 /// dealt by creatures you control can't be prevented. (The planeswalker-redirect

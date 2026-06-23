@@ -4374,3 +4374,56 @@ fn cruel_witness_surveils_on_noncreature_cast() {
     // beyond what surveil might do; we just assert the trigger ran without panic.
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Cruel Witness"));
 }
+
+/// Hungry Ridgewolf is a 2/2 alone, 3/2 trample with another Wolf/Werewolf.
+#[test]
+fn hungry_ridgewolf_pack_buff() {
+    let mut g = two_player_game();
+    let rw = g.add_card_to_battlefield(0, catalog::hungry_ridgewolf());
+    let base = g.computed_permanent(rw).unwrap();
+    assert_eq!((base.power, base.toughness), (2, 2), "vanilla alone");
+    assert!(!base.keywords.contains(&Keyword::Trample));
+    g.add_card_to_battlefield(0, catalog::hungry_ridgewolf()); // another Wolf
+    let buffed = g.computed_permanent(rw).unwrap();
+    assert_eq!((buffed.power, buffed.toughness), (3, 2), "+1/+0 with a packmate");
+    assert!(buffed.keywords.contains(&Keyword::Trample));
+}
+
+/// Skaab Wrangler taps a target by tapping three creatures you control.
+#[test]
+fn skaab_wrangler_taps_via_three() {
+    let mut g = two_player_game();
+    let sw = g.add_card_to_battlefield(0, catalog::skaab_wrangler());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sw, ability_index: 0,
+        target: Some(Target::Permanent(target)), additional_targets: vec![], x_value: None,
+    }).expect("three untapped creatures available");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).unwrap().tapped, "target tapped");
+    // Three of our creatures got tapped as the cost.
+    let our_tapped = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.tapped).count();
+    assert_eq!(our_tapped, 3, "tapped three to pay");
+    let _ = (a, b);
+}
+
+/// Blood Petal Celebrant gains first strike while attacking and makes Blood on death.
+#[test]
+fn blood_petal_celebrant_first_strike_and_blood() {
+    let mut g = two_player_game();
+    let bp = g.add_card_to_battlefield(0, catalog::blood_petal_celebrant());
+    // Not attacking → no first strike.
+    assert!(!g.computed_permanent(bp).unwrap().keywords.contains(&Keyword::FirstStrike));
+    g.attacking.push(crate::game::types::Attack { attacker: bp, target: AttackTarget::Player(1) });
+    assert!(g.computed_permanent(bp).unwrap().keywords.contains(&Keyword::FirstStrike), "FS while attacking");
+    // On death, a Blood token appears.
+    g.attacking.clear();
+    g.battlefield_find_mut(bp).unwrap().damage = 5; // lethal to a 2/1
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Blood"),
+        "made a Blood token on death");
+}
