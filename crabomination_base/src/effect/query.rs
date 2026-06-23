@@ -488,6 +488,11 @@ impl Effect {
                     || options.iter().any(|e| e.requires_target())
                     || otherwise.requires_target()
             }
+            Effect::VillainousChoice { who, option_a, option_b } => {
+                sel_has_target(who)
+                    || option_a.requires_target()
+                    || option_b.requires_target()
+            }
             Effect::AddPoison { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::AddRadCounters { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)

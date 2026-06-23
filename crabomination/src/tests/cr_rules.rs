@@ -4025,3 +4025,45 @@ fn cr_702_29_cycling_discards_and_draws() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == card), "cycled card hits the graveyard");
     assert_eq!(g.players[0].hand.len(), hand, "discarded one, drew one (net zero)");
 }
+
+// ── CR 701.55 — Face a villainous choice ─────────────────────────────────────
+
+/// CR 701.55a — the chooser performs the chosen option. The bot heuristic
+/// picks the lesser self-harm: 2 life lost beats 6 life lost.
+#[test]
+fn cr_701_55_villainous_choice_picks_lesser_harm() {
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    let choice = Effect::VillainousChoice {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        option_a: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(6) }),
+        option_b: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) }),
+    };
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&choice, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 18, "opponent took the 2-life option");
+}
+
+/// CR 701.55b — an impossible option may be chosen and does nothing, so the
+/// chooser dodges harm (no creature to sacrifice → sacrifice branch is free).
+#[test]
+fn cr_701_55_villainous_choice_takes_impossible_option_to_dodge() {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    // Opponent controls no creature, so the sacrifice option is impossible.
+    let choice = Effect::VillainousChoice {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        option_a: Box::new(Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(5) }),
+        option_b: Box::new(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::You),
+            filter: SelectionRequirement::Creature,
+            count: Value::Const(1),
+        }),
+    };
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&choice, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 20, "dodged via the impossible sacrifice option");
+}

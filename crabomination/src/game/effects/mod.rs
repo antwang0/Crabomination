@@ -631,6 +631,62 @@ impl GameState {
         }
     }
 
+    /// Rough estimate of how much a villainous-choice option hurts the chooser
+    /// (`ctx.controller`), used to pick the lesser evil (CR 701.55). Higher =
+    /// worse for the chooser. An option the chooser can't perform scores 0
+    /// (CR 701.55b — they may pick an impossible option and do nothing).
+    fn villainous_self_harm(&self, opt: &Effect, ctx: &EffectContext) -> i64 {
+        match opt {
+            Effect::LoseLife { who, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as i64;
+                if self.resolve_selector(who, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller)) {
+                    n
+                } else {
+                    0
+                }
+            }
+            Effect::DealDamage { to, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as i64;
+                if self.resolve_selector(to, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller)) {
+                    n
+                } else {
+                    0
+                }
+            }
+            Effect::Discard { who, amount, .. } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as i64;
+                let hits_self = self.resolve_selector(who, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller));
+                if !hits_self { return 0; }
+                let have = self.players[ctx.controller].hand.len() as i64;
+                n.min(have) * 2
+            }
+            Effect::Sacrifice { who, filter, count } | Effect::SacrificeGreatestMV { who, filter, count, .. } => {
+                let n = self.evaluate_value(count, ctx).max(0) as i64;
+                let owns = self.resolve_selector(who, ctx).iter().any(|e| matches!(e, EntityRef::Player(p) if *p == ctx.controller));
+                let have = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                ctx.controller,
+                                ctx.source,
+                            )
+                    })
+                    .count() as i64;
+                if owns { n.min(have) * 4 } else { 0 }
+            }
+            Effect::Mill { amount, .. } => self.evaluate_value(amount, ctx).max(0) as i64,
+            Effect::Seq(v) => v.iter().map(|e| self.villainous_self_harm(e, ctx)).sum(),
+            // Options that primarily benefit the *caster* (free cast, token
+            // copy of the chooser's creature, caster draws): a moderate fixed
+            // cost so the chooser weighs it against direct self-harm.
+            _ => 3,
+        }
+    }
+
     pub(crate) fn resolve_effect(
         &mut self,
         effect: &Effect,
@@ -6161,6 +6217,31 @@ impl GameState {
                         // gets the payoff (uses the original ctx).
                         None => self.run_effect(otherwise, ctx, events)?,
                     }
+                }
+                Ok(())
+            }
+
+            Effect::VillainousChoice { who, option_a, option_b } => {
+                // CR 701.55 — each chooser (APNAP order) picks A or B; the
+                // chosen option's actions run with the chooser as controller.
+                let mut choosers: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                choosers = self.apnap_sort(choosers);
+                for p in choosers {
+                    let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
+                    // The chooser picks the option that harms them least
+                    // (CR 701.55b lets an impossible option be chosen, which
+                    // the harm estimate scores at 0).
+                    let harm_a = self.villainous_self_harm(option_a, &opt_ctx);
+                    let harm_b = self.villainous_self_harm(option_b, &opt_ctx);
+                    let pick = if harm_b < harm_a { option_b } else { option_a };
+                    self.run_effect(pick, &opt_ctx, events)?;
                 }
                 Ok(())
             }

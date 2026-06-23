@@ -3024,6 +3024,18 @@ pub enum Effect {
         otherwise: Box<Effect>,
     },
 
+    /// CR 701.55 — "[player] faces a villainous choice — [A], or [B]." Each
+    /// resolved `who` (in APNAP order) chooses one option, then that option's
+    /// actions are performed with the chooser as effect controller (so
+    /// `PlayerRef::You` = the chooser). Unlike `Punisher` there is no fallback
+    /// payoff: both options are genuine choices. The bot heuristic picks the
+    /// lower-`self`-harm option; UI-player prompting is a follow-up (TODO.md).
+    VillainousChoice {
+        who: Selector,
+        option_a: Box<Effect>,
+        option_b: Box<Effect>,
+    },
+
     // ── Counters on players ──────────────────────────────────────────────────
     AddPoison { who: Selector, amount: Value },
     /// CR 122.1i / 728 — give each resolved player `amount` rad counters.

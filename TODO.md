@@ -39,7 +39,6 @@ plays its headline pattern):
   reduction is approximated as always-on (`affinity_filter`).
 - **Sarkhan, Soul Aflame** — the become-a-copy trigger keeps the copied Dragon's
   name; the "name stays Sarkhan, legendary in addition" override is approximated.
-- **Mizzium Skin** — Overload omitted (base targeted mode ships).
 - **Take the Fall** — the outlaw check uses a controlled-outlaw selector count.
 - Not implemented for want of a mechanic: **Spree** (Insatiable Avarice, Three
   Steps Ahead — cast-time per-mode additional costs), **Intensity** (Static
