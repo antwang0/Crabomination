@@ -44,6 +44,66 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Lightshield Parry pumps +2/+2 and offers Cycling {2}.
+#[test]
+fn lightshield_parry_pumps_and_cycles() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let parry = catalog::lightshield_parry();
+    assert!(parry.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&parry.effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// Star Charter digs at end step only when you changed life that turn.
+#[test]
+fn star_charter_digs_after_life_change() {
+    let mut g = two_player_game();
+    let sc = g.add_card_to_battlefield(0, catalog::star_charter());
+    let pred = catalog::star_charter().triggered_abilities[0].event.filter.clone().unwrap();
+    let ctx = crate::game::effects::EffectContext::for_ability(sc, 0, None);
+    // No life change → intervening-if fails.
+    g.players[0].life_gained_this_turn = 0;
+    g.players[0].lost_life_this_turn = false;
+    assert!(!g.evaluate_predicate(&pred, &ctx), "no dig without a life change");
+    // Gained life → condition holds.
+    g.players[0].life_gained_this_turn = 2;
+    assert!(g.evaluate_predicate(&pred, &ctx), "digs after gaining life");
+}
+
+/// Krydle's combat-damage trigger drains the player and self-scrys.
+#[test]
+fn krydle_combat_damage_drains_and_gains() {
+    let mut g = two_player_game();
+    let krydle = g.add_card_to_battlefield(0, catalog::krydle_of_baldurs_gate());
+    g.add_card_to_library(1, catalog::island()); // something to mill
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    let trig = catalog::krydle_of_baldurs_gate().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(krydle, 0, None, 0);
+    ctx.trigger_source = Some(crate::game::effects::EntityRef::Player(1));
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 19, "damaged player lost 1");
+    assert_eq!(g.players[0].life, 21, "Krydle's controller gained 1");
+    assert_eq!(g.players[1].graveyard.len(), 1, "milled a card");
+}
+
+/// Dour Port-Mage's activated ability returns another of your creatures.
+#[test]
+fn dour_port_mage_bounces_own_creature() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::dour_port_mage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(mage, 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::dour_port_mage().activated_abilities[0].effect, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_none() && g.players[0].hand.iter().any(|c| c.id == bear));
+}
+
 /// Hard-Hitting Question makes your creature deal its power to a foe.
 #[test]
 fn hard_hitting_question_deals_power() {

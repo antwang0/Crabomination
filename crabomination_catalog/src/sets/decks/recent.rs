@@ -112,6 +112,106 @@ pub fn vaultborn_tyrant() -> CardDefinition {
     }
 }
 
+/// Star Charter — {3}{W} 3/1 Bat Cleric. Flying. At your end step, if you
+/// gained or lost life this turn, look at the top four cards; you may reveal a
+/// creature card with power 3 or less and put it into your hand.
+pub fn star_charter() -> CardDefinition {
+    CardDefinition {
+        name: "Star Charter",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::Any(vec![
+                Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(1) },
+                Predicate::PlayerLostLifeThisTurn { who: PlayerRef::You },
+            ])),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: false,
+                pick_filter: Some(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(3)),
+                ),
+                take: None,
+                to_battlefield: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dour Port-Mage — {1}{U} 1/3 Frog Wizard. {1}{U}, {T}: Return another target
+/// creature you control to its owner's hand. (The leaves-without-dying draw
+/// trigger is omitted — no such event yet.)
+pub fn dour_port_mage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Dour Port-Mage",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            tap_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Krydle of Baldur's Gate — {U}{B} 1/3 Legendary Human Elf Rogue. Whenever it
+/// deals combat damage to a player, that player loses 1 life and mills a card,
+/// then you gain 1 life and scry 1. (The attack pay-{2} unblockable rider is
+/// omitted.)
+pub fn krydle_of_baldurs_gate() -> CardDefinition {
+    CardDefinition {
+        name: "Krydle of Baldur's Gate",
+        cost: cost(&[u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Elf, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(1) },
+                Effect::Mill { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(1) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Marsh Hulk — {4}{B}{B} 4/6 Zombie Ogre. Megamorph {6}{B}.
 pub fn marsh_hulk() -> CardDefinition {
     CardDefinition {
