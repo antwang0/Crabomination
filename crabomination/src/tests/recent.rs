@@ -2632,3 +2632,47 @@ fn risen_necroregent_max_speed_token() {
     drain_stack(&mut g);
     assert_eq!(creatures(&g), before + 1, "2/2 Zombie at max speed");
 }
+
+/// Walking Sarcophagus is a 2/1 normally, 3/3 at max speed.
+#[test]
+fn walking_sarcophagus_max_speed_pump() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::walking_sarcophagus());
+    assert_eq!(g.computed_permanent(s).map(|c| (c.power, c.toughness)), Some((2, 1)));
+    g.players[0].speed = 4;
+    assert_eq!(g.computed_permanent(s).map(|c| (c.power, c.toughness)), Some((3, 3)));
+}
+
+/// Streaking Oilgorger gains lifelink only at max speed.
+#[test]
+fn streaking_oilgorger_max_speed_lifelink() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::streaking_oilgorger());
+    assert!(!g.computed_permanent(v).unwrap().keywords.contains(&Keyword::Lifelink));
+    g.players[0].speed = 4;
+    assert!(g.computed_permanent(v).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+/// Gastal Thrillseeker pings each opponent and gains you life on ETB.
+#[test]
+fn gastal_thrillseeker_etb_ping() {
+    let mut g = two_player_game();
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.move_card_to_battlefield_for_test(0, catalog::gastal_thrillseeker());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 1, "opponent took 1");
+    assert_eq!(g.players[0].life, life0 + 1, "you gained 1");
+}
+
+/// Goblin Surveyor's graveyard draw is only castable at max speed.
+#[test]
+fn goblin_surveyor_max_speed_gated_ability() {
+    let def = catalog::goblin_surveyor();
+    let ab = &def.activated_abilities[0];
+    assert!(ab.from_graveyard && ab.exile_self_cost, "graveyard exile-cost ability");
+    assert_eq!(ab.condition, Some(crate::card::Predicate::SpeedAtLeast {
+        who: crate::effect::PlayerRef::You,
+        speed: 4,
+    }));
+}

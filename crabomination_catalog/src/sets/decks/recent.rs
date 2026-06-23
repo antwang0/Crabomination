@@ -4246,3 +4246,119 @@ pub fn embalmed_ascendant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Walking Sarcophagus — {2} 2/1 Zombie Cat artifact creature. Start your
+/// engines! Max speed — it gets +1/+2.
+pub fn walking_sarcophagus() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Walking Sarcophagus",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::StartYourEngines],
+        static_abilities: vec![StaticAbility {
+            description: "Max speed — Walking Sarcophagus gets +1/+2.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                power: 1,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Streaking Oilgorger — {4}{B} 3/3 Vampire. Flying, haste, Start your engines!
+/// Max speed — it has lifelink.
+pub fn streaking_oilgorger() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Streaking Oilgorger",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::StartYourEngines],
+        static_abilities: vec![StaticAbility {
+            description: "Max speed — Streaking Oilgorger has lifelink.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Lifelink],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Surveyor — {2}{R} 3/2 Goblin Scout. Trample, Start your engines! Max
+/// speed — {3}, Exile this card from your graveyard: Draw a card.
+pub fn goblin_surveyor() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Goblin Surveyor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample, Keyword::StartYourEngines],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gastal Thrillseeker — {B}{R} 2/3 Lizard Berserker. Start your engines! When
+/// it enters, deal 1 damage to each opponent (printed "target opponent",
+/// 1v1-faithful) and you gain 1 life. Max speed — it has deathtouch and haste.
+pub fn gastal_thrillseeker() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Gastal Thrillseeker",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::StartYourEngines],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "Max speed — Gastal Thrillseeker has deathtouch and haste.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Deathtouch, Keyword::Haste],
+            },
+        }],
+        ..Default::default()
+    }
+}
