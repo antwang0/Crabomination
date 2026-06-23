@@ -2683,6 +2683,7 @@ static DECKS: &[Factory] = &[
     super::decks::stock_up,
     super::decks::this_town_aint_big_enough,
     super::decks::galvanic_discharge,
+    super::decks::refurbished_familiar,
     super::decks::shelter,
     super::decks::pick_your_poison,
     super::decks::tail_swipe,

@@ -112,6 +112,31 @@ pub fn vaultborn_tyrant() -> CardDefinition {
     }
 }
 
+/// Refurbished Familiar — {3}{B} 2/1 Zombie Rat. Affinity for artifacts, flying.
+/// When it enters, each opponent discards a card. (The draw-per-opponent-who-
+/// can't rider is omitted.)
+pub fn refurbished_familiar() -> CardDefinition {
+    CardDefinition {
+        name: "Refurbished Familiar",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Galvanic Discharge — {R} Instant. Choose target creature or planeswalker.
 /// You get {E}{E}{E}, then you may pay any amount of {E}; deal that much damage.
 pub fn galvanic_discharge() -> CardDefinition {

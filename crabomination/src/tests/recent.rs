@@ -44,6 +44,24 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Refurbished Familiar's affinity discounts it per artifact, and its ETB
+/// makes each opponent discard.
+#[test]
+fn refurbished_familiar_affinity_and_etb_discard() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mind_stone()); // an artifact
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::refurbished_familiar(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "affinity for 2 artifacts");
+    // ETB discard.
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let fam = g.move_card_to_battlefield_for_test(0, catalog::refurbished_familiar());
+    drain_stack(&mut g);
+    let _ = fam;
+    assert!(g.players[1].hand.is_empty(), "opponent discarded their only card");
+}
+
 /// Galvanic Discharge nets 3 energy then pays exactly lethal to kill a 3/3.
 #[test]
 fn galvanic_discharge_pays_lethal_energy() {
