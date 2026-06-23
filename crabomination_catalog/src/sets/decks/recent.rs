@@ -1076,3 +1076,806 @@ pub fn boon_bringer_valkyrie() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Inti, Seneschal of the Sun — {1}{R} 2/2 Legendary Human Knight. Whenever you
+/// attack, you may discard a card to put a +1/+1 counter on target attacking
+/// creature and give it trample. Whenever you discard a card, exile the top of
+/// your library; you may play it until your next end step. ("Whenever you
+/// attack" is approximated as once per turn.)
+pub fn inti_seneschal_of_the_sun() -> CardDefinition {
+    CardDefinition {
+        name: "Inti, Seneschal of the Sun",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+                effect: Effect::MayDo {
+                    description: "Discard a card to grow a target attacking creature".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                        Effect::AddCounter {
+                            what: target_filtered(SelectionRequirement::IsAttacking),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Trample,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    duration: MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    uncast_penalty: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Warren Soultrader — {2}{B} 3/3 Zombie Goblin Wizard. Pay 1 life, Sacrifice
+/// another creature: Create a Treasure token.
+pub fn warren_soultrader() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Warren Soultrader",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Goblin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 1,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hostile Investigator — {3}{B} 4/3 Ogre Rogue Detective. When it enters,
+/// target opponent discards a card. Whenever one or more players discard one or
+/// more cards, investigate (once each turn).
+pub fn hostile_investigator() -> CardDefinition {
+    CardDefinition {
+        name: "Hostile Investigator",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Rogue, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(1),
+                random: false,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::AnyPlayer)
+                    .once_per_turn(),
+                effect: crate::effect::shortcut::investigate(1),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Marshal of Zhalfir — {W}{U} 2/2 Human Knight. Other Knights you control get
+/// +1/+1. {W}{U}, {T}: Tap another target creature.
+pub fn marshal_of_zhalfir() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Marshal of Zhalfir",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Knights you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Knight)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), u()]),
+            tap_cost: true,
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pawpatch Recruit — {G} 2/1 Rabbit Warrior with trample. Offspring {2}.
+/// Whenever a creature you control becomes the target of a spell or ability an
+/// opponent controls, put a +1/+1 counter on target creature you control other
+/// than that creature.
+pub fn pawpatch_recruit() -> CardDefinition {
+    CardDefinition {
+        name: "Pawpatch Recruit",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Offspring(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            // Offspring (CR 702.166): if its cost was paid, mint a 1/1 copy.
+            etb(Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    override_pt: Some((1, 1)),
+                    non_legendary: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::BecameTarget,
+                    EventScope::YourPermanentTargetedByOpponent,
+                ),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Helping Hand — {W} Sorcery. Return target creature card with mana value 3 or
+/// less from your graveyard to the battlefield tapped.
+pub fn helping_hand() -> CardDefinition {
+    CardDefinition {
+        name: "Helping Hand",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(3))
+                    .and(SelectionRequirement::InYourGraveyard),
+            },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+        ..Default::default()
+    }
+}
+
+/// Diversion Unit — {1}{U} 2/1 Robot artifact creature with flying. {U},
+/// Sacrifice this creature: Counter target instant or sorcery spell unless its
+/// controller pays {3}.
+pub fn diversion_unit() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Diversion Unit",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            sac_cost: true,
+            effect: Effect::CounterUnlessPaid {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
+                mana_cost: cost(&[generic(3)]),
+                exile: false,
+                extra_generic: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Final Vengeance — {B} Sorcery. As an additional cost, sacrifice a creature
+/// or enchantment. Exile target creature.
+pub fn final_vengeance() -> CardDefinition {
+    CardDefinition {
+        name: "Final Vengeance",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: (SelectionRequirement::Creature.or(SelectionRequirement::Enchantment))
+                .and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
+        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Roughshod Mentor — {5}{G} 5/4 Giant Warrior. Green creatures you control
+/// have trample.
+pub fn roughshod_mentor() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Roughshod Mentor",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Green creatures you control have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasColor(Color::Green)),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Innocuous Rat — {1}{B} 1/1 Rat. When it dies, manifest dread.
+pub fn innocuous_rat() -> CardDefinition {
+    CardDefinition {
+        name: "Innocuous Rat",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::ManifestDread { who: PlayerRef::You })],
+        ..Default::default()
+    }
+}
+
+/// Quaketusk Boar — {3}{R}{R} 5/5 Elemental Boar with reach, trample, haste.
+pub fn quaketusk_boar() -> CardDefinition {
+    CardDefinition {
+        name: "Quaketusk Boar",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Boar],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Reach, Keyword::Trample, Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Veteran Guardmouse — {3}{R/W} 3/4 Mouse Soldier. Valiant — the first time it
+/// becomes the target of a spell or ability you control each turn, it gets
+/// +1/+0 and gains first strike until end of turn, then scry 1.
+pub fn veteran_guardmouse() -> CardDefinition {
+    use crate::mana::hybrid;
+    use crate::mana::Color::{Red, White};
+    CardDefinition {
+        name: "Veteran Guardmouse",
+        cost: cost(&[generic(3), hybrid(Red, White)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl).once_per_turn(),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Polliwallop — {3}{G} Instant. Affinity for Frogs. Target creature you
+/// control deals damage equal to twice its power to target creature you don't
+/// control. (Damage is dealt by the spell rather than the creature.)
+pub fn polliwallop() -> CardDefinition {
+    CardDefinition {
+        name: "Polliwallop",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        affinity_filter: Some(
+            SelectionRequirement::HasCreatureType(CreatureType::Frog)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+            amount: Value::Times(
+                Box::new(Value::PowerOf(Box::new(Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                }))),
+                Box::new(Value::Const(2)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Coiling Rebirth — {3}{B}{B} Sorcery. Gift a card. Return target creature card
+/// from your graveyard to the battlefield. If the gift was promised and that
+/// creature isn't legendary, also create a 1/1 token copy of it.
+pub fn coiling_rebirth() -> CardDefinition {
+    use crate::card::Gift;
+    let reanimate = Effect::Move {
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+        },
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    CardDefinition {
+        name: "Coiling Rebirth",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: reanimate.clone(),
+        gift: Some(Box::new(Gift {
+            label: "a card",
+            gifted_effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+                reanimate,
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::Target(0),
+                    extra_creature_types: vec![],
+                    override_pt: Some((1, 1)),
+                    non_legendary: true,
+                },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Pearl of Wisdom — {2}{U} Sorcery. Draw two cards. (The "costs {1} less if you
+/// control an Otter" rider is dropped.)
+pub fn pearl_of_wisdom() -> CardDefinition {
+    CardDefinition {
+        name: "Pearl of Wisdom",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Ride's End — {4}{W} Instant. Costs {3} less to cast if it targets a tapped
+/// permanent. Exile target creature or Vehicle.
+pub fn rides_end() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Ride's End",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((SelectionRequirement::Tapped, 3)),
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Nurturing Pixie — {W} 1/1 Faerie Rogue with flying. When it enters, return
+/// up to one target non-Faerie, nonland permanent you control to its owner's
+/// hand; if one was returned, put a +1/+1 counter on this creature.
+pub fn nurturing_pixie() -> CardDefinition {
+    CardDefinition {
+        name: "Nurturing Pixie",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Bounce a nonland permanent you control to grow the Pixie".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Permanent
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::Not(Box::new(
+                                SelectionRequirement::HasCreatureType(CreatureType::Faerie),
+                            ))),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stab — {B} Instant. Target creature gets -2/-2 until end of turn.
+pub fn stab() -> CardDefinition {
+    CardDefinition {
+        name: "Stab",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Slumbering Keepguard — {W} 1/1 Human Knight. Whenever an enchantment you
+/// control enters, scry 1. {2}{W}: This creature gets +1/+1 until end of turn
+/// for each enchantment you control.
+pub fn slumbering_keepguard() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let enchant_count = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        filter: SelectionRequirement::Enchantment,
+    };
+    CardDefinition {
+        name: "Slumbering Keepguard",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Enchantment,
+                }),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: enchant_count.clone(),
+                toughness: enchant_count,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ruby, Daring Tracker — {R}{G} 1/2 Legendary Human Scout with haste. Whenever
+/// Ruby attacks while you control a creature with power 4 or greater, it gets
+/// +2/+2 until end of turn. {T}: Add {R} or {G}.
+pub fn ruby_daring_tracker() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Ruby, Daring Tracker",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![
+            crate::sets::tap_add(Color::Red),
+            crate::sets::tap_add(Color::Green),
+        ],
+        ..Default::default()
+    }
+}
+
+
+/// Anoint with Affliction — {1}{B} Instant. Exile target creature with mana
+/// value 3 or less. (The Corrupted "any creature if its controller has 3+
+/// poison" rider is dropped; the base mode caps the target at MV 3.)
+pub fn anoint_with_affliction() -> CardDefinition {
+    CardDefinition {
+        name: "Anoint with Affliction",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Wing It — {1}{W} Instant. Target creature gets +2/+2 until end of turn, gets
+/// a flying counter, then scry 1.
+pub fn wing_it() -> CardDefinition {
+    CardDefinition {
+        name: "Wing It",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cackling Prowler — {3}{G} 4/3 Hyena Rogue. Ward {2}. Morbid — at the
+/// beginning of your end step, if a creature died this turn, put a +1/+1
+/// counter on it.
+pub fn cackling_prowler() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Cackling Prowler",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hyena, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glimmerlight — {2} Equipment. When it enters, create a 1/1 white Glimmer
+/// enchantment creature token. Equipped creature gets +1/+1. Equip {1}.
+pub fn glimmerlight() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, TokenDefinition};
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Glimmerlight",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Glimmer".into(),
+                card_types: vec![CardType::Enchantment, CardType::Creature],
+                colors: vec![Color::White],
+                power: 1,
+                toughness: 1,
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Demonic Ruckus — {1}{R} Aura. Enchanted creature gets +1/+1 and has menace
+/// and trample. When this Aura is put into a graveyard from the battlefield,
+/// draw a card. Plot {R}.
+pub fn demonic_ruckus() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Demonic Ruckus",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Menace, Keyword::Trample],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        plot_cost: Some(cost(&[r()])),
+        ..Default::default()
+    }
+}
+
+/// Hugs, Grisly Guardian — {X}{R}{R}{G}{G} 5/5 Legendary Badger Warrior with
+/// trample. When it enters, exile the top X cards of your library; you may play
+/// them until your next end step. You may play an additional land each turn.
+pub fn hugs_grisly_guardian() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Hugs, Grisly Guardian",
+        cost: cost(&[x(), r(), r(), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Badger, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        triggered_abilities: vec![etb(Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            duration: MayPlayDuration::EndOfControllersNextTurn,
+            pay_any_color: false,
+            uncast_penalty: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gloomfang Mauler — {5}{B}{B} 5/5 Nightmare. Swampcycling {2}. Backup 2.
+pub fn gloomfang_mauler() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Gloomfang Mauler",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Swamp)],
+        triggered_abilities: vec![crate::effect::shortcut::backup(2, vec![])],
+        ..Default::default()
+    }
+}

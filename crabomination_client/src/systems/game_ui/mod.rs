@@ -3655,6 +3655,7 @@ pub fn handle_game_input(
                             targeting.pending_split,
                             targeting.pending_gift,
                             targeting.pending_omen,
+                            targeting.pending_kicked,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3706,6 +3707,7 @@ pub fn handle_game_input(
                             targeting.pending_split,
                             targeting.pending_gift,
                             targeting.pending_omen,
+                            targeting.pending_kicked,
                         );
                         outbox.submit(action);
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3770,6 +3772,7 @@ pub fn handle_game_input(
                             targeting.pending_split,
                             targeting.pending_gift,
                             targeting.pending_omen,
+                            targeting.pending_kicked,
                     );
                     outbox.submit(action);
                     cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
@@ -3852,6 +3855,21 @@ pub fn handle_game_input(
                             targeting.pending_omen = true;
                         } else {
                             outbox.submit(GameAction::CastOmen {
+                                card_id, target: None, additional_targets: vec![],
+                                mode: None, x_value: None,
+                            });
+                        }
+                    } else if cv.kickable_hand.contains(&card_id) {
+                        // CR 702.32 / 702.166 — right-click a Kicker/Offspring
+                        // card casts it with the optional cost paid
+                        // (`CastSpellKicked`). Arm targeting when the effect
+                        // needs a target; otherwise fire now.
+                        if k.needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card_id);
+                            targeting.pending_kicked = true;
+                        } else {
+                            outbox.submit(GameAction::CastSpellKicked {
                                 card_id, target: None, additional_targets: vec![],
                                 mode: None, x_value: None,
                             });
@@ -4253,6 +4271,7 @@ fn build_pending_cast(
     split: Option<crate::game::SplitCastChoice>,
     gift: bool,
     omen: bool,
+    kicked: bool,
 ) -> GameAction {
     // CR 702.165 — a promised Gift is its own cast action; it can't combine
     // with the split / pay-times / back-face shapes.
@@ -4264,6 +4283,12 @@ fn build_pending_cast(
     // CR 702.183 — an Omen half is its own cast action.
     if omen {
         return GameAction::CastOmen {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+        };
+    }
+    // CR 702.32 / 702.166 — Kicker / Offspring paid via the kicked cast path.
+    if kicked {
+        return GameAction::CastSpellKicked {
             card_id, target, additional_targets: vec![], mode, x_value: None,
         };
     }
@@ -4305,6 +4330,7 @@ fn cancel_targeting(
     targeting.pending_split = None;
     targeting.pending_gift = false;
     targeting.pending_omen = false;
+    targeting.pending_kicked = false;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

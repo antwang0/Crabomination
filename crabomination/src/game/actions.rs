@@ -357,6 +357,14 @@ pub(crate) fn cost_reduction_for_spell_zoned(
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
+    // Card-intrinsic target-conditional reduction (Ride's End): "{amount}
+    // less if it targets a permanent matching `filter`." Generic-only.
+    if let Some((filter, amount)) = &card.definition.self_cost_reduction_if_target
+        && let Some(tgt) = target
+        && state.evaluate_requirement_static(filter, tgt, caster, Some(card.id))
+    {
+        reduction = reduction.saturating_add(*amount);
+    }
     // Card-intrinsic "costs {X} less, where X is the greatest power among
     // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
     // Power` static carried by the spell being cast. Generic-only, clamped by

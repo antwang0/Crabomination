@@ -49,7 +49,7 @@ pub enum CreatureType {
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith, Lamia,
     Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
-    Jackal,
+    Jackal, Hyena,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg,
@@ -1618,6 +1618,13 @@ pub struct CardDefinition {
     /// reductions, etc. Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub affinity_graveyard_filter: Option<SelectionRequirement>,
+    /// "This spell costs `{amount}` less to cast if it targets a permanent
+    /// matching `filter`." A card-intrinsic, target-conditional generic
+    /// reduction (Ride's End — "{3} less if it targets a tapped permanent").
+    /// Generic-only, clamped by the caller; evaluated against the chosen
+    /// target at cast time. Defaults to `None` for snapshot back-compat.
+    #[serde(default)]
+    pub self_cost_reduction_if_target: Option<(SelectionRequirement, u32)>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)

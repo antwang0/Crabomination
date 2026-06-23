@@ -3519,7 +3519,7 @@ pub enum Effect {
     /// extra-combat effects (Hellkite Charger, Aggravated Assault while in
     /// combat), usually paired with an `Untap` so creatures can attack again.
     /// Main-phase-cast "after this main phase, an additional combat + main"
-    /// sorceries (Relentless Assault) aren't supported yet — see TODO.md.
+    /// sorceries (Relentless Assault) use `AdditionalCombatPhaseAfterMain`.
     AdditionalCombatPhase { count: Value },
     /// CR 505.1b — "After this main phase, there is an additional combat
     /// phase followed by an additional main phase." Banks a combat phase

@@ -41,6 +41,27 @@ plays its headline pattern):
   Discharge), **Channel** (Touch the Spirit Realm's Channel ability),
   **Hardened Scales** (a +1/+1-counter-addition replacement static),
   **Galvanic Discharge** (pay-any-amount-of-energy damage).
+- Not implemented for want of a mechanic (newer batch): **Speed / "Start your
+  engines!"** (CR 702.179 — a per-player 0–4 resource that increments once per
+  turn when an opponent loses life; Mendicant Core, Nesting Bot, plus their
+  "Max speed —" riders), **static-ability emblems** (Vivien Reid's −8 anthem;
+  `Effect::CreateEmblem` only carries triggered abilities — a `statics` field
+  + a synthetic emblem source in `gather_continuous_effects` would unblock most
+  planeswalker ultimates), **board-state flat cost reduction** ("{1} less if
+  you control an Otter" — Pearl of Wisdom; a `self_cost_reduction_if`
+  predicate-gated sibling of `self_cost_reduction_if_target`).
+- **Caustic Bronco** — deferred: needs a "reveal top → hand, then lose life =
+  its mana value unless saddled, else each opponent loses that much" composite
+  (only the opponents-lose-MV half, `RevealTopToHandOpponentsLoseMv`, exists).
+- **Sovereign Okinec Ahau** — deferred: attack "for each creature you control
+  with power greater than that creature's base power, add the difference in
+  +1/+1 counters" needs a per-creature base-power-comparison value.
+- **Inti, Seneschal of the Sun** — the discard trigger fires per discarded card
+  (`CardDiscarded`/`YourControl`) rather than once per "you discard one or more
+  cards" event; a discard-batch event would make it faithful.
+- **Client** — the hand hint shows no Kicker/Offspring *cost* label; the
+  right-click "cast with the optional cost" path now works (`CastSpellKicked`),
+  but surfacing the cost (a `kicker_cost_label` on `KnownCard`) is a follow-up.
 
 ## Engine correctness audit — 2026-06-11
 

@@ -1266,11 +1266,12 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
-    // Kicker (CR 702.32): for any hand card with `Keyword::Kicker`, offer a
-    // `CastSpellKicked` candidate. Targets come from the effect tree, whose
-    // slot-0 filter resolves to the kicked (typically broader) branch, so a
-    // kicked Tear Asunder can aim at a creature. `would_accept` validates
-    // the full base+kicker cost, so this is only added when affordable.
+    // Kicker / Offspring (CR 702.32 / 702.166): for any hand card with the
+    // optional additional cost, offer a `CastSpellKicked` candidate. Targets
+    // come from the effect tree, whose slot-0 filter resolves to the kicked
+    // (typically broader) branch, so a kicked Tear Asunder can aim at a
+    // creature. `would_accept` validates the full base+kicker cost, so this is
+    // only added when affordable.
     for c in state.players[seat]
         .hand
         .iter()
@@ -1295,6 +1296,15 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             x_value: None,
         };
         if state.would_accept(action.clone()) {
+            // Offspring (CR 702.166) is pure upside — a free 1/1 token copy
+            // with no downside beyond the mana. When affordable, prefer it
+            // over the plain cast of the same card (mirrors Conspire above).
+            if c.definition.has_offspring().is_some() {
+                let cid = c.id;
+                castable.retain(
+                    |a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid),
+                );
+            }
             castable.push(action);
         }
     }
@@ -3074,6 +3084,23 @@ mod tests {
         );
         assert!(optional_trigger_beneficial(&g, id, "you may"),
             "a pure-upside 'you may draw' is taken by the bot");
+    }
+
+    /// The bot pays Offspring (CR 702.166) when it can afford it — the chosen
+    /// main-phase cast is the kicked variant, not the plain cast.
+    #[test]
+    fn bot_pays_offspring_when_affordable() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        let recruit = g.add_card_to_hand(0, catalog::pawpatch_recruit()); // {G}, Offspring {2}
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(action, GameAction::CastSpellKicked { card_id, .. } if card_id == recruit),
+            "bot cast Pawpatch Recruit with Offspring paid, got {action:?}"
+        );
     }
 
     #[test]

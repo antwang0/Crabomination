@@ -279,7 +279,10 @@ Each a small targeted feature; sweep batch by batch.
   restrictions beyond these (filter lands).
 - ⏳ **Minimum-cost floor** (Trinisphere) and **cost-increase statics** beyond the
   first-spell tax. (Note: Trinisphere floor actually ships — see CUBE_FEATURES.)
-- ⏳ **Conditional / additional costs** as a general modal layer.
+- 🟡 **Conditional / additional costs** as a general modal layer. Card-intrinsic
+  target-conditional reduction ships (`self_cost_reduction_if_target` — Ride's
+  End's "{3} less if it targets a tapped permanent", generic-only / colored-pip
+  safe). Remaining: board-state-gated flat reductions and per-mode Spree costs.
 - ⏳ **{X} in activated abilities** generalized; **delve/convoke colored**
   contribution.
 - ⏳ **Snow-mana-only** and **mana-value-X** cost gates.

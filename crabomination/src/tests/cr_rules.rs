@@ -3844,3 +3844,93 @@ fn cr_601_2c_up_to_two_targets_accepts_one() {
         "the single chosen creature got its counter"
     );
 }
+
+// ── CR 601.2f / 117.7c — target-conditional cost reduction ────────────────────
+
+/// CR 601.2f — Ride's End ("costs {3} less if it targets a tapped permanent")
+/// is castable for {1}{W} against a tapped creature, but its full {4}{W} stands
+/// against an untapped one. The colored {W} pip is never reduced (117.7c).
+#[test]
+fn cr_601_2f_rides_end_target_conditional_reduction() {
+    // Tapped target → discounted, castable for {1}{W}.
+    let mut g = two_player_game();
+    let tapped = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let re = g.add_card_to_hand(0, catalog::rides_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, re, Target::Permanent(tapped));
+    assert!(g.exile.iter().any(|c| c.id == tapped), "discounted exile of a tapped permanent");
+
+    // Untapped target → no discount; {1}{W} is not enough for {4}{W}.
+    let mut g = two_player_game();
+    let untapped = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let re = g.add_card_to_hand(0, catalog::rides_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: re, target: Some(Target::Permanent(untapped)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "no discount against an untapped target — full cost unpaid"
+    );
+}
+
+// ── CR 701.13 — Investigate ───────────────────────────────────────────────────
+
+/// CR 701.13 — Hostile Investigator's "whenever a player discards, investigate"
+/// (once each turn) creates a Clue artifact token.
+#[test]
+fn cr_701_13_investigate_makes_a_clue() {
+    use crate::card::ArtifactSubtype;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hostile_investigator());
+    // A discard (Unburden on seat 0) triggers the investigate.
+    let unburden = g.add_card_to_hand(0, catalog::unburden());
+    g.add_card_to_hand(0, catalog::mountain());
+    g.add_card_to_hand(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, unburden, Target::Player(0));
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue)),
+        "investigate created a Clue token"
+    );
+}
+
+// ── CR 702.166 — Offspring ────────────────────────────────────────────────────
+
+/// CR 702.166 — paying a creature's Offspring cost makes a 1/1 token copy of it
+/// enter when the creature itself enters.
+#[test]
+fn cr_702_166_offspring_makes_one_one_copy() {
+    let mut g = two_player_game();
+    let recruit = g.add_card_to_hand(0, catalog::pawpatch_recruit()); // Offspring {2}
+    g.players[0].mana_pool.add(Color::Green, 1); // {G} base
+    g.players[0].mana_pool.add_colorless(2); // {2} Offspring
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: recruit, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with Offspring paid");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Pawpatch Recruit")
+        .count();
+    assert_eq!(copies, 2, "the creature plus its 1/1 Offspring token");
+    let cp = g.compute_battlefield();
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Pawpatch Recruit" && c.is_token
+            && cp.iter().find(|p| p.id == c.id).map(|p| (p.power, p.toughness)) == Some((1, 1))),
+        "the Offspring copy is a 1/1 token"
+    );
+}

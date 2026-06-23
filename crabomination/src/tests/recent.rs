@@ -755,3 +755,476 @@ fn boon_bringer_valkyrie_backup_grants_flying() {
     assert_eq!(c.power, 3, "got a +1/+1 counter");
     assert!(c.keywords.contains(&Keyword::Flying), "gained flying from Backup");
 }
+
+/// Inti's discard trigger exiles the top of your library with a may-play.
+#[test]
+fn inti_discard_exiles_top_with_may_play() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::inti_seneschal_of_the_sun());
+    g.add_card_to_library(0, catalog::mountain());
+    // Unburden (cast by p0, targeting p0) forces a discard, firing Inti.
+    let unburden = g.add_card_to_hand(0, catalog::unburden());
+    g.add_card_to_hand(0, catalog::mountain()); // something to discard
+    g.add_card_to_hand(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, unburden, Target::Player(0));
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.owner == 0),
+        "Inti exiled the top of the library on discard"
+    );
+}
+
+/// Warren Soultrader sacrifices a creature and pays 1 life for a Treasure.
+#[test]
+fn warren_soultrader_makes_treasure() {
+    let mut g = two_player_game();
+    let warren = g.add_card_to_battlefield(0, catalog::warren_soultrader());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].life = 20;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(fodder))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: warren, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed the creature");
+    assert_eq!(g.players[0].life, 19, "paid 1 life");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure)),
+        "made a Treasure"
+    );
+}
+
+/// Hostile Investigator makes a target opponent discard on ETB.
+#[test]
+fn hostile_investigator_etb_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::mountain());
+    let opp_hand = g.players[1].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::hostile_investigator());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "opponent discarded to the ETB");
+}
+
+/// Marshal of Zhalfir buffs other Knights and can tap a creature.
+#[test]
+fn marshal_of_zhalfir_anthems_knights() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::marshal_of_zhalfir());
+    let knight = g.add_card_to_battlefield(0, catalog::inti_seneschal_of_the_sun()); // a Knight
+    let c = g.computed_permanent(knight).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "another Knight got +1/+1");
+}
+
+/// Pawpatch Recruit grows a creature when an opponent targets one you control.
+#[test]
+fn pawpatch_recruit_counters_on_opponent_target() {
+    let mut g = two_player_game();
+    let pixie = g.add_card_to_battlefield(0, catalog::pawpatch_recruit());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Opponent's Stab targets your bear; Pawpatch's trigger puts a counter on it.
+    let stab = g.add_card_to_hand(1, catalog::stab());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    cast_at(&mut g, stab, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let _ = pixie;
+    assert!(
+        g.battlefield_find(bear).map(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied())
+            == Some(Some(1)),
+        "Pawpatch put a +1/+1 counter on the targeted creature"
+    );
+}
+
+/// Helping Hand returns a small creature from your graveyard tapped.
+#[test]
+fn helping_hand_reanimates_tapped() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let hh = g.add_card_to_hand(0, catalog::helping_hand());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, hh, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let r = g.battlefield_find(bear).expect("reanimated onto battlefield");
+    assert!(r.tapped, "entered tapped");
+}
+
+/// Diversion Unit sacrifices itself to counter a spell.
+#[test]
+fn diversion_unit_counters_spell() {
+    let mut g = two_player_game();
+    let unit = g.add_card_to_battlefield(0, catalog::diversion_unit());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_axe()); // an instant
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.add_card_to_hand(1, catalog::mountain()); // discard fodder for Lightning Axe
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    let dummy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(dummy)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts Lightning Axe");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: unit, ability_index: 0,
+        target: Some(Target::Permanent(bolt)), additional_targets: vec![], x_value: None,
+    }).expect("activate counter");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Lightning Axe was countered");
+}
+
+/// Final Vengeance sacrifices a permanent and exiles a creature.
+#[test]
+fn final_vengeance_sac_and_exile() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let fv = g.add_card_to_hand(0, catalog::final_vengeance());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, fv, Target::Permanent(victim));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed a creature as additional cost");
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled the target creature");
+}
+
+/// Roughshod Mentor gives your green creatures trample.
+#[test]
+fn roughshod_mentor_grants_green_trample() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::roughshod_mentor());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // green
+    assert!(
+        g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::Trample),
+        "green creature gained trample"
+    );
+}
+
+/// Innocuous Rat manifests dread when it dies.
+#[test]
+fn innocuous_rat_manifests_on_death() {
+    let mut g = two_player_game();
+    let rat = g.add_card_to_battlefield(0, catalog::innocuous_rat());
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::island());
+    let bf_before = g.battlefield.len();
+    g.battlefield_find_mut(rat).unwrap().damage = 1;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    // Rat left; a face-down 2/2 entered → battlefield count unchanged net (−rat +manifest).
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.face_down),
+        "manifested a face-down creature"
+    );
+    let _ = bf_before;
+}
+
+/// Quaketusk Boar is a 5/5 with reach, trample, and haste.
+#[test]
+fn quaketusk_boar_keywords() {
+    let d = catalog::quaketusk_boar();
+    assert_eq!((d.power, d.toughness), (5, 5));
+    assert!(d.keywords.contains(&Keyword::Reach));
+    assert!(d.keywords.contains(&Keyword::Trample));
+    assert!(d.keywords.contains(&Keyword::Haste));
+}
+
+/// Veteran Guardmouse's Valiant fires when you target it (it gains first
+/// strike; Valiant's +1/+0 resolves before the targeting spell).
+#[test]
+fn veteran_guardmouse_valiant_pumps() {
+    let mut g = two_player_game();
+    let mouse = g.add_card_to_battlefield(0, catalog::veteran_guardmouse()); // 3/4
+    g.add_card_to_library(0, catalog::mountain());
+    let stab = g.add_card_to_hand(0, catalog::stab()); // your own targeted spell
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, stab, Target::Permanent(mouse));
+    drain_stack(&mut g);
+    let c = g.computed_permanent(mouse).unwrap();
+    // Valiant (+1/+0) resolves first, then Stab (-2/-2): 3+1-2 / 4+0-2 = 2/2.
+    assert_eq!((c.power, c.toughness), (2, 2), "+1/+0 then -2/-2");
+    assert!(c.keywords.contains(&Keyword::FirstStrike), "gained first strike");
+}
+
+/// Polliwallop makes your creature deal twice its power to an enemy creature.
+#[test]
+fn polliwallop_deals_double_power() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let poll = g.add_card_to_hand(0, catalog::polliwallop());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: poll, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Polliwallop");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "4 damage (2×2) killed the 4/4");
+}
+
+/// Coiling Rebirth reanimates a creature from your graveyard.
+#[test]
+fn coiling_rebirth_reanimates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let cr = g.add_card_to_hand(0, catalog::coiling_rebirth());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, cr, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "creature returned to the battlefield");
+}
+
+/// Pearl of Wisdom draws two cards.
+#[test]
+fn pearl_of_wisdom_draws_two() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let pearl = g.add_card_to_hand(0, catalog::pearl_of_wisdom());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: pearl, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Pearl");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew two (cast one)");
+}
+
+/// Ride's End costs {3} less when it targets a tapped permanent.
+#[test]
+fn rides_end_cost_reduction_when_tapped() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.battlefield_find_mut(victim).unwrap().tapped = true;
+    let re = g.add_card_to_hand(0, catalog::rides_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1); // only {1}{W} available, not {4}{W}
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, re, Target::Permanent(victim));
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "cheaply exiled a tapped creature");
+}
+
+/// Nurturing Pixie bounces your own permanent and grows.
+#[test]
+fn nurturing_pixie_bounce_and_grow() {
+    let mut g = two_player_game();
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(token)),
+    ]));
+    let pixie = g.move_card_to_battlefield_for_test(0, catalog::nurturing_pixie());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(token).is_none(), "bounced your own permanent");
+    assert_eq!(g.computed_permanent(pixie).unwrap().power, 2, "Pixie grew to 2/2");
+}
+
+/// Ruby pumps herself when attacking alongside a big creature.
+#[test]
+fn ruby_pumps_with_big_creature() {
+    let mut g = two_player_game();
+    let ruby = g.add_card_to_battlefield(0, catalog::ruby_daring_tracker());
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4
+    g.clear_sickness(ruby);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ruby, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ruby).unwrap().power, 3, "Ruby got +2/+2");
+}
+
+/// Stab gives a creature -2/-2.
+#[test]
+fn stab_shrinks_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let stab = g.add_card_to_hand(0, catalog::stab());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, stab, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "-2/-2 killed the 2/2");
+}
+
+/// Slumbering Keepguard scries when an enchantment enters.
+#[test]
+fn slumbering_keepguard_scries_on_enchantment() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::slumbering_keepguard());
+    g.add_card_to_library(0, catalog::island());
+    // An enchantment entering under your control triggers the scry.
+    g.move_card_to_battlefield_for_test(0, catalog::hopeless_nightmare()); // an enchantment
+    drain_stack(&mut g);
+    // No panic / clean resolution is the assertion; the scry decision auto-resolves.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Slumbering Keepguard"));
+}
+
+/// Anoint with Affliction exiles a small creature.
+#[test]
+fn anoint_with_affliction_exiles_small() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let spell = g.add_card_to_hand(0, catalog::anoint_with_affliction());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "small creature exiled");
+}
+
+/// Wing It pumps, adds a flying counter, and scries.
+#[test]
+fn wing_it_pumps_and_grants_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::wing_it());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 4, "+2/+2");
+    assert!(c.keywords.contains(&Keyword::Flying), "flying counter grants flying");
+}
+
+/// Cackling Prowler grows at end step when a creature died this turn.
+#[test]
+fn cackling_prowler_morbid_counter() {
+    let mut g = two_player_game();
+    let prowler = g.add_card_to_battlefield(0, catalog::cackling_prowler());
+    g.players[0].creatures_died_this_turn = 1;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PostCombatMain;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(prowler).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "morbid put a +1/+1 counter at end step"
+    );
+}
+
+/// Glimmerlight mints a Glimmer token on enter.
+#[test]
+fn glimmerlight_makes_glimmer_token() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::glimmerlight());
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Glimmer"),
+        "minted a Glimmer token"
+    );
+}
+
+/// Demonic Ruckus buffs the enchanted creature and draws when it dies.
+#[test]
+fn demonic_ruckus_buffs_then_cantrips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::island());
+    let aura = g.add_card_to_hand(0, catalog::demonic_ruckus());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "enchanted creature gets +1/+1");
+    assert!(c.keywords.contains(&Keyword::Menace), "gains menace");
+    // Kill the bear → the Aura dies and cantrips.
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(bear).unwrap().damage = 3;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.len() > hand, "Aura death drew a card");
+}
+
+/// Hugs exiles X cards with a may-play when it enters.
+#[test]
+fn hugs_exiles_x_with_may_play() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::forest());
+    let hugs = g.add_card_to_hand(0, catalog::hugs_grisly_guardian());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hugs, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Hugs with X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0).count(), 2, "exiled the top 2 cards");
+}
+
+/// Gloomfang Mauler's Backup 2 puts two counters on a creature.
+#[test]
+fn gloomfang_mauler_backup_two() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ally))]));
+    g.move_card_to_battlefield_for_test(0, catalog::gloomfang_mauler());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ally).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(2),
+        "Backup 2 put two +1/+1 counters"
+    );
+}

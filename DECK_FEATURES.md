@@ -38,7 +38,10 @@ Beza, No More Lies, Tyvar's Stand, Stock Up, Gird for Battle, … each with a
 test in `tests/recent.rs`. This batch added the fixed-threshold evasion keyword
 `CantBeBlockedByPowerAtMost`, fixed `YourControl` combat-damage triggers firing
 for the dealing creature itself, and the `AnOpponentHasMoreCardsInHand`
-predicate.
+predicate. Later batches added the card-intrinsic target-conditional cost
+reduction (`self_cost_reduction_if_target` — Ride's End's "{3} less if it
+targets a tapped permanent"), made the bot prefer paying Offspring, and wired
+the client right-click "cast with Kicker/Offspring" path (`CastSpellKicked`).
 
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief

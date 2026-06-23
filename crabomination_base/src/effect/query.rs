@@ -1365,6 +1365,13 @@ impl Effect {
                 | Value::ManaValueOf(s)
                 | Value::LoyaltyOf(s) => sel_find(s, slot),
                 Value::CountersOn { what, .. } => sel_find(what, slot),
+                // Arithmetic combinators can wrap a target-bearing value
+                // (Polliwallop: `Times(PowerOf(slot 0), 2)`). Descend both arms.
+                Value::Times(a, b) | Value::Diff(a, b) | Value::Min(a, b) | Value::Max(a, b) => {
+                    val_find(a, slot).or_else(|| val_find(b, slot))
+                }
+                Value::NonNeg(a) | Value::HalvedRoundUp(a) => val_find(a, slot),
+                Value::Sum(vs) => vs.iter().find_map(|x| val_find(x, slot)),
                 _ => None,
             }
         }
