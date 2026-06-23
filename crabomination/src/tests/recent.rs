@@ -3999,3 +3999,54 @@ fn squee_attacks_makes_goblin_and_has_escape() {
     let gob = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Goblin");
     assert!(gob.is_some_and(|c| c.tapped), "made a tapped Goblin on attack");
 }
+
+/// Headless Rider makes a 2/2 Zombie when a nontoken Zombie you control dies.
+#[test]
+fn headless_rider_makes_zombie_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::headless_rider());
+    let other = g.add_card_to_battlefield(0, catalog::champion_of_the_perished()); // a 1/1 Zombie
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(other)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the Zombie");
+    drain_stack(&mut g);
+    let zombies = g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token
+        && c.definition.name == "Zombie").count();
+    assert_eq!(zombies, 1, "a Zombie token was created");
+}
+
+/// Diregraf Horde makes two decayed Zombies and exiles graveyard cards on ETB.
+#[test]
+fn diregraf_horde_etb_zombies_and_exile() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::diregraf_horde());
+    drain_stack(&mut g);
+    let decayed = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.keywords.contains(&Keyword::Decayed)).count();
+    assert_eq!(decayed, 2, "two decayed Zombies");
+    assert_eq!(g.players[1].graveyard.len(), 0, "exiled up to two graveyard cards");
+}
+
+/// The Meathook Massacre wipes the board for -X/-X and drains on your deaths.
+#[test]
+fn meathook_massacre_wipes_and_drains() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mh = g.add_card_to_hand(0, catalog::the_meathook_massacre());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mh, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast for {2}{B}{B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(), "-2/-2 wiped both");
+    // Your creature dying makes the opponent lose 1.
+    assert!(g.players[1].life < opp_life, "opponent lost life when your creature died");
+}

@@ -6495,3 +6495,113 @@ pub fn squee_dubious_monarch() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 2/2 black Zombie with decayed (shared by several Innistrad makers).
+fn decayed_zombie_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Zombie".into(), power: 2, toughness: 2,
+        card_types: vec![CardType::Creature], colors: vec![crate::mana::Color::Black],
+        keywords: vec![Keyword::Decayed],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// A plain 2/2 black Zombie token.
+fn black_zombie_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Zombie".into(), power: 2, toughness: 2,
+        card_types: vec![CardType::Creature], colors: vec![crate::mana::Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+
+
+/// Headless Rider — {2}{B} 3/1 Zombie. Whenever this or another nontoken Zombie
+/// you control dies, create a 2/2 black Zombie.
+pub fn headless_rider() -> CardDefinition {
+    let make = || Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: black_zombie_token() };
+    CardDefinition {
+        name: "Headless Rider",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![
+            on_dies(make()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                            .and(SelectionRequirement::NotToken),
+                    }),
+                effect: make(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Diregraf Horde — {4}{B} 3/4 Zombie. ETB make two 2/2 decayed Zombies and
+/// exile up to two cards from graveyards.
+pub fn diregraf_horde() -> CardDefinition {
+    CardDefinition {
+        name: "Diregraf Horde",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: decayed_zombie_token() },
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::EachPlayer,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    },
+                    Value::Const(2),
+                ),
+                to: ZoneDest::Exile,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// The Meathook Massacre — {X}{B}{B} Legendary Enchantment. ETB each creature
+/// gets -X/-X EOT. Your creature dies → each opponent loses 1; an opponent's
+/// creature dies → you gain 1.
+pub fn the_meathook_massacre() -> CardDefinition {
+    CardDefinition {
+        name: "The Meathook Massacre",
+        cost: cost(&[crate::mana::x(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Times(Box::new(Value::Const(-1)), Box::new(Value::XFromCost)),
+                    toughness: Value::Times(Box::new(Value::Const(-1)), Box::new(Value::XFromCost)),
+                    duration: Duration::EndOfTurn,
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
