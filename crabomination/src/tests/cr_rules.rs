@@ -14,8 +14,9 @@
 //! (CR 509.1b — Questing Beast), "lose half your life, rounded up"
 //! (CR 120.6), "up to N target" spells accepting fewer targets
 //! (CR 601.2c), scoped unpreventable combat damage (CR 615.12 — Questing
-//! Beast vs. fog), the stun-counter untap replacement (CR 122.1c), and
-//! Cycling (CR 702.29).
+//! Beast vs. fog), the stun-counter untap replacement (CR 122.1c),
+//! Cycling (CR 702.29), Cleave bracket-removal (CR 702.149), and reflexive
+//! sacrifice costs (CR 701.16 — `Effect::MaySacrifice`).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -4110,4 +4111,89 @@ fn cr_701_56_time_travel_advances_own_suspended_card() {
     g.resolve_effect(&Effect::TimeTravel { who: PlayerRef::You }, &ctx).unwrap();
     let after = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
     assert_eq!(after, 4, "one time counter removed");
+}
+
+// ── CR 702.149 — Cleave ──────────────────────────────────────────────────────
+
+/// Casting Path of Peril normally destroys only creatures of mana value 2 or
+/// less; casting it for its cleave cost removes the bracketed clause and wipes
+/// every creature (the bracket-removal is the broader `effect_override`).
+#[test]
+fn cr_702_149_cleave_removes_bracketed_clause() {
+    // Normal cast: a 5/5 survives.
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
+    let id = g.add_card_to_hand(0, catalog::path_of_peril());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("normal cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none(), "MV-2 creature destroyed");
+    assert!(g.battlefield_find(big).is_some(), "MV-5 creature spared by the bracketed clause");
+
+    // Cleave cast: the 5/5 dies too.
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::path_of_peril());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cleave cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "cleave wipes all creatures");
+}
+
+// ── CR 701.16 — Sacrifice as a reflexive cost ────────────────────────────────
+
+/// `Effect::MaySacrifice` ("you may sacrifice X; if you do, …") declined leaves
+/// the board untouched and skips the payoff.
+#[test]
+fn cr_701_16_reflexive_sacrifice_declined_skips_payoff() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::effect::{Effect, Value, Selector};
+    use crate::card::SelectionRequirement;
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eff = Effect::MaySacrifice {
+        description: "sac a creature?".into(),
+        filter: SelectionRequirement::Creature,
+        count: Value::Const(1),
+        then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+        else_: None,
+    };
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(fodder).is_some(), "nothing sacrificed when declined");
+    assert_eq!(g.players[0].life, life, "payoff skipped");
+}
+
+// ── EntityMatchesAny — "if a [type] card was exiled this way" ────────────────
+
+/// `Predicate::EntityMatchesAny` is false when the selector is empty, so an
+/// "up to one target" rider with no target chosen skips its payoff (Diregraf
+/// Scavenger drains nothing when it exiles nothing).
+#[test]
+fn entity_matches_any_false_on_empty_target() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    g.players[0].life = 20;
+    let etb = catalog::diregraf_scavenger().triggered_abilities[0].effect.clone();
+    // No target chosen (up-to-one declined) → empty targets.
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 20, "no exile → no drain");
+    assert_eq!(g.players[0].life, 20, "no exile → no gain");
 }
