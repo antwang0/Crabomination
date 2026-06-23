@@ -2681,6 +2681,8 @@ static DECKS: &[Factory] = &[
     super::decks::tyvars_stand,
     super::decks::gird_for_battle,
     super::decks::stock_up,
+    super::decks::this_town_aint_big_enough,
+    super::decks::galvanic_discharge,
     super::decks::shelter,
     super::decks::pick_your_poison,
     super::decks::tail_swipe,

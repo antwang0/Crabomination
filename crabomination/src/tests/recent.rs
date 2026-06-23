@@ -44,6 +44,41 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Galvanic Discharge nets 3 energy then pays exactly lethal to kill a 3/3.
+#[test]
+fn galvanic_discharge_pays_lethal_energy() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    g.players[0].energy = 1; // 1 + 3 from the spell = 4 available
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::galvanic_discharge().effect, &ctx).unwrap();
+    // 3 gained, paid 3 (lethal to the 3/3), 1 left over.
+    assert_eq!(g.players[0].energy, 1, "spent only lethal energy");
+    assert!(g.battlefield_find(foe).is_none(), "the 3/3 died");
+}
+
+/// This Town Ain't Big Enough bounces up to two nonland permanents and is
+/// cheaper when it targets one of yours.
+#[test]
+fn this_town_bounces_two_and_discounts_self_target() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    // Targeting your own permanent → {3} off.
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::this_town_aint_big_enough(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, Some(&Target::Permanent(mine))), 3);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, Some(&Target::Permanent(theirs))), 0);
+    // Resolution bounces both.
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(mine), Target::Permanent(theirs)];
+    g.resolve_effect(&catalog::this_town_aint_big_enough().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine));
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs));
+}
+
 /// Highspire Bell-Ringer cuts {1} off your second spell each turn only.
 #[test]
 fn highspire_bell_ringer_discounts_second_spell() {

@@ -112,6 +112,45 @@ pub fn vaultborn_tyrant() -> CardDefinition {
     }
 }
 
+/// Galvanic Discharge — {R} Instant. Choose target creature or planeswalker.
+/// You get {E}{E}{E}, then you may pay any amount of {E}; deal that much damage.
+pub fn galvanic_discharge() -> CardDefinition {
+    CardDefinition {
+        name: "Galvanic Discharge",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(3)),
+            Effect::PayAnyEnergyDealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// This Town Ain't Big Enough — {4}{U} Instant. Costs {3} less if it targets a
+/// permanent you control. Return up to two target nonland permanents to hand.
+pub fn this_town_aint_big_enough() -> CardDefinition {
+    CardDefinition {
+        name: "This Town Ain't Big Enough",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((SelectionRequirement::ControlledByYou, 3)),
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Nonland,
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Hardened Scales — {G} enchantment. If one or more +1/+1 counters would be
 /// put on a creature you control, that many plus one are put on it instead.
 pub fn hardened_scales() -> CardDefinition {

@@ -42,9 +42,7 @@ plays its headline pattern):
 - **Take the Fall** — the outlaw check uses a controlled-outlaw selector count.
 - Not implemented for want of a mechanic: **Spree** (Insatiable Avarice, Three
   Steps Ahead — cast-time per-mode additional costs), **Intensity** (Static
-  Discharge), **Channel** (Touch the Spirit Realm's Channel ability),
-  **Hardened Scales** (a +1/+1-counter-addition replacement static),
-  **Galvanic Discharge** (pay-any-amount-of-energy damage).
+  Discharge), **Channel** (Touch the Spirit Realm's Channel ability).
 - Not implemented for want of a mechanic (newer batch): **Speed / "Start your
   engines!"** (CR 702.179 — a per-player 0–4 resource that increments once per
   turn when an opponent loses life; Mendicant Core, Nesting Bot, plus their

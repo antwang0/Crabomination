@@ -591,6 +591,7 @@ impl Effect {
             Effect::ExileTopAndGrantMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } => then.requires_target(),
+            Effect::PayAnyEnergyDealDamage { to } => sel_has_target(to),
             Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
@@ -624,6 +625,7 @@ impl Effect {
             | Effect::DestroyTargetsPolymorph { filter }
             | Effect::ApplyToTargets { filter, .. }
             | Effect::DestroyTargets { filter } => Some(filter),
+            Effect::PayAnyEnergyDealDamage { to } => sel_filter(to),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.

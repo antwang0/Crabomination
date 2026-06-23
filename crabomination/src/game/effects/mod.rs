@@ -1985,6 +1985,36 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayAnyEnergyDealDamage { to } => {
+                let p = ctx.controller;
+                let avail = self.players[p].energy;
+                if avail == 0 { return Ok(()); }
+                // Resolve the (single) target.
+                let Some(ent) = self.resolve_selector(to, ctx).into_iter().next() else {
+                    return Ok(());
+                };
+                // Heuristic: pay exactly lethal to a creature, else dump it all.
+                let want = match ent {
+                    EntityRef::Permanent(cid) => self
+                        .computed_permanent(cid)
+                        .filter(|c| c.card_types.contains(&CardType::Creature))
+                        .map(|c| {
+                            let marked = self.battlefield_find(cid).map_or(0, |i| i.damage);
+                            (c.toughness.max(0) as u32).saturating_sub(marked)
+                        })
+                        .unwrap_or(avail),
+                    _ => avail,
+                };
+                let pay = want.max(1).min(avail);
+                self.players[p].energy -= pay;
+                self.run_effect(
+                    &Effect::DealDamage { to: to.clone(), amount: crate::effect::Value::Const(pay as i32) },
+                    ctx,
+                    events,
+                )?;
+                Ok(())
+            }
+
             Effect::PayEnergyOrElse { amount, otherwise } => {
                 // CR 107.16 — "sacrifice/return unless you pay {E}…". Pay when
                 // able (AutoDecider keeps the permanent); otherwise resolve the
