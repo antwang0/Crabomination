@@ -4811,3 +4811,85 @@ fn parish_blade_trainee_trains_and_passes_counters() {
     assert_eq!(g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "counters moved to the ally on death");
 }
+
+/// Whispering Wizard makes a Spirit on a noncreature cast, once per turn.
+#[test]
+fn whispering_wizard_makes_spirit_once() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::whispering_wizard());
+    let cast_bolt = |g: &mut GameState| {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast");
+        drain_stack(g);
+    };
+    cast_bolt(&mut g);
+    let spirits = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count();
+    assert_eq!(spirits(&g), 1, "one Spirit");
+    cast_bolt(&mut g);
+    assert_eq!(spirits(&g), 1, "once each turn");
+}
+
+/// Patrician Geist anthems other Spirits and discounts graveyard casts.
+#[test]
+fn patrician_geist_anthems_spirits() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::patrician_geist());
+    let other = g.add_card_to_battlefield(0, catalog::whispering_wizard()); // not a Spirit
+    let cp = g.computed_permanent(other).unwrap();
+    assert_eq!(cp.power, 3, "non-Spirit unaffected");
+    let def = catalog::patrician_geist();
+    assert_eq!(def.static_abilities.len(), 2, "anthem + gy discount");
+}
+
+/// Predator's Howl makes one Wolf normally, three with Morbid.
+#[test]
+fn predators_howl_morbid_scales() {
+    let wolves = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Wolf").count();
+    // No death this turn → one Wolf.
+    let mut g = two_player_game();
+    let h = g.add_card_to_hand(0, catalog::predators_howl());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: h, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(wolves(&g), 1, "one Wolf without Morbid");
+    // A death this turn → three Wolves.
+    let mut g2 = two_player_game();
+    g2.players[1].creatures_died_this_turn = 1;
+    let h2 = g2.add_card_to_hand(0, catalog::predators_howl());
+    g2.players[0].mana_pool.add(Color::Green, 1);
+    g2.players[0].mana_pool.add_colorless(3);
+    g2.perform_action(GameAction::CastSpell {
+        card_id: h2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g2);
+    assert_eq!(wolves(&g2), 3, "three Wolves with Morbid");
+}
+
+/// Ardenvale Tactician's adventure taps up to two creatures.
+#[test]
+fn ardenvale_tactician_adventure_taps() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let at = g.add_card_to_hand(0, catalog::ardenvale_tactician());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: at, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast the adventure");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped, "both tapped");
+    // The creature half waits in exile to be cast later.
+    assert!(g.exile.iter().any(|c| c.id == at), "creature half exiled on the adventure");
+}

@@ -6483,7 +6483,8 @@ impl GameState {
         // fire from non-caster permanents (Wandering Archaic etc.). The
         // ability's effective controller is its own permanent's controller,
         // *not* the spell-caster's index.
-        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> = self
+        #[allow(clippy::type_complexity)]
+        let candidates: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>, usize, bool)> = self
             .battlefield
             .iter()
             .filter(|c| !stripped.contains(&c.id))
@@ -6492,7 +6493,8 @@ impl GameState {
                 c.definition
                     .triggered_abilities
                     .iter()
-                    .filter(move |t| {
+                    .enumerate()
+                    .filter(move |(_, t)| {
                         if t.event.kind != EventKind::SpellCast {
                             return false;
                         }
@@ -6510,11 +6512,19 @@ impl GameState {
                             _ => false,
                         }
                     })
-                    .map(move |t| (c.id, c_controller, t.effect.clone(), t.event.filter.clone()))
+                    .map(move |(idx, t)| {
+                        (c.id, c_controller, t.effect.clone(), t.event.filter.clone(), idx, t.event.once_per_turn)
+                    })
             })
             .collect();
 
-        for (source, listener_controller, effect, filter) in candidates {
+        for (source, listener_controller, effect, filter, trig_idx, once_per_turn) in candidates {
+            // CR 603.3d — "This ability triggers only once each turn"
+            // (Whispering Wizard, Welcoming Vampire-style SpellCast payoffs).
+            let once_key = (source, trig_idx);
+            if once_per_turn && self.triggered_once_per_turn_used.contains(&once_key) {
+                continue;
+            }
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
                     controller: listener_controller,
@@ -6536,6 +6546,10 @@ impl GameState {
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
                 }
+            }
+            // The trigger is firing this cast — consume its once-per-turn slot.
+            if once_per_turn {
+                self.triggered_once_per_turn_used.insert(once_key);
             }
             let auto_target = self.auto_target_for_effect_avoiding(
                 &effect,

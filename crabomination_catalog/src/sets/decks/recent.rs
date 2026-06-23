@@ -269,6 +269,154 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Whispering Wizard — {3}{U} 3/2 Human Wizard. Whenever you cast a noncreature
+/// spell, create a 1/1 white flying Spirit. Once each turn.
+pub fn whispering_wizard() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Whispering Wizard",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature))
+                .once_per_turn(),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: spirit },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Patrician Geist — {2}{U} 2/2 Spirit Knight. Flying. Other Spirits you
+/// control get +1/+1. Spells you cast from your graveyard cost {1} less.
+pub fn patrician_geist() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Patrician Geist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Spirits you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "Spells you cast from your graveyard cost {1} less.",
+                effect: StaticEffect::GraveyardCastCostReduction { amount: 1 },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Predator's Howl — {3}{G} Instant. Create a 2/2 green Wolf. Morbid — create
+/// three instead if a creature died this turn.
+pub fn predators_howl() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let wolf = || TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Predator's Howl",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) },
+            then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: wolf() }),
+            else_: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: wolf() }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ardenvale Tactician // Dizzying Swoop — {1}{W}{W} 2/3 Human Knight, Flying.
+/// Adventure: Dizzying Swoop {1}{W} Instant — tap up to two target creatures.
+pub fn ardenvale_tactician() -> CardDefinition {
+    use crate::card::Adventure;
+    CardDefinition {
+        name: "Ardenvale Tactician",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(Adventure {
+            name: "Dizzying Swoop",
+            cost: cost(&[generic(1), w()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Bloodcrazed Socialite — {3}{B} 3/3 Vampire. Menace. ETB create a Blood
+/// token. (The attack "sacrifice a Blood for +2/+2" rider is omitted.)
+pub fn bloodcrazed_socialite() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodcrazed Socialite",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
 /// life. Create two Blood tokens.
 pub fn vampires_kiss() -> CardDefinition {
