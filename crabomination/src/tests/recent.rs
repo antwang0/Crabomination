@@ -44,6 +44,23 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Highspire Bell-Ringer cuts {1} off your second spell each turn only.
+#[test]
+fn highspire_bell_ringer_discounts_second_spell() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::highspire_bell_ringer());
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    // First spell (0 cast so far): no discount.
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0);
+    // Second spell (1 cast already): {1} less.
+    g.players[0].spells_cast_this_turn = 1;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 1);
+    // Third spell: no discount.
+    g.players[0].spells_cast_this_turn = 2;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0);
+}
+
 /// Hardened Scales adds one to a +1/+1 placement on your creature.
 #[test]
 fn hardened_scales_adds_one() {

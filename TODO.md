@@ -30,8 +30,6 @@ plays its headline pattern):
   backed-up creature is omitted (the +1/+1 counter still lands).
 - **Bristlebud Farmer** — the attack "sacrifice a Food → mill three, grab a
   permanent" rider omitted (the ETB two-Food still fires).
-- **Highspire Bell-Ringer** — "your second spell each turn costs {1} less" needs
-  an nth-spell cost-reduction static; unbuilt for now.
 - **Tersa Lightshatter** — "discard up to two, then draw that many" variable
   rummage + the 7+-graveyard attack exile-and-play rider need a variable-loot
   primitive; unbuilt for now.

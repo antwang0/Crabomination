@@ -162,6 +162,11 @@ pub enum StaticEffect {
     /// cast cost {1} less"). Applied in `cost_reduction_for_spell` when the
     /// caster is not the active player.
     CostReductionDuringOpponentsTurn { filter: SelectionRequirement, amount: u32 },
+    /// "Your Nth spell each turn costs `amount` less" (Highspire Bell-Ringer —
+    /// second spell). Applied in `cost_reduction_for_spell` when the caster
+    /// controls the source and is about to cast their `nth` spell this turn
+    /// (i.e. `Player.spells_cast_this_turn == nth - 1`). Generic-only.
+    CostReductionNthSpell { filter: SelectionRequirement, nth: u32, amount: u32 },
     /// Target-aware generic cost reduction for spells whose chosen target
     /// matches `target_filter`. Powers Killian, Ink Duelist's "spells you
     /// cast that target a creature cost {2} less to cast."

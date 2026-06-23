@@ -9425,6 +9425,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::CostReduction { .. }
             | StaticEffect::GraveyardCastCostReduction { .. }
             | StaticEffect::CostReductionDuringOpponentsTurn { .. }
+            | StaticEffect::CostReductionNthSpell { .. }
             | StaticEffect::CostReductionTargetingFilter { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }

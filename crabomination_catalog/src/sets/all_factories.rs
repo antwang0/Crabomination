@@ -2669,6 +2669,7 @@ static DECKS: &[Factory] = &[
     super::decks::cackling_slasher,
     super::decks::vaultborn_tyrant,
     super::decks::hardened_scales,
+    super::decks::highspire_bell_ringer,
     super::decks::emberheart_challenger,
     super::decks::eldrazi_linebreaker,
     super::decks::no_more_lies,

@@ -130,6 +130,33 @@ pub fn hardened_scales() -> CardDefinition {
     }
 }
 
+/// Highspire Bell-Ringer — {2}{U} 1/4 Djinn Monk. Flying; the second spell you
+/// cast each turn costs {1} less.
+pub fn highspire_bell_ringer() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Highspire Bell-Ringer",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "The second spell you cast each turn costs {1} less to cast.",
+            effect: StaticEffect::CostReductionNthSpell {
+                filter: SelectionRequirement::Any,
+                nth: 2,
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Emberheart Challenger — {1}{R} 2/2 Mouse Warrior. Haste, prowess; Valiant
 /// — the first time it becomes the target of your spell/ability each turn,
 /// exile the top card of your library; you may play it this turn.
