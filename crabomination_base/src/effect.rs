@@ -642,6 +642,10 @@ pub enum Predicate {
     IsNight,
     /// CR 724 — `who` is the monarch ("as long as you're the monarch, …").
     IsMonarch { who: PlayerRef },
+    /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
+    /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
+    /// the listed threshold. Backed by `Player.speed`.
+    SpeedAtLeast { who: PlayerRef, speed: u32 },
     /// True if any player matched by `who` has been dealt damage this turn.
     /// Backed by `Player.was_dealt_damage_this_turn`. Powers Bloodthirst
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was

@@ -1613,6 +1613,18 @@ impl GameState {
             self.players[seat].lost_life_this_turn = true;
             self.players[seat].life_lost_this_turn =
                 self.players[seat].life_lost_this_turn.saturating_add((-delta) as u32);
+            // CR 702.179 — the active player's speed increases by 1 (capped at
+            // 4), once on their own turn, the first time an opponent loses life.
+            let active = self.active_player_idx;
+            if active < self.players.len()
+                && self.players[active].speed >= 1
+                && self.players[active].speed < 4
+                && !self.players[active].speed_increased_this_turn
+                && !self.same_team(seat, active)
+            {
+                self.players[active].speed += 1;
+                self.players[active].speed_increased_this_turn = true;
+            }
         }
         new_total
     }

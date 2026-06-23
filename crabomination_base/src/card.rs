@@ -884,6 +884,12 @@ pub enum Keyword {
     /// paired creature gains is carried in `CardDefinition.soulbond_bonus`.
     /// Deadeye Navigator, Wolfir Silverheart.
     Soulbond,
+    /// CR 702.179 — Start your engines! A marker keyword: when a permanent
+    /// with it enters, if its controller has no speed their speed becomes 1.
+    /// Speed then increases once per their turn (capped at 4) when an opponent
+    /// loses life. "Max speed —" abilities (modeled as `Predicate::SpeedAtLeast
+    /// { speed: 4 }`) are active at speed 4.
+    StartYourEngines,
 }
 
 /// CR 702.24 — the maintenance cost paid (once per age counter) to keep a

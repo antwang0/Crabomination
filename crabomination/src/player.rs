@@ -294,6 +294,18 @@ pub struct Player {
     pub sorceries_as_flash: bool,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
+    /// CR 702.179 — this player's speed (0–4). Starts at 0; a "Start your
+    /// engines!" object sets it to 1, and it increases by 1 (once per the
+    /// player's own turn, capped at 4) the first time an opponent loses life
+    /// during their turn. "Max speed —" abilities are active at 4. Default 0
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub speed: u32,
+    /// CR 702.179 — set once this player's speed has already increased on the
+    /// current turn (the "increases once on each of your turns" clause). Reset
+    /// at the start of each of this player's turns.
+    #[serde(default)]
+    pub speed_increased_this_turn: bool,
     /// CR 122 / 107.16 — energy counters ({E}) this player has. A
     /// generic resource pool added by `Effect::AddEnergy` and spent by
     /// `Effect::PayEnergy`. Defaults to 0 for snapshot back-compat.
@@ -493,6 +505,8 @@ impl Player {
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
+            speed: 0,
+            speed_increased_this_turn: false,
             energy: 0,
             rad_counters: 0,
             city_blessing: false,

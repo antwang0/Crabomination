@@ -1373,6 +1373,17 @@ impl GameState {
     pub(crate) fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
         // CR 614.13 — apply enters-tapped replacements before ETB triggers fire.
         self.apply_enters_tapped_replacement(card_id);
+        // CR 702.179 — a "Start your engines!" permanent entering gives its
+        // controller speed 1 if they have none.
+        if controller < self.players.len()
+            && self.players[controller].speed == 0
+            && self
+                .battlefield
+                .iter()
+                .any(|c| c.id == card_id && c.definition.keywords.contains(&crate::card::Keyword::StartYourEngines))
+        {
+            self.players[controller].speed = 1;
+        }
         use crate::effect::{EventKind, EventScope};
         let etb_triggers: Vec<Effect> = self
             .battlefield

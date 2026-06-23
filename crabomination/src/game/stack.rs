@@ -1594,6 +1594,9 @@ impl GameState {
             ) && dt.controller == p)
         });
         self.players[p].extra_land_plays = 0;
+        // CR 702.179 — "speed increases once on each of your turns": clear the
+        // active player's per-turn speed-bump flag as their turn begins.
+        self.players[p].speed_increased_this_turn = false;
         // Raid (CR 702.108): the active player hasn't attacked yet this turn.
         self.players[p].attacked_this_turn = false;
         self.players[p].creatures_attacked_this_turn = 0;

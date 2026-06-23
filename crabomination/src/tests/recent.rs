@@ -2550,3 +2550,85 @@ fn hulking_raptor_ramps_and_wards() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "added two green");
 }
+
+// ── "Start your engines!" / speed (CR 702.179) ──────────────────────────────
+
+/// A "Start your engines!" permanent entering sets its controller's speed to 1.
+#[test]
+fn start_your_engines_sets_speed_to_one() {
+    let mut g = two_player_game();
+    assert_eq!(g.players[0].speed, 0);
+    g.move_card_to_battlefield_for_test(0, catalog::nesting_bot());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].speed, 1, "SYE starts speed at 1");
+    // A second SYE permanent doesn't re-bump an already-started speed.
+    g.move_card_to_battlefield_for_test(0, catalog::swiftwing_assailant());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].speed, 1);
+}
+
+/// Speed rises once per your turn when an opponent loses life, capped at 4.
+#[test]
+fn speed_increments_on_opponent_life_loss() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].speed = 1;
+    g.adjust_life(1, -1); // opponent loses life on your turn → +1
+    assert_eq!(g.players[0].speed, 2);
+    g.adjust_life(1, -3); // same turn → no further bump
+    assert_eq!(g.players[0].speed, 2);
+    // A player with no speed yet isn't started by a life-loss event.
+    g.active_player_idx = 1;
+    g.players[1].speed_increased_this_turn = false;
+    g.adjust_life(0, -1);
+    assert_eq!(g.players[1].speed, 0, "no speed yet → life loss doesn't start it");
+}
+
+/// Speed never exceeds 4.
+#[test]
+fn speed_caps_at_four() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.players[0].speed = 4;
+    g.adjust_life(1, -1);
+    assert_eq!(g.players[0].speed, 4);
+}
+
+/// Nesting Bot's "Max speed —" +1/+0 is live only at speed 4.
+#[test]
+fn nesting_bot_max_speed_pump() {
+    let mut g = two_player_game();
+    let bot = g.add_card_to_battlefield(0, catalog::nesting_bot());
+    assert_eq!(g.computed_permanent(bot).unwrap().power, 1, "1/1 below max speed");
+    g.players[0].speed = 4;
+    assert_eq!(g.computed_permanent(bot).unwrap().power, 2, "+1/+0 at max speed");
+}
+
+/// Burnout Bashtronaut gains double strike at max speed.
+#[test]
+fn burnout_bashtronaut_max_speed_double_strike() {
+    let mut g = two_player_game();
+    let goblin = g.add_card_to_battlefield(0, catalog::burnout_bashtronaut());
+    assert!(!g.computed_permanent(goblin).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    g.players[0].speed = 4;
+    assert!(g.computed_permanent(goblin).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Risen Necroregent makes an end-step Zombie only at max speed.
+#[test]
+fn risen_necroregent_max_speed_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.add_card_to_battlefield(0, catalog::risen_necroregent());
+    let creatures = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count()
+    };
+    let before = creatures(&g);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(creatures(&g), before, "no token below max speed");
+    g.players[0].speed = 4;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(creatures(&g), before + 1, "2/2 Zombie at max speed");
+}

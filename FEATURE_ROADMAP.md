@@ -274,7 +274,9 @@ Each a small targeted feature; sweep batch by batch.
   mana abilities); ⏳ Experience counters → actually **✅** (`CounterType::
   Experience`); ✅ Poison/Toxic, Devotion, Ascend/city's blessing; ✅ Monarch;
   ✅ Day/Night (502.2 turn-based transition + Daybound/Nightbound DFC auto-flip);
-  ⏳ Ring-bearer.
+  ✅ **Speed / "Start your engines!"** (CR 702.179 — `Player.speed` 0–4,
+  `Keyword::StartYourEngines`, life-loss increment, `Predicate::SpeedAtLeast`
+  for "Max speed —"; DFT batch in `decks::recent`); ⏳ Ring-bearer.
 - **Fading family:** ✅ Fading, Vanishing (`process_fading_vanishing`). Remaining:
   Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift, Epic, Umbra armor, Affinity, Entwine, Buyback,

@@ -4061,3 +4061,188 @@ pub fn hulking_raptor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── DFT "Start your engines!" / speed (CR 702.179) ──────────────────────────
+
+/// Nesting Bot — {W} 1/1 Robot artifact creature. Start your engines! When it
+/// dies, create a 1/1 colorless Servo artifact creature token. Max speed — it
+/// gets +1/+0.
+pub fn nesting_bot() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, TokenDefinition};
+    CardDefinition {
+        name: "Nesting Bot",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::StartYourEngines],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Servo".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Artifact, CardType::Creature],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Servo], ..Default::default() },
+                ..Default::default()
+            },
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Max speed — Nesting Bot gets +1/+0.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                power: 1,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Burnout Bashtronaut — {R} 1/1 Goblin Warrior. Menace, Start your engines!
+/// {2}: it gets +1/+0 until end of turn. Max speed — it has double strike.
+pub fn burnout_bashtronaut() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Burnout Bashtronaut",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace, Keyword::StartYourEngines],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Max speed — Burnout Bashtronaut has double strike.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::DoubleStrike],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Swiftwing Assailant — {3}{W} 3/3 Bird Warrior. Flying, Start your engines!
+/// Max speed — it gets +0/+1 and has vigilance.
+pub fn swiftwing_assailant() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Swiftwing Assailant",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::StartYourEngines],
+        static_abilities: vec![StaticAbility {
+            description: "Max speed — Swiftwing Assailant gets +0/+1 and has vigilance.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                power: 0,
+                toughness: 1,
+                keywords: vec![Keyword::Vigilance],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Risen Necroregent — {4}{B} 5/4 Zombie Cat Knight. Start your engines! Max
+/// speed — at the beginning of your end step, create a 2/2 black Zombie token.
+pub fn risen_necroregent() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Risen Necroregent",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Cat, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::StartYourEngines],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Zombie".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Black],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Embalmed Ascendant — {1}{W}{B} 1/2 Zombie. Start your engines! When it
+/// enters, create a 2/2 black Zombie token. Max speed — whenever a creature you
+/// control dies, each opponent loses 1 life and you gain 1 life.
+pub fn embalmed_ascendant() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Embalmed Ascendant",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::StartYourEngines],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Zombie".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Black],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+                    ..Default::default()
+                },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

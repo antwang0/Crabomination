@@ -607,6 +607,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.monarch == Some(p)),
+            Predicate::SpeedAtLeast { who, speed } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].speed >= *speed),
             Predicate::PlayerDamagedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

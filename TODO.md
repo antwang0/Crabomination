@@ -58,10 +58,12 @@ plays its headline pattern):
 - Not implemented for want of a mechanic: **Spree** (Insatiable Avarice, Three
   Steps Ahead — cast-time per-mode additional costs), **Intensity** (Static
   Discharge), **Channel** (Touch the Spirit Realm's Channel ability).
-- Not implemented for want of a mechanic (newer batch): **Speed / "Start your
-  engines!"** (CR 702.179 — a per-player 0–4 resource that increments once per
-  turn when an opponent loses life; Mendicant Core, Nesting Bot, plus their
-  "Max speed —" riders).
+- ✅ **Speed / "Start your engines!"** (CR 702.179) — `Player.speed` (0–4) +
+  `Keyword::StartYourEngines` (sets speed to 1 on entry) + life-loss increment
+  (once per your turn, capped at 4) + `Predicate::SpeedAtLeast` for "Max speed
+  —" riders. Surfaced in `PlayerView.speed`. Cards: Nesting Bot, Burnout
+  Bashtronaut, Swiftwing Assailant, Risen Necroregent, Embalmed Ascendant.
+  Remaining: client HUD speed chip; the rest of the DFT speed pool.
 - **Caustic Bronco** — deferred: needs a "reveal top → hand, then lose life =
   its mana value unless saddled, else each opponent loses that much" composite
   (only the opponents-lose-MV half, `RevealTopToHandOpponentsLoseMv`, exists).

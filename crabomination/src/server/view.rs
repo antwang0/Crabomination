@@ -413,6 +413,7 @@ fn project_player(
         life: player.life,
         poison_counters: player.poison_counters,
         energy: player.energy,
+        speed: player.speed,
         mana_pool: player.mana_pool.clone(),
         library: LibraryView {
             size: player.library.len(),

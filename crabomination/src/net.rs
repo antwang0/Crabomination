@@ -483,6 +483,10 @@ pub struct PlayerView {
     /// client HUD can show an energy chip alongside life/poison.
     #[serde(default)]
     pub energy: u32,
+    /// CR 702.179 — this player's speed (0–4). Surfaced so the client HUD can
+    /// show a speed chip for "Start your engines!" decks.
+    #[serde(default)]
+    pub speed: u32,
     pub mana_pool: ManaPool,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
