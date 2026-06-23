@@ -166,6 +166,8 @@ pub enum CreatureType {
     Kirin,
     // "Spellshaper" — discard-cost spellcaster creatures (Seismic Mage).
     Spellshaper,
+    // Streets of New Capenna "Villain" (Kingpin's Enforcers).
+    Villain,
 }
 
 /// Land subtypes (basic land types + others).

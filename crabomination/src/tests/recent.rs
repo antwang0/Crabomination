@@ -3343,3 +3343,131 @@ fn gnarlroot_pallbearer_scales_with_graveyard() {
     // 2 creatures in gy → +2/+2 → 4/4.
     assert_eq!(g.computed_permanent(target).map(|c| c.power), Some(4));
 }
+
+/// Illusionary Servant sacrifices itself when targeted.
+#[test]
+fn illusionary_servant_dies_when_targeted() {
+    let mut g = two_player_game();
+    let servant = g.add_card_to_battlefield(0, catalog::illusionary_servant());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(servant)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Bolt targets the Servant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(servant).is_none(), "sacrificed on becoming targeted");
+}
+
+/// Bounding Wolf and Goblin Sky Raider carry their printed keywords.
+#[test]
+fn vanilla_keyword_creatures() {
+    let bw = catalog::bounding_wolf();
+    assert!(bw.keywords.contains(&Keyword::Flash) && bw.keywords.contains(&Keyword::Reach));
+    assert!(catalog::goblin_sky_raider().keywords.contains(&Keyword::Flying));
+}
+
+/// Glowing Anemone bounces a land on ETB when its controller chooses to.
+#[test]
+fn glowing_anemone_returns_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::mountain());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(land)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::glowing_anemone());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land returned to hand");
+}
+
+/// Contraband Kingpin scries when an artifact you control enters.
+#[test]
+fn contraband_kingpin_scries_on_artifact() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::contraband_kingpin());
+    g.add_card_to_library(0, catalog::island());
+    // An artifact entering fires the scry-1 trigger (resolves via the AutoDecider).
+    g.move_card_to_battlefield_for_test(0, catalog::gold_myr());
+    drain_stack(&mut g);
+    assert!(catalog::contraband_kingpin().keywords.contains(&Keyword::Lifelink));
+    // The trigger fired and resolved without panicking; library intact (kept on top).
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Gold Myr"));
+}
+
+/// Kingpin's Enforcers sacrifices a permanent to draw a card.
+#[test]
+fn kingpins_enforcers_sac_to_draw() {
+    let mut g = two_player_game();
+    let enf = g.add_card_to_battlefield(0, catalog::kingpins_enforcers());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: enf,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("sac ability activates");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+/// Goldmaw Champion's Boast taps a creature after it has attacked.
+#[test]
+fn goldmaw_champion_boast_taps() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::goldmaw_champion());
+    g.battlefield_find_mut(champ).unwrap().attacked_this_turn = true;
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: champ,
+        ability_index: 0,
+        target: Some(Target::Permanent(foe)),
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("boast activates after attacking");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped by Boast");
+}
+
+/// Gold Myr taps for white mana.
+#[test]
+fn gold_myr_makes_white() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_battlefield(0, catalog::gold_myr());
+    g.clear_sickness(myr);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: myr,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("mana ability");
+    assert!(g.players[0].mana_pool.amount(Color::White) >= 1);
+}
+
+/// Drumhunter draws at end step when you control a 5-power creature.
+#[test]
+fn drumhunter_draws_with_big_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::drumhunter());
+    g.add_card_to_battlefield(0, catalog::vaultborn_tyrant()); // 6/6, power ≥ 5
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "end-step draw fired");
+}

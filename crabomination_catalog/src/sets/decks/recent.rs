@@ -5514,3 +5514,202 @@ pub fn gnarlroot_pallbearer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Illusionary Servant — {1}{U}{U} 3/4 Illusion. Flying; when it becomes the
+/// target of a spell or ability, sacrifice it.
+pub fn illusionary_servant() -> CardDefinition {
+    CardDefinition {
+        name: "Illusionary Servant",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bounding Wolf — {2}{G} 3/2 Wolf with flash and reach.
+pub fn bounding_wolf() -> CardDefinition {
+    CardDefinition {
+        name: "Bounding Wolf",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Goblin Sky Raider — {2}{R} 1/2 Goblin Warrior with flying.
+pub fn goblin_sky_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Sky Raider",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Glowing Anemone — {3}{U} 1/3 Jellyfish Beast. When it enters, you may return
+/// target land to its owner's hand.
+pub fn glowing_anemone() -> CardDefinition {
+    CardDefinition {
+        name: "Glowing Anemone",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Return target land to its owner's hand".into(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(SelectionRequirement::Land),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Contraband Kingpin — {U}{B} 1/4 Aetherborn Rogue. Lifelink; whenever an
+/// artifact you control enters, scry 1.
+pub fn contraband_kingpin() -> CardDefinition {
+    CardDefinition {
+        name: "Contraband Kingpin",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Aetherborn, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                },
+            ),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kingpin's Enforcers — {2}{B} 2/3 Human Villain. Lifelink; "{2}{B}, Sacrifice
+/// an artifact or creature: Draw a card."
+pub fn kingpins_enforcers() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Kingpin's Enforcers",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Villain],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                1,
+            )),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goldmaw Champion — {2}{W} 2/3 Dwarf Warrior. Boast — {1}{W}: Tap target
+/// creature.
+pub fn goldmaw_champion() -> CardDefinition {
+    use crate::effect::shortcut::boast;
+    CardDefinition {
+        name: "Goldmaw Champion",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![boast(
+            cost(&[generic(1), w()]),
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Gold Myr — {2} 1/1 artifact Myr. "{T}: Add {W}."
+pub fn gold_myr() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Gold Myr",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![crate::sets::tap_add(Color::White)],
+        ..Default::default()
+    }
+}
+
+/// Drumhunter — {3}{G} 2/2 Human Druid Warrior. At the beginning of your end
+/// step, if you control a creature with power 5 or greater, you may draw a card.
+/// "{T}: Add {C}."
+pub fn drumhunter() -> CardDefinition {
+    CardDefinition {
+        name: "Drumhunter",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::SelectorExists(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(5)),
+            })),
+            effect: Effect::MayDo {
+                description: "Draw a card".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        activated_abilities: vec![crate::sets::tap_add_colorless()],
+        ..Default::default()
+    }
+}
