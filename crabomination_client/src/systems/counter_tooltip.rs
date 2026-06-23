@@ -690,6 +690,13 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::Inspired => "Whenever it becomes untapped, its inspired ability triggers.",
         K::Landcycling(_, _) => "Pay its landcycling cost and discard it to search your library for a matching land.",
         K::Typecycling(_) => "Pay its typecycling cost and discard it to search your library for a matching card.",
+        K::Mayhem(_) => "You may cast it from your graveyard for its mayhem cost if you discarded a card this turn; then exile it.",
+        K::Harmonize(_) => "You may cast it from your graveyard for its harmonize cost; you may tap an untapped creature to pay {1} of that cost. Then exile it.",
+        K::CantActivateAbilities => "Its activated abilities can't be activated.",
+        K::CantAttackUnlessCastCreatureThisTurn => "Can't attack unless you cast a creature spell this turn.",
+        K::CanAttackOnlyIfYouControl(_) => "Can attack only if you control a matching permanent.",
+        K::CantAttackOrBlockUnlessEvenCounters => "Can't attack or block unless it has an even number of counters on it.",
+        K::CantBeCounteredIfXAtLeast(_) => "Can't be countered if X was paid at or above the named amount.",
         _ => return None,
     })
 }
@@ -1327,6 +1334,23 @@ mod tests {
             Keyword::ProtectionFromManaValueExcept(3),
             Keyword::ProtectionFromCreatureType(CreatureType::Human),
             Keyword::ProtectionFromSpellSubtype(SpellSubtype::Arcane),
+        ] {
+            assert!(keyword_reminder(&kw).is_some(),
+                "expected reminder text for {kw:?}");
+        }
+    }
+
+    #[test]
+    fn graveyard_recast_and_restriction_keywords_carry_reminder_text() {
+        use crabomination::card::Keyword;
+        use crabomination::mana::ManaCost;
+        for kw in [
+            Keyword::Mayhem(ManaCost::default()),
+            Keyword::Harmonize(ManaCost::default()),
+            Keyword::CantActivateAbilities,
+            Keyword::CantAttackUnlessCastCreatureThisTurn,
+            Keyword::CantAttackOrBlockUnlessEvenCounters,
+            Keyword::CantBeCounteredIfXAtLeast(5),
         ] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");
