@@ -44,6 +44,32 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Trumpeting Herd makes a 3/3 Elephant and has Rebound.
+#[test]
+fn trumpeting_herd_makes_elephant() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let th = catalog::trumpeting_herd();
+    assert!(th.keywords.contains(&Keyword::Rebound));
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&th.effect, &ctx).unwrap();
+    let ele = g.battlefield.iter().find(|c| c.definition.name == "Elephant").unwrap();
+    assert_eq!((ele.power(), ele.toughness()), (3, 3));
+}
+
+/// Festergloom shrinks nonblack creatures but spares black ones.
+#[test]
+fn festergloom_minus_one_to_nonblack() {
+    let mut g = two_player_game();
+    let white = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green, 2/2
+    let black = g.add_card_to_battlefield(1, catalog::black_knight()); // black, 2/2
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&catalog::festergloom().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert_eq!(g.computed_permanent(white).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    assert_eq!(g.computed_permanent(black).map(|c| (c.power, c.toughness)), Some((2, 2)));
+}
+
 /// Intrepid Rabbit's ETB pumps a creature you control and it has Offspring.
 #[test]
 fn intrepid_rabbit_etb_pump() {

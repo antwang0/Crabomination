@@ -212,6 +212,56 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Trumpeting Herd — {2}{G}{G} Sorcery. Create a 3/3 green Elephant token.
+/// Rebound.
+pub fn trumpeting_herd() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Trumpeting Herd",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Elephant".into(),
+                power: 3,
+                toughness: 3,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Elephant],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Festergloom — {2}{B} Sorcery. Nonblack creatures get -1/-1 until end of turn.
+pub fn festergloom() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Festergloom",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasColor(Color::Black).negate()),
+            ),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 /// Intrepid Rabbit — {2}{W} 3/2 Rabbit Soldier. Offspring {1}. When it enters,
 /// target creature you control gets +1/+1 until end of turn.
 pub fn intrepid_rabbit() -> CardDefinition {

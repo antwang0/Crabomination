@@ -2702,6 +2702,8 @@ static DECKS: &[Factory] = &[
     super::decks::druid_of_the_spade,
     super::decks::persistent_marshstalker,
     super::decks::intrepid_rabbit,
+    super::decks::trumpeting_herd,
+    super::decks::festergloom,
     super::decks::marauding_brinefang,
     super::decks::crystal_barricade,
     super::decks::helpful_hunter,
