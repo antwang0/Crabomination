@@ -15,8 +15,6 @@ plays its headline pattern):
 - **The Ring tempts you / Ring-bearer** (LTR) — not yet modeled; see
   FEATURE_ROADMAP Tier 4. Per-player ring level (1–4) + designated Ring-bearer
   with cumulative attack/blocked/combat-damage granted abilities.
-- **Vaultborn Tyrant** — the death token-copy "is an artifact in addition" is
-  dropped (`CreateTokenCopyOf` has no `extra_card_types`; add one to fix).
 - **Questing Beast** — combat-damage-can't-be-prevented ships
   (`StaticEffect::ControllerCreaturesCombatDamageCantBePrevented`, CR 615.12);
   only the deals-damage-→-planeswalker redirect rider remains (needs

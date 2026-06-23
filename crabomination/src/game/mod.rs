@@ -1914,6 +1914,52 @@ impl GameState {
             .sum()
     }
 
+    /// Number of `StaticEffect::ExtraPlusOneCounters` permanents `seat`
+    /// controls — each adds one to a +1/+1 counter placement onto one of
+    /// `seat`'s creatures (Hardened Scales). Applied additively before the
+    /// `DoubleCounters` multiplier.
+    pub fn plus_counter_adders_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::ExtraPlusOneCounters))
+                    .count() as u32
+            })
+            .sum()
+    }
+
+    /// CR 614.16 counter-placement replacement chain for a `base`-count
+    /// placement of `kind` onto a permanent controlled by `ctrl`. Applies, in
+    /// order: Hardened Scales additive (+1/+1 only, creature only), Vizier of
+    /// Remedies shave (-1/-1 only, creature only), then Doubling-Season-class
+    /// doubling. Centralized so every counter-add site (AddCounter, Support,
+    /// enters-with-counters, …) replaces consistently.
+    pub fn scaled_counter_count(
+        &self,
+        ctrl: usize,
+        kind: crate::card::CounterType,
+        base: u32,
+        is_creature: bool,
+    ) -> u32 {
+        use crate::card::CounterType;
+        let mut n = base;
+        if is_creature && kind == CounterType::PlusOnePlusOne {
+            n = n.saturating_add(self.plus_counter_adders_for(ctrl));
+        }
+        if is_creature && kind == CounterType::MinusOneMinusOne {
+            n = n.saturating_sub(self.minus_counter_reduction_for(ctrl));
+        }
+        for _ in 0..self.counter_doublers_for(ctrl) {
+            n = n.saturating_mul(2);
+        }
+        n
+    }
+
     /// CR 614.5 — how many -1/-1 counters to shave off a placement onto one
     /// of `seat`'s creatures (Vizier of Remedies; one per copy).
     pub fn minus_counter_reduction_for(&self, seat: usize) -> u32 {
@@ -9396,9 +9442,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // DoubleTokens — read at `Effect::CreateToken` resolution time
             // via `GameState::token_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleTokens
-            // DoubleCounters — read at `Effect::AddCounter` resolution time
-            // via `GameState::counter_doublers_for(seat)`; no layer effect.
+            // DoubleCounters / ExtraPlusOneCounters — read at counter-add
+            // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters
+            | StaticEffect::ExtraPlusOneCounters
             // Damage doubling/halving — read at damage time via
             // `GameState::damage_doublers` / `damage_halvers` /
             // `scale_damage_to`; no layer effect.

@@ -90,8 +90,6 @@ pub fn vaultborn_tyrant() -> CardDefinition {
                     Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 ]),
             },
-            // The token copy "is an artifact in addition" rider is omitted —
-            // `CreateTokenCopyOf` doesn't add card types.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
                     .with_filter(Predicate::EntityMatches {
@@ -103,11 +101,31 @@ pub fn vaultborn_tyrant() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::This,
                     extra_creature_types: vec![],
+                    // The token "is an artifact in addition to its other types".
+                    extra_card_types: vec![CardType::Artifact],
                     override_pt: None,
                     non_legendary: false,
                 },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Hardened Scales — {G} enchantment. If one or more +1/+1 counters would be
+/// put on a creature you control, that many plus one are put on it instead.
+pub fn hardened_scales() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Hardened Scales",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more +1/+1 counters would be put on a creature \
+                          you control, that many plus one +1/+1 counters are put \
+                          on it instead.",
+            effect: StaticEffect::ExtraPlusOneCounters,
+        }],
         ..Default::default()
     }
 }
@@ -522,6 +540,7 @@ pub fn stormsplitter() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::This,
                     extra_creature_types: vec![],
+                    extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
                 },
@@ -1315,6 +1334,7 @@ pub fn pawpatch_recruit() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::This,
                     extra_creature_types: vec![],
+                    extra_card_types: vec![],
                     override_pt: Some((1, 1)),
                     non_legendary: false,
                 }),
@@ -1565,6 +1585,7 @@ pub fn coiling_rebirth() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::Target(0),
                     extra_creature_types: vec![],
+                    extra_card_types: vec![],
                     override_pt: Some((1, 1)),
                     non_legendary: true,
                 },

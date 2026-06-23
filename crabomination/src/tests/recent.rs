@@ -44,6 +44,39 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Hardened Scales adds one to a +1/+1 placement on your creature.
+#[test]
+fn hardened_scales_adds_one() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2),
+    }, &ctx).unwrap();
+    // 2 + 1 = 3.
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+/// Hardened Scales is additive and only touches +1/+1 (not -1/-1) counters.
+#[test]
+fn hardened_scales_ignores_minus_counters() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::MinusOneMinusOne, amount: Value::Const(1),
+    }, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+}
+
 /// Vaultborn Tyrant draws and gains life when a big creature enters.
 #[test]
 fn vaultborn_tyrant_value_on_big_etb() {
@@ -93,12 +126,15 @@ fn vaultborn_tyrant_dies_into_a_copy() {
     g.battlefield_find_mut(vt).unwrap().damage = 6; // lethal
     g.check_state_based_actions();
     drain_stack(&mut g);
-    let copies = g
+    let copies: Vec<_> = g
         .battlefield
         .iter()
         .filter(|c| c.definition.name == "Vaultborn Tyrant" && c.is_token)
-        .count();
-    assert_eq!(copies, 1, "one token copy on the battlefield");
+        .collect();
+    assert_eq!(copies.len(), 1, "one token copy on the battlefield");
+    // The copy is an artifact in addition to being a creature.
+    assert!(copies[0].definition.card_types.contains(&crate::card::CardType::Artifact));
+    assert!(copies[0].definition.is_creature());
 }
 
 /// Emberheart Challenger's Valiant exiles the top card the first time you

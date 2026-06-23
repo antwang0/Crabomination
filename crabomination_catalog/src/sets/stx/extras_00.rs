@@ -803,6 +803,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::TriggerSource,
                     extra_creature_types: vec![CreatureType::Spirit],
+                    extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
                 },

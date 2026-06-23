@@ -2612,6 +2612,10 @@ pub enum Effect {
         source: Selector,
         #[serde(default)]
         extra_creature_types: Vec<crate::card::CreatureType>,
+        /// Card types added on top of the source's printed types (Vaultborn
+        /// Tyrant: "that token is an artifact in addition to its other types").
+        #[serde(default)]
+        extra_card_types: Vec<crate::card::CardType>,
         #[serde(default)]
         override_pt: Option<(i32, i32)>,
         /// CR 707.2e rider — the token copy isn't legendary (Helm of the

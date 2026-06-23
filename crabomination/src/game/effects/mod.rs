@@ -1436,12 +1436,9 @@ impl GameState {
                     .collect();
                 for id in targets {
                     let ctrl = self.battlefield_find(id).map(|c| c.controller);
-                    let mut n = 1u32;
-                    if let Some(ctrl) = ctrl {
-                        for _ in 0..self.counter_doublers_for(ctrl) {
-                            n = n.saturating_mul(2);
-                        }
-                    }
+                    let n = ctrl
+                        .map(|c| self.scaled_counter_count(c, CounterType::PlusOnePlusOne, 1, true))
+                        .unwrap_or(1);
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.add_counters(CounterType::PlusOnePlusOne, n);
                         events.push(GameEvent::CounterAdded {
@@ -1522,22 +1519,17 @@ impl GameState {
                 if division.len() != targets.len() || division.iter().sum::<u32>() != amt {
                     division = crate::decision::even_damage_split(amt, targets.len());
                 }
-                for (t, mut n) in targets.iter().zip(division) {
+                for (t, n) in targets.iter().zip(division) {
                     if n == 0 { continue; }
                     let Target::Permanent(id) = t else { continue };
                     let id = *id;
-                    // +1/+1 counters respect counter-doubling statics (Doubling
-                    // Season); other counter kinds are placed as-is.
-                    let doublers = if counter == CounterType::PlusOnePlusOne {
-                        self.battlefield_find(id)
-                            .map(|c| c.controller)
-                            .map_or(0, |ctrl| self.counter_doublers_for(ctrl))
-                    } else {
-                        0
-                    };
-                    for _ in 0..doublers {
-                        n = n.saturating_mul(2);
-                    }
+                    // CR 614.16 — counter replacement effects (Doubling Season,
+                    // Hardened Scales) scale the placement.
+                    let n = self
+                        .battlefield_find(id)
+                        .map(|c| (c.controller, c.definition.is_creature()))
+                        .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, counter, n, cre))
+                        .unwrap_or(n);
                     if let Some(c) = self.battlefield_find_mut(id) {
                         c.add_counters(counter, n);
                         events.push(GameEvent::CounterAdded {
@@ -2435,14 +2427,11 @@ impl GameState {
                 if already {
                     return Ok(());
                 }
-                // CR 614.16 — counter doublers scale monstrosity counters too.
+                // CR 614.16 — counter replacement effects scale monstrosity.
                 let ctrl = self.battlefield_find(src).map(|c| c.controller);
-                let mut count = base;
-                if let Some(ctrl) = ctrl {
-                    for _ in 0..self.counter_doublers_for(ctrl) {
-                        count = count.saturating_mul(2);
-                    }
-                }
+                let count = ctrl
+                    .map(|c| self.scaled_counter_count(c, CounterType::PlusOnePlusOne, base, true))
+                    .unwrap_or(base);
                 if let Some(c) = self.battlefield_find_mut(src) {
                     c.monstrous = true;
                     if count > 0 {
@@ -2717,11 +2706,9 @@ impl GameState {
                         self.players[controller].hand.push(card);
                     } else {
                         // Nonland revealed (or empty library): +1/+1 counter.
-                        // CR 614.1c — Hardened Scales-style doublers apply.
-                        let mut n = 1u32;
-                        for _ in 0..self.counter_doublers_for(controller) {
-                            n = n.saturating_mul(2);
-                        }
+                        // CR 614.16 — counter replacement effects apply.
+                        let n =
+                            self.scaled_counter_count(controller, CounterType::PlusOnePlusOne, 1, true);
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.add_counters(CounterType::PlusOnePlusOne, n);
                             events.push(GameEvent::CounterAdded {
@@ -4651,23 +4638,10 @@ impl GameState {
                             // controllers.
                             let target_ctrl = self.battlefield_find(cid).map(|c| c.controller);
                             let n = if let Some(ctrl) = target_ctrl {
-                                let doublers = self.counter_doublers_for(ctrl);
-                                let mut scaled = base;
-                                for _ in 0..doublers {
-                                    scaled = scaled.saturating_mul(2);
-                                }
-                                // CR 614.5 — Vizier of Remedies: each copy
-                                // shaves one -1/-1 counter bound for a
-                                // creature its controller controls.
-                                if *kind == CounterType::MinusOneMinusOne
-                                    && self
-                                        .battlefield_find(cid)
-                                        .is_some_and(|c| c.definition.is_creature())
-                                {
-                                    scaled = scaled
-                                        .saturating_sub(self.minus_counter_reduction_for(ctrl));
-                                }
-                                scaled
+                                let is_creature = self
+                                    .battlefield_find(cid)
+                                    .is_some_and(|c| c.definition.is_creature());
+                                self.scaled_counter_count(ctrl, *kind, base, is_creature)
                             } else {
                                 base
                             };
@@ -4730,15 +4704,12 @@ impl GameState {
                     .collect();
                 for (cid, cur) in targets {
                     // Adding `cur` doubles the total (N → 2N), routed through the
-                    // CR 614.16 counter-doubling replacement like any other add.
-                    let doublers = self
-                        .battlefield_find(cid)
-                        .map(|c| self.counter_doublers_for(c.controller))
-                        .unwrap_or(0);
-                    let mut add = cur;
-                    for _ in 0..doublers {
-                        add = add.saturating_mul(2);
-                    }
+                    // CR 614.16 counter replacement chain like any other add.
+                    let bf = self.battlefield_find(cid);
+                    let add = bf
+                        .map(|c| (c.controller, c.definition.is_creature()))
+                        .map(|(ctrl, cre)| self.scaled_counter_count(ctrl, *kind, cur, cre))
+                        .unwrap_or(cur);
                     if let Some(c) = self.battlefield_find_mut(cid) {
                         c.add_counters(*kind, add);
                         events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: add });
@@ -5199,12 +5170,10 @@ impl GameState {
                         self.mint_token_onto_battlefield(def, p, false, events)
                     }
                 };
-                // CR 614.16 — counter doubling applies to the amassed counters.
+                // CR 614.16 — counter replacement effects apply to the amass.
                 if n > 0 && self.battlefield.iter().any(|c| c.id == army) {
-                    let mut scaled = n;
-                    for _ in 0..self.counter_doublers_for(p) {
-                        scaled = scaled.saturating_mul(2);
-                    }
+                    let scaled =
+                        self.scaled_counter_count(p, CounterType::PlusOnePlusOne, n, true);
                     if let Some(c) = self.battlefield_find_mut(army) {
                         c.add_counters(CounterType::PlusOnePlusOne, scaled);
                     }
@@ -5379,6 +5348,7 @@ impl GameState {
                 count,
                 source,
                 extra_creature_types,
+                extra_card_types,
                 override_pt,
                 non_legendary,
             } => {
@@ -5423,6 +5393,11 @@ impl GameState {
                     }
                 }
                 def.subtypes.creature_types = extra_types;
+                for t in extra_card_types.iter() {
+                    if !def.card_types.contains(t) {
+                        def.card_types.push(t.clone());
+                    }
+                }
                 if let Some((p_o, t_o)) = override_pt {
                     def.power = *p_o;
                     def.toughness = *t_o;

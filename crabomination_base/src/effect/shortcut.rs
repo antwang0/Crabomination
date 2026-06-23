@@ -709,6 +709,7 @@ pub fn squad_etb() -> TriggeredAbility {
         count: Value::SquadCount,
         source: Selector::This,
         extra_creature_types: Vec::new(),
+        extra_card_types: Vec::new(),
         override_pt: None,
         non_legendary: false,
     })
@@ -2869,6 +2870,7 @@ fn embalm_like(
             count: Value::Const(1),
             source: Selector::This,
             extra_creature_types: vec![crate::card::CreatureType::Zombie],
+            extra_card_types: Vec::new(),
             override_pt,
             non_legendary: false,
         },

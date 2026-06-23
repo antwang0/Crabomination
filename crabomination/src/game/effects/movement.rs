@@ -895,20 +895,15 @@ impl GameState {
                     let etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
                     let base = self.evaluate_value(&value, &etb_ctx);
                     if base > 0 {
-                        // CR 614.16: counter-doubling statics also apply
+                        // CR 614.16: counter replacement statics also apply
                         // to the "enters with N counters" replacement.
-                        let target_ctrl = self
-                            .battlefield
-                            .iter()
-                            .find(|c| c.id == cid)
-                            .map(|c| c.controller);
-                        let mut n = base as u32;
-                        if let Some(ctrl) = target_ctrl {
-                            let doublers = self.counter_doublers_for(ctrl);
-                            for _ in 0..doublers {
-                                n = n.saturating_mul(2);
-                            }
-                        }
+                        let bf = self.battlefield.iter().find(|c| c.id == cid);
+                        let n = bf
+                            .map(|c| (c.controller, c.definition.is_creature()))
+                            .map(|(ctrl, cre)| {
+                                self.scaled_counter_count(ctrl, kind, base as u32, cre)
+                            })
+                            .unwrap_or(base as u32);
                         if let Some(card_mut) =
                             self.battlefield.iter_mut().find(|c| c.id == cid)
                         {

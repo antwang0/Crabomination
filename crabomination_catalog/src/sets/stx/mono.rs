@@ -802,6 +802,7 @@ pub fn replication_technique() -> CardDefinition {
                 SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
             ),
             extra_creature_types: vec![],
+            extra_card_types: vec![],
             override_pt: None,
             non_legendary: false,
         },

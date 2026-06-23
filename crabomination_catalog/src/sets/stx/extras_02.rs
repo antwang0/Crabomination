@@ -694,6 +694,7 @@ pub fn sublime_epiphany() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByYou),
                     ),
                     extra_creature_types: vec![],
+                    extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
                 },

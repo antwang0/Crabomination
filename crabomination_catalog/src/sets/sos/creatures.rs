@@ -3565,6 +3565,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
                     count: Value::Const(1),
                     source: Selector::This,
                     extra_creature_types: vec![],
+                    extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
                 },

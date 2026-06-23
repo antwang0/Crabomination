@@ -244,6 +244,7 @@ pub fn skitterbeam_battalion() -> CardDefinition {
                 count: Value::Const(2),
                 source: Selector::This,
                 extra_creature_types: vec![],
+                extra_card_types: vec![],
                 override_pt: None,
                 non_legendary: false,
             }),

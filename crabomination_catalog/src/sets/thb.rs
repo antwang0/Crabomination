@@ -5194,6 +5194,7 @@ pub fn nightmare_shepherd() -> CardDefinition {
                         count: Value::ONE,
                         source: Selector::TriggerSource,
                         extra_creature_types: vec![CreatureType::Nightmare],
+                        extra_card_types: vec![],
                         override_pt: Some((1, 1)),
                         non_legendary: false,
                     },

@@ -1759,6 +1759,7 @@ pub fn lorehold_tomb_robber() -> CardDefinition {
                             .and(SelectionRequirement::InYourGraveyard),
                     ),
                     extra_creature_types: vec![],
+                    extra_card_types: vec![],
                     override_pt: None,
                     non_legendary: false,
                 },

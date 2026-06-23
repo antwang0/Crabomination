@@ -392,14 +392,19 @@ pub enum StaticEffect {
     DoubleTokens,
     /// "If one or more counters would be put on a permanent you control,
     /// twice that many of those counters are put on that permanent instead."
-    /// The counter-half of CR 614.16, matching Doubling Season / Hardened
-    /// Scales / Branching Evolution-class permanents. Read at
-    /// `Effect::AddCounter` resolution time: each active `DoubleCounters`
-    /// permanent the controller has on the battlefield doubles the counter
-    /// count (2 doublers → 4×, …). Composes multiplicatively with
-    /// `DoubleTokens` for cards that print both halves (Doubling Season
-    /// itself ships both static abilities).
+    /// The counter-half of CR 614.16, matching Doubling Season / Branching
+    /// Evolution-class permanents. Read at `Effect::AddCounter` resolution
+    /// time: each active `DoubleCounters` permanent the controller has on the
+    /// battlefield doubles the counter count (2 doublers → 4×, …). Composes
+    /// multiplicatively with `DoubleTokens` for cards that print both halves
+    /// (Doubling Season itself ships both static abilities).
     DoubleCounters,
+    /// CR 614.16 additive variant — "If one or more +1/+1 counters would be
+    /// put on a creature you control, that many *plus one* are put on it
+    /// instead." Hardened Scales / Conclave Mentor / Kalonian Hydra-class.
+    /// Each active copy adds one to a +1/+1 placement onto the controller's
+    /// creatures; applied before any `DoubleCounters` multiplier.
+    ExtraPlusOneCounters,
     /// CR 614.2 — "If a source would deal damage … it deals double that
     /// damage instead." A *global* damage-replacement (Furnace of Rath,
     /// Gratuitous Violence-class, Fiery Emancipation as ×2 stacking): read

@@ -1295,6 +1295,7 @@ pub fn rite_of_replication() -> CardDefinition {
         count: Value::Const(n),
         source: target_filtered(SelectionRequirement::Creature),
         extra_creature_types: vec![],
+        extra_card_types: vec![],
         override_pt: None,
         non_legendary: false,
     };
