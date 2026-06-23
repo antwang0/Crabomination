@@ -1228,3 +1228,107 @@ fn gloomfang_mauler_backup_two() {
         "Backup 2 put two +1/+1 counters"
     );
 }
+
+/// Audacity buffs the enchanted creature and cantrips when it leaves.
+#[test]
+fn audacity_buffs_and_cantrips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::island());
+    let aura = g.add_card_to_hand(0, catalog::audacity());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 2), "+2/+0");
+    assert!(c.keywords.contains(&Keyword::Trample));
+    let hand = g.players[0].hand.len();
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.len() > hand, "Aura death drew a card");
+}
+
+/// Felonious Rage leaves a Detective when the buffed creature dies.
+#[test]
+fn felonious_rage_death_makes_detective() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::felonious_rage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    // Kill the buffed 4/2 with a burn spell so the death flows through the
+    // damage funnel that the "dies this turn" watch listens on.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "buffed creature died");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Detective"),
+        "the dying creature left a Detective token"
+    );
+}
+
+/// Razorkin Hordecaller mints a Gremlin when you attack.
+#[test]
+fn razorkin_hordecaller_attack_token() {
+    let mut g = two_player_game();
+    let razor = g.add_card_to_battlefield(0, catalog::razorkin_hordecaller());
+    g.clear_sickness(razor);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: razor, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Gremlin"),
+        "minted a Gremlin on attack"
+    );
+}
+
+/// Goldvein Pick gives +1/+1 and a Treasure on combat damage.
+#[test]
+fn goldvein_pick_buffs_and_treasures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(bear);
+    let pick = g.add_card_to_battlefield(0, catalog::goldvein_pick());
+    g.players[0].mana_pool.add_colorless(1); // Equip {1}
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: pick, target: bear }).expect("equip");
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "equipped creature gets +1/+1");
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure)),
+        "combat damage made a Treasure"
+    );
+}

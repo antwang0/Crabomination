@@ -1879,3 +1879,154 @@ pub fn gloomfang_mauler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Audacity — {G} Aura. Enchanted creature gets +2/+0 and has trample. When
+/// this Aura is put into a graveyard from the battlefield, draw a card.
+pub fn audacity() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Audacity",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 0,
+            keywords: vec![Keyword::Trample],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Felonious Rage — {R} Instant. Target creature you control gets +2/+0 and
+/// gains haste until end of turn. When that creature dies this turn, create a
+/// 2/2 white and blue Detective creature token.
+pub fn felonious_rage() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Felonious Rage",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::WhenTargetDiesThisTurn {
+                slot: 0,
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Detective".into(),
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White, Color::Blue],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Detective],
+                            ..Default::default()
+                        },
+                        power: 2,
+                        toughness: 2,
+                        ..Default::default()
+                    },
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Razorkin Hordecaller — {4}{R} 4/4 Human Clown Berserker with haste. Whenever
+/// you attack, create a 1/1 red Gremlin creature token. (Modeled once per turn.)
+pub fn razorkin_hordecaller() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Razorkin Hordecaller",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Clown, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Gremlin".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Gremlin],
+                        ..Default::default()
+                    },
+                    power: 1,
+                    toughness: 1,
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goldvein Pick — {2} Equipment. Equipped creature gets +1/+1 and, whenever it
+/// deals combat damage to a player, creates a Treasure token. Equip {1}.
+pub fn goldvein_pick() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Goldvein Pick",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![],
+            scale: None,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
