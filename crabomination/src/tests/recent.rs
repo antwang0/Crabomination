@@ -4573,3 +4573,109 @@ fn tovolars_huntmaster_makes_wolves() {
     assert!(def.keywords.contains(&Keyword::Daybound));
     assert_eq!(def.back_face.as_ref().unwrap().name, "Tovolar's Packleader");
 }
+
+/// Geistwave bounces a permanent and draws when it was yours.
+#[test]
+fn geistwave_draws_when_bouncing_your_own() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::mountain());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gw = g.add_card_to_hand(0, catalog::geistwave());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: gw, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "bounced");
+    // -1 Geistwave, +1 bounced bear, +1 drew = hand0 +1.
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew off bouncing your own");
+}
+
+/// Geistwave bouncing an opponent's permanent does not draw.
+#[test]
+fn geistwave_no_draw_on_opponent() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::mountain());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gw = g.add_card_to_hand(0, catalog::geistwave());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: gw, target: Some(Target::Permanent(theirs)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Only spent Geistwave (no draw); their bear returns to their hand.
+    assert_eq!(g.players[0].hand.len(), hand0 - 1, "no draw bouncing opponent's");
+}
+
+/// Adamant Will pumps +2/+2 and grants indestructible.
+#[test]
+fn adamant_will_pumps_and_protects() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aw = g.add_card_to_hand(0, catalog::adamant_will());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aw, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Bladestitched Skaab anthems other Zombies.
+#[test]
+fn bladestitched_skaab_anthems_zombies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bladestitched_skaab());
+    let zombie = g.add_card_to_battlefield(0, catalog::champion_of_the_perished()); // 1/1 Zombie
+    let cp = g.computed_permanent(zombie).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 1), "+1/+0 to other Zombie");
+}
+
+/// Angelic Quartermaster supports two creatures on entry.
+#[test]
+fn angelic_quartermaster_supports_two() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aq = g.add_card_to_battlefield(0, catalog::angelic_quartermaster());
+    g.fire_self_etb_triggers(aq, 0);
+    drain_stack(&mut g);
+    let counters = |g: &GameState, id| g.battlefield_find(id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    // Auto-target spreads at least one counter (the full up-to-two spread is
+    // exercised by the dedicated Support test in counters.rs).
+    assert!(counters(&g, a) + counters(&g, b) >= 1, "support places a +1/+1 counter");
+}
+
+/// Slogurk grows on land mill and returns lands when it leaves.
+#[test]
+fn slogurk_grows_and_returns_lands() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let slo = g.add_card_to_battlefield(0, catalog::slogurk_the_overslime());
+    // A land card hitting your graveyard adds a counter.
+    g.add_card_to_graveyard(0, catalog::forest());
+    let evs = vec![GameEvent::CardPutIntoGraveyard {
+        player: 0, card_id: g.players[0].graveyard.last().unwrap().id, is_land: true,
+    }];
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(slo).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(), Some(1));
+    // Three lands in graveyard; bounce Slogurk via SBA leaving → return up to 3.
+    g.add_card_to_graveyard(0, catalog::mountain());
+    g.add_card_to_graveyard(0, catalog::island());
+    g.battlefield_find_mut(slo).unwrap().damage = 5;
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    let lands_in_hand = g.players[0].hand.iter().filter(|c| c.definition.is_land()).count();
+    assert!(lands_in_hand >= 3, "returned up to three lands, got {lands_in_hand}");
+}

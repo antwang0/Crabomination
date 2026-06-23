@@ -1676,7 +1676,17 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 701.13 — Mill (incl. `Effect::MillThenToHand { amount, filter }` — mill,
   then pick one card matching `filter` from those milled this way to hand;
   Cache Grab, `SelectionRequirement::PermanentCard`; test
-  `cache_grab_returns_a_milled_permanent`)
+  `cache_grab_returns_a_milled_permanent`). `EventKind::CardMilled` binds its
+  trigger subject to the milled card so "a creature card put into a graveyard
+  from a library" triggers can filter on the milled card's type (Dreadhound).
+- ✅ CR 502.2 / 731 — Day/Night transition trigger. `EventKind::DayNightChanged`
+  (matched to `GameEvent::DayNightChanged { was_transition }`, true only on a
+  real day↔night flip) fires "whenever day becomes night or night becomes day"
+  with `EventScope::AnyPlayer` (Brimstone Vandal).
+- ✅ Coven (Innistrad ability word) — `Predicate::CovenActive { who }` = control
+  3+ creatures with different (computed) powers; gates attack triggers and
+  "activate only if …" abilities (Sigarda Champion of Light, Dawnhart Mentor,
+  Sungold Sentinel).
 - ✅ CR 702.104 — Tribute
 - ✅ CR 728 — Ending the Turn
 - ✅ CR 701.19 — Searching (incl. `Effect::SearchUpToN` count-search — Nylea's Intervention, Deathbellow War Cry; test `cr_701_19_search_up_to_n_picks_matches_only`)

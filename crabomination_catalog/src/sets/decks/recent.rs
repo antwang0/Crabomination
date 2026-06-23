@@ -269,6 +269,168 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Geistwave — {1}{U} Instant. Return target nonland permanent to its owner's
+/// hand. If you controlled that permanent, draw a card.
+pub fn geistwave() -> CardDefinition {
+    let bounce = || Effect::Move {
+        what: target_filtered(SelectionRequirement::Nonland),
+        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+    };
+    CardDefinition {
+        name: "Geistwave",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: SelectionRequirement::ControlledByYou,
+            },
+            then: Box::new(Effect::Seq(vec![
+                bounce(),
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ])),
+            else_: Box::new(bounce()),
+        },
+        ..Default::default()
+    }
+}
+
+/// Adamant Will — {1}{W} Instant. Target creature gets +2/+2 and gains
+/// indestructible until end of turn.
+pub fn adamant_will() -> CardDefinition {
+    CardDefinition {
+        name: "Adamant Will",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bladestitched Skaab — {U}{B} 2/3 Zombie Soldier. Other Zombies you control
+/// get +1/+0.
+pub fn bladestitched_skaab() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Bladestitched Skaab",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Zombies you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Angelic Quartermaster — {3}{W}{W} 3/3 Angel Soldier. Flying. ETB put a
+/// +1/+1 counter on each of up to two other target creatures.
+pub fn angelic_quartermaster() -> CardDefinition {
+    CardDefinition {
+        name: "Angelic Quartermaster",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::SupportCounters {
+            max_targets: 2,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Slogurk, the Overslime — {1}{G}{U} 3/3 Ooze. Trample. Whenever a land card
+/// is put into your graveyard, put a +1/+1 counter on it. Remove three +1/+1
+/// counters: return it to its owner's hand. When it leaves the battlefield,
+/// return up to three target land cards from your graveyard to your hand.
+pub fn slogurk_the_overslime() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    // "up to three target land cards from your graveyard" — auto-pulled.
+    let return_lands = Effect::Move {
+        what: Selector::Take {
+            inner: Box::new(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::Land,
+            }),
+            count: Box::new(Value::Const(3)),
+        },
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Slogurk, the Overslime",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CreatureLeavesBattlefieldNotDying,
+                    EventScope::SelfSource,
+                ),
+                effect: return_lands.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: return_lands,
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 3)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Saryth, the Viper's Fang — {2}{G}{G} 3/4 Human Warlock. Other tapped
 /// creatures you control have deathtouch; other untapped creatures you control
 /// have hexproof. {1}, {T}: Untap another target creature or land you control.
