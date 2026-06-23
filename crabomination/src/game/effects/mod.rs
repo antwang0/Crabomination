@@ -1894,6 +1894,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LifeGainLockGame { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].cannot_gain_life = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantSpellsUncounterableThisTurn { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
@@ -2377,6 +2386,47 @@ impl GameState {
             }
 
             Effect::MillUntilLands { who, lands } => self.resolve_mill_until_lands(who, lands, ctx, events),
+
+            Effect::MillThenToHand { amount, filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let n = self.mill_count_for(p, self.evaluate_value(amount, ctx).max(0) as usize);
+                let mut milled: Vec<CardId> = Vec::new();
+                for _ in 0..n {
+                    if self.players[p].library.is_empty() { break; }
+                    let card = self.players[p].library.remove(0);
+                    let cid = card.id;
+                    if !self.route_to_graveyard(card, events) {
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    }
+                    milled.push(cid);
+                }
+                // Candidates: cards milled this way that are still in the
+                // graveyard and match `filter`.
+                let cands: Vec<(CardId, String)> = self.players[p].graveyard.iter()
+                    .filter(|c| milled.contains(&c.id)
+                        && crate::game::layers::requirement_matches_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if cands.is_empty() { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Put which card milled this way into your hand?".to_string(),
+                    candidates: cands,
+                    min: 1,
+                    max: 1,
+                });
+                if let DecisionAnswer::Cards(picked) = answer {
+                    if let Some(cid) = picked.first() {
+                        if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid) {
+                            let card = self.players[p].graveyard.remove(pos);
+                            self.players[p].hand.push(card);
+                        }
+                    }
+                }
+                Ok(())
+            }
 
 
             Effect::MillTwoRepeatSharedColor { who } => self.resolve_mill_two_repeat_shared_color(who, ctx, events),

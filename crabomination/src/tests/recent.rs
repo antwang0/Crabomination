@@ -2776,6 +2776,11 @@ fn screaming_nemesis_redirects_damage() {
     }]);
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 3, "redirected 3 to the opponent");
+    // CR 119.7 — the damaged player can't gain life for the rest of the game.
+    assert!(g.players[1].cannot_gain_life, "rest-of-game lifegain lock");
+    let before = g.players[1].life;
+    g.adjust_life(1, 5);
+    assert_eq!(g.players[1].life, before, "lifegain stays locked");
 }
 
 /// Spinewoods Armadillo is a 7/7 with Reach and Ward {3}.
@@ -2854,6 +2859,46 @@ fn bakersbane_duo_makes_food() {
     g.move_card_to_battlefield_for_test(0, catalog::bakersbane_duo());
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"));
+}
+
+/// Cache Grab mills four and returns a chosen permanent card to hand; the
+/// non-permanent milled card stays in the graveyard.
+#[test]
+fn cache_grab_returns_a_milled_permanent() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::lightning_bolt()); // instant — not eligible
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears()); // permanent
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bears])]));
+    let grab = g.add_card_to_hand(0, catalog::cache_grab());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: grab,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Cache Grab castable for {1}{G}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears), "chose the creature to hand");
+    assert_eq!(g.players[0].library.len(), 0, "milled all four");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "the instant stays milled");
+}
+
+/// Lumbering Worldwagon's power equals the lands you control; toughness stays 4.
+#[test]
+fn lumbering_worldwagon_power_tracks_lands() {
+    let mut g = two_player_game();
+    let wagon = g.add_card_to_battlefield(0, catalog::lumbering_worldwagon());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let c = g.computed_permanent(wagon).unwrap();
+    assert_eq!(c.power, 3, "power = 3 lands controlled");
+    assert_eq!(c.toughness, 4, "printed toughness");
 }
 
 /// Spire Mangler pumps a flyer you control on ETB.

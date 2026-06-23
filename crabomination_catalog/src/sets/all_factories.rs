@@ -2713,6 +2713,8 @@ static DECKS: &[Factory] = &[
     super::decks::cogwork_wrestler,
     super::decks::crocodile_of_the_crossing,
     super::decks::topiary_stomper,
+    super::decks::cache_grab,
+    super::decks::lumbering_worldwagon,
     super::decks::bakersbane_duo,
     super::decks::spire_mangler,
     super::decks::palace_familiar,

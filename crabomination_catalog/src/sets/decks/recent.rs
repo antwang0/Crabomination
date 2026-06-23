@@ -4543,8 +4543,8 @@ pub fn spinewoods_armadillo() -> CardDefinition {
 }
 
 /// Screaming Nemesis — {2}{R} 3/3 Spirit. Haste. Whenever it's dealt damage, it
-/// deals that much damage to any target. (The "that player can't gain life for
-/// the rest of the game" rider is omitted.)
+/// deals that much damage to any target; if a player is dealt damage this way,
+/// they can't gain life for the rest of the game.
 pub fn screaming_nemesis() -> CardDefinition {
     CardDefinition {
         name: "Screaming Nemesis",
@@ -4556,10 +4556,14 @@ pub fn screaming_nemesis() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
-            effect: Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
-                amount: Value::TriggerEventAmount,
-            },
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Any),
+                    amount: Value::TriggerEventAmount,
+                },
+                // No-op unless the target was a player (CR 119.7 rest-of-game lock).
+                Effect::LifeGainLockGame { who: Selector::Target(0) },
+            ]),
         }],
         ..Default::default()
     }
@@ -4662,6 +4666,74 @@ pub fn topiary_stomper() -> CardDefinition {
             filter: SelectionRequirement::IsBasicLand,
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
         })],
+        ..Default::default()
+    }
+}
+
+/// Cache Grab — {1}{G} Instant. Mill four, then you may put a permanent card
+/// milled this way into your hand. If you control a Squirrel, create a Food.
+/// (The "returned a Squirrel this way" half of the Food trigger is approximated
+/// to controlling one.)
+pub fn cache_grab() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Cache Grab",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::MillThenToHand {
+                amount: Value::Const(4),
+                filter: SelectionRequirement::PermanentCard,
+            },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Squirrel),
+                }),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::food_token(),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lumbering Worldwagon — {2}{G} Vehicle `*`/4. Power = lands you control.
+/// Whenever it enters or attacks, you may fetch a basic land tapped. Crew 4.
+pub fn lumbering_worldwagon() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, DynamicPt};
+    let fetch = || Effect::MayDo {
+        description: "Search for a basic land, put it onto the battlefield tapped".into(),
+        body: Box::new(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        }),
+    };
+    CardDefinition {
+        name: "Lumbering Worldwagon",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        dynamic_pt: Some(DynamicPt::LandsControlledPower { base_p: 0, base_t: 4 }),
+        keywords: vec![Keyword::Crew(4)],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: fetch(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: fetch(),
+            },
+        ],
         ..Default::default()
     }
 }

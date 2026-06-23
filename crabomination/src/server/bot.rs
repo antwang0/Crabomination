@@ -112,8 +112,8 @@ impl Bot for RandomBot {
                     }
                     // AutoDecider chooses nothing; the bot exiles opponents'
                     // graveyard cards (deny graveyard value) up to the cap.
-                    crate::decision::Decision::ChooseCards { candidates, max, .. } => {
-                        decide_choose_cards(state, seat, candidates, *max)
+                    crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
+                        decide_choose_cards(state, seat, candidates, *min, *max)
                     }
                     // A self-discard (cleanup over max hand size, rummaging, a
                     // discard cost): every offered card is in our own hand and
@@ -923,6 +923,7 @@ fn decide_choose_cards(
     state: &GameState,
     seat: usize,
     candidates: &[(crate::card::CardId, String)],
+    min: u32,
     max: u32,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
@@ -971,12 +972,25 @@ fn decide_choose_cards(
             .iter()
             .position(|p| p.graveyard.iter().any(|c| c.id == id))
     };
-    let chosen: Vec<_> = candidates
+    let mut chosen: Vec<_> = candidates
         .iter()
         .filter(|(id, _)| owner_of(*id).is_some_and(|o| !state.same_team(o, seat)))
         .map(|(id, _)| *id)
         .take(max as usize)
         .collect();
+    // A mandatory pick (min ≥ 1) over our own graveyard — Cache Grab's "put a
+    // permanent card milled this way into your hand". Keep the biggest one.
+    if chosen.len() < min as usize {
+        let mut own: Vec<(crate::card::CardId, i32)> = candidates
+            .iter()
+            .filter_map(|(id, _)| {
+                let c = state.players[seat].graveyard.iter().find(|c| c.id == *id)?;
+                Some((*id, c.definition.cost.cmc() as i32))
+            })
+            .collect();
+        own.sort_by_key(|b| std::cmp::Reverse(b.1));
+        chosen = own.into_iter().take((min as usize).max(1)).map(|(id, _)| id).collect();
+    }
     DecisionAnswer::Cards(chosen)
 }
 
@@ -4956,7 +4970,7 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, &candidates, 1) {
+        match decide_choose_cards(&g, 0, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
             other => panic!("expected Cards, got {other:?}"),
@@ -4977,7 +4991,7 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, &candidates, 1) {
+        match decide_choose_cards(&g, 0, &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot taps the opponent's biggest creature, not its own"),
             other => panic!("expected Cards, got {other:?}"),

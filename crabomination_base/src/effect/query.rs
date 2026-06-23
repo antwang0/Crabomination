@@ -303,6 +303,7 @@ impl Effect {
                 sel_has_target(who) || value_has_target(amount)
             }
             Effect::MillTwoRepeatSharedColor { who } => sel_has_target(who),
+            Effect::MillThenToHand { amount, .. } => value_has_target(amount),
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
             Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
@@ -585,6 +586,7 @@ impl Effect {
                 value_has_target(power) || value_has_target(toughness)
             }
             Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
+            Effect::LifeGainLockGame { who } => sel_has_target(who),
             Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
             Effect::GrantHexproofFromColorThisTurn { who, .. } => sel_has_target(who),
             Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),

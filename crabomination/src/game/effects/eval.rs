@@ -1531,7 +1531,7 @@ impl GameState {
             R::Artifact => card.definition.is_artifact(),
             R::Enchantment => card.definition.is_enchantment(),
             R::Planeswalker => card.definition.is_planeswalker(),
-            R::Permanent => card.definition.is_permanent(),
+            R::Permanent | R::PermanentCard => card.definition.is_permanent(),
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),
             R::Noncreature => !card.definition.is_creature(),

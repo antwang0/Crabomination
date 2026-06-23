@@ -960,6 +960,11 @@ pub enum SelectionRequirement {
     Enchantment,
     Planeswalker,
     Permanent,
+    /// A *card* whose type line includes a permanent type (creature / land /
+    /// artifact / enchantment / planeswalker / battle). Unlike `Permanent`
+    /// (always-true on the battlefield), this discriminates in zones that
+    /// also hold instants/sorceries — graveyard/exile/milled picks.
+    PermanentCard,
     Land,
     Nonland,
     Noncreature,
@@ -2159,6 +2164,10 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of lands the controller
     /// controls. Lumra, Bellow of the Woods (base 0/0).
     LandsControlled { base: i32 },
+    /// Power = `base_p` + the lands the controller controls; toughness is
+    /// the fixed `base_t`. `*`-power Vehicles whose power tracks lands
+    /// while toughness is printed (Lumbering Worldwagon, `*/8`).
+    LandsControlledPower { base_p: i32, base_t: i32 },
     /// Power = toughness = the number of cards in the controller's hand.
     /// Maro, Kagemaro.
     ControllerHandSize,

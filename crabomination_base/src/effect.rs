@@ -1747,6 +1747,13 @@ pub enum Effect {
     /// to (Skullcrack, Sulfurous Blast's flashback rider, future
     /// one-turn lifegain locks).
     LifeGainLockThisTurn { who: Selector },
+    /// Permanently set `Player.cannot_gain_life` on each player the selector
+    /// resolves to — "that player can't gain life for the rest of the game"
+    /// (Screaming Nemesis, Everlasting Torment, Witch of the Moors). Sticks
+    /// across recomputes and turns (nothing resets the flag). Non-player
+    /// resolutions are ignored, so `Selector::Target(0)` over a damage target
+    /// only fires when a player was hit.
+    LifeGainLockGame { who: Selector },
     /// Set `Player.spells_uncounterable_this_turn` on each resolved player —
     /// "spells you control can't be countered for the rest of this turn"
     /// (Veil of Summer). Cleared at the next untap.
@@ -1861,6 +1868,11 @@ pub enum Effect {
     /// `size`.
     SetMaxHandSize { who: Selector, size: Value },
     Mill    { who: Selector, amount: Value },
+    /// The controller mills `amount` cards, then puts one card matching
+    /// `filter` from among those milled this way into their hand (the
+    /// controller chooses; nothing happens if none qualify). Cache Grab
+    /// ("mill four, then return a permanent card milled this way to hand").
+    MillThenToHand { amount: Value, filter: SelectionRequirement },
     /// Reveal cards from the top of each resolved player's library until
     /// `lands` land cards are revealed, then put all revealed cards into
     /// that player's graveyard (Mind Grind, Consuming Aberration's trigger).

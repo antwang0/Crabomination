@@ -631,7 +631,7 @@ fn affected_includes_gated(
 pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
     use SelectionRequirement as R;
     match req {
-        R::Any | R::Permanent | R::Creature | R::Artifact | R::Enchantment
+        R::Any | R::Permanent | R::PermanentCard | R::Creature | R::Artifact | R::Enchantment
         | R::Planeswalker | R::Land | R::Nonland | R::Noncreature | R::IsBasicLand
         | R::IsNonbasicLand | R::IsToken | R::NotToken | R::ControlledByYou
         | R::ControlledByOpponent | R::Colorless => true,
@@ -679,6 +679,7 @@ pub(crate) fn requirement_matches_card(
     let def = &card.definition;
     match req {
         R::Any | R::Permanent => true,
+        R::PermanentCard => def.is_permanent(),
         R::Creature => def.card_types.contains(&CardType::Creature),
         R::Artifact => def.card_types.contains(&CardType::Artifact),
         R::Enchantment => def.card_types.contains(&CardType::Enchantment),
