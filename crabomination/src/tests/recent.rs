@@ -5082,3 +5082,75 @@ fn bloodthirsty_adversary_multikicker_counters() {
     assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Multikicker(_))));
     assert_eq!(d.enters_with_counters, Some((CounterType::PlusOnePlusOne, Value::TimesKicked)));
 }
+
+/// Eccentric Farmer mills three then returns a land from the graveyard.
+#[test]
+fn eccentric_farmer_mill_then_return_land() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest()); // top of library
+    let etb = catalog::eccentric_farmer().triggered_abilities[0].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "land returned to hand");
+    assert_eq!(g.players[0].graveyard.len(), 2, "land left gy; two nonlands remain");
+}
+
+/// Briarbridge Tracker investigates and grows while you control a token.
+#[test]
+fn briarbridge_tracker_token_boost() {
+    let mut g = two_player_game();
+    let bt = g.add_card_to_battlefield(0, catalog::briarbridge_tracker());
+    // No token yet → base 2/3.
+    assert_eq!(g.computed_permanent(bt).map(|c| (c.power, c.toughness)), Some((2, 3)));
+    // Resolve the ETB investigate → a Clue token appears, +2/+0 kicks in.
+    let etb = catalog::briarbridge_tracker().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(bt, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "investigated");
+    assert_eq!(g.computed_permanent(bt).map(|c| (c.power, c.toughness)), Some((4, 3)));
+}
+
+/// Markov Waltzer's begin-combat trigger pumps up to two of your creatures.
+#[test]
+fn markov_waltzer_pumps_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let trig = catalog::markov_waltzer().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    ctx.targets = vec![Target::Permanent(a), Target::Permanent(b)];
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(a).map(|c| c.power), Some(3));
+    assert_eq!(g.computed_permanent(b).map(|c| c.power), Some(3));
+}
+
+/// Heron-Blessed Geist's graveyard ability needs an enchantment and sorcery speed.
+#[test]
+fn heron_blessed_geist_gy_ability_gated() {
+    let d = catalog::heron_blessed_geist();
+    let ab = &d.activated_abilities[0];
+    assert!(ab.from_graveyard && ab.exile_self_cost && ab.sorcery_speed);
+    assert!(ab.condition.is_some(), "gated on controlling an enchantment");
+}
+
+/// Vampire Socialite buffs other Vampires when an opponent lost life this turn.
+#[test]
+fn vampire_socialite_counters_when_opp_lost_life() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::bloodcrazed_socialite()); // a Vampire
+    let soc = g.add_card_to_battlefield(0, catalog::vampire_socialite());
+    let etb = catalog::vampire_socialite().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(soc, 0, None, 0);
+    // No life lost → no counters.
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(other).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(), None);
+    // Opponent lost life → counter on the other Vampire (not the source).
+    g.players[1].lost_life_this_turn = true;
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(other).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(), Some(1));
+    assert_eq!(g.battlefield_find(soc).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(), None);
+}

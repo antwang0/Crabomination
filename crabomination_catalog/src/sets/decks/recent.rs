@@ -707,6 +707,184 @@ pub fn gut_true_soul_zealot() -> CardDefinition {
     }
 }
 
+/// Eccentric Farmer — {2}{G} 2/3 Human Peasant. ETB mill three, then you may
+/// return a land card from your graveyard to your hand.
+pub fn eccentric_farmer() -> CardDefinition {
+    CardDefinition {
+        name: "Eccentric Farmer",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::MayDo {
+                description: "Return a land card from your graveyard to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: SelectionRequirement::Land,
+                        }),
+                        count: Box::new(Value::Const(1)),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Briarbridge Tracker — {2}{G} 2/3 Human Scout. Vigilance. ETB investigate;
+/// gets +2/+0 as long as you control a token.
+pub fn briarbridge_tracker() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::shortcut::investigate;
+    CardDefinition {
+        name: "Briarbridge Tracker",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(investigate(1))],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control a token, this creature gets +2/+0.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::IsToken.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 2,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Markov Waltzer — {2}{R}{W} 1/3 Vampire. Flying, haste. At the beginning of
+/// combat on your turn, up to two target creatures you control each get +1/+0.
+pub fn markov_waltzer() -> CardDefinition {
+    CardDefinition {
+        name: "Markov Waltzer",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                effect: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Heron-Blessed Geist — {4}{W} 3/3 Spirit. Flying. {3}{W}, exile from your
+/// graveyard: make two 1/1 white flying Spirits. Sorcery-speed, only if you
+/// control an enchantment.
+pub fn heron_blessed_geist() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CardType as CT, TokenDefinition};
+    use crate::mana::Color;
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Heron-Blessed Geist",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            condition: Some(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasCardType(CT::Enchantment)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: spirit,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vampire Socialite — {B}{R} 2/2 Vampire Noble. Menace. ETB, if an opponent
+/// lost life this turn, put a +1/+1 counter on each other Vampire you control.
+/// (The "enters with an extra counter while an opponent lost life" static is
+/// approximated by the ETB; tracked in TODO.md.)
+pub fn vampire_socialite() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Vampire Socialite",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
 /// life. Create two Blood tokens.
 pub fn vampires_kiss() -> CardDefinition {
