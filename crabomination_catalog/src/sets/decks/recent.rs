@@ -4564,3 +4564,52 @@ pub fn screaming_nemesis() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Goblin Boarders — {2}{R} 3/2 Goblin Pirate. Raid — enters with a +1/+1
+/// counter if you attacked this turn.
+pub fn goblin_boarders() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Boarders",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cogwork Wrestler — {U} 1/2 Gnome artifact creature. Flash. When it enters,
+/// target creature an opponent controls gets -2/-0 until end of turn.
+pub fn cogwork_wrestler() -> CardDefinition {
+    CardDefinition {
+        name: "Cogwork Wrestler",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}

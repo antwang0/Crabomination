@@ -2786,3 +2786,35 @@ fn spinewoods_armadillo_stats() {
     assert!(def.keywords.contains(&Keyword::Reach));
     assert!(def.activated_abilities[0].discard_self_cost, "discard-this fetch ability");
 }
+
+/// Goblin Boarders enters with a +1/+1 counter only if you attacked this turn.
+#[test]
+fn goblin_boarders_raid_counter() {
+    let mut g = two_player_game();
+    g.players[0].attacked_this_turn = true;
+    let id = g.move_card_to_battlefield_for_test(0, catalog::goblin_boarders());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+    );
+    let mut g2 = two_player_game();
+    let id2 = g2.move_card_to_battlefield_for_test(0, catalog::goblin_boarders());
+    drain_stack(&mut g2);
+    assert_eq!(
+        g2.battlefield_find(id2).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        None,
+        "no Raid → no counter",
+    );
+}
+
+/// Cogwork Wrestler shrinks an opponent's creature's power on ETB.
+#[test]
+fn cogwork_wrestler_etb_shrinks_foe() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    g.move_card_to_battlefield_for_test(0, catalog::cogwork_wrestler());
+    // ETB targets the only opposing creature.
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(foe).map(|c| c.power), Some(1), "-2/-0 applied");
+}

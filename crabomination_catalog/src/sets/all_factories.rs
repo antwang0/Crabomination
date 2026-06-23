@@ -2709,6 +2709,8 @@ static DECKS: &[Factory] = &[
     super::decks::savor,
     super::decks::spinewoods_armadillo,
     super::decks::screaming_nemesis,
+    super::decks::goblin_boarders,
+    super::decks::cogwork_wrestler,
     super::decks::krydle_of_baldurs_gate,
     super::decks::overprotect,
     super::decks::plumecreed_escort,
