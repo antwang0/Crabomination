@@ -316,7 +316,7 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
   post-main insertion (Relentless Assault).
 - 🟡 **"Must/can't attack/block" restrictions** — `Keyword::{CantAttack,CantBlock,
-  AttacksAlone,MustBeBlocked,AllMustBlock,MustAttack,MustBlock}`, Goad;
+  AttacksAlone,CantAttackAlone,MustBeBlocked,AllMustBlock,MustAttack,MustBlock}`, Goad;
   power-based evasion (`CantBeBlockedByPowerLess` — Formation Breaker;
   fixed-threshold `CantBeBlockedByPowerAtMost(n)` — Questing Beast);
   turn-scoped defender-bypass grant (`AttackDespiteDefenderThisTurn` — Krotiq

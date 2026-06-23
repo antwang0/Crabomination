@@ -108,6 +108,13 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
 - **Gisa, Glorious Resurrector / Toxrill** — opponent-creature-dies→exile-under-
   you replacement + upkeep mass-reanimate-with-decayed (Gisa) and slime-counter
   team-shrink (Toxrill) both want new replacement/counter machinery.
+- **Skipped this run for want of a primitive:** Spectral Adversary (the
+  scale-with-kicks *phase-out* rider — `ApplyToTargets` takes a fixed `max_targets`,
+  not a runtime `Value`); Mulch (`MillThenToHand` picks one card, not *all*
+  matching — needs a "mill N, all matching → hand" variant); Moonrager's Slash
+  (conditional cost reduction "if it's night" — no `cost_reduction_if_predicate`
+  primitive yet); Sigarda's Vanguard / Sigardian Zealot ("choose any number of
+  creatures with *different powers*" — a coven-style distinct-power `ChooseN`).
 
 ## Discovered follow-ups — missing-card sweep (modern_decks)
 
