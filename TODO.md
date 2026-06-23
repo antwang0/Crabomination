@@ -17,23 +17,35 @@ plays its headline pattern):
   with cumulative attack/blocked/combat-damage granted abilities.
 - **Vaultborn Tyrant** — the death token-copy "is an artifact in addition" is
   dropped (`CreateTokenCopyOf` has no `extra_card_types`; add one to fix).
-- **Questing Beast** — "combat damage by your creatures can't be prevented" and
-  the deals-damage-→-planeswalker redirect riders omitted.
+- **Questing Beast** — combat-damage-can't-be-prevented ships
+  (`StaticEffect::ControllerCreaturesCombatDamageCantBePrevented`, CR 615.12);
+  only the deals-damage-→-planeswalker redirect rider remains (needs
+  planeswalkers as attack targets).
 - **The Necrobloom** — the 7-different-named-lands Zombie upgrade and the
   "lands in your graveyard have dredge 2" grant omitted.
 - **Lightning Axe / Demand Answers** — modal additional costs ("discard OR pay
   {5}" / "sac an artifact OR discard") collapsed to the discard branch, taken at
   resolution (Deadly-Dispute style). A general modal-additional-cost layer would
   make these faithful.
-- **Tail Swipe** — the "if cast during your main phase, +1/+1 first" rider
-  omitted (no cast-phase predicate on the fight).
 - **Optimistic Scavenger** — the "fully unlock a Room" half of Eerie omitted.
 - **Hangar Scrounger** — the Backup *grant* of its tapped-loot ability to the
   backed-up creature is omitted (the +1/+1 counter still lands).
 - **Bristlebud Farmer** — the attack "sacrifice a Food → mill three, grab a
   permanent" rider omitted (the ETB two-Food still fires).
-- **Outcaster Greenblade** — the "+1/+1 for each Desert you control" CDA omitted
-  (no Desert-count `DynamicPt`); the ETB basic/Desert tutor ships.
+- **Bloodletter of Aclazotz** — "opponents lose double life during your turn"
+  needs a life-loss-doubling replacement keyed on the active player (touch
+  `adjust_life_applied`); unbuilt for now.
+- **Highspire Bell-Ringer** — "your second spell each turn costs {1} less" needs
+  an nth-spell cost-reduction static; unbuilt for now.
+- **Tersa Lightshatter** — "discard up to two, then draw that many" variable
+  rummage + the 7+-graveyard attack exile-and-play rider need a variable-loot
+  primitive; unbuilt for now.
+- **Karakyk Guardian** — conditional "hexproof while it hasn't dealt damage"
+  omitted (no lifetime damage-dealt tracking); ships flying/vig/trample.
+- **Temur Battlecrier** — the "during your turn" gate on its power≥4 Affinity
+  reduction is approximated as always-on (`affinity_filter`).
+- **Sarkhan, Soul Aflame** — the become-a-copy trigger keeps the copied Dragon's
+  name; the "name stays Sarkhan, legendary in addition" override is approximated.
 - **Mizzium Skin** — Overload omitted (base targeted mode ships).
 - **Take the Fall** — the outlaw check uses a controlled-outlaw selector count.
 - Not implemented for want of a mechanic: **Spree** (Insatiable Avarice, Three
