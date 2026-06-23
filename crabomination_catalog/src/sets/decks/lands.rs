@@ -1981,3 +1981,52 @@ pub fn lair_of_the_hydra() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fountainport — `{T}: Add {C}`. `{2}, {T}, Sacrifice a token: Draw a card.`
+/// `{3}, {T}, Pay 1 life: Create a 1/1 blue Fish.` `{4}, {T}: Create a Treasure.`
+pub fn fountainport() -> CardDefinition {
+    let fish = crate::card::TokenDefinition {
+        name: "Fish".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes {
+            creature_types: vec![crate::card::CreatureType::Fish],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Fountainport",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                sac_other_filter: Some((SelectionRequirement::IsToken, 1)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                life_cost: 1,
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: fish },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::treasure_token(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

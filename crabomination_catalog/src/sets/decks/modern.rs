@@ -58985,3 +58985,295 @@ pub fn reave_soul() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Guild & wedge Charms (modal instants) ────────────────────────────────────
+
+fn white_knight_vig_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Knight".into(), power: 2, toughness: 2,
+        card_types: vec![CardType::Creature], colors: vec![Color::White],
+        keywords: vec![Keyword::Vigilance],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Azorius Charm — {W}{U} Instant. Team lifelink EOT; or draw a card; or put a
+/// target creature on top of its owner's library. (The printed
+/// attacking/blocking restriction on the tuck mode is broadened to any creature.)
+pub fn azorius_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Azorius Charm",
+        cost: cost(&[w(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: crate::effect::LibraryPosition::Top },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Selesnya Charm — {G}{W} Instant. +2/+2 and trample EOT; or exile a creature
+/// with power 5+; or make a 2/2 white Knight with vigilance.
+pub fn selesnya_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Selesnya Charm",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            ]),
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(5))),
+                to: ZoneDest::Exile,
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: white_knight_vig_token() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Simic Charm — {G}{U} Instant. +3/+3 EOT; or your permanents gain hexproof
+/// EOT; or return target creature to its owner's hand.
+pub fn simic_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Simic Charm",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3), toughness: Value::Const(3), duration: Duration::EndOfTurn,
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource, keyword: Keyword::Hexproof, duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Golgari Charm — {B}{G} Instant. All creatures get -1/-1 EOT; or destroy
+/// target enchantment; or regenerate each creature you control.
+pub fn golgari_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Golgari Charm",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(-1), toughness: Value::Const(-1), duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::Regenerate {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rakdos Charm — {B}{R} Instant. Exile target player's graveyard; or destroy
+/// target artifact; or each creature deals 1 damage to its controller.
+pub fn rakdos_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Rakdos Charm",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0) },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))), amount: Value::Const(1),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Abzan Charm — {W}{B}{G} Instant. Exile a creature with power 3+; or draw two
+/// and lose 2 life; or distribute two +1/+1 counters among up to two creatures.
+pub fn abzan_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Abzan Charm",
+        cost: cost(&[w(), b(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(3))),
+                to: ZoneDest::Exile,
+            },
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+            Effect::DistributeCounters {
+                total: Value::Const(2), counter: CounterType::PlusOnePlusOne,
+                filter: SelectionRequirement::Creature, max_targets: 2,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sultai Charm — {B}{G}{U} Instant. Destroy a monocolored creature; or destroy
+/// an artifact or enchantment; or draw two cards, then discard a card.
+pub fn sultai_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Sultai Charm",
+        cost: cost(&[b(), g(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::Monocolored)),
+            },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment)),
+            },
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Jeskai Charm — {U}{R}{W} Instant. Put target creature on top of its owner's
+/// library; or 4 damage to target opponent or planeswalker; or your creatures
+/// get +1/+1 and gain lifelink EOT.
+pub fn jeskai_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Jeskai Charm",
+        cost: cost(&[u(), r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: crate::effect::LibraryPosition::Top },
+            },
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)),
+                amount: Value::Const(4),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::Const(1), toughness: Value::Const(1), duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword { what: Selector::TriggerSource, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
+                ])),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mardu Charm — {R}{W}{B} Instant. 4 damage to target creature; or make two
+/// 1/1 white Warriors with first strike EOT; or a target opponent reveals their
+/// hand and you make them discard a noncreature, nonland card.
+pub fn mardu_charm() -> CardDefinition {
+    let warrior = TokenDefinition {
+        name: "Warrior".into(), power: 1, toughness: 1,
+        card_types: vec![CardType::Creature], colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mardu Charm",
+        cost: cost(&[r(), w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage { to: target_filtered(SelectionRequirement::Creature), amount: Value::Const(4) },
+            Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: warrior },
+                Effect::ForEach {
+                    selector: Selector::LastCreatedTokens,
+                    body: Box::new(Effect::GrantKeyword {
+                        what: Selector::TriggerSource, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn,
+                    }),
+                },
+            ]),
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Temur Charm — {G}{U}{R} Instant. A creature you control gets +1/+1 EOT and
+/// fights a creature you don't control; or counter target spell unless its
+/// controller pays {3}; or creatures with power 3 or less can't block this turn.
+pub fn temur_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Temur Charm",
+        cost: cost(&[g(), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+                    power: Value::Const(1), toughness: Value::Const(1), duration: Duration::EndOfTurn,
+                },
+                Effect::Fight {
+                    attacker: Selector::Target(0),
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    },
+                },
+            ]),
+            Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: cost(&[generic(3)]),
+                exile: false,
+                extra_generic: None,
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(3))),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource, keyword: Keyword::CantBlock, duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}

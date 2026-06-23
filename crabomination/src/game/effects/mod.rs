@@ -2417,13 +2417,12 @@ impl GameState {
                     min: 1,
                     max: 1,
                 });
-                if let DecisionAnswer::Cards(picked) = answer {
-                    if let Some(cid) = picked.first() {
-                        if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid) {
-                            let card = self.players[p].graveyard.remove(pos);
-                            self.players[p].hand.push(card);
-                        }
-                    }
+                if let DecisionAnswer::Cards(picked) = answer
+                    && let Some(cid) = picked.first()
+                    && let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid)
+                {
+                    let card = self.players[p].graveyard.remove(pos);
+                    self.players[p].hand.push(card);
                 }
                 Ok(())
             }

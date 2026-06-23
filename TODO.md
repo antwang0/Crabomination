@@ -92,6 +92,23 @@ plays its headline pattern):
   right-click "cast with the optional cost" path now works (`CastSpellKicked`),
   but surfacing the cost (a `kicker_cost_label` on `KnownCard`) is a follow-up.
 
+## Discovered follow-ups — missing-card sweep (modern_decks)
+
+Real cards confirmed absent, deferred for want of a mechanic:
+- **Class enchantments** (Bandit's/Stormchaser's/Innkeeper's Talent, and the
+  whole DSK/BLB Class cycle) — need a Class type with sorcery-speed pay-to-
+  level-up (CR 714-adjacent) layering on abilities per level band. `level_bands`
+  exists for Leveler *creatures* only. Roadmap Tier 3 "Classes/Cases/Backgrounds".
+- **Intrepid Adversary** (and the MID/VOW Adversary cycle) — needs a "pay {cost}
+  any number of times" repeatable ETB payment plus a counter-scaled team anthem
+  (`+1/+1 for each valor counter on this`). Neither primitive exists.
+- **Valgavoth, Terror Eater** — Ward—Sac 3 ships (`WardCost::SacrificePermanents`),
+  but the opponent-graveyard→exile replacement and "play exiled cards paying life
+  = MV" recursion engine are unbuilt.
+- **Kaervek, the Punisher / "commit a crime" payoffs** — no crime-tracking event.
+- **Loot, Exuberant Explorer** — dig-6 put-creature-with-MV≤lands needs an
+  MV-≤-dynamic-count filter on `LookPickToHand`.
+
 ## Engine correctness audit — 2026-06-11
 
 Five-reviewer deep pass over the engine core (`game/mod.rs`, `effects/`,

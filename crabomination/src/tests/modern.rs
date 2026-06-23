@@ -43889,6 +43889,19 @@ fn takenuma_channel_returns_creature_from_graveyard() {
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
 }
 
+/// Fountainport's {4}, {T} ability creates a Treasure token.
+#[test]
+fn fountainport_makes_a_treasure() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::fountainport());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 3, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("activate {4}, {T}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
+}
+
 /// Restless Spire animates into a 2/1 first-strike Elemental.
 #[test]
 fn restless_spire_animates_first_strike() {
@@ -64505,4 +64518,144 @@ fn wail_of_war_shrinks_opponents() {
     }).expect("cast Wail of War mode 0");
     drain_stack(&mut g);
     assert!(g.battlefield_find(a).is_none(), "-1/-1 kills the 1/1");
+}
+
+// ── Charm modal-instant tests ────────────────────────────────────────────────
+
+fn cast_charm(g: &mut GameState, card: crate::card::CardId, mode: usize, target: Option<Target>) {
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: card, target, additional_targets: vec![], mode: Some(mode), x_value: None,
+    }).expect("charm castable");
+    drain_stack(g);
+}
+
+#[test]
+fn azorius_charm_tucks_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let charm = g.add_card_to_hand(0, catalog::azorius_charm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let lib_before = g.players[1].library.len();
+    cast_charm(&mut g, charm, 2, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "creature left the battlefield");
+    assert_eq!(g.players[1].library.len(), lib_before + 1, "put on top of library");
+}
+
+#[test]
+fn selesnya_charm_exiles_a_big_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 — not big enough
+    let charm = g.add_card_to_hand(0, catalog::selesnya_charm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    // 4/4 is power 4, < 5 — illegal target, so use a 5-power creature.
+    g.battlefield_find_mut(big).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    cast_charm(&mut g, charm, 1, Some(Target::Permanent(big)));
+    assert!(g.battlefield_find(big).is_none(), "exiled the 5-power creature");
+}
+
+#[test]
+fn simic_charm_bounces() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let charm = g.add_card_to_hand(0, catalog::simic_charm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast_charm(&mut g, charm, 2, Some(Target::Permanent(bear)));
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced to owner's hand");
+}
+
+#[test]
+fn golgari_charm_sweeps_minus_one() {
+    let mut g = two_player_game();
+    let x1 = g.add_card_to_battlefield(0, catalog::ornithopter()); // 0/2
+    let x2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let charm = g.add_card_to_hand(0, catalog::golgari_charm());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_charm(&mut g, charm, 0, None);
+    assert_eq!(g.computed_permanent(x1).map(|c| c.toughness), Some(1), "0/2 → 0/1");
+    assert_eq!(g.computed_permanent(x2).map(|c| c.power), Some(1), "2/2 → 1/1");
+}
+
+#[test]
+fn rakdos_charm_exiles_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let charm = g.add_card_to_hand(0, catalog::rakdos_charm());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_charm(&mut g, charm, 0, Some(Target::Player(1)));
+    assert!(g.players[1].graveyard.is_empty(), "opponent graveyard exiled");
+}
+
+#[test]
+fn abzan_charm_distributes_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let charm = g.add_card_to_hand(0, catalog::abzan_charm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_charm(&mut g, charm, 2, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "both counters landed on the one target");
+}
+
+#[test]
+fn sultai_charm_destroys_monocolored() {
+    let mut g = two_player_game();
+    let mono = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // mono-green
+    let charm = g.add_card_to_hand(0, catalog::sultai_charm());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast_charm(&mut g, charm, 0, Some(Target::Permanent(mono)));
+    assert!(g.battlefield_find(mono).is_none(), "monocolored creature destroyed");
+}
+
+#[test]
+fn jeskai_charm_burns_opponent() {
+    let mut g = two_player_game();
+    let charm = g.add_card_to_hand(0, catalog::jeskai_charm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life = g.players[1].life;
+    cast_charm(&mut g, charm, 1, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 4, "4 damage to the opponent");
+}
+
+#[test]
+fn mardu_charm_bolts_a_creature() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let charm = g.add_card_to_hand(0, catalog::mardu_charm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_charm(&mut g, charm, 0, Some(Target::Permanent(v)));
+    assert!(g.battlefield_find(v).is_none(), "4 damage killed the 4/4");
+}
+
+#[test]
+fn temur_charm_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/3 with +1/+1
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let charm = g.add_card_to_hand(0, catalog::temur_charm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: charm, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: Some(0), x_value: None,
+    }).expect("Temur Charm fight mode");
+    drain_stack(&mut g);
+    // Mine becomes 3/3, deals 3 to their 2/2 → dies; theirs deals 2 back, mine survives.
+    assert!(g.battlefield_find(theirs).is_none(), "their creature died to the fight");
+    assert!(g.battlefield_find(mine).is_some(), "my pumped creature survived");
 }
