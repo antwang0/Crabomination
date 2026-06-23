@@ -6605,3 +6605,94 @@ pub fn the_meathook_massacre() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cobblebrute — {3}{R} 5/2 Elemental (vanilla beater).
+pub fn cobblebrute() -> CardDefinition {
+    CardDefinition {
+        name: "Cobblebrute",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 5,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Reckoner's Bargain — {1}{B} Instant. Sacrifice an artifact or creature (taken
+/// at resolution); gain life equal to its mana value and draw two cards.
+pub fn reckoners_bargain() -> CardDefinition {
+    CardDefinition {
+        name: "Reckoner's Bargain",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::SacrificedManaValue },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Missionary — {1}{W} 2/3 Phyrexian Human Cleric. Lifelink. Kicker
+/// {1}{B}; if kicked, ETB return a creature card from your graveyard to hand.
+pub fn phyrexian_missionary() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Phyrexian Missionary",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink, Keyword::Kicker(cost(&[generic(1), b()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Soul Transfer — {1}{B}{B} Sorcery. Exile target creature or planeswalker; or
+/// return a creature or planeswalker card from your graveyard to your hand. (The
+/// "choose both if you control an artifact and an enchantment" rider is omitted.)
+pub fn soul_transfer() -> CardDefinition {
+    CardDefinition {
+        name: "Soul Transfer",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                to: ZoneDest::Exile,
+            },
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}

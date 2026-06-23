@@ -383,6 +383,10 @@ pub enum Value {
     /// Tribute to Hunger (gain life equal to sacrificed creature's
     /// toughness) and similar sacrifice + lifegain spells.
     SacrificedToughness,
+    /// Mana value of the most recently sacrificed permanent this
+    /// resolution (set by `Effect::SacrificeAndRemember`). Reckoner's
+    /// Bargain ("gain life equal to the sacrificed permanent's mana value").
+    SacrificedManaValue,
     /// Number of cards discarded so far within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// in `Effect::Discard` / `Effect::DiscardChosen`. Used by Borrowed

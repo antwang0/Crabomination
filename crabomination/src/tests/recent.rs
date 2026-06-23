@@ -4050,3 +4050,62 @@ fn meathook_massacre_wipes_and_drains() {
     // Your creature dying makes the opponent lose 1.
     assert!(g.players[1].life < opp_life, "opponent lost life when your creature died");
 }
+
+/// Reckoner's Bargain sacrifices a permanent for life equal to its MV and two cards.
+#[test]
+fn reckoners_bargain_sacrifices_for_life_and_cards() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // MV 5 creature to sac
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let rb = g.add_card_to_hand(0, catalog::reckoners_bargain());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: rb, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 5, "gained life = sacrificed MV (5)");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew two (net +1 after the cast)");
+}
+
+/// Phyrexian Missionary reanimates to hand only when kicked.
+#[test]
+fn phyrexian_missionary_kicked_reanimates() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let pm = g.add_card_to_hand(0, catalog::phyrexian_missionary());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: pm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "kicked → creature back to hand");
+}
+
+/// Soul Transfer exiles a creature (mode 0).
+#[test]
+fn soul_transfer_exiles_creature() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let st = g.add_card_to_hand(0, catalog::soul_transfer());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: st, target: Some(Target::Permanent(v)), additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == v), "creature exiled");
+}
+
+/// Cobblebrute is a 5/2 vanilla creature.
+#[test]
+fn cobblebrute_is_5_2() {
+    let def = catalog::cobblebrute();
+    assert_eq!((def.power, def.toughness), (5, 2));
+    assert!(def.keywords.is_empty() && def.triggered_abilities.is_empty(), "vanilla");
+}
