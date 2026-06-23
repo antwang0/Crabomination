@@ -1102,6 +1102,16 @@ impl GameState {
                     i != you && !p.eliminated && !self.same_team(i, you) && p.hand.len() > your_hand
                 })
             }
+            Predicate::CovenActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let powers: std::collections::HashSet<i32> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
+                    .collect();
+                powers.len() >= 3
+            }
             Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
             Predicate::RevoltActive { who } => self

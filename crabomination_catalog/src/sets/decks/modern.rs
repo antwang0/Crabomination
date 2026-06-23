@@ -554,7 +554,7 @@ pub fn tenacious_underdog() -> CardDefinition {
     }
 }
 
-/// Ardent Elementalist — {2}{R} 2/2 Human Wizard. ETB return target instant or
+/// Ardent Elementalist — {3}{R} 2/1 Human Shaman. ETB return target instant or
 /// sorcery card from a graveyard to its owner's hand. Blitz {1}{R}.
 pub fn ardent_elementalist() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;

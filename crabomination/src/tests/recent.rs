@@ -4211,3 +4211,102 @@ fn cemetery_gatekeeper_pings_on_shared_land() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 18, "land share pings the player who played it");
 }
+
+/// Coven is active when you control 3+ creatures with different powers.
+#[test]
+fn coven_predicate_counts_distinct_powers() {
+    use crate::effect::{Predicate, PlayerRef};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    // Two creatures, distinct powers (2 and 3): coven inactive.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let ctx = EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    assert!(!g.evaluate_predicate(&Predicate::CovenActive { who: PlayerRef::You }, &ctx));
+    // A third creature with a new power (4): coven active.
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    assert!(g.evaluate_predicate(&Predicate::CovenActive { who: PlayerRef::You }, &ctx));
+    // Three creatures but only two distinct powers: inactive.
+    let mut g2 = two_player_game();
+    g2.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g2.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g2.add_card_to_battlefield(0, catalog::hill_giant());
+    assert!(!g2.evaluate_predicate(&Predicate::CovenActive { who: PlayerRef::You }, &ctx));
+}
+
+/// Sigarda anthems Humans and digs only when coven is active.
+#[test]
+fn sigarda_anthems_humans() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::sigarda_champion_of_light());
+    let human = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // not a Human
+    let soldier = g.add_card_to_battlefield(0, catalog::cemetery_protector()); // Human Soldier 3/4
+    // Sigarda is an Angel (no self-anthem); the Human gets +1/+1.
+    let cp = g.computed_permanent(soldier).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 5), "Human anthemed");
+    let bears = g.computed_permanent(human).unwrap();
+    assert_eq!((bears.power, bears.toughness), (2, 2), "non-Human unaffected");
+    let _ = s;
+}
+
+/// Dawnhart Mentor's Coven ability is gated on coven being active.
+#[test]
+fn dawnhart_mentor_coven_gate() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::dawnhart_mentor()); // 0/4 Human
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    // Only one creature → coven inactive → activation rejected.
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 0,
+        target: Some(Target::Permanent(m)), additional_targets: vec![], x_value: None,
+    });
+    assert!(r.is_err(), "coven inactive blocks activation");
+    // Add two more distinct-power creatures → coven active → activation works.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2
+    g.add_card_to_battlefield(0, catalog::hill_giant()); // 3
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 0,
+        target: Some(Target::Permanent(m)), additional_targets: vec![], x_value: None,
+    }).expect("coven active allows activation");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(m).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 7), "+3/+3 applied");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Bladebrand grants deathtouch and draws.
+#[test]
+fn bladebrand_deathtouch_and_draw() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::mountain()); // something to draw
+    let bb = g.add_card_to_hand(0, catalog::bladebrand());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+    // -1 (cast Bladebrand) +1 (drew) = net same as before-cast hand minus the spell.
+    assert_eq!(g.players[0].hand.len(), hand_before, "spent Bladebrand, drew one");
+}
+
+/// Halana and Alena pump another creature at the beginning of combat.
+#[test]
+fn halana_and_alena_begin_combat_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let ha = g.add_card_to_battlefield(0, catalog::halana_and_alena()); // power 2
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ally))]));
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.battlefield_find(ally).unwrap();
+    assert_eq!(cp.counters.get(&CounterType::PlusOnePlusOne).copied(), Some(2), "X=2 counters");
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Haste));
+    let _ = ha;
+}

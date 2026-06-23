@@ -11,6 +11,217 @@ use crate::effect::shortcut::{etb, on_dies, recover, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w};
 
+// === Innistrad: Midnight Hunt — Coven (control 3+ creatures with different
+// powers). `Predicate::CovenActive { who }`. ===
+
+/// Sigarda, Champion of Light — {1}{G}{W}{W} 4/4 Legendary Angel. Flying,
+/// trample. Humans you control get +1/+1. Coven — whenever it attacks, if
+/// coven is active, look at the top five cards, reveal a Human creature among
+/// them to your hand, rest on the bottom in random order.
+pub fn sigarda_champion_of_light() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let humans = Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Human)
+            .and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Sigarda, Champion of Light",
+        cost: cost(&[generic(1), g(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Humans you control get +1/+1.",
+            effect: StaticEffect::PumpPT { applies_to: humans, power: 1, toughness: 1 },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(5),
+                rest_to_graveyard: false,
+                pick_filter: Some(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Human)),
+                ),
+                take: Some(Value::Const(1)),
+                to_battlefield: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dawnhart Mentor — {2}{G} 0/4 Human Warlock. ETB create a 1/1 white Human.
+/// Coven — {5}{G}: target creature you control gets +3/+3 and gains trample
+/// until end of turn. Activate only with coven active.
+pub fn dawnhart_mentor() -> CardDefinition {
+    use crate::card::{ActivatedAbility, TokenDefinition};
+    use crate::mana::Color;
+    let human = TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dawnhart Mentor",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: human,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), g()]),
+            condition: Some(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sungold Sentinel — {1}{W} 3/2 Human Soldier. ETB or attack: exile up to one
+/// target card from a graveyard. Coven — {1}{W}: it gains hexproof and can't
+/// be blocked this turn. Activate only with coven active. (The "from a chosen
+/// color" sub-clause is approximated as blanket hexproof + unblockable.)
+pub fn sungold_sentinel() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    // "up to one" is honored by the target being optional at resolution.
+    let exile_gy = Effect::Move {
+        what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+        to: ZoneDest::Exile,
+    };
+    CardDefinition {
+        name: "Sungold Sentinel",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(exile_gy.clone()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: exile_gy,
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            condition: Some(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Hexproof,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bladebrand — {1}{B} Instant. Target creature gains deathtouch until end of
+/// turn. Draw a card.
+pub fn bladebrand() -> CardDefinition {
+    CardDefinition {
+        name: "Bladebrand",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Halana and Alena, Partners — {2}{R}{G} 2/3 Legendary Human Ranger. First
+/// strike, reach. At the beginning of combat on your turn, put X +1/+1
+/// counters on another target creature you control, where X is this creature's
+/// power; that creature gains haste until end of turn.
+pub fn halana_and_alena() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Halana and Alena, Partners",
+        cost: cost(&[generic(2), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Questing Beast — {2}{G}{G} 4/4 Legendary Beast. Vigilance, deathtouch,
 /// haste; can't be blocked by creatures with power 2 or less; combat damage
 /// dealt by creatures you control can't be prevented. (The planeswalker-redirect

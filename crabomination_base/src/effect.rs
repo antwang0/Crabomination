@@ -945,6 +945,11 @@ pub enum Predicate {
     /// hand. Beza, the Bounding Spring's "draw a card if an opponent has more
     /// cards in hand than you".
     AnOpponentHasMoreCardsInHand,
+    /// CR (Innistrad "Coven") — `who` controls three or more creatures with
+    /// different powers (every pairwise power distinct counts as ≥3 distinct
+    /// power values). Gates Coven attack triggers and "activate only if …"
+    /// abilities (Sigarda, Champion of Light; Dawnhart Mentor; Sungold Sentinel).
+    CovenActive { who: PlayerRef },
     /// True when exactly one creature is attacking this combat — the
     /// CR 702.83a "attacks alone" condition that gates Exalted. Read
     /// from `GameState.attacking.len() == 1`. Outside a combat with
