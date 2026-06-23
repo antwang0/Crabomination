@@ -84,6 +84,8 @@ pub enum CreatureType {
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).
     Siren, Citizen, Leech,
+    // BLB / VOW expansion (Prosperous Innkeeper).
+    Halfling,
     // THB expansion (Venomous Hierophant, Pharika's Spawn).
     Gorgon,
     // Bloomburrow / MKM (Voracious Varmint).

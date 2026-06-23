@@ -3858,3 +3858,68 @@ fn workshop_warchief_etb_life_and_dies_token() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Rhino"),
         "dies trigger made a Rhino");
 }
+
+/// Prosperous Innkeeper makes a Treasure and gains life when another creature enters.
+#[test]
+fn prosperous_innkeeper_treasure_and_lifegain() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::prosperous_innkeeper());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
+    let life = g.players[0].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 when another creature entered");
+}
+
+/// Jadar makes a decayed Zombie at end step when none is present.
+#[test]
+fn jadar_makes_decayed_zombie() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::jadar_ghoulcaller_of_nephalia());
+    g.fire_step_triggers(crate::TurnStep::End);
+    drain_stack(&mut g);
+    let z = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Zombie");
+    assert!(z.is_some(), "made a Zombie");
+    assert!(z.unwrap().definition.keywords.contains(&Keyword::Decayed), "with decayed");
+}
+
+/// The Goose Mother enters with X +1/+1 counters and half-X Food.
+#[test]
+fn goose_mother_counters_and_food() {
+    let mut g = two_player_game();
+    let goose = g.add_card_to_hand(0, catalog::the_goose_mother());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4); // X=4
+    g.perform_action(GameAction::CastSpell {
+        card_id: goose, target: None, additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("cast for {4}{G}{U}");
+    drain_stack(&mut g);
+    let g_id = g.battlefield.iter().find(|c| c.definition.name == "The Goose Mother").unwrap().id;
+    assert_eq!(g.battlefield_find(g_id).unwrap().counter_count(CounterType::PlusOnePlusOne), 4, "X counters");
+    let foods = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Food").count();
+    assert_eq!(foods, 2, "half of 4 = 2 Food");
+}
+
+/// Archangel of Wrath deals 2 per kick on ETB (multikicker twice → 4 total).
+#[test]
+fn archangel_of_wrath_kicked_twice_burns_four() {
+    let mut g = two_player_game();
+    let aa = g.add_card_to_hand(0, catalog::archangel_of_wrath());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellMultikicked {
+        card_id: aa, times: 2, target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)], mode: None, x_value: None,
+    }).expect("cast kicked twice");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4, "two ETB triggers each dealt 2");
+}

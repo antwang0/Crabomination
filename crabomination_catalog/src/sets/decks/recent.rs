@@ -6209,3 +6209,142 @@ pub fn workshop_warchief() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Prosperous Innkeeper — {1}{G} 1/1 Halfling Citizen. ETB create a Treasure.
+/// Whenever another creature you control enters, gain 1 life.
+pub fn prosperous_innkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Prosperous Innkeeper",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Halfling, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Jadar, Ghoulcaller of Nephalia — {1}{B} 1/1 Legendary Human Wizard. At your
+/// end step, if you control no creature with decayed, create a 2/2 black Zombie
+/// with decayed.
+pub fn jadar_ghoulcaller_of_nephalia() -> CardDefinition {
+    let zombie = crate::card::TokenDefinition {
+        name: "Zombie".into(), power: 2, toughness: 2,
+        card_types: vec![CardType::Creature], colors: vec![crate::mana::Color::Black],
+        keywords: vec![Keyword::Decayed],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Jadar, Ghoulcaller of Nephalia",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(
+                Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Decayed),
+                },
+            )))),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: zombie },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Goose Mother — {X}{G}{U} 2/2 Legendary Bird Hydra. Flying. Enters with X
+/// +1/+1 counters and makes half X Food (rounded up). Attack: you may sacrifice
+/// a Food to draw a card.
+pub fn the_goose_mother() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "The Goose Mother",
+        cost: cost(&[crate::mana::x(), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Hydra],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::HalvedRoundUp(Box::new(Value::XFromCost)),
+                definition: crabomination_base::tokens::food_token(),
+            }),
+            crate::effect::shortcut::on_attack(Effect::MayDo {
+                description: "Sacrifice a Food to draw a card".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ])),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Archangel of Wrath — {2}{W}{W} 3/4 Angel. Flying, lifelink. Kicker (multi,
+/// approximated from the printed {B} and/or {R}): when it enters, deals 2 damage
+/// to any target for each time it was kicked (up to twice).
+pub fn archangel_of_wrath() -> CardDefinition {
+    CardDefinition {
+        name: "Archangel of Wrath",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink, Keyword::Multikicker(cost(&[r()]))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                    .with_filter(Predicate::ValueAtLeast(Value::TimesKicked, Value::Const(1))),
+                effect: Effect::DealDamage { to: target_filtered(SelectionRequirement::Any), amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                    .with_filter(Predicate::ValueAtLeast(Value::TimesKicked, Value::Const(2))),
+                effect: Effect::DealDamage { to: target_filtered(SelectionRequirement::Any), amount: Value::Const(2) },
+            },
+        ],
+        ..Default::default()
+    }
+}
