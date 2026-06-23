@@ -201,8 +201,8 @@ pub fn no_more_lies() -> CardDefinition {
 }
 
 /// Unstoppable Slasher — {2}{B} 2/3 Zombie Assassin. Deathtouch; when it deals
-/// combat damage to a player, they lose half their life, rounded up. (The
-/// dies-return-with-stun-counters rider is omitted.)
+/// combat damage to a player, they lose half their life, rounded up. When it
+/// dies, return it tapped with two stun counters under its owner's control.
 pub fn unstoppable_slasher() -> CardDefinition {
     CardDefinition {
         name: "Unstoppable Slasher",
@@ -215,13 +215,19 @@ pub fn unstoppable_slasher() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Deathtouch],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::LoseHalfLife {
-                who: Selector::Player(PlayerRef::Target(0)),
-                rounded_up: true,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::LoseHalfLife {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    rounded_up: true,
+                },
             },
-        }],
+            on_dies(Effect::ReturnSelfTappedWithCounters {
+                kind: CounterType::Stun,
+                amount: 2,
+            }),
+        ],
         ..Default::default()
     }
 }
@@ -419,24 +425,45 @@ pub fn pick_your_poison() -> CardDefinition {
 }
 
 /// Tail Swipe — {G} Instant. Target creature you control fights target creature
-/// you don't control; if cast in your main phase, yours gets +1/+1 first.
-/// (The main-phase pump rider is omitted.)
+/// you don't control; if cast in your main phase, yours gets +1/+1 until end of
+/// turn first.
 pub fn tail_swipe() -> CardDefinition {
+    use crate::effect::Predicate;
+    use crate::game::TurnStep;
+    let attacker = Selector::TargetFiltered {
+        slot: 0,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    };
     CardDefinition {
         name: "Tail Swipe",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Fight {
-            attacker: Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::Any(vec![
+                        Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+                        Predicate::CurrentStepIs(TurnStep::PostCombatMain),
+                    ]),
+                ]),
+                then: Box::new(Effect::PumpPT {
+                    what: attacker.clone(),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
             },
-            defender: Selector::TargetFiltered {
-                slot: 1,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+            Effect::Fight {
+                attacker,
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
             },
-        },
+        ]),
         ..Default::default()
     }
 }
@@ -935,10 +962,10 @@ pub fn bristlebud_farmer() -> CardDefinition {
 }
 
 /// Outcaster Greenblade — {2}{G} 1/2 Human Mercenary. ETB: search your library
-/// for a basic land or Desert card and put it into your hand. (Its
-/// "+1/+1 for each Desert you control" is omitted.)
+/// for a basic land or Desert card and put it into your hand. Gets +1/+1 for
+/// each Desert you control.
 pub fn outcaster_greenblade() -> CardDefinition {
-    use crate::card::LandType;
+    use crate::card::{DynamicPt, LandType};
     CardDefinition {
         name: "Outcaster Greenblade",
         cost: cost(&[generic(2), g()]),
@@ -949,6 +976,11 @@ pub fn outcaster_greenblade() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
+        dynamic_pt: Some(DynamicPt::BasePlusLandsOfTypeControlled {
+            land_type: LandType::Desert,
+            base_p: 1,
+            base_t: 2,
+        }),
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand
@@ -960,8 +992,10 @@ pub fn outcaster_greenblade() -> CardDefinition {
 }
 
 /// Mizzium Skin — {U} Instant. Target creature you control gets +0/+1 and gains
-/// hexproof until end of turn. (Overload is omitted.)
+/// hexproof until end of turn. Overload {3}{U}: each creature you control
+/// instead.
 pub fn mizzium_skin() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Mizzium Skin",
         cost: cost(&[u()]),
@@ -981,6 +1015,28 @@ pub fn mizzium_skin() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(3), u()]),
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::Const(0),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Hexproof,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            }),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -1513,13 +1569,18 @@ pub fn coiling_rebirth() -> CardDefinition {
     }
 }
 
-/// Pearl of Wisdom — {2}{U} Sorcery. Draw two cards. (The "costs {1} less if you
-/// control an Otter" rider is dropped.)
+/// Pearl of Wisdom — {2}{U} Sorcery. Costs {1} less if you control an Otter.
+/// Draw two cards.
 pub fn pearl_of_wisdom() -> CardDefinition {
     CardDefinition {
         name: "Pearl of Wisdom",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
+        self_cost_reduction_if_control: Some((
+            SelectionRequirement::HasCreatureType(CreatureType::Otter)
+                .and(SelectionRequirement::ControlledByYou),
+            1,
+        )),
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
         ..Default::default()
     }

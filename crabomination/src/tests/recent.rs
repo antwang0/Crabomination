@@ -68,6 +68,23 @@ fn vaultborn_tyrant_value_on_big_etb() {
     assert_eq!(g.players[0].hand.len(), hand, "drew a card off the big ETB");
 }
 
+/// Unstoppable Slasher returns tapped with two stun counters when it dies.
+#[test]
+fn unstoppable_slasher_recurs_with_stun() {
+    let mut g = two_player_game();
+    let slasher = g.add_card_to_battlefield(0, catalog::unstoppable_slasher());
+    g.battlefield_find_mut(slasher).unwrap().damage = 3; // lethal vs its 3 toughness
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let back = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Unstoppable Slasher")
+        .expect("returned to the battlefield");
+    assert!(back.tapped, "returned tapped");
+    assert_eq!(back.counters.get(&CounterType::Stun).copied(), Some(2), "two stun counters");
+}
+
 /// Vaultborn Tyrant leaves a token copy of itself when it dies.
 #[test]
 fn vaultborn_tyrant_dies_into_a_copy() {
@@ -365,6 +382,28 @@ fn tail_swipe_fights() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none(), "their 2/2 died to the 4/4");
     assert!(g.battlefield_find(mine).is_some(), "our 4/4 survived 2 damage");
+    // Cast during your main phase: the +1/+1 rider made it a 5/5.
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 5, "main-phase +1/+1");
+}
+
+/// Tail Swipe cast at instant speed (opponent's turn) skips the +1/+1.
+#[test]
+fn tail_swipe_no_main_phase_pump() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::tail_swipe());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 1; // opponent's turn
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    })
+    .expect("cast Tail Swipe");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 4, "no pump off your turn");
 }
 
 /// Lightning Axe discards a card and deals 5 to a creature.
@@ -652,9 +691,17 @@ fn outcaster_greenblade_fetches_a_basic() {
     // Script the search to take the forest.
     let forest = g.players[0].library[0].id;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
-    g.move_card_to_battlefield_for_test(0, catalog::outcaster_greenblade());
+    let blade = g.move_card_to_battlefield_for_test(0, catalog::outcaster_greenblade());
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "fetched a land to hand");
+    // Base 1/2 with no Deserts.
+    let c = g.computed_permanent(blade).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 2));
+    // Each Desert you control grows it +1/+1.
+    g.add_card_to_battlefield(0, catalog::conduit_pylons());
+    g.add_card_to_battlefield(0, catalog::conduit_pylons());
+    let c = g.computed_permanent(blade).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 4), "+1/+1 per Desert");
 }
 
 /// Mizzium Skin grants hexproof.
@@ -670,6 +717,29 @@ fn mizzium_skin_grants_hexproof() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.toughness, 3, "+0/+1");
     assert!(c.keywords.contains(&Keyword::Hexproof));
+}
+
+/// Mizzium Skin overloaded protects every creature you control.
+#[test]
+fn mizzium_skin_overload_shields_team() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::mizzium_skin());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spell, pitch_card: None, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("overload Mizzium Skin");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        let c = g.computed_permanent(id).unwrap();
+        assert_eq!(c.toughness, 3, "+0/+1 across the team");
+        assert!(c.keywords.contains(&Keyword::Hexproof));
+    }
 }
 
 /// Demand Answers discards then draws two.
@@ -1021,6 +1091,26 @@ fn pearl_of_wisdom_draws_two() {
     }).expect("cast Pearl");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew two (cast one)");
+}
+
+/// Pearl of Wisdom costs {1} less while you control an Otter.
+#[test]
+fn pearl_of_wisdom_otter_discount() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::stormsplitter()); // an Otter
+    let pearl = g.add_card_to_hand(0, catalog::pearl_of_wisdom());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1); // only {1}{U}, not {2}{U}
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pearl, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Pearl at the Otter discount");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pearl), "resolved cheaply");
 }
 
 /// Ride's End costs {3} less when it targets a tapped permanent.

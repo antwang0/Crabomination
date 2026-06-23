@@ -1466,6 +1466,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DigToHandLoseLife { .. } => "Dig, lose life per card kept",
         Effect::Suspect { .. } => "Suspect",
         Effect::Ascend { .. } => "Ascend",
+        Effect::ReturnSelfTappedWithCounters { .. } => "Return tapped with counters",
         _ => "Activate",
     }
 }

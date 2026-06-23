@@ -4086,6 +4086,13 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::BasePlusLandsOfTypeControlled { land_type, base_p, base_t } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && c.definition.subtypes.land_types.contains(&land_type)
+                    }).count() as i32;
+                    (base_p + n, base_t + n)
+                }
                 crate::card::DynamicPt::ControllerHandSize => {
                     let n = self.players[card.controller].hand.len() as i32;
                     (n, n)

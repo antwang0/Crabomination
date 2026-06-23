@@ -2182,6 +2182,11 @@ pub enum Effect {
     /// limits — a noncreature can't satisfy "if it was a creature", so it
     /// won't loop). No-op if the source isn't a creature card in a graveyard.
     ReturnSelfAsEnchantment,
+    /// "When this creature dies, return it to the battlefield tapped and with
+    /// `amount` `kind` counters under its owner's control." Returns the source
+    /// from its owner's graveyard (Unstoppable Slasher — two stun counters).
+    /// No-op if the source isn't in a graveyard.
+    ReturnSelfTappedWithCounters { kind: crate::card::CounterType, amount: u32 },
     /// CR 712 — Transform the targeted double-faced permanent(s): swap each to
     /// its other face in place (same object, keeping counters / tapped state /
     /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event

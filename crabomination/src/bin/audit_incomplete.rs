@@ -129,6 +129,15 @@ fn scan_card(def: &CardDefinition) -> Vec<StructuralFinding> {
                 if let Some(eff) = ab.get("effect")
                     && effect_is_empty(eff)
                 {
+                    // "{cost}: Sacrifice this." (Hopeful Vigil, Hopeless
+                    // Nightmare) is a real ability whose whole point is the
+                    // sacrifice — an empty resolution effect is correct, the
+                    // sacrifice is paid as part of the activation cost.
+                    let is_sac_ability =
+                        ab.get("sac_cost").and_then(Value::as_bool).unwrap_or(false);
+                    if is_sac_ability {
+                        continue;
+                    }
                     out.push(StructuralFinding::DeadAbility { kind, index: i });
                 }
             }

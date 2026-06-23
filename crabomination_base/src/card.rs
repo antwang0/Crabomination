@@ -1625,6 +1625,14 @@ pub struct CardDefinition {
     /// target at cast time. Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub self_cost_reduction_if_target: Option<(SelectionRequirement, u32)>,
+    /// "This spell costs `{amount}` less to cast if you control a permanent
+    /// matching `filter`." A flat (non-scaling) board-state-gated generic
+    /// reduction — Pearl of Wisdom ("{1} less if you control an Otter").
+    /// Distinct from `affinity_filter`, which scales per matching permanent.
+    /// Generic-only, clamped by the caller; `None` by default for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub self_cost_reduction_if_control: Option<(SelectionRequirement, u32)>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
@@ -2161,6 +2169,9 @@ pub enum DynamicPt {
     /// creature cards only. Consuming Aberration (base 0, all cards), Wight
     /// of Precinct Six (base 1, creatures only).
     BasePlusOpponentGraveyards { base: i32, creatures_only: bool },
+    /// P/T = base + 1/+1 for each land of `land_type` the controller controls.
+    /// Outcaster Greenblade (1/2, +1/+1 per Desert).
+    BasePlusLandsOfTypeControlled { land_type: LandType, base_p: i32, base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

@@ -4258,6 +4258,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnSelfTappedWithCounters { kind, amount } => {
+                let Some(src) = ctx.source else { return Ok(()); };
+                let owner = self
+                    .players
+                    .iter()
+                    .position(|p| p.graveyard.iter().any(|c| c.id == src));
+                let Some(owner) = owner else { return Ok(()); };
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: true };
+                let ret_ctx = EffectContext::for_ability(src, owner, None);
+                self.move_card_to(src, &dest, &ret_ctx, events);
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
+                    *c.counters.entry(*kind).or_insert(0) += *amount;
+                }
+                Ok(())
+            }
+
             Effect::Transform { what } => {
                 // CR 712 — toggle each targeted DFC permanent to its other face
                 // in place (same object: counters / tapped / attachments persist).

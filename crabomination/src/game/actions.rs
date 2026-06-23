@@ -365,6 +365,16 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(*amount);
     }
+    // Card-intrinsic board-state-gated flat reduction (Pearl of Wisdom):
+    // "{amount} less if you control a permanent matching `filter`."
+    if let Some((filter, amount)) = &card.definition.self_cost_reduction_if_control
+        && state
+            .battlefield
+            .iter()
+            .any(|c| state.evaluate_requirement_on_card(filter, c, caster))
+    {
+        reduction = reduction.saturating_add(*amount);
+    }
     // Card-intrinsic "costs {X} less, where X is the greatest power among
     // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
     // Power` static carried by the spell being cast. Generic-only, clamped by

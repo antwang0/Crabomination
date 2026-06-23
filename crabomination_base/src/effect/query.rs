@@ -212,6 +212,7 @@ impl Effect {
             Effect::SacrificeSourceUnlessSacrifice { .. } => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
+            Effect::ReturnSelfTappedWithCounters { .. } => false,
             Effect::Transform { what } => sel_has_target(what),
             Effect::Flip { what } => sel_has_target(what),
             Effect::Meld { .. } => false,
