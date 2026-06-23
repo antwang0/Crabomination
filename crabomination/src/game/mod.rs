@@ -9542,6 +9542,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // DamageCantBePrevented — consulted in `apply_prevention_shields`
             // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
             | StaticEffect::DamageCantBePrevented
+            // Questing Beast — consulted directly in `apply_prevention_shields`;
+            // no layer effect.
+            | StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
             // ManaProductionDoubled / Tripled — consulted at mana-ability
             // resolution via `mana_production_multiplier_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled

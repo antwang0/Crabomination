@@ -52,6 +52,27 @@ impl GameState {
         if self.damage_cant_be_prevented_this_turn || self.damage_cant_be_prevented_now() {
             return amount;
         }
+        // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
+        // the controller controls can't be prevented. Bypass shields when the
+        // damage source is a creature whose controller has the static.
+        if let Some(src_id) = source
+            && let Some(src) = self.battlefield_find(src_id)
+            && src.definition.is_creature()
+        {
+            let ctrl = src.controller;
+            let unpreventable = self.battlefield.iter().any(|c| {
+                c.controller == ctrl
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+                        )
+                    })
+            });
+            if unpreventable {
+                return amount;
+            }
+        }
         // Protection from everything (The One Ring) — all damage to the
         // player is prevented until their next turn.
         if let EntityRef::Player(p) = ent

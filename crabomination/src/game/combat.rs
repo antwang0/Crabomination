@@ -1804,6 +1804,21 @@ impl GameState {
         if !self.prevent_combat_damage_this_turn {
             return false;
         }
+        // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
+        // its controller controls can't be prevented, so fog doesn't stop it.
+        if let Some(ctrl) = self.battlefield_find(dealer).map(|c| c.controller)
+            && self.battlefield.iter().any(|c| {
+                c.controller == ctrl
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::ControllerCreaturesCombatDamageCantBePrevented
+                        )
+                    })
+            })
+        {
+            return false;
+        }
         match &self.prevent_combat_damage_except {
             None => true,
             Some(filter) => {

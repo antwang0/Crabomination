@@ -12,8 +12,10 @@
 //! ceasing to exist on a zone change (CR 122.2), Gift (CR 702.165),
 //! Survival (CR 702.180), the fixed-threshold power block restriction
 //! (CR 509.1b — Questing Beast), "lose half your life, rounded up"
-//! (CR 120.6), and "up to N target" spells accepting fewer targets
-//! (CR 601.2c).
+//! (CR 120.6), "up to N target" spells accepting fewer targets
+//! (CR 601.2c), scoped unpreventable combat damage (CR 615.12 — Questing
+//! Beast vs. fog), the stun-counter untap replacement (CR 122.1c), and
+//! Cycling (CR 702.29).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -3933,4 +3935,93 @@ fn cr_702_166_offspring_makes_one_one_copy() {
             && cp.iter().find(|p| p.id == c.id).map(|p| (p.power, p.toughness)) == Some((1, 1))),
         "the Offspring copy is a 1/1 token"
     );
+}
+
+// ── CR 615.12 (scoped) — Questing Beast: your creatures' combat damage can't be prevented ──
+
+/// CR 615.12 — a Fog (prevent all combat damage this turn) doesn't stop the
+/// combat damage of a creature its controller controls while Questing Beast's
+/// static is active.
+#[test]
+fn cr_615_12_questing_beast_combat_damage_ignores_fog() {
+    let mut g = two_player_game();
+    let qb = g.add_card_to_battlefield(0, catalog::questing_beast()); // 4/4, the static
+    g.clear_sickness(qb);
+    // A Fog is in effect this turn.
+    g.prevent_combat_damage_this_turn = true;
+    let opp = g.players[1].life;
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: qb, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, opp - 4, "Questing Beast's combat damage was not prevented");
+}
+
+/// Without Questing Beast's static, the same Fog prevents an ordinary
+/// attacker's combat damage (control case).
+#[test]
+fn cr_615_1_fog_prevents_ordinary_attacker() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.prevent_combat_damage_this_turn = true;
+    let opp = g.players[1].life;
+    cr_advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    cr_advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, opp, "ordinary combat damage is fogged");
+}
+
+// ── CR 122.1c / 701.46a — a stun counter replaces an untap ───────────────────
+
+/// CR 122.1c — a tapped permanent with stun counters stays tapped through the
+/// untap step, removing one stun counter each time, then untaps normally.
+#[test]
+fn cr_122_1c_stun_counter_replaces_untap() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let inst = g.battlefield_find_mut(c).unwrap();
+        inst.tapped = true;
+        inst.add_counters(CounterType::Stun, 2);
+    }
+    g.active_player_idx = 0;
+    g.do_untap();
+    let inst = g.battlefield_find(c).unwrap();
+    assert!(inst.tapped, "stayed tapped, untap replaced");
+    assert_eq!(inst.counter_count(CounterType::Stun), 1, "one stun counter removed");
+    g.do_untap();
+    let inst = g.battlefield_find(c).unwrap();
+    assert!(inst.tapped, "still tapped while a stun counter remains");
+    assert_eq!(inst.counter_count(CounterType::Stun), 0, "second stun removed");
+    g.do_untap();
+    assert!(!g.battlefield_find(c).unwrap().tapped, "untaps once stun counters are gone");
+}
+
+// ── CR 702.29 — Cycling: pay the cost, discard the card, draw a card ─────────
+
+/// CR 702.29a — cycling a card discards it (to its owner's graveyard) and draws
+/// a card, paying the cycling cost.
+#[test]
+fn cr_702_29_cycling_discards_and_draws() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_hand(0, catalog::marauding_mako()); // Cycling {2}
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: card, x_value: None }).expect("cycle for {2}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == card), "cycled card hits the graveyard");
+    assert_eq!(g.players[0].hand.len(), hand, "discarded one, drew one (net zero)");
 }

@@ -298,6 +298,11 @@ pub enum StaticEffect {
     /// `apply_prevention_shields` bypasses all shields while any source on the
     /// battlefield has this. Sulfuric Vortex, Sunspine Lynx, Everlasting Torment.
     DamageCantBePrevented,
+    /// CR 615.12 (scoped) — combat damage dealt by creatures the source's
+    /// controller controls can't be prevented (Questing Beast). Bypasses
+    /// prevention shields only for damage whose source is a creature that
+    /// controller controls.
+    ControllerCreaturesCombatDamageCantBePrevented,
     /// CR 508.1g — creatures can't attack the source's controller (and, when
     /// `protect_planeswalkers`, a planeswalker they control) unless the
     /// attacking player pays `amount` generic mana for each such attacker.

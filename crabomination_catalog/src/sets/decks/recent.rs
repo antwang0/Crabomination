@@ -12,10 +12,11 @@ use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w};
 
 /// Questing Beast — {2}{G}{G} 4/4 Legendary Beast. Vigilance, deathtouch,
-/// haste; can't be blocked by creatures with power 2 or less. (The
-/// "combat damage can't be prevented" and planeswalker-redirect riders are
-/// omitted.)
+/// haste; can't be blocked by creatures with power 2 or less; combat damage
+/// dealt by creatures you control can't be prevented. (The planeswalker-redirect
+/// rider is omitted — planeswalkers aren't attack targets yet.)
 pub fn questing_beast() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Questing Beast",
         cost: cost(&[generic(2), g(), g()]),
@@ -30,6 +31,10 @@ pub fn questing_beast() -> CardDefinition {
             Keyword::Haste,
             Keyword::CantBeBlockedByPowerAtMost(2),
         ],
+        static_abilities: vec![StaticAbility {
+            description: "Combat damage that would be dealt by creatures you control can't be prevented.",
+            effect: StaticEffect::ControllerCreaturesCombatDamageCantBePrevented,
+        }],
         ..Default::default()
     }
 }
