@@ -1123,6 +1123,217 @@ pub fn famished_foragers() -> CardDefinition {
     }
 }
 
+/// Pointed Discussion — {2}{B} Sorcery. Draw two cards, lose 2 life, then
+/// create a Blood token.
+pub fn pointed_discussion() -> CardDefinition {
+    CardDefinition {
+        name: "Pointed Discussion",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::blood_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bloodtithe Collector — {4}{B} 3/4 Vampire Noble. Flying. ETB, if an opponent
+/// lost life this turn, each opponent discards a card.
+pub fn bloodtithe_collector() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodtithe Collector",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dawnhart Disciple — {1}{G} 2/2 Human Warlock. Whenever another Human you
+/// control enters, this creature gets +1/+1 until end of turn.
+pub fn dawnhart_disciple() -> CardDefinition {
+    CardDefinition {
+        name: "Dawnhart Disciple",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bramble Armor — {1}{G} Equipment. ETB attach to a creature you control.
+/// Equipped creature gets +2/+1. Equip {4}.
+pub fn bramble_armor() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Bramble Armor",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        equipped_bonus: Some(crate::card::EquipBonus { power: 2, toughness: 1, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Repository Skaab — {3}{U} 3/3 Zombie. Exploit; when it exploits a creature,
+/// return target instant or sorcery card from your graveyard to your hand.
+pub fn repository_skaab() -> CardDefinition {
+    use crate::effect::shortcut::{exploit, target_filtered};
+    let return_is = Effect::Move {
+        what: target_filtered(
+            SelectionRequirement::InGraveyard.and(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            ),
+        ),
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Repository Skaab",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![exploit(return_is)],
+        ..Default::default()
+    }
+}
+
+/// Fleshtaker — {W}{B} 2/2 Human Assassin. Whenever you sacrifice another
+/// creature, gain 1 life and scry 1. {1}, sacrifice another creature: +2/+2.
+pub fn fleshtaker() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Fleshtaker",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::OtherThanSource,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blessed Defiance — {W} Instant. Target creature you control gets +2/+0 and
+/// gains lifelink; when it dies this turn, create a 1/1 white flying Spirit.
+pub fn blessed_defiance() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::target_filtered;
+    use crate::mana::Color;
+    let spirit = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Blessed Defiance",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::WhenTargetDiesThisTurn {
+                slot: 0,
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: spirit,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
 /// life. Create two Blood tokens.
 pub fn vampires_kiss() -> CardDefinition {

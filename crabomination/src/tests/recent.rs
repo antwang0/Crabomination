@@ -5318,3 +5318,108 @@ fn famished_foragers_ritual_when_opp_lost_life() {
     g.resolve_effect(&etb, &ctx).unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "added RRR");
 }
+
+/// Pointed Discussion draws two, loses 2, and makes a Blood token.
+#[test]
+fn pointed_discussion_draws_loses_blood() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].life = 20;
+    let hand = g.players[0].hand.len();
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&catalog::pointed_discussion().effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
+    assert_eq!(g.players[0].life, 18, "lost 2");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Blood"), "blood made");
+}
+
+/// Bloodtithe Collector forces a discard only when an opponent lost life.
+#[test]
+fn bloodtithe_collector_conditional_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    let etb = catalog::bloodtithe_collector().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(0), 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[1].hand.len(), 1, "no discard without life loss");
+    g.players[1].lost_life_this_turn = true;
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[1].hand.len(), 0, "opponent discarded");
+}
+
+/// Dawnhart Disciple pumps itself when another Human enters.
+#[test]
+fn dawnhart_disciple_pumps_on_human_etb() {
+    let mut g = two_player_game();
+    let dd = g.add_card_to_battlefield(0, catalog::dawnhart_disciple());
+    let human = g.move_card_to_battlefield_for_test(0, catalog::militia_rallier()); // Human Soldier
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: human }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(dd).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 from the Human ETB");
+}
+
+/// Bramble Armor enters attached and grants +2/+1, with an equip cost.
+#[test]
+fn bramble_armor_attaches_and_buffs() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let armor = g.add_card_to_battlefield(0, catalog::bramble_armor());
+    let attach = catalog::bramble_armor().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(armor, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&attach, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1");
+    assert!(catalog::bramble_armor().keywords.iter().any(|k| matches!(k, Keyword::Equip(_))));
+}
+
+/// Repository Skaab exploits a creature to return an instant/sorcery.
+#[test]
+fn repository_skaab_exploit_returns_spell() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let etb = catalog::repository_skaab().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(99), 0, None, 0);
+    ctx.targets = vec![Target::Permanent(bolt)];
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.battlefield_find(fodder).is_none(), "fodder exploited");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "bolt returned to hand");
+}
+
+/// Fleshtaker gains life + scrys whenever you sacrifice another creature.
+#[test]
+fn fleshtaker_triggers_on_sacrifice() {
+    let mut g = two_player_game();
+    let ft = g.add_card_to_battlefield(0, catalog::fleshtaker());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].life = 20;
+    g.sacrifice_one(fodder, 0, &mut vec![]);
+    let evs = vec![GameEvent::CreatureSacrificed { card_id: fodder, who: 0 }];
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 21, "gained 1 from the sacrifice");
+    let _ = ft;
+}
+
+/// Blessed Defiance pumps and leaves a Spirit when the creature dies this turn.
+#[test]
+fn blessed_defiance_pump_and_death_spirit() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::blessed_defiance().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "+2/+0");
+    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    // Kill it → delayed trigger makes a Spirit.
+    g.sacrifice_one(bear, 0, &mut vec![]);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: bear }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Spirit"), "made a Spirit");
+}
