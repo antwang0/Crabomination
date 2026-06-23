@@ -5260,3 +5260,61 @@ fn militia_rallier_attacks_with_partner_and_untaps() {
     assert!(!g.battlefield_find(tapped).unwrap().tapped, "untapped the target");
 }
 
+
+/// Bleed Dry shrinks a creature lethally and exiles it instead of dying.
+#[test]
+fn bleed_dry_exiles_dying_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&catalog::bleed_dry().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "creature died");
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled instead of graveyard");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == victim), "not in graveyard");
+}
+
+/// Flame-Blessed Bolt burns and exiles a dying creature.
+#[test]
+fn flame_blessed_bolt_exiles_dying_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&catalog::flame_blessed_bolt().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.exile.iter().any(|c| c.id == victim), "lethal 2 damage → exiled");
+}
+
+/// Ancestral Anger scales +X/+0 with copies in the graveyard and draws.
+#[test]
+fn ancestral_anger_scales_with_graveyard_copies() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::ancestral_anger());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::ancestral_anger().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    // 1 + 1 copy in gy = +2/+0 → 4/2, plus trample.
+    assert_eq!((cp.power, cp.toughness), (4, 2));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew");
+}
+
+/// Famished Foragers adds RRR on entry only when an opponent lost life.
+#[test]
+fn famished_foragers_ritual_when_opp_lost_life() {
+    let mut g = two_player_game();
+    let etb = catalog::famished_foragers().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(0), 0, None, 0);
+    // No life lost → no mana.
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no mana without life loss");
+    g.players[1].lost_life_this_turn = true;
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "added RRR");
+}

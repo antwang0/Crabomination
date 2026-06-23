@@ -1016,6 +1016,113 @@ pub fn militia_rallier() -> CardDefinition {
     }
 }
 
+/// Bleed Dry — {2}{B}{B} Instant. Target creature gets -13/-13; if it would die
+/// this turn, exile it instead.
+pub fn bleed_dry() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Bleed Dry",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        // Install the exile replacement before the shrink so the SBA death is
+        // caught (CR 614).
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(-13),
+                toughness: Value::Const(-13),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flame-Blessed Bolt — {R} Instant. Deals 2 damage to target creature or
+/// planeswalker; if it would die this turn, exile it instead.
+pub fn flame_blessed_bolt() -> CardDefinition {
+    use crate::card::CardType as CT;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Flame-Blessed Bolt",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::HasCardType(CT::Planeswalker)),
+                ),
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ancestral Anger — {R} Sorcery. Target creature gains trample and gets +X/+0,
+/// where X is 1 plus the number of cards named Ancestral Anger in your
+/// graveyard. Draw a card.
+pub fn ancestral_anger() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Ancestral Anger",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Sum(vec![
+                    Value::Const(1),
+                    Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasName("Ancestral Anger".into()),
+                    },
+                ]),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Famished Foragers — {3}{R} 4/3 Vampire. ETB, if an opponent lost life this
+/// turn, add {R}{R}{R}. {2}{R}, discard a card: draw a card.
+pub fn famished_foragers() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Famished Foragers",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(crate::mana::Color::Red, Value::Const(3)),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
 /// life. Create two Blood tokens.
 pub fn vampires_kiss() -> CardDefinition {
