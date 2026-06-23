@@ -4427,3 +4427,140 @@ pub fn resize() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── More recent-set staples ─────────────────────────────────────────────────
+
+/// Bloodthirsty Conqueror — {3}{B}{B} 5/5 Vampire Knight. Flying, deathtouch.
+/// Whenever an opponent loses life, you gain that much life.
+pub fn bloodthirsty_conqueror() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodthirsty Conqueror",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeLost, EventScope::OpponentControl),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Razorkin Needlehead — {R}{R} 2/2 Human Assassin. First strike during your
+/// turn. Whenever an opponent draws a card, it deals 1 damage to them.
+pub fn razorkin_needlehead() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Razorkin Needlehead",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Razorkin Needlehead has first strike during your turn.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Savor — {1}{B} Instant. Target creature gets -2/-2 until end of turn; create
+/// a Food token.
+pub fn savor() -> CardDefinition {
+    CardDefinition {
+        name: "Savor",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::food_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Spinewoods Armadillo — {4}{G}{G} 7/7 Armadillo. Reach, ward {3}. {1}{G},
+/// Discard this card: Search your library for a basic land or Desert card, put
+/// it into your hand, then shuffle. You gain 3 life.
+pub fn spinewoods_armadillo() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType, WardCost};
+    CardDefinition {
+        name: "Spinewoods Armadillo",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Armadillo], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Reach, Keyword::Ward(WardCost::generic(3))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand
+                        .or(SelectionRequirement::HasLandType(LandType::Desert)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Screaming Nemesis — {2}{R} 3/3 Spirit. Haste. Whenever it's dealt damage, it
+/// deals that much damage to any target. (The "that player can't gain life for
+/// the rest of the game" rider is omitted.)
+pub fn screaming_nemesis() -> CardDefinition {
+    CardDefinition {
+        name: "Screaming Nemesis",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -2710,3 +2710,79 @@ fn recover_exiles_when_declined() {
     assert!(g.exile.iter().any(|c| c.id == gh), "unpaid recover exiles the card");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == gh));
 }
+
+/// Bloodthirsty Conqueror gains you life equal to an opponent's life loss.
+#[test]
+fn bloodthirsty_conqueror_drains_to_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bloodthirsty_conqueror());
+    let life0 = g.players[0].life;
+    let evs = vec![{
+        let amt = 3u32;
+        g.players[1].life -= amt as i32;
+        crate::game::GameEvent::LifeLost { player: 1, amount: amt }
+    }];
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 3, "gained 3 from the opponent's loss");
+}
+
+/// Razorkin Needlehead has first strike on your turn only, and pings opponents
+/// who draw.
+#[test]
+fn razorkin_needlehead_turn_first_strike_and_draw_ping() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let rk = g.add_card_to_battlefield(0, catalog::razorkin_needlehead());
+    assert!(g.computed_permanent(rk).unwrap().keywords.contains(&Keyword::FirstStrike));
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(rk).unwrap().keywords.contains(&Keyword::FirstStrike));
+    // Opponent draws → takes 1.
+    let life1 = g.players[1].life;
+    let drawn = g.add_card_to_hand(1, catalog::island());
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::CardDrawn {
+        player: 1,
+        card_id: drawn,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 1);
+}
+
+/// Savor shrinks a creature and makes a Food.
+#[test]
+fn savor_shrinks_and_makes_food() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::savor().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(foe).is_none(), "-2/-2 killed the 2/2");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"));
+}
+
+/// Screaming Nemesis redirects damage dealt to it onto any target.
+#[test]
+fn screaming_nemesis_redirects_damage() {
+    let mut g = two_player_game();
+    let nem = g.add_card_to_battlefield(0, catalog::screaming_nemesis());
+    let life1 = g.players[1].life;
+    // The enrage trigger reads the DamageDealt amount and bolts any target.
+    g.dispatch_triggers_for_events(&[crate::game::GameEvent::DamageDealt {
+        amount: 3,
+        to_card: Some(nem),
+        to_player: None,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 3, "redirected 3 to the opponent");
+}
+
+/// Spinewoods Armadillo is a 7/7 with Reach and Ward {3}.
+#[test]
+fn spinewoods_armadillo_stats() {
+    let def = catalog::spinewoods_armadillo();
+    assert_eq!((def.power, def.toughness), (7, 7));
+    assert!(def.keywords.contains(&Keyword::Reach));
+    assert!(def.activated_abilities[0].discard_self_cost, "discard-this fetch ability");
+}
