@@ -4893,3 +4893,64 @@ fn ardenvale_tactician_adventure_taps() {
     // The creature half waits in exile to be cast later.
     assert!(g.exile.iter().any(|c| c.id == at), "creature half exiled on the adventure");
 }
+
+/// Sporeback Wolf is 2/4 on your turn, 2/2 otherwise.
+#[test]
+fn sporeback_wolf_your_turn_toughness() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::sporeback_wolf());
+    g.active_player_idx = 0;
+    assert_eq!(g.computed_permanent(w).unwrap().toughness, 4, "+0/+2 on your turn");
+    g.active_player_idx = 1;
+    assert_eq!(g.computed_permanent(w).unwrap().toughness, 2, "vanilla off-turn");
+}
+
+/// Dawnhart Wardens pumps the team at combat only when coven is active.
+#[test]
+fn dawnhart_wardens_coven_combat_pump() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::dawnhart_wardens()); // a 3/3
+    // Two distinct powers (2, 3) → coven inactive → no pump.
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 2, "no pump without coven");
+    // Add a third distinct power → coven active → +1/+0.
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "+1/+0 with coven");
+}
+
+/// Brimstone Trebuchet pings each opponent and untaps when a Knight enters.
+#[test]
+fn brimstone_trebuchet_pings_and_untaps() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let tre = g.add_card_to_battlefield(0, catalog::brimstone_trebuchet());
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tre, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "pinged opponent");
+    assert!(g.battlefield_find(tre).unwrap().tapped, "tapped to ping");
+    // A Knight entering untaps the Trebuchet.
+    let knight = g.move_card_to_battlefield_for_test(0, catalog::ardenvale_tactician()); // Human Knight
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: knight }]);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(tre).unwrap().tapped, "untapped by Knight ETB");
+}
+
+/// Gryff Rider and Apprentice Sharpshooter carry Training.
+#[test]
+fn training_creatures_wired() {
+    for def in [catalog::gryff_rider(), catalog::apprentice_sharpshooter()] {
+        assert!(def.triggered_abilities.iter().any(|t|
+            matches!(t.event.kind, crate::effect::EventKind::Attacks)), "{} has Training", def.name);
+    }
+    assert!(catalog::gryff_rider().keywords.contains(&Keyword::Flying));
+    assert!(catalog::apprentice_sharpshooter().keywords.contains(&Keyword::Reach));
+}

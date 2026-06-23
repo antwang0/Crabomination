@@ -269,6 +269,133 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Gryff Rider — {2}{W} 2/1 Human Soldier. Flying, Training.
+pub fn gryff_rider() -> CardDefinition {
+    use crate::effect::shortcut::training;
+    CardDefinition {
+        name: "Gryff Rider",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![training()],
+        ..Default::default()
+    }
+}
+
+/// Apprentice Sharpshooter — {2}{G} 1/4 Human Archer. Reach, Training.
+pub fn apprentice_sharpshooter() -> CardDefinition {
+    use crate::effect::shortcut::training;
+    CardDefinition {
+        name: "Apprentice Sharpshooter",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![training()],
+        ..Default::default()
+    }
+}
+
+/// Sporeback Wolf — {1}{G} 2/2 Wolf. During your turn, it gets +0/+2.
+pub fn sporeback_wolf() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Sporeback Wolf",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "During your turn, Sporeback Wolf gets +0/+2.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::IsTurnOf(PlayerRef::You),
+                power: 0,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dawnhart Wardens — {1}{G}{W} 3/3 Human Warrior. Vigilance. Coven — at the
+/// beginning of combat on your turn, if you control three or more creatures
+/// with different powers, creatures you control get +1/+0 until end of turn.
+pub fn dawnhart_wardens() -> CardDefinition {
+    CardDefinition {
+        name: "Dawnhart Wardens",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brimstone Trebuchet — {2}{R} 1/3 Goblin. Defender, reach. {T}: deals 1
+/// damage to each opponent. Whenever a Knight you control enters, untap it.
+pub fn brimstone_trebuchet() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Brimstone Trebuchet",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Defender, Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Knight),
+                }),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Whispering Wizard — {3}{U} 3/2 Human Wizard. Whenever you cast a noncreature
 /// spell, create a 1/1 white flying Spirit. Once each turn.
 pub fn whispering_wizard() -> CardDefinition {
