@@ -212,6 +212,49 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Hunted Bonebrute — {2}{B} 6/2 Skeleton Beast. Menace; when it enters, target
+/// opponent creates two 1/1 white Dog tokens; when it dies, each opponent loses
+/// 3 life. Disguise {1}{B}.
+pub fn hunted_bonebrute() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Hunted Bonebrute",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 2,
+        keywords: vec![Keyword::Menace, Keyword::Disguise(cost(&[generic(1), b()]))],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::EachOpponent,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Dog".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Dog],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            }),
+            on_dies(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Trumpeting Herd — {2}{G}{G} Sorcery. Create a 3/3 green Elephant token.
 /// Rebound.
 pub fn trumpeting_herd() -> CardDefinition {

@@ -44,6 +44,21 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Hunted Bonebrute gives the opponent two Dogs on ETB and drains on death.
+#[test]
+fn hunted_bonebrute_etb_dogs_and_death_drain() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    let brute = catalog::hunted_bonebrute();
+    let etb_ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&brute.triggered_abilities[0].effect, &etb_ctx).unwrap();
+    let dogs = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.name == "Dog").count();
+    assert_eq!(dogs, 2, "opponent made two Dogs");
+    // Death drain.
+    g.resolve_effect(&brute.triggered_abilities[1].effect, &etb_ctx).unwrap();
+    assert_eq!(g.players[1].life, 17, "each opponent lost 3");
+}
+
 /// Trumpeting Herd makes a 3/3 Elephant and has Rebound.
 #[test]
 fn trumpeting_herd_makes_elephant() {
