@@ -212,6 +212,58 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Nightbird's Clutches — {1}{R} Sorcery. Up to two target creatures can't
+/// block this turn. Flashback {3}{R}.
+pub fn nightbirds_clutches() -> CardDefinition {
+    CardDefinition {
+        name: "Nightbird's Clutches",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Get Out — {U}{U} Instant. Choose one — counter target creature or enchantment
+/// spell; or return one or two target creatures and/or enchantments you own to
+/// your hand.
+pub fn get_out() -> CardDefinition {
+    CardDefinition {
+        name: "Get Out",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
+                    ),
+                },
+            },
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                filter: (SelectionRequirement::Creature.or(SelectionRequirement::Enchantment))
+                    .and(SelectionRequirement::ControlledByYou),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Helpful Hunter — {1}{W} 1/1 Cat. When it enters, draw a card.
 pub fn helpful_hunter() -> CardDefinition {
     CardDefinition {

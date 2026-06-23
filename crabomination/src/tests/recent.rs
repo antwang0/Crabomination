@@ -44,6 +44,34 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Nightbird's Clutches stops up to two creatures from blocking and has flashback.
+#[test]
+fn nightbirds_clutches_grants_cant_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let nc = catalog::nightbirds_clutches();
+    assert!(nc.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))));
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(a), Target::Permanent(b)];
+    g.resolve_effect(&nc.effect, &ctx).unwrap();
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Get Out's bounce mode returns your creatures/enchantments to hand.
+#[test]
+fn get_out_bounce_mode_returns_permanents() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.mode = 1; // bounce mode
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::get_out().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_none() && g.players[0].hand.iter().any(|c| c.id == bear));
+}
+
 /// Helpful Hunter draws on entry.
 #[test]
 fn helpful_hunter_draws_on_etb() {
