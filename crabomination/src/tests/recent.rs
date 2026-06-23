@@ -44,6 +44,41 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Hard-Hitting Question makes your creature deal its power to a foe.
+#[test]
+fn hard_hitting_question_deals_power() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(mine), Target::Permanent(foe)];
+    g.resolve_effect(&catalog::hard_hitting_question().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(foe).is_none(), "3 damage kills the 2/2");
+}
+
+/// Brave-Kin Duo's sorcery-speed pump grows a creature by +1/+1.
+#[test]
+fn brave_kin_duo_pumps_at_sorcery_speed() {
+    let mut g = two_player_game();
+    let duo = catalog::brave_kin_duo();
+    assert!(duo.activated_abilities[0].sorcery_speed, "activates only as a sorcery");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&duo.activated_abilities[0].effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 until end of turn");
+}
+
+/// Marsh Hulk carries Megamorph and can be cast face down for {3}.
+#[test]
+fn marsh_hulk_has_megamorph() {
+    use crate::card::Keyword;
+    let hulk = catalog::marsh_hulk();
+    assert!(hulk.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))));
+    assert_eq!((hulk.power, hulk.toughness), (4, 6));
+}
+
 /// Refurbished Familiar's affinity discounts it per artifact, and its ETB
 /// makes each opponent discard.
 #[test]

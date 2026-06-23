@@ -112,6 +112,95 @@ pub fn vaultborn_tyrant() -> CardDefinition {
     }
 }
 
+/// Marsh Hulk — {4}{B}{B} 4/6 Zombie Ogre. Megamorph {6}{B}.
+pub fn marsh_hulk() -> CardDefinition {
+    CardDefinition {
+        name: "Marsh Hulk",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Ogre],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 6,
+        keywords: vec![Keyword::Megamorph(cost(&[generic(6), b()]))],
+        ..Default::default()
+    }
+}
+
+/// Brave-Kin Duo — {W} 1/1 Rabbit Mouse. {1}, {T}: Target creature gets +1/+1
+/// until end of turn. Activate only as a sorcery.
+pub fn brave_kin_duo() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Brave-Kin Duo",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Mouse],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lightshield Parry — {W} Instant. Target creature gets +2/+2 until end of
+/// turn. Cycling {2}.
+pub fn lightshield_parry() -> CardDefinition {
+    CardDefinition {
+        name: "Lightshield Parry",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Hard-Hitting Question — {G} Sorcery. Target creature you control deals damage
+/// equal to its power to target creature or planeswalker you don't control.
+pub fn hard_hitting_question() -> CardDefinition {
+    CardDefinition {
+        name: "Hard-Hitting Question",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            })),
+        },
+        ..Default::default()
+    }
+}
+
 /// Refurbished Familiar — {3}{B} 2/1 Zombie Rat. Affinity for artifacts, flying.
 /// When it enters, each opponent discards a card. (The draw-per-opponent-who-
 /// can't rider is omitted.)
