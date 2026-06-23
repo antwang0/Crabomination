@@ -5423,3 +5423,121 @@ fn blessed_defiance_pump_and_death_spirit() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Spirit"), "made a Spirit");
 }
+
+/// Gavony Trapper taps a target creature.
+#[test]
+fn gavony_trapper_taps() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ab = catalog::gavony_trapper().activated_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(victim)];
+    g.resolve_effect(&ab, &ctx).unwrap();
+    assert!(g.battlefield_find(victim).unwrap().tapped);
+}
+
+/// Sure Strike pumps +3/+0 and grants first strike.
+#[test]
+fn sure_strike_pump_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::sure_strike().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 5);
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Lunar Frenzy pumps by X from the cost.
+#[test]
+fn lunar_frenzy_x_pump() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    ctx.x_value = 3;
+    g.resolve_effect(&catalog::lunar_frenzy().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 5, "+3 from X");
+    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Dawnhart Rejuvenator gains 3 life on entry and taps for any color.
+#[test]
+fn dawnhart_rejuvenator_lifegain_and_mana() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    let etb = catalog::dawnhart_rejuvenator().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(0), 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[0].life, 23);
+    assert!(catalog::dawnhart_rejuvenator().activated_abilities[0].tap_cost);
+}
+
+/// Spore Crawler draws when it dies.
+#[test]
+fn spore_crawler_dies_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let dies = catalog::spore_crawler().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(crate::card::CardId(0), 0, None, 0);
+    g.resolve_effect(&dies, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Snarling Wolf's pump is once each turn.
+#[test]
+fn snarling_wolf_once_per_turn() {
+    let ab = &catalog::snarling_wolf().activated_abilities[0];
+    assert!(ab.once_per_turn);
+}
+
+/// Wolfkin Bond makes a Wolf and buffs the enchanted creature.
+#[test]
+fn wolfkin_bond_token_and_buff() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::wolfkin_bond());
+    let mut actx = crate::game::effects::EffectContext::for_ability(aura, 0, None);
+    actx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::wolfkin_bond().effect, &actx).unwrap();
+    let etb = catalog::wolfkin_bond().triggered_abilities[0].effect.clone();
+    let tctx = crate::game::effects::EffectContext::for_trigger(aura, 0, None, 0);
+    g.resolve_effect(&etb, &tctx).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Wolf"));
+    assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((4, 4)));
+}
+
+/// Vampires' Vengeance hits non-Vampires only and makes Blood.
+#[test]
+fn vampires_vengeance_spares_vampires() {
+    let mut g = two_player_game();
+    let vamp = g.add_card_to_battlefield(1, catalog::bloodcrazed_socialite()); // 3/3 Vampire
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&catalog::vampires_vengeance().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(other).is_none(), "non-Vampire took lethal 2");
+    assert!(g.battlefield_find(vamp).is_some(), "Vampire spared");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Blood"));
+}
+
+/// Defenestrate destroys a grounded creature but can't target a flyer.
+#[test]
+fn defenestrate_kills_grounded_only() {
+    let mut g = two_player_game();
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(ground)];
+    g.resolve_effect(&catalog::defenestrate().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(ground).is_none(), "grounded creature destroyed");
+    // Targeting a flyer is illegal.
+    assert!(!g.evaluate_requirement_static(
+        &SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasKeyword(Keyword::Flying)))),
+        &Target::Permanent(flyer), 0, None));
+}
+
