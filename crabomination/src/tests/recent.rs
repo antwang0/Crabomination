@@ -4427,3 +4427,61 @@ fn blood_petal_celebrant_first_strike_and_blood() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Blood"),
         "made a Blood token on death");
 }
+
+/// Mask of Avacyn grants +1/+2 and hexproof to the equipped creature.
+#[test]
+fn mask_of_avacyn_equips() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mask = g.add_card_to_battlefield(0, catalog::mask_of_avacyn());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: mask, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+2");
+    assert!(cp.keywords.contains(&Keyword::Hexproof));
+}
+
+/// Stormchaser Drake draws when your spell targets it.
+#[test]
+fn stormchaser_drake_draws_on_your_target() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let drake = g.add_card_to_battlefield(0, catalog::stormchaser_drake());
+    g.add_card_to_library(0, catalog::mountain());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(drake)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 (cast bolt) +1 (drew off the target trigger) = net unchanged.
+    assert_eq!(g.players[0].hand.len(), hand0, "drew off our own targeting");
+}
+
+/// Falkenrath Pit Fighter activates only after an opponent lost life.
+#[test]
+fn falkenrath_pit_fighter_gated_on_opp_life_loss() {
+    let mut g = two_player_game();
+    let fp = g.add_card_to_battlefield(0, catalog::falkenrath_pit_fighter());
+    let fodder = g.add_card_to_battlefield(0, catalog::falkenrath_pit_fighter()); // a Vampire to sac
+    g.add_card_to_hand(0, catalog::mountain()); // card to discard
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // No opponent has lost life yet → rejected.
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: fp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    });
+    assert!(r.is_err(), "gated off until an opponent loses life");
+    // Make the opponent lose life, then it works.
+    g.players[1].life -= 1;
+    g.players[1].lost_life_this_turn = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("opp lost life → activatable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "sacrificed a Vampire");
+}

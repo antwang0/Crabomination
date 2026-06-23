@@ -269,6 +269,78 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Mask of Avacyn — {2} Equipment. Equipped creature gets +1/+2 and has
+/// hexproof. Equip {3}.
+pub fn mask_of_avacyn() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Mask of Avacyn",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 2,
+            keywords: vec![Keyword::Hexproof],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Stormchaser Drake — {1}{U} 2/1 Drake. Flying. Whenever this becomes the
+/// target of a spell you control, draw a card.
+pub fn stormchaser_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Stormchaser Drake",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Falkenrath Pit Fighter — {R} 2/1 Vampire Warrior. {1}{R}, discard a card,
+/// sacrifice a Vampire: draw two cards. Activate only if an opponent lost life
+/// this turn.
+pub fn falkenrath_pit_fighter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Falkenrath Pit Fighter",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Vampire),
+                1,
+            )),
+            condition: Some(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hungry Ridgewolf — {1}{R} 2/2 Wolf. As long as you control another Wolf or
 /// Werewolf, it gets +1/+0 and has trample.
 pub fn hungry_ridgewolf() -> CardDefinition {
