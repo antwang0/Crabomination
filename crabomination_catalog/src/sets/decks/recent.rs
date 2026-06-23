@@ -151,9 +151,10 @@ pub fn star_charter() -> CardDefinition {
     }
 }
 
-/// Dour Port-Mage — {1}{U} 1/3 Frog Wizard. {1}{U}, {T}: Return another target
-/// creature you control to its owner's hand. (The leaves-without-dying draw
-/// trigger is omitted — no such event yet.)
+/// Dour Port-Mage — {1}{U} 1/3 Frog Wizard. Whenever one or more other
+/// creatures you control leave the battlefield without dying, draw a card
+/// (modeled per-creature). {1}{U}, {T}: Return another target creature you
+/// control to its owner's hand.
 pub fn dour_port_mage() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -166,6 +167,13 @@ pub fn dour_port_mage() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CreatureLeavesBattlefieldNotDying,
+                EventScope::AnotherOfYours,
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), u()]),
             tap_cost: true,
@@ -178,6 +186,38 @@ pub fn dour_port_mage() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Three Tree Scribe — {1}{G} 2/3 Frog Druid. Whenever this or another creature
+/// you control leaves the battlefield without dying, put a +1/+1 counter on
+/// target creature you control. (The self-leave half is approximate — the
+/// "another creature you control" case is the one that fires.)
+pub fn three_tree_scribe() -> CardDefinition {
+    CardDefinition {
+        name: "Three Tree Scribe",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CreatureLeavesBattlefieldNotDying,
+                EventScope::YourControl,
+            ),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }

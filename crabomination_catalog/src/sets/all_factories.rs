@@ -2690,6 +2690,7 @@ static DECKS: &[Factory] = &[
     super::decks::hard_hitting_question,
     super::decks::star_charter,
     super::decks::dour_port_mage,
+    super::decks::three_tree_scribe,
     super::decks::krydle_of_baldurs_gate,
     super::decks::overprotect,
     super::decks::plumecreed_escort,

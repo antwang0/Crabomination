@@ -574,8 +574,15 @@ impl GameState {
             // `self.block_map` so the post-move combat state stays
             // consistent for downstream selectors and trigger dispatchers.
             self.remove_from_combat(cid);
+            // CR 603.6 — note a creature leaving for a non-graveyard zone
+            // (bounce / exile / library) *without dying* before it's consumed.
+            let leaver = (card.definition.is_creature() && !matches!(resolved_dest, ZoneDest::Graveyard))
+                .then_some((card.id, card.controller));
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
             self.on_left_battlefield(cid, events);
+            if let Some((card_id, controller)) = leaver {
+                events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
+            }
             return;
         }
         // Then graveyards. Emit `CardLeftGraveyard` so Strixhaven

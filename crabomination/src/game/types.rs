@@ -1316,6 +1316,12 @@ pub enum GameEvent {
     /// land sacrifices alongside creature sacrifices, without
     /// double-firing creature-specific sub-triggers.
     PermanentSacrificed { card_id: CardId, who: usize },
+    /// CR 603.6 — a creature left the battlefield to a zone other than a
+    /// graveyard (bounced / exiled / shuffled away), i.e. left *without
+    /// dying*. `controller` is its last controller on the battlefield, read
+    /// from the leaving card (it's gone by dispatch time). Dour Port-Mage,
+    /// Three Tree Scribe.
+    CreatureLeftWithoutDying { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     /// CR 122.1b — keyword counters are counters; surfaced so the log /

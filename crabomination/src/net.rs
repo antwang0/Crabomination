@@ -1684,6 +1684,8 @@ pub enum GameEventWire {
     /// regardless of type for replay rewinds and Korvold/Mayhem-Devil
     /// payoffs.
     PermanentSacrificed { card_id: CardId, who: usize },
+    /// Wire mirror of `GameEvent::CreatureLeftWithoutDying` (CR 603.6).
+    CreatureLeftWithoutDying { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     #[serde(rename = "kw_counter_added")]
@@ -1820,6 +1822,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::CreatureSacrificed { card_id, who } => {
                 GameEventWire::CreatureSacrificed { card_id: *card_id, who: *who }
+            }
+            GameEvent::CreatureLeftWithoutDying { card_id, controller } => {
+                GameEventWire::CreatureLeftWithoutDying { card_id: *card_id, controller: *controller }
             }
             GameEvent::PermanentSacrificed { card_id, who } => {
                 GameEventWire::PermanentSacrificed { card_id: *card_id, who: *who }
@@ -2052,6 +2057,9 @@ impl GameEventWire {
             }
             E::PermanentSacrificed { card_id, who } => {
                 format!("{} sacrificed permanent {}", pn(*who), name(*card_id))
+            }
+            E::CreatureLeftWithoutDying { card_id, .. } => {
+                format!("{} left the battlefield without dying", name(*card_id))
             }
             E::PumpApplied {
                 card_id,

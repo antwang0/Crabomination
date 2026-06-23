@@ -21,6 +21,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::CreatureSacrificed, GameEvent::CreatureSacrificed { .. }) => true,
         (EventKind::PermanentSacrificed, GameEvent::PermanentSacrificed { .. }) => true,
         (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,
+        (
+            EventKind::CreatureLeavesBattlefieldNotDying,
+            GameEvent::CreatureLeftWithoutDying { .. },
+        ) => true,
         (EventKind::CardDrawn, GameEvent::CardDrawn { .. }) => true,
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
         (EventKind::LandPlayed, GameEvent::LandPlayed { .. }) => true,
@@ -210,6 +214,12 @@ pub(crate) fn event_matches_spec(
             // Dragon's Treasure, Phantasmal Image's sacrifice rider).
             event,
             GameEvent::BecameTarget { target, .. } if *target == source.id
+        ) || matches!(
+            // "Whenever this creature leaves the battlefield without dying"
+            // (Three Tree Scribe's self half). The source is gone by dispatch,
+            // so this matches by id from the event's snapshot.
+            event,
+            GameEvent::CreatureLeftWithoutDying { card_id, .. } if *card_id == source.id
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A
@@ -251,7 +261,13 @@ pub(crate) fn event_matches_spec(
                 // is populated at die-time in `check_state_based_actions`
                 // so AnotherOfYours-scope triggers (Witherbloom Pestmaster,
                 // Felisa, Fang of Silverquill) still fire on token death.
-                .or_else(|| state.died_card_snapshots.get(&target).map(|c| c.controller));
+                .or_else(|| state.died_card_snapshots.get(&target).map(|c| c.controller))
+                // A creature that left without dying is gone from every zone;
+                // its last controller rides the event (Dour Port-Mage).
+                .or_else(|| match event {
+                    GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
+                    _ => None,
+                });
             subject_controller == Some(source.controller)
         }
         EventScope::FromYourGraveyard => event_actor(state, event)
@@ -379,6 +395,10 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // would use OpponentControl.
         GameEvent::CreatureSacrificed { who, .. } => Some(*who),
         GameEvent::PermanentSacrificed { who, .. } => Some(*who),
+        // The leaving creature is gone from every zone by dispatch time, so
+        // its last controller travels in the event (drives YourControl /
+        // OpponentControl scope for Three Tree Scribe).
+        GameEvent::CreatureLeftWithoutDying { controller, .. } => Some(*controller),
         _ => None,
     }
 }
@@ -402,6 +422,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CreatureLeftWithoutDying { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::AttackerDeclared(card_id) => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BlockerDeclared { blocker, attacker } => Some(EntityRef::Permanent(
             if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker },
@@ -508,6 +529,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CardCycled { card_id, .. }
         | GameEvent::CardMilled { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
+        | GameEvent::CreatureLeftWithoutDying { card_id, .. }
         | GameEvent::PermanentTapped { card_id }
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::PermanentPhasedIn { card_id }

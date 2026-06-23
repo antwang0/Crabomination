@@ -16,9 +16,13 @@ plays its headline pattern):
   bot heuristic (lesser-self-harm option / advance own suspended cards); per-
   object UI prompting for a `wants_ui` player is a follow-up. No real card wires
   VillainousChoice yet (Sycorax Commander, Ensnared by the Mara want it).
-- **Leaves-the-battlefield-without-dying trigger** — no event yet, so Dour
-  Port-Mage's draw rider and Three Tree Scribe are omitted/unbuilt. A
-  `GameEvent::LeftBattlefieldWithoutDying` would unblock both.
+- ✅ **Leaves-the-battlefield-without-dying trigger** — `GameEvent::
+  CreatureLeftWithoutDying` + `EventKind::CreatureLeavesBattlefieldNotDying`
+  fire on a creature's non-graveyard exit (bounce / exile). Dour Port-Mage's
+  draw rider and Three Tree Scribe both ship. (Approximations: the self-leave
+  half of Three Tree Scribe doesn't fire — the source is gone from the
+  battlefield by dispatch; Dour Port-Mage draws per-creature on a mass bounce
+  rather than once per batch.)
 - **Krydle of Baldur's Gate** — the attack pay-{2}-for-unblockable rider is
   omitted (wants a `MayPay`-on-attack); the combat-damage drain ships.
 - **Thornplate Intimidator** — its "target opponent" Punisher is modeled as

@@ -396,6 +396,71 @@ fn dour_port_mage_bounces_own_creature() {
     assert!(g.battlefield_find(bear).is_none() && g.players[0].hand.iter().any(|c| c.id == bear));
 }
 
+/// Dour Port-Mage draws when another of your creatures is bounced (CR 603.6
+/// leaves-without-dying).
+#[test]
+fn dour_port_mage_draws_on_bounce() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lib = g.players[0].library.len();
+    let mage = g.add_card_to_battlefield(0, catalog::dour_port_mage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bounce = catalog::dour_port_mage().activated_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(mage, 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    let evs = g.resolve_effect(&bounce, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "leaves-without-dying drew a card");
+}
+
+/// Exiling your creature is also a leaves-without-dying event for Dour Port-Mage.
+#[test]
+fn dour_port_mage_draws_on_exile() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lib = g.players[0].library.len();
+    let _mage = g.add_card_to_battlefield(0, catalog::dour_port_mage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_exile(bear);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "exile drew a card");
+}
+
+/// Dying (graveyard exit) does NOT trigger Dour Port-Mage.
+#[test]
+fn dour_port_mage_no_draw_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lib = g.players[0].library.len();
+    let _mage = g.add_card_to_battlefield(0, catalog::dour_port_mage());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let evs = g.remove_to_graveyard_with_triggers(bear);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib, "death is not leaves-without-dying");
+}
+
+/// Three Tree Scribe puts a +1/+1 counter on a creature you control when
+/// another of your creatures leaves without dying.
+#[test]
+fn three_tree_scribe_counters_on_leave() {
+    let mut g = two_player_game();
+    let scribe = g.add_card_to_battlefield(0, catalog::three_tree_scribe());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bounce = catalog::dour_port_mage().activated_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(scribe, 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    let evs = g.resolve_effect(&bounce, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    // Scribe is the only creature left, so the counter lands on it.
+    assert_eq!(
+        g.battlefield_find(scribe).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+    );
+}
+
 /// Hard-Hitting Question makes your creature deal its power to a foe.
 #[test]
 fn hard_hitting_question_deals_power() {

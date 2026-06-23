@@ -2810,9 +2810,17 @@ impl GameState {
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
             }
+            // CR 603.6 — exile is a non-graveyard exit: a creature leaves
+            // without dying (Dour Port-Mage / Three Tree Scribe watchers).
+            let leaver =
+                (card.definition.is_creature()).then_some((card.id, card.controller));
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
+            if let Some((card_id, controller)) = leaver {
+                events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
+            }
+            self.dispatch_triggers_for_events(&events);
         }
     }
 

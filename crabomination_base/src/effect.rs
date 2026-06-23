@@ -1147,6 +1147,11 @@ pub enum EventKind {
     PermanentSacrificed,
     /// Any permanent left the battlefield.
     PermanentLeavesBattlefield,
+    /// CR 603.6 — a creature left the battlefield *without dying* (moved to
+    /// hand / exile / library, not to a graveyard). Dour Port-Mage, Three
+    /// Tree Scribe. Distinct from `CreatureDied`/`PermanentLeavesBattlefield`,
+    /// which fire on the graveyard exit.
+    CreatureLeavesBattlefieldNotDying,
     /// A card was drawn.
     CardDrawn,
     /// A card was discarded.
