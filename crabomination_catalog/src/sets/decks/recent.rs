@@ -5714,3 +5714,171 @@ pub fn drumhunter() -> CardDefinition {
     }
 }
 
+
+/// Roc of Kher Ridges — {3}{R} 3/3 Bird with flying.
+pub fn roc_of_kher_ridges() -> CardDefinition {
+    CardDefinition {
+        name: "Roc of Kher Ridges",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Minotaur Aggressor — {6}{R} 6/2 Minotaur Berserker with first strike and haste.
+pub fn minotaur_aggressor() -> CardDefinition {
+    CardDefinition {
+        name: "Minotaur Aggressor",
+        cost: cost(&[generic(6), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Malakir Familiar — {2}{B} 2/1 Bat. Flying, deathtouch; whenever you gain
+/// life, it gets +1/+1 until end of turn.
+pub fn malakir_familiar() -> CardDefinition {
+    CardDefinition {
+        name: "Malakir Familiar",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mercurial Geists — {2}{U}{R} 1/3 Spirit. Flying; whenever you cast an instant
+/// or sorcery spell, it gets +3/+0 until end of turn.
+pub fn mercurial_geists() -> CardDefinition {
+    CardDefinition {
+        name: "Mercurial Geists",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Engine Rat — {B} 1/1 Zombie Rat. Deathtouch; "{5}{B}: Each opponent loses 2
+/// life."
+pub fn engine_rat() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Engine Rat",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), b()]),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gavony Silversmith — {3}{W} 2/3 Human Soldier. When it enters, put a +1/+1
+/// counter on each of up to two target creatures.
+pub fn gavony_silversmith() -> CardDefinition {
+    CardDefinition {
+        name: "Gavony Silversmith",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Creature,
+            effect: Box::new(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Reputable Merchant — {2/W}{2/B}{2/G} 2/2 Human Citizen. When it enters or
+/// dies, put a +1/+1 counter on target creature you control.
+pub fn reputable_merchant() -> CardDefinition {
+    use crate::mana::{mono_hybrid, Color};
+    let counter = || Effect::AddCounter {
+        what: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Reputable Merchant",
+        cost: cost(&[
+            mono_hybrid(2, Color::White),
+            mono_hybrid(2, Color::Black),
+            mono_hybrid(2, Color::Green),
+        ]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(counter()), on_dies(counter())],
+        ..Default::default()
+    }
+}

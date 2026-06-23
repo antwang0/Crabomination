@@ -3546,3 +3546,107 @@ fn cr_702_148_dread_fugue_cleave_widens_discard() {
     drain_stack(&mut g);
     assert!(!g.players[1].hand.iter().any(|c| c.id == big), "cleave discarded the MV-5 card");
 }
+
+/// Venerable Monk gains 2 life on ETB.
+#[test]
+fn venerable_monk_gains_life() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.move_card_to_battlefield_for_test(0, catalog::venerable_monk());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 22);
+}
+
+/// Vanilla keyword bodies: Roc and Minotaur Aggressor.
+#[test]
+fn roc_and_minotaur_keywords() {
+    assert!(catalog::roc_of_kher_ridges().keywords.contains(&Keyword::Flying));
+    let m = catalog::minotaur_aggressor();
+    assert!(m.keywords.contains(&Keyword::FirstStrike) && m.keywords.contains(&Keyword::Haste));
+}
+
+/// Malakir Familiar grows whenever you gain life.
+#[test]
+fn malakir_familiar_grows_on_lifegain() {
+    let mut g = two_player_game();
+    let bat = g.add_card_to_battlefield(0, catalog::malakir_familiar());
+    use crate::effect::{Effect, Selector, Value};
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    let evs = g
+        .resolve_effect(&Effect::GainLife { who: Selector::You, amount: Value::Const(1) }, &ctx)
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bat).map(|c| c.power), Some(3), "+1/+1 on lifegain");
+}
+
+/// Mercurial Geists pumps when you cast an instant or sorcery.
+#[test]
+fn mercurial_geists_pumps_on_spell() {
+    let mut g = two_player_game();
+    let geist = g.add_card_to_battlefield(0, catalog::mercurial_geists());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(geist).map(|c| c.power), Some(4), "+3/+0 from instant cast");
+}
+
+/// Engine Rat drains each opponent for 2.
+#[test]
+fn engine_rat_drains() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    let rat = g.add_card_to_battlefield(0, catalog::engine_rat());
+    g.clear_sickness(rat);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rat, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("drain ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Gavony Silversmith puts a +1/+1 counter on each of up to two creatures.
+#[test]
+fn gavony_silversmith_counters_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::gavony_silversmith());
+    drain_stack(&mut g);
+    // Up-to-two ApplyToTargets distributes +1/+1 counters onto the chosen
+    // creature(s); each picked target gets exactly one.
+    let total: u32 = [a, b]
+        .iter()
+        .map(|id| g.battlefield_find(*id).unwrap().counter_count(CounterType::PlusOnePlusOne))
+        .sum();
+    assert!(total >= 1, "at least one creature got a +1/+1 counter");
+    assert!(
+        [a, b]
+            .iter()
+            .all(|id| g.battlefield_find(*id).unwrap().counter_count(CounterType::PlusOnePlusOne) <= 1),
+        "no creature gets more than one counter from a single resolution"
+    );
+}
+
+/// Reputable Merchant counters a creature on ETB and again on death.
+#[test]
+fn reputable_merchant_counters_on_etb_and_death() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(target)),
+        DecisionAnswer::Target(Target::Permanent(target)),
+    ]));
+    let merch = g.move_card_to_battlefield_for_test(0, catalog::reputable_merchant());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "ETB counter");
+    let evs = g.remove_to_graveyard_with_triggers(merch);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "death counter");
+}
