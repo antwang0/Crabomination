@@ -269,6 +269,134 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
+/// life. Create two Blood tokens.
+pub fn vampires_kiss() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire's Kiss",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crabomination_base::tokens::blood_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Alchemist's Gift — {B} Instant. Target creature gets +1/+1 and gains your
+/// choice of deathtouch or lifelink until end of turn.
+pub fn alchemists_gift() -> CardDefinition {
+    CardDefinition {
+        name: "Alchemist's Gift",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::ChooseMode(vec![
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Deathtouch,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dawnhart Geist — {1}{W} 1/3 Spirit Warlock. Whenever you cast an enchantment
+/// spell, you gain 2 life.
+pub fn dawnhart_geist() -> CardDefinition {
+    CardDefinition {
+        name: "Dawnhart Geist",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(SelectionRequirement::HasCardType(CardType::Enchantment)),
+            ),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bramble Wurm — {6}{G} 7/6 Wurm. Reach, trample. ETB gain 5 life. {2}{G},
+/// Exile this card from your graveyard: You gain 5 life.
+pub fn bramble_wurm() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Bramble Wurm",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(5) })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Parish-Blade Trainee — {1}{W} 1/2 Human Soldier. Training. When it dies, put
+/// its counters on target creature you control.
+pub fn parish_blade_trainee() -> CardDefinition {
+    use crate::effect::shortcut::{on_dies, training};
+    CardDefinition {
+        name: "Parish-Blade Trainee",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![
+            training(),
+            on_dies(Effect::MoveAllCounters {
+                from: Selector::This,
+                to: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Olivia, Crimson Bride — {4}{B}{R} 3/4 Legendary Vampire Noble. Flying,
 /// haste. Whenever Olivia attacks, return target creature card from a graveyard
 /// to the battlefield tapped and attacking. (The legendary-Vampire exile rider

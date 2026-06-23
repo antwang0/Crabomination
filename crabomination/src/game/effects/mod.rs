@@ -5061,10 +5061,19 @@ impl GameState {
                 if let (Some(src), Some(dst)) = (src, dst)
                     && src != dst
                 {
-                    let taken = self
-                        .battlefield_find_mut(src)
-                        .map(|c| std::mem::take(&mut c.counters))
-                        .unwrap_or_default();
+                    // CR 603.10 — for a dies trigger the source has already
+                    // left the battlefield; read its counters off the death
+                    // LKI snapshot so "when this dies, move its counters …"
+                    // (Parish-Blade Trainee) still relocates them.
+                    let taken = if let Some(c) = self.battlefield_find_mut(src) {
+                        std::mem::take(&mut c.counters)
+                    } else {
+                        self.died_card_snapshots
+                            .get(&src)
+                            .or_else(|| self.leaves_bf_lki.get(&src))
+                            .map(|c| c.counters.clone())
+                            .unwrap_or_default()
+                    };
                     if let Some(d) = self.battlefield_find_mut(dst) {
                         for (kind, n) in taken {
                             if n > 0 {

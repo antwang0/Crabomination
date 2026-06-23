@@ -4716,3 +4716,98 @@ fn covetous_castaway_dies_mills_three() {
     let def = catalog::covetous_castaway();
     assert_eq!(def.back_face.as_ref().unwrap().name, "Ghostly Castigator");
 }
+
+/// Vampire's Kiss drains 2 and makes two Blood tokens.
+#[test]
+fn vampires_kiss_drains_and_makes_blood() {
+    let mut g = two_player_game();
+    let vk = g.add_card_to_hand(0, catalog::vampires_kiss());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: vk, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 2, "target lost 2");
+    assert_eq!(g.players[0].life, l0 + 2, "you gained 2");
+    let blood = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Blood").count();
+    assert_eq!(blood, 2, "two Blood tokens");
+}
+
+/// Alchemist's Gift pumps and grants deathtouch (mode 0).
+#[test]
+fn alchemists_gift_grants_deathtouch() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ag = g.add_card_to_hand(0, catalog::alchemists_gift());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: ag, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Dawnhart Geist gains 2 life on an enchantment cast.
+#[test]
+fn dawnhart_geist_gains_on_enchantment() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::dawnhart_geist());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let pacifism = g.add_card_to_hand(0, catalog::pacifism()); // {1}{W} Aura enchantment
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pacifism, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the aura");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 2, "gained 2 from the enchantment cast");
+}
+
+/// Bramble Wurm gains 5 on entry and again from the graveyard.
+#[test]
+fn bramble_wurm_lifegain() {
+    let mut g = two_player_game();
+    let life0 = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::bramble_wurm());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 5, "ETB gained 5");
+    // From the graveyard: exile to gain 5.
+    let bw = g.add_card_to_graveyard(0, catalog::bramble_wurm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("graveyard ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 10, "graveyard gained 5 more");
+    assert!(g.exile.iter().any(|c| c.id == bw), "exiled as cost");
+}
+
+/// Parish-Blade Trainee trains, then passes its counters on death.
+#[test]
+fn parish_blade_trainee_trains_and_passes_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let def = catalog::parish_blade_trainee();
+    assert!(def.triggered_abilities.iter().any(|t|
+        matches!(t.event.kind, crate::effect::EventKind::Attacks)), "has Training (attack trigger)");
+    // Give it counters, then kill it; counters move to an ally.
+    let pbt = g.add_card_to_battlefield(0, catalog::parish_blade_trainee());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(pbt).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ally))]));
+    g.battlefield_find_mut(pbt).unwrap().damage = 5;
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "counters moved to the ally on death");
+}
