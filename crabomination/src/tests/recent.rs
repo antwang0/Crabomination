@@ -4527,3 +4527,49 @@ fn dreadhound_ignores_noncreature_mill() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp, "noncreature mill: no drain");
 }
+
+/// Saryth grants deathtouch to tapped allies and hexproof to untapped allies.
+#[test]
+fn saryth_tapped_untapped_grants() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::saryth_the_vipers_fang());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Untapped → hexproof, not deathtouch.
+    let up = g.computed_permanent(ally).unwrap();
+    assert!(up.keywords.contains(&Keyword::Hexproof));
+    assert!(!up.keywords.contains(&Keyword::Deathtouch));
+    // Tapped → deathtouch, not hexproof.
+    g.battlefield_find_mut(ally).unwrap().tapped = true;
+    let down = g.computed_permanent(ally).unwrap();
+    assert!(down.keywords.contains(&Keyword::Deathtouch));
+    assert!(!down.keywords.contains(&Keyword::Hexproof));
+}
+
+/// Reckless Stormseeker pumps a creature and grants haste at begin of combat.
+#[test]
+fn reckless_stormseeker_begin_combat_pump() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.add_card_to_battlefield(0, catalog::reckless_stormseeker());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(ally))]));
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ally).unwrap();
+    assert_eq!(cp.power, 3, "+1/+0");
+    assert!(cp.keywords.contains(&Keyword::Haste));
+}
+
+/// Tovolar's Huntmaster makes two Wolves on entry; it's Daybound.
+#[test]
+fn tovolars_huntmaster_makes_wolves() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::tovolars_huntmaster());
+    drain_stack(&mut g);
+    let wolves = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Wolf" && c.is_token).count();
+    assert_eq!(wolves, 2, "two 2/2 Wolves");
+    let def = catalog::tovolars_huntmaster();
+    assert!(def.keywords.contains(&Keyword::Daybound));
+    assert_eq!(def.back_face.as_ref().unwrap().name, "Tovolar's Packleader");
+}

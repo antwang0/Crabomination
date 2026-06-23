@@ -269,6 +269,184 @@ pub fn cruel_witness() -> CardDefinition {
     }
 }
 
+/// Saryth, the Viper's Fang — {2}{G}{G} 3/4 Human Warlock. Other tapped
+/// creatures you control have deathtouch; other untapped creatures you control
+/// have hexproof. {1}, {T}: Untap another target creature or land you control.
+pub fn saryth_the_vipers_fang() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility, StaticEffect};
+    let others = |req: SelectionRequirement| {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource)
+                .and(req),
+        )
+    };
+    CardDefinition {
+        name: "Saryth, the Viper's Fang",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other tapped creatures you control have deathtouch.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(SelectionRequirement::Tapped),
+                    keyword: Keyword::Deathtouch,
+                },
+            },
+            StaticAbility {
+                description: "Other untapped creatures you control have hexproof.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(SelectionRequirement::Untapped),
+                    keyword: Keyword::Hexproof,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Untap {
+                what: target_filtered(
+                    SelectionRequirement::ControlledByYou
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(
+                            SelectionRequirement::Creature.or(SelectionRequirement::HasCardType(CardType::Land)),
+                        ),
+                ),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reckless Stormseeker // Storm-Charged Slasher — {2}{R} 2/3 Human Werewolf,
+/// Daybound. At the beginning of combat on your turn, target creature you
+/// control gets +1/+0 and gains haste. Back: 3/4 Werewolf, Nightbound, +2/+0
+/// trample + haste instead.
+pub fn reckless_stormseeker() -> CardDefinition {
+    let begin_combat = |power: i32, kws: Vec<Keyword>| {
+        let mut seq = vec![Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(power),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        }];
+        for kw in kws {
+            seq.push(Effect::GrantKeyword { what: Selector::Target(0), keyword: kw, duration: Duration::EndOfTurn });
+        }
+        TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Seq(seq),
+        }
+    };
+    let slasher = CardDefinition {
+        name: "Storm-Charged Slasher",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Nightbound],
+        triggered_abilities: vec![begin_combat(2, vec![Keyword::Trample, Keyword::Haste])],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Reckless Stormseeker",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Daybound],
+        triggered_abilities: vec![begin_combat(1, vec![Keyword::Haste])],
+        back_face: Some(Box::new(slasher)),
+        ..Default::default()
+    }
+}
+
+/// Tovolar's Huntmaster // Tovolar's Packleader — {4}{G}{G} 6/6 Human Werewolf,
+/// Daybound. ETB create two 2/2 green Wolves. Back: 7/7 Werewolf, Nightbound,
+/// enters-or-attacks two Wolves + {2}{G}{G}: another Wolf/Werewolf you control
+/// fights a creature you don't control.
+pub fn tovolars_huntmaster() -> CardDefinition {
+    use crate::card::{ActivatedAbility, TokenDefinition};
+    use crate::mana::Color;
+    let wolf = || TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        ..Default::default()
+    };
+    let two_wolves = || Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: wolf() };
+    let packleader = CardDefinition {
+        name: "Tovolar's Packleader",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Nightbound],
+        triggered_abilities: vec![
+            etb(two_wolves()),
+            crate::effect::shortcut::on_attack(two_wolves()),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g(), g()]),
+            effect: Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::ControlledByYou
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(
+                            SelectionRequirement::HasCreatureType(CreatureType::Wolf)
+                                .or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf)),
+                        ),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Tovolar's Huntmaster",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Daybound],
+        triggered_abilities: vec![etb(two_wolves())],
+        back_face: Some(Box::new(packleader)),
+        ..Default::default()
+    }
+}
+
 /// Dreadhound — {4}{B}{B} 6/6 Demon Dog. ETB mill three. Whenever a creature
 /// dies or a creature card is put into a graveyard from a library, each
 /// opponent loses 1 life.
