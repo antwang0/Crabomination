@@ -3471,3 +3471,64 @@ fn drumhunter_draws_with_big_creature() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "end-step draw fired");
 }
+
+/// Cleave (CR 702.148) — Dig Up's base mode finds only a basic land; the cleave
+/// alt-cost removes the bracket and finds any card.
+#[test]
+fn cr_702_148_dig_up_cleave_widens_search() {
+    // Base cast: only a basic land is a legal find.
+    let mut g = two_player_game();
+    let nonbasic = g.add_card_to_library(0, catalog::grizzly_bears());
+    let basic = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(basic))]));
+    let dig = g.add_card_to_hand(0, catalog::dig_up());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dig, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("base cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == basic), "basic land tutored to hand");
+    let _ = nonbasic;
+
+    // Cleave cast: a nonland creature card is now a legal find.
+    let mut g = two_player_game();
+    let creature = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(creature))]));
+    let dig = g.add_card_to_hand(0, catalog::dig_up());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: dig, pitch_card: None, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cleave cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == creature), "cleave found a nonland card");
+}
+
+/// Cleave (CR 702.148) — Dread Fugue's base only discards a low-MV nonland; the
+/// cleave alt-cost lets the chooser take any nonland.
+#[test]
+fn cr_702_148_dread_fugue_cleave_widens_discard() {
+    let mut g = two_player_game();
+    // Opponent holds only an expensive nonland card.
+    let big = g.add_card_to_hand(1, catalog::serra_angel()); // MV 5
+    let fugue = g.add_card_to_hand(0, catalog::dread_fugue());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fugue, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("base cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == big), "base mode can't take the MV-5 card");
+
+    // Cleave: now the MV-5 card is a legal pick.
+    let fugue2 = g.add_card_to_hand(0, catalog::dread_fugue());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fugue2, pitch_card: None, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cleave cast");
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == big), "cleave discarded the MV-5 card");
+}
