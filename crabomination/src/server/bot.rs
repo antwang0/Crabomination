@@ -809,6 +809,17 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         // "You may sacrifice/exile this" riders are a clear self-cost.
         Effect::SacrificeSource => true,
         Effect::Exile { what } => hits_self(what),
+        // "You may put this into exile / your graveyard / your library" is a
+        // self-cost too (returning it to *hand* is upside, so that's excluded).
+        Effect::Move { what, to } => {
+            hits_self(what)
+                && matches!(
+                    to,
+                    crate::effect::ZoneDest::Exile
+                        | crate::effect::ZoneDest::Graveyard
+                        | crate::effect::ZoneDest::Library { .. }
+                )
+        }
         Effect::PayOrLoseGame { .. } => true,
         _ => false,
     }
@@ -3293,6 +3304,29 @@ mod tests {
         let id = g.add_card_to_battlefield(0, def);
         assert!(!optional_trigger_beneficial(&g, id, "you may pay"),
             "a MayPay whose body costs the bot 3 life is declined");
+    }
+
+    /// Moving the source to exile/graveyard is a self-cost (decline); returning
+    /// it to hand (Recover-style upside) is accepted.
+    #[test]
+    fn bot_screens_self_move_bodies() {
+        use crate::effect::{PlayerRef, Selector, ZoneDest};
+        let mut g = two_player_game();
+        let exile_self = g.add_card_to_battlefield(
+            0,
+            body_card("ExileSelf", Effect::Move { what: Selector::This, to: ZoneDest::Exile }),
+        );
+        assert!(!optional_trigger_beneficial(&g, exile_self, "you may"),
+            "'you may exile this' reads as a self-cost");
+        let to_hand = g.add_card_to_battlefield(
+            0,
+            body_card("ToHand", Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        );
+        assert!(optional_trigger_beneficial(&g, to_hand, "you may"),
+            "returning self to hand is upside");
     }
 
     fn generic_spell(name: &'static str, cmc: u32) -> CardDefinition {

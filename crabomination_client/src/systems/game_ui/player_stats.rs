@@ -61,6 +61,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
         // parchment green so the public information reads at a glance.
         StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
+        // Speed (CR 702.179 — "Start your engines!") — a Aetherdrift racing
+        // crimson that brightens toward max speed.
+        StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -83,6 +86,7 @@ pub(super) enum StatChipKind {
     NoLifegain,
     Fog,
     TopCard,
+    Speed,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -537,6 +541,10 @@ pub fn update_player_stats_chips(
         if p.energy > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
         }
+        // CR 702.179 speed — surface once "Start your engines!" has started it.
+        if p.speed > 0 {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
+        }
         // Storm / magecraft count — surface once a second spell lands this
         // turn so Storm / prowess / magecraft payoffs can be read at a glance.
         if storm_chip_visible(p.spells_cast_this_turn) {
@@ -819,6 +827,9 @@ pub fn update_opponent_stats_rows(
                 }
                 if p.energy > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
+                }
+                if p.speed > 0 {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Speed, format!("🏁 {}/4", p.speed));
                 }
                 if let Some(cap) = p.draw_cap {
                     spawn_stat_chip(
