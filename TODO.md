@@ -108,6 +108,14 @@ Real cards confirmed absent, deferred for want of a mechanic:
 - **Kaervek, the Punisher / "commit a crime" payoffs** — no crime-tracking event.
 - **Loot, Exuberant Explorer** — dig-6 put-creature-with-MV≤lands needs an
   MV-≤-dynamic-count filter on `LookPickToHand`.
+- **Day/night transition trigger** — no `EventKind` fires when it becomes day
+  or night (Brimstone Vandal's "whenever day becomes night or night becomes day"
+  is unwireable). Add a `GameEvent::DayNightChanged` emitted from the 502.2 turn
+  transition + the day/night-setting effects.
+- **"Shares a card type with the exiled card" trigger** — Cemetery Gatekeeper /
+  Cemetery Protector need a per-source exiled-card-type comparison on a
+  land-played / spell-cast event. Needs a stashed exiled-card reference + a
+  type-overlap predicate.
 
 ## Engine correctness audit — 2026-06-11
 
