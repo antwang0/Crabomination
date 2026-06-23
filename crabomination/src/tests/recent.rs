@@ -44,6 +44,55 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Plumecreed Escort has flash + flying and its ETB grants hexproof.
+#[test]
+fn plumecreed_escort_etb_grants_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let esc = catalog::plumecreed_escort();
+    assert!(esc.keywords.contains(&Keyword::Flash) && esc.keywords.contains(&Keyword::Flying));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&esc.triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof));
+}
+
+/// Overprotect pumps +3/+3 and grants three protective keywords.
+#[test]
+fn overprotect_pumps_and_grants_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::overprotect().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    for kw in [Keyword::Trample, Keyword::Hexproof, Keyword::Indestructible] {
+        assert!(cp.keywords.contains(&kw), "granted {kw:?}");
+    }
+}
+
+/// Banishing Slash destroys a tapped creature and mints a Samurai when you
+/// control an artifact and an enchantment.
+#[test]
+fn banishing_slash_destroys_and_makes_samurai() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    g.add_card_to_battlefield(0, catalog::mind_stone()); // artifact
+    g.add_card_to_battlefield(0, catalog::solemnity()); // non-aura enchantment
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::banishing_slash().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(foe).is_none(), "tapped creature destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Samurai"),
+        "Samurai token created"
+    );
+}
+
 /// Lightshield Parry pumps +2/+2 and offers Cycling {2}.
 #[test]
 fn lightshield_parry_pumps_and_cycles() {

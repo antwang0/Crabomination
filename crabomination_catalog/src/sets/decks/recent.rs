@@ -212,6 +212,107 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Overprotect — {1}{G} Instant. Target creature you control gets +3/+3 and
+/// gains trample, hexproof, and indestructible until end of turn.
+pub fn overprotect() -> CardDefinition {
+    let grant = |kw| Effect::GrantKeyword { what: Selector::Target(0), keyword: kw, duration: Duration::EndOfTurn };
+    CardDefinition {
+        name: "Overprotect",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            grant(Keyword::Trample),
+            grant(Keyword::Hexproof),
+            grant(Keyword::Indestructible),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Plumecreed Escort — {1}{U} 2/1 Bird Scout. Flash, flying. When it enters,
+/// target creature you control gains hexproof until end of turn.
+pub fn plumecreed_escort() -> CardDefinition {
+    CardDefinition {
+        name: "Plumecreed Escort",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword: Keyword::Hexproof,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Banishing Slash — {W}{W} Sorcery. Destroy up to one target artifact,
+/// enchantment, or tapped creature. Then if you control an artifact and an
+/// enchantment, create a 2/2 white Samurai with vigilance.
+pub fn banishing_slash() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Banishing Slash",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
+                effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            },
+            Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::SelectorExists(Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    )),
+                    Predicate::SelectorExists(Selector::EachPermanent(
+                        SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+                    )),
+                ]),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Samurai".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Samurai],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Vigilance],
+                        ..Default::default()
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Marsh Hulk — {4}{B}{B} 4/6 Zombie Ogre. Megamorph {6}{B}.
 pub fn marsh_hulk() -> CardDefinition {
     CardDefinition {
