@@ -4694,3 +4694,28 @@ pub fn bakersbane_duo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Spire Mangler — {2}{B} 2/1 Insect. Flash, flying. When it enters, target
+/// creature you control with flying gets +2/+0 until end of turn.
+pub fn spire_mangler() -> CardDefinition {
+    CardDefinition {
+        name: "Spire Mangler",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}

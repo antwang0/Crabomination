@@ -2714,6 +2714,7 @@ static DECKS: &[Factory] = &[
     super::decks::crocodile_of_the_crossing,
     super::decks::topiary_stomper,
     super::decks::bakersbane_duo,
+    super::decks::spire_mangler,
     super::decks::krydle_of_baldurs_gate,
     super::decks::overprotect,
     super::decks::plumecreed_escort,

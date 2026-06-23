@@ -2855,3 +2855,14 @@ fn bakersbane_duo_makes_food() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"));
 }
+
+/// Spire Mangler pumps a flyer you control on ETB.
+#[test]
+fn spire_mangler_pumps_a_flyer() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 flying
+    g.move_card_to_battlefield_for_test(0, catalog::spire_mangler());
+    drain_stack(&mut g);
+    // Auto-target picks a controlled flyer; total power gain on your flyers is 2.
+    assert_eq!(g.computed_permanent(flyer).map(|c| c.power), Some(6));
+}
