@@ -336,6 +336,9 @@ pub enum CounterType {
     /// creature/planeswalker; when a bounty-countered creature dies, Chevill's
     /// controller draws and gains a life.
     Bounty,
+    /// Oil counter — a generic resource counter on Phyrexian permanents,
+    /// spent by activated abilities (Glistener Seer, Migloz).
+    Oil,
 }
 
 /// Every zone a card can occupy.

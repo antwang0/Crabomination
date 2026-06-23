@@ -1877,3 +1877,85 @@ fn aerie_auxiliary_supports_two() {
         + g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne);
     assert!(total >= 1, "support fired off the ETB trigger");
 }
+
+// ── Recent-set batch 4 ───────────────────────────────────────────────────────
+
+/// Loran's Escape shields a creature and scries.
+#[test]
+fn lorans_escape_shields_and_scries() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::lorans_escape());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert!(c.keywords.contains(&Keyword::Hexproof));
+    assert!(c.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Dauntless Veteran pumps the team when it attacks.
+#[test]
+fn dauntless_veteran_pumps_team_on_attack() {
+    let mut g = two_player_game();
+    let vet = g.add_card_to_battlefield(0, catalog::dauntless_veteran());
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(vet);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: vet, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(buddy).unwrap().power, 3, "team got +1/+1");
+    assert_eq!(g.computed_permanent(vet).unwrap().power, 3, "the veteran too");
+}
+
+/// Spectral Denial soft-counters a spell whose controller can't pay {X}.
+#[test]
+fn spectral_denial_counters_at_x() {
+    let mut g = two_player_game();
+    // Cast Denial with X=2 → counter unless they pay {2}.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1); // bolt only, nothing spare
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast Bolt");
+    g.priority.player_with_priority = 0;
+    let denial = g.add_card_to_hand(0, catalog::spectral_denial());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: denial, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: Some(2),
+    }).expect("cast Denial X=2");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered (couldn't pay {{2}})");
+    assert_eq!(g.players[0].life, 20, "Bolt didn't resolve");
+}
+
+/// Glistener Seer enters with oil counters and spends them to scry.
+#[test]
+fn glistener_seer_oil_scry() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let seer = g.move_card_to_battlefield_for_test(0, catalog::glistener_seer());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(seer).unwrap().counter_count(CounterType::Oil), 3, "entered with 3 oil");
+    g.clear_sickness(seer);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seer, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("remove an oil to scry");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(seer).unwrap().counter_count(CounterType::Oil), 2, "spent one oil");
+    assert!(g.battlefield_find(seer).unwrap().tapped, "tapped for the ability");
+}

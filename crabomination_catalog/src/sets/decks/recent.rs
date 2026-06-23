@@ -3000,3 +3000,106 @@ pub fn aerie_auxiliary() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Loran's Escape — {W} Instant. Target artifact or creature gains hexproof and
+/// indestructible until end of turn. Scry 1.
+pub fn lorans_escape() -> CardDefinition {
+    use crate::card::CardType as CT;
+    CardDefinition {
+        name: "Loran's Escape",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::HasCardType(CT::Artifact)),
+                ),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dauntless Veteran — {1}{W}{W} 2/2 Human Soldier. Whenever it attacks,
+/// creatures you control get +1/+1 until end of turn.
+pub fn dauntless_veteran() -> CardDefinition {
+    CardDefinition {
+        name: "Dauntless Veteran",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spectral Denial — {X}{U} Instant. Costs {1} less for each creature you
+/// control with power 4 or greater. Counter target spell unless its controller
+/// pays {X}.
+pub fn spectral_denial() -> CardDefinition {
+    CardDefinition {
+        name: "Spectral Denial",
+        cost: cost(&[crate::mana::x(), u()]),
+        card_types: vec![CardType::Instant],
+        affinity_filter: Some(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::PowerAtMost(3).negate())
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        effect: Effect::CounterUnlessPaid {
+            what: crate::effect::shortcut::target(),
+            mana_cost: crate::mana::ManaCost::default(),
+            exile: false,
+            extra_generic: Some(Value::XFromCost),
+        },
+        ..Default::default()
+    }
+}
+
+/// Glistener Seer — {U} 0/3 Phyrexian Advisor. Enters with three oil counters.
+/// {T}, Remove an oil counter: scry 1.
+pub fn glistener_seer() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Glistener Seer",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        enters_with_counters: Some((CounterType::Oil, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Oil, 1)),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
