@@ -1288,8 +1288,9 @@ impl GameState {
         if self.day_night == Some(dn) {
             return;
         }
+        let was_transition = self.day_night.is_some();
         self.day_night = Some(dn);
-        events.push(GameEvent::DayNightChanged { day_night: dn });
+        events.push(GameEvent::DayNightChanged { day_night: dn, was_transition });
         // CR 702.146f/g — daybound/nightbound DFCs flip with the day/night
         // cycle: front (daybound) ↔ back (nightbound).
         let want = match dn {

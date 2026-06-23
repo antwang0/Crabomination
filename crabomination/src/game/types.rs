@@ -1375,8 +1375,11 @@ pub enum GameEvent {
     MonarchChanged { player: usize },
     /// CR 700.6 — `player` got the city's blessing (Ascend).
     CityBlessingGained { player: usize },
-    /// CR 731 — the game became day or night.
-    DayNightChanged { day_night: DayNight },
+    /// CR 731 — the game became day or night. `was_transition` is true only
+    /// when flipping between day and night (CR 502.2 "day becomes night or
+    /// night becomes day"), false when establishing day/night from neither —
+    /// so "whenever day becomes night …" triggers fire on the former only.
+    DayNightChanged { day_night: DayNight, was_transition: bool },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },

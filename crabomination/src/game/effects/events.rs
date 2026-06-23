@@ -69,6 +69,9 @@ pub(crate) fn event_matches_spec(
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
         (EventKind::AuraAttached, GameEvent::AuraAttached { .. }) => true,
+        (EventKind::DayNightChanged, GameEvent::DayNightChanged { was_transition, .. }) => {
+            *was_transition
+        }
         _ => false,
     };
     if !kind_ok {

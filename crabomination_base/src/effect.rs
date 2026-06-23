@@ -821,6 +821,13 @@ pub enum Predicate {
     /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
     /// against the topmost matching `StackItem::Spell`'s card definition.
     CastSpellMatches(SelectionRequirement),
+    /// True if the card pointed to by `ctx.trigger_source` (the just-cast
+    /// spell or just-played land) shares at least one card type with the card
+    /// exiled by this source (`exiled_with == ctx.source`). Drives the
+    /// Innistrad "Cemetery" cycle's intervening-`if` — "Whenever a player
+    /// plays a land or casts a spell, if it shares a card type with the
+    /// exiled card, …" (Cemetery Gatekeeper, Cemetery Protector).
+    SharesCardTypeWithExiledBySource,
     /// True if the just-cast spell (via `ctx.trigger_source`) was kicked —
     /// read off the stack instance's `kicked` flag, so cast triggers
     /// ("when you cast this spell, if it was kicked" — Scourge of the
@@ -1324,6 +1331,12 @@ pub enum EventKind {
     /// in the graveyard (Emrakul's "when this is put into a graveyard from
     /// anywhere, its owner shuffles their graveyard into their library").
     PutIntoGraveyard,
+    /// CR 502.2 / 731 — the game's day/night designation flipped ("Whenever
+    /// day becomes night or night becomes day"). Fires once per transition;
+    /// this is a global game event with no player subject, so pair it with
+    /// `EventScope::AnyPlayer`. Matched to `GameEvent::DayNightChanged`.
+    /// Brimstone Vandal listens here.
+    DayNightChanged,
 }
 
 /// Whose events does this trigger listen for?

@@ -630,6 +630,126 @@ pub fn coruscation_mage() -> CardDefinition {
     }
 }
 
+/// Brimstone Vandal — {2}{R} 2/3 Devil. Menace. If it's neither day nor night,
+/// it becomes day as this enters. Whenever day becomes night or night becomes
+/// day, it deals 1 damage to each opponent.
+pub fn brimstone_vandal() -> CardDefinition {
+    CardDefinition {
+        name: "Brimstone Vandal",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::Any(vec![
+                    Predicate::IsDay,
+                    Predicate::IsNight,
+                ]))),
+                then: Box::new(Effect::BecomeDay),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Cemetery Gatekeeper — {1}{R} 2/1 Vampire. First strike. ETB exile a card
+/// from a graveyard. Whenever a player plays a land or casts a spell that
+/// shares a card type with the exiled card, it deals 2 damage to that player.
+pub fn cemetery_gatekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Cemetery Gatekeeper",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![
+            etb(Effect::ExileTaggedWithSource {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(Predicate::SharesCardTypeWithExiledBySource),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(2),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::AnyPlayer)
+                    .with_filter(Predicate::SharesCardTypeWithExiledBySource),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Cemetery Protector — {2}{W}{W} 3/4 Human Soldier. Flash. ETB exile a card
+/// from a graveyard. Whenever you play a land or cast a spell that shares a
+/// card type with the exiled card, create a 1/1 white Human creature token.
+pub fn cemetery_protector() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let human = TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        ..Default::default()
+    };
+    let token_effect = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: human,
+    };
+    CardDefinition {
+        name: "Cemetery Protector",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![
+            etb(Effect::ExileTaggedWithSource {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::SharesCardTypeWithExiledBySource),
+                effect: token_effect.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl)
+                    .with_filter(Predicate::SharesCardTypeWithExiledBySource),
+                effect: token_effect,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Thornplate Intimidator — {3}{B} 4/3 Rat Rogue. Offspring {3}. When it
 /// enters, each opponent loses 3 life unless they sacrifice a nonland permanent
 /// or discard a card. (Modeled as each opponent; printed targets one.)

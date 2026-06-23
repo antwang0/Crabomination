@@ -228,8 +228,15 @@ impl GameState {
                     // CR 502.2 — day/night turn-based check. Runs BEFORE
                     // do_untap so an extra turn (previous active == active)
                     // reads the real previous-turn spell count rather than
-                    // the counter do_untap is about to reset.
-                    self.check_day_night_transition(&mut events);
+                    // the counter do_untap is about to reset. A transition
+                    // here fires "day becomes night …" triggers (Brimstone
+                    // Vandal) — dispatch them before priority is given out.
+                    let mut dn_evs = Vec::new();
+                    self.check_day_night_transition(&mut dn_evs);
+                    if !dn_evs.is_empty() {
+                        self.dispatch_triggers_for_events(&dn_evs);
+                        events.append(&mut dn_evs);
+                    }
                     self.do_untap();
                 }
                 events.push(GameEvent::TurnStarted {

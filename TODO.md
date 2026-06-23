@@ -108,14 +108,16 @@ Real cards confirmed absent, deferred for want of a mechanic:
 - **Kaervek, the Punisher / "commit a crime" payoffs** — no crime-tracking event.
 - **Loot, Exuberant Explorer** — dig-6 put-creature-with-MV≤lands needs an
   MV-≤-dynamic-count filter on `LookPickToHand`.
-- **Day/night transition trigger** — no `EventKind` fires when it becomes day
-  or night (Brimstone Vandal's "whenever day becomes night or night becomes day"
-  is unwireable). Add a `GameEvent::DayNightChanged` emitted from the 502.2 turn
-  transition + the day/night-setting effects.
-- **"Shares a card type with the exiled card" trigger** — Cemetery Gatekeeper /
-  Cemetery Protector need a per-source exiled-card-type comparison on a
-  land-played / spell-cast event. Needs a stashed exiled-card reference + a
-  type-overlap predicate.
+- ✅ **Day/night transition trigger** — `EventKind::DayNightChanged` (matched to
+  `GameEvent::DayNightChanged { was_transition }`, true only on a real day↔night
+  flip, not on establishing day from neither) fires "whenever day becomes night
+  or night becomes day" with `EventScope::AnyPlayer` (Brimstone Vandal).
+- ✅ **"Shares a card type with the exiled card" trigger** —
+  `Predicate::SharesCardTypeWithExiledBySource` compares the just-cast spell /
+  just-played land (via `ctx.trigger_source`) against the card this source
+  exiled (`exiled_with == source`); Cemetery Gatekeeper (ping the player) and
+  Cemetery Protector (mint a Human) ship, splitting the printed "plays a land
+  or casts a spell" into a LandPlayed + SpellCast trigger pair.
 
 ## Engine correctness audit — 2026-06-11
 

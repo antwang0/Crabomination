@@ -1943,7 +1943,7 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::MonarchChanged { player } => GameEventWire::MonarchChanged { player: *player },
             GameEvent::CityBlessingGained { player } => GameEventWire::CityBlessingGained { player: *player },
-            GameEvent::DayNightChanged { day_night } => GameEventWire::DayNightChanged {
+            GameEvent::DayNightChanged { day_night, .. } => GameEventWire::DayNightChanged {
                 is_day: matches!(day_night, crate::game::types::DayNight::Day),
             },
             GameEvent::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {

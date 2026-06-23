@@ -827,6 +827,32 @@ impl GameState {
                     _ => false,
                 })
             }
+            Predicate::SharesCardTypeWithExiledBySource => {
+                let Some(src) = ctx.source else { return false };
+                // Card types of whatever this source exiled (CR — the
+                // "exiled card"). No exiled card → the clause is false.
+                let exiled_types: Vec<CardType> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .flat_map(|c| c.definition.card_types.clone())
+                    .collect();
+                if exiled_types.is_empty() {
+                    return false;
+                }
+                // The triggering card (cast spell on the stack, or the played
+                // land now on the battlefield).
+                let cid = match ctx.trigger_source {
+                    Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
+                    _ => return false,
+                };
+                self.find_card_anywhere(cid).is_some_and(|trig| {
+                    trig.definition
+                        .card_types
+                        .iter()
+                        .any(|t| exiled_types.contains(t))
+                })
+            }
             Predicate::CastSpellWasKicked => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;

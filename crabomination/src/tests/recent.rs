@@ -4109,3 +4109,105 @@ fn cobblebrute_is_5_2() {
     assert_eq!((def.power, def.toughness), (5, 2));
     assert!(def.keywords.is_empty() && def.triggered_abilities.is_empty(), "vanilla");
 }
+
+/// Brimstone Vandal becomes day on entry while it's neither day nor night,
+/// and that establishing (non-transition) does not ping.
+#[test]
+fn brimstone_vandal_etb_becomes_day_without_pinging() {
+    let mut g = two_player_game();
+    assert!(g.day_night.is_none());
+    g.move_card_to_battlefield_for_test(0, catalog::brimstone_vandal());
+    drain_stack(&mut g);
+    assert_eq!(g.day_night, Some(crate::game::types::DayNight::Day));
+    assert_eq!(g.players[1].life, 20, "establishing day is not a transition");
+}
+
+/// Day↔night transitions ping each opponent for 1 (Brimstone Vandal).
+#[test]
+fn brimstone_vandal_pings_on_daynight_transition() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    let mut evs = Vec::new();
+    g.set_day_night(DayNight::Day, &mut evs); // establish day
+    g.add_card_to_battlefield(0, catalog::brimstone_vandal());
+    let before = g.players[1].life;
+    let mut t = Vec::new();
+    g.set_day_night(DayNight::Night, &mut t); // real transition
+    g.dispatch_triggers_for_events(&t);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "day→night pings opponent");
+}
+
+/// Cemetery Gatekeeper exiles a graveyard card on entry, then pings the caster
+/// of a spell that shares a card type with it.
+#[test]
+fn cemetery_gatekeeper_pings_shared_type_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears()); // a creature card
+    let gk = g.move_card_to_battlefield_for_test(0, catalog::cemetery_gatekeeper());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.exiled_with == Some(gk)), "exiled a gy card");
+    // Active player casts a creature spell — shares the Creature type → 2 dmg.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "shared-type spell pings the caster for 2");
+}
+
+/// No ping when the cast spell shares no card type with the exiled card.
+#[test]
+fn cemetery_gatekeeper_no_ping_on_unshared_type() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::lightning_bolt()); // an instant card
+    g.move_card_to_battlefield_for_test(0, catalog::cemetery_gatekeeper());
+    drain_stack(&mut g);
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "creature spell vs exiled instant: no ping");
+}
+
+/// Cemetery Protector mints a Human when you cast a spell sharing a card type
+/// with the exiled card.
+#[test]
+fn cemetery_protector_mints_on_shared_type() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears()); // a creature card
+    g.move_card_to_battlefield_for_test(0, catalog::cemetery_protector());
+    drain_stack(&mut g);
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    // +2: the cast Grizzly Bears resolves AND a Human token is minted.
+    assert_eq!(after, before + 2, "shared-type spell mints a Human token");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0
+        && c.definition.name == "Human" && c.is_token));
+}
+
+/// Cemetery Gatekeeper's land path: playing a land that shares the Land type
+/// with the exiled card pings the player.
+#[test]
+fn cemetery_gatekeeper_pings_on_shared_land() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::forest()); // a land card
+    g.move_card_to_battlefield_for_test(0, catalog::cemetery_gatekeeper());
+    drain_stack(&mut g);
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "land share pings the player who played it");
+}
