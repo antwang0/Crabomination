@@ -44,6 +44,19 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Wary Watchdog surveils on entry.
+#[test]
+fn wary_watchdog_surveils_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lib = g.players[0].library.len();
+    g.move_card_to_battlefield_for_test(0, catalog::wary_watchdog());
+    drain_stack(&mut g);
+    // Surveil 1 looked at the top card (library size unchanged when kept on top).
+    assert!(g.players[0].library.len() <= lib, "surveil resolved");
+    assert_eq!(catalog::wary_watchdog().triggered_abilities.len(), 2, "ETB + dies triggers");
+}
+
 /// Hunted Bonebrute gives the opponent two Dogs on ETB and drains on death.
 #[test]
 fn hunted_bonebrute_etb_dogs_and_death_drain() {

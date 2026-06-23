@@ -212,6 +212,23 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Wary Watchdog — {1}{G} 3/1 Dog. When it enters or dies, surveil 1.
+pub fn wary_watchdog() -> CardDefinition {
+    CardDefinition {
+        name: "Wary Watchdog",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) }),
+            on_dies(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Hunted Bonebrute — {2}{B} 6/2 Skeleton Beast. Menace; when it enters, target
 /// opponent creates two 1/1 white Dog tokens; when it dies, each opponent loses
 /// 3 life. Disguise {1}{B}.
