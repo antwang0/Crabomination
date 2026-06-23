@@ -164,6 +164,8 @@ pub enum CreatureType {
     Coyote,
     // Tarkir: Dragonstorm (Sunpearl Kirin).
     Kirin,
+    // "Spellshaper" — discard-cost spellcaster creatures (Seismic Mage).
+    Spellshaper,
 }
 
 /// Land subtypes (basic land types + others).

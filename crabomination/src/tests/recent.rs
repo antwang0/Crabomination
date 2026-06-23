@@ -2889,3 +2889,295 @@ fn topiary_stomper_needs_seven_lands_to_attack() {
     g.declare_attackers(vec![Attack { attacker: stomper, target: AttackTarget::Player(1) }])
         .expect("seven lands → can attack");
 }
+
+/// Palace Familiar draws a card when it dies.
+#[test]
+fn palace_familiar_dies_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let fam = g.add_card_to_battlefield(0, catalog::palace_familiar());
+    let hand_before = g.players[0].hand.len();
+    g.remove_to_graveyard_with_triggers(fam);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "dies → draw a card");
+}
+
+/// Symbiotic Elf leaves two 1/1 Insects when it dies.
+#[test]
+fn symbiotic_elf_dies_makes_two_insects() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_battlefield(0, catalog::symbiotic_elf());
+    g.remove_to_graveyard_with_triggers(elf);
+    drain_stack(&mut g);
+    let insects = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Insect").count();
+    assert_eq!(insects, 2);
+}
+
+/// Bear's Companion mints a 4/4 Bear on entry.
+#[test]
+fn bears_companion_makes_a_bear() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::bears_companion());
+    drain_stack(&mut g);
+    let bear = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Bear");
+    assert!(bear.is_some_and(|b| b.definition.power == 4 && b.definition.toughness == 4));
+}
+
+/// Grasping Thrull drains each opponent for 2 and gains you 2.
+#[test]
+fn grasping_thrull_drains_and_gains() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    g.move_card_to_battlefield_for_test(0, catalog::grasping_thrull());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "opponent took 2");
+    assert_eq!(g.players[0].life, 22, "you gained 2");
+}
+
+/// Hero of Precinct One makes a 1/1 Human when you cast a multicolored spell.
+#[test]
+fn hero_of_precinct_one_tokens_on_multicolored_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hero_of_precinct_one());
+    let thrull = g.add_card_to_hand(0, catalog::grasping_thrull()); // W/B multicolored
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: thrull,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("multicolored spell castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Human"));
+}
+
+/// Havoc Devils is a 4/3 with trample.
+#[test]
+fn havoc_devils_stats() {
+    let d = catalog::havoc_devils();
+    assert_eq!((d.power, d.toughness), (4, 3));
+    assert!(d.keywords.contains(&Keyword::Trample));
+}
+
+/// Hollow Dogs pumps itself +2/+0 when it attacks.
+#[test]
+fn hollow_dogs_pumps_on_attack() {
+    let mut g = two_player_game();
+    let dogs = g.add_card_to_battlefield(0, catalog::hollow_dogs());
+    g.clear_sickness(dogs);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: dogs, target: AttackTarget::Player(1) }]).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(dogs).map(|c| c.power), Some(5));
+}
+
+/// Argothian Enchantress has shroud and draws on enchantment casts.
+#[test]
+fn argothian_enchantress_draws_on_enchantment_cast() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(0, catalog::argothian_enchantress());
+    assert!(g.battlefield_find(ench).unwrap().definition.keywords.contains(&Keyword::Shroud));
+    g.add_card_to_library(0, catalog::island());
+    let prison = g.add_card_to_hand(0, catalog::ghostly_prison());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: prison,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("enchantment castable");
+    drain_stack(&mut g);
+    // Spent one card (the enchantment) and drew one back from the trigger.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+/// Patrol Hound gains first strike by discarding a card.
+#[test]
+fn patrol_hound_discards_for_first_strike() {
+    let mut g = two_player_game();
+    let hound = g.add_card_to_battlefield(0, catalog::patrol_hound());
+    g.add_card_to_hand(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hound,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("ability activates");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(hound).unwrap().keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Canyon Wildcat can't be blocked while the defender controls a Mountain.
+#[test]
+fn canyon_wildcat_mountainwalk() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::canyon_wildcat());
+    g.clear_sickness(cat);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::mountain());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: cat, target: AttackTarget::Player(1) }]).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.declare_blockers(vec![(blocker, cat)]).is_err(),
+        "mountainwalk: can't be blocked while defender controls a Mountain"
+    );
+}
+
+/// Squirrelanoids is a 1/1 with deathtouch.
+#[test]
+fn squirrelanoids_deathtouch() {
+    let d = catalog::squirrelanoids();
+    assert_eq!((d.power, d.toughness), (1, 1));
+    assert!(d.keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Vile Deacon gets +X/+X on attack where X counts Clerics.
+#[test]
+fn vile_deacon_scales_with_clerics() {
+    let mut g = two_player_game();
+    let deacon = g.add_card_to_battlefield(0, catalog::vile_deacon()); // a Cleric itself
+    g.add_card_to_battlefield(0, catalog::vile_deacon()); // second Cleric
+    g.clear_sickness(deacon);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: deacon, target: AttackTarget::Player(1) }]).unwrap();
+    drain_stack(&mut g);
+    // Base 2 + (2 Clerics) = 4 power.
+    assert_eq!(g.computed_permanent(deacon).map(|c| c.power), Some(4));
+}
+
+/// Mischievous Mystic makes a Faerie when you draw your second card.
+#[test]
+fn mischievous_mystic_tokens_on_second_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mischievous_mystic());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let div = g.add_card_to_hand(0, catalog::divination()); // draw 2
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: div,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Divination castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Faerie"));
+}
+
+/// Dawn's Light Archer has flash and reach.
+#[test]
+fn dawns_light_archer_keywords() {
+    let d = catalog::dawns_light_archer();
+    assert!(d.keywords.contains(&Keyword::Flash) && d.keywords.contains(&Keyword::Reach));
+    assert_eq!((d.power, d.toughness), (4, 2));
+}
+
+/// Plumeveil is a 4/4 with flash, defender, and flying.
+#[test]
+fn plumeveil_keywords() {
+    let d = catalog::plumeveil();
+    assert_eq!((d.power, d.toughness), (4, 4));
+    for kw in [Keyword::Flash, Keyword::Defender, Keyword::Flying] {
+        assert!(d.keywords.contains(&kw));
+    }
+}
+
+/// Rooftop Assassin destroys an opponent's damaged creature on ETB.
+#[test]
+fn rooftop_assassin_destroys_damaged_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().dealt_damage_this_turn = true;
+    g.move_card_to_battlefield_for_test(0, catalog::rooftop_assassin());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "damaged creature destroyed");
+}
+
+/// Spellgorger Barbarian discards at random on ETB and draws when it leaves.
+#[test]
+fn spellgorger_barbarian_etb_discard_and_leaves_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let barb = g.move_card_to_battlefield_for_test(0, catalog::spellgorger_barbarian());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0, "ETB discarded the one card at random");
+    let hand_before = g.players[0].hand.len();
+    g.remove_to_graveyard_with_triggers(barb);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "leaves → draw");
+}
+
+/// Bog Gnarr grows when any player casts a black spell.
+#[test]
+fn bog_gnarr_pumps_on_black_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bog_gnarr());
+    let squirrel = g.add_card_to_hand(0, catalog::squirrelanoids()); // mono-black
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: squirrel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("black spell castable");
+    drain_stack(&mut g);
+    let gnarr = g.battlefield.iter().find(|c| c.definition.name == "Bog Gnarr").unwrap();
+    assert_eq!(g.computed_permanent(gnarr.id).map(|c| c.power), Some(4));
+}
+
+/// Elf Replica sacrifices to destroy an enchantment.
+#[test]
+fn elf_replica_destroys_enchantment() {
+    let mut g = two_player_game();
+    let replica = g.add_card_to_battlefield(0, catalog::elf_replica());
+    let prison = g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: replica,
+        ability_index: 0,
+        target: Some(Target::Permanent(prison)),
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("ability activates");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prison).is_none(), "enchantment destroyed");
+    assert!(g.battlefield_find(replica).is_none(), "Elf Replica sacrificed");
+}
+
+/// Seismic Mage taps and discards to destroy a land.
+#[test]
+fn seismic_mage_destroys_land() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::seismic_mage());
+    g.clear_sickness(mage);
+    g.add_card_to_hand(0, catalog::island());
+    let land = g.add_card_to_battlefield(1, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage,
+        ability_index: 0,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        x_value: None,
+    }).expect("ability activates");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land destroyed");
+}

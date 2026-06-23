@@ -4724,3 +4724,515 @@ pub fn spire_mangler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Palace Familiar — {1}{U} 1/1 Bird. Flying; when it dies, draw a card.
+pub fn palace_familiar() -> CardDefinition {
+    CardDefinition {
+        name: "Palace Familiar",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_dies(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Symbiotic Elf — {3}{G} 2/2 Elf. When it dies, create two 1/1 green Insect
+/// creature tokens.
+pub fn symbiotic_elf() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let insect = TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Symbiotic Elf",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: insect,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bear's Companion — {2}{G}{U}{R} 2/2 Human Warrior. When it enters, create a
+/// 4/4 green Bear creature token.
+pub fn bears_companion() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let bear = TokenDefinition {
+        name: "Bear".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Bear's Companion",
+        cost: cost(&[generic(2), g(), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: bear,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Grasping Thrull — {3}{W}{B} 3/3 Thrull. Flying; when it enters, it deals 2
+/// damage to each opponent and you gain 2 life.
+pub fn grasping_thrull() -> CardDefinition {
+    CardDefinition {
+        name: "Grasping Thrull",
+        cost: cost(&[generic(3), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Hero of Precinct One — {1}{W} 2/2 Human Warrior. Whenever you cast a
+/// multicolored spell, create a 1/1 white Human creature token.
+pub fn hero_of_precinct_one() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let human = TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Hero of Precinct One",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Multicolored,
+                },
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: human,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Havoc Devils — {2}{R}{R} 4/3 Devil with trample.
+pub fn havoc_devils() -> CardDefinition {
+    CardDefinition {
+        name: "Havoc Devils",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Hollow Dogs — {4}{B} 3/3 Phyrexian Zombie Dog. Whenever it attacks, it gets
+/// +2/+0 until end of turn.
+pub fn hollow_dogs() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Hollow Dogs",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Zombie, CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Argothian Enchantress — {1}{G} 0/1 Human Druid. Shroud; whenever you cast an
+/// enchantment spell, draw a card.
+pub fn argothian_enchantress() -> CardDefinition {
+    CardDefinition {
+        name: "Argothian Enchantress",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::Shroud],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCardType(CardType::Enchantment),
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Patrol Hound — {1}{W} 2/2 Dog. "Discard a card: This creature gains first
+/// strike until end of turn."
+pub fn patrol_hound() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Patrol Hound",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Canyon Wildcat — {1}{R} 2/1 Cat with mountainwalk.
+pub fn canyon_wildcat() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Canyon Wildcat",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Landwalk(LandType::Mountain)],
+        ..Default::default()
+    }
+}
+
+/// Squirrelanoids — {B} 1/1 Squirrel Mutant with deathtouch.
+pub fn squirrelanoids() -> CardDefinition {
+    CardDefinition {
+        name: "Squirrelanoids",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Mutant],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Vile Deacon — {2}{B}{B} 2/2 Human Cleric. Whenever it attacks, it gets +X/+X
+/// until end of turn, where X is the number of Clerics on the battlefield.
+pub fn vile_deacon() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    let clerics = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+        filter: SelectionRequirement::HasCreatureType(CreatureType::Cleric),
+    };
+    CardDefinition {
+        name: "Vile Deacon",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: clerics.clone(),
+            toughness: clerics,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mischievous Mystic — {1}{U} 2/1 Human Wizard. Flying; whenever you draw your
+/// second card each turn, create a 1/1 blue Faerie creature token with flying.
+pub fn mischievous_mystic() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let faerie = TokenDefinition {
+        name: "Faerie".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        keywords: vec![Keyword::Flying],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mischievous Mystic",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
+                Predicate::ValueEquals(
+                    Value::CardsDrawnThisTurn(PlayerRef::You),
+                    Value::Const(2),
+                ),
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: faerie,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dawn's Light Archer — {2}{G} 4/2 Elf Archer with flash and reach.
+pub fn dawns_light_archer() -> CardDefinition {
+    CardDefinition {
+        name: "Dawn's Light Archer",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Plumeveil — {W/U}{W/U}{W/U} 4/4 Elemental with flash, defender, and flying.
+pub fn plumeveil() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
+    CardDefinition {
+        name: "Plumeveil",
+        cost: cost(&[
+            hybrid(Color::White, Color::Blue),
+            hybrid(Color::White, Color::Blue),
+            hybrid(Color::White, Color::Blue),
+        ]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flash, Keyword::Defender, Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Rooftop Assassin — {3}{B} 2/2 Vampire Assassin. Flash, flying, lifelink. When
+/// it enters, destroy target creature an opponent controls that was dealt
+/// damage this turn.
+pub fn rooftop_assassin() -> CardDefinition {
+    CardDefinition {
+        name: "Rooftop Assassin",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::DealtDamageThisTurn),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Spellgorger Barbarian — {3}{R} 3/1 Human Nightmare Barbarian. When it enters,
+/// discard a card at random. When it leaves the battlefield, draw a card.
+pub fn spellgorger_barbarian() -> CardDefinition {
+    CardDefinition {
+        name: "Spellgorger Barbarian",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Nightmare,
+                CreatureType::Barbarian,
+            ],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: true,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Bog Gnarr — {4}{G} 2/2 Beast. Whenever a player casts a black spell, it gets
+/// +2/+2 until end of turn.
+pub fn bog_gnarr() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Bog Gnarr",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Black),
+                },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elf Replica — {3} 2/2 artifact Elf. "{1}{G}, Sacrifice this creature:
+/// Destroy target enchantment."
+pub fn elf_replica() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Elf Replica",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::HasCardType(CardType::Enchantment)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seismic Mage — {3}{R} 1/1 Human Spellshaper. "{2}{R}, {T}, Discard a card:
+/// Destroy target land."
+pub fn seismic_mage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Seismic Mage",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Spellshaper],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            tap_cost: true,
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Land),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
