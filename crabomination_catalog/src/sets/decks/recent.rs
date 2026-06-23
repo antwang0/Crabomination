@@ -212,6 +212,92 @@ pub fn krydle_of_baldurs_gate() -> CardDefinition {
     }
 }
 
+/// Thornplate Intimidator — {3}{B} 4/3 Rat Rogue. Offspring {3}. When it
+/// enters, each opponent loses 3 life unless they sacrifice a nonland permanent
+/// or discard a card. (Modeled as each opponent; printed targets one.)
+pub fn thornplate_intimidator() -> CardDefinition {
+    CardDefinition {
+        name: "Thornplate Intimidator",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Offspring(cost(&[generic(3)]))],
+        triggered_abilities: vec![etb(Effect::Punisher {
+            chooser: Selector::Player(PlayerRef::EachOpponent),
+            options: vec![
+                Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::You),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Nonland,
+                },
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ],
+            otherwise: Box::new(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Repeating Barrage — {1}{R}{R} Sorcery. Deals 3 damage to any target. Raid —
+/// {3}{R}{R}: Return this from your graveyard to your hand if you attacked.
+pub fn repeating_barrage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::{deal, target_any};
+    CardDefinition {
+        name: "Repeating Barrage",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: deal(3, target_any()),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r(), r()]),
+            from_graveyard: true,
+            condition: Some(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fountainport Bell — {1} Artifact. When it enters, you may search your library
+/// for a basic land and put it on top. {1}, Sacrifice: Draw a card.
+pub fn fountainport_bell() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Fountainport Bell",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Overprotect — {1}{G} Instant. Target creature you control gets +3/+3 and
 /// gains trample, hexproof, and indestructible until end of turn.
 pub fn overprotect() -> CardDefinition {

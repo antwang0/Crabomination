@@ -44,6 +44,48 @@ fn cackling_slasher_no_death_no_counter() {
     assert_eq!(r.counters.get(&CounterType::PlusOnePlusOne).copied(), None);
 }
 
+/// Thornplate Intimidator's ETB makes the opponent dodge by discarding rather
+/// than losing 3 life.
+#[test]
+fn thornplate_intimidator_punisher_discard() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a card to pitch
+    let trig = catalog::thornplate_intimidator().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    // No nonland permanent to sac, so the opponent discards (no life loss).
+    assert_eq!(g.players[1].life, 20, "dodged the life loss");
+    assert!(g.players[1].hand.is_empty(), "discarded instead");
+}
+
+/// Repeating Barrage burns for 3 and can return itself from the graveyard
+/// after you've attacked.
+#[test]
+fn repeating_barrage_burns_and_raids_back() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::repeating_barrage().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(foe).is_none(), "3 damage kills the 3/3");
+    // The Raid ability is gated on having attacked this turn.
+    let ab = &catalog::repeating_barrage().activated_abilities[0];
+    assert!(ab.from_graveyard && ab.condition.is_some());
+}
+
+/// Fountainport Bell can be sacrificed to draw.
+#[test]
+fn fountainport_bell_sac_draws() {
+    let mut g = two_player_game();
+    let bell = g.add_card_to_battlefield(0, catalog::fountainport_bell());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let ctx = crate::game::effects::EffectContext::for_ability(bell, 0, None);
+    g.resolve_effect(&catalog::fountainport_bell().activated_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
+
 /// Plumecreed Escort has flash + flying and its ETB grants hexproof.
 #[test]
 fn plumecreed_escort_etb_grants_hexproof() {
