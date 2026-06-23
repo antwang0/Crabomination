@@ -1698,6 +1698,92 @@ pub fn markov_purifier() -> CardDefinition {
     }
 }
 
+/// Twins of Maurer Estate — {4}{B} 3/5 Vampire. Madness {2}{B}.
+pub fn twins_of_maurer_estate() -> CardDefinition {
+    CardDefinition {
+        name: "Twins of Maurer Estate",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Madness(cost(&[generic(2), b()]))],
+        ..Default::default()
+    }
+}
+
+/// Estwald Shieldbasher — {3}{W} 4/2 Human Soldier. Attacks → may pay {1} to
+/// gain indestructible until end of turn.
+pub fn estwald_shieldbasher() -> CardDefinition {
+    CardDefinition {
+        name: "Estwald Shieldbasher",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {1} for indestructible until end of turn?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stensia Banquet — {2}{R} Sorcery. Deals damage to target opponent or
+/// planeswalker equal to the number of Vampires you control. Draw a card.
+pub fn stensia_banquet() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Stensia Banquet",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::OpponentPlayer.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sheltering Boughs — {2}{G} Aura. Enchant creature. ETB draw a card.
+/// Enchanted creature gets +1/+3.
+pub fn sheltering_boughs() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Sheltering Boughs",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 3, ..Default::default() }),
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
 /// Vampire's Kiss — {1}{B} Sorcery. Target player loses 2 life and you gain 2
 /// life. Create two Blood tokens.
 pub fn vampires_kiss() -> CardDefinition {

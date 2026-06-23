@@ -5613,3 +5613,57 @@ fn markov_purifier_end_step_draw() {
     g.resolve_effect(&mp.triggered_abilities[0].effect, &ctx).unwrap();
     assert_eq!(g.players[0].hand.len(), hand + 1, "paid two to draw");
 }
+
+/// Twins of Maurer Estate carries Madness.
+#[test]
+fn twins_of_maurer_estate_has_madness() {
+    assert!(catalog::twins_of_maurer_estate().keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
+}
+
+/// Estwald Shieldbasher pays {1} on attack for indestructible.
+#[test]
+fn estwald_shieldbasher_indestructible_for_one() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let es = g.add_card_to_battlefield(0, catalog::estwald_shieldbasher());
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let atk = catalog::estwald_shieldbasher().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(es, 0, None, 0);
+    g.resolve_effect(&atk, &ctx).unwrap();
+    assert!(g.computed_permanent(es).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// Stensia Banquet deals damage equal to your Vampire count and draws.
+#[test]
+fn stensia_banquet_scales_with_vampires() {
+    let mut g = two_player_game();
+    g.players[1].life = 20;
+    g.add_card_to_battlefield(0, catalog::bloodcrazed_socialite()); // Vampire
+    g.add_card_to_battlefield(0, catalog::vampire_spawn()); // Vampire
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&catalog::stensia_banquet().effect, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 18, "2 Vampires → 2 damage");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew");
+}
+
+/// Sheltering Boughs draws on entry and buffs the enchanted creature +1/+3.
+#[test]
+fn sheltering_boughs_draw_and_buff() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::sheltering_boughs());
+    let mut actx = crate::game::effects::EffectContext::for_ability(aura, 0, None);
+    actx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::sheltering_boughs().effect, &actx).unwrap();
+    let hand = g.players[0].hand.len();
+    let etb = catalog::sheltering_boughs().triggered_abilities[0].effect.clone();
+    let tctx = crate::game::effects::EffectContext::for_trigger(aura, 0, None, 0);
+    g.resolve_effect(&etb, &tctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on ETB");
+    assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((3, 5)), "+1/+3");
+}
