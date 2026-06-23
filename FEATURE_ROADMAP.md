@@ -153,7 +153,10 @@ Each unblocks a large swath of cards.
   statics over combat state (`IsAttacking` — Bone-Cairn Butcher's "attacking
   tokens you control have deathtouch"). Remaining: broader "you may play",
   devotion-gated non-type states.
-- 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
+- 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1). Life-loss
+  doubling (`OpponentLifeLossDoubledDuringYourTurn` — Bloodletter) and scoped
+  unpreventable combat damage (`ControllerCreaturesCombatDamageCantBePrevented`
+  — Questing Beast) now ride the `adjust_life` / prevention chokepoints.
 - ✅ **Regeneration shields & "next time" prevention** as proper shields.
 - 🟡 **Damage marking vs. wither/−1−1, lethal/indestructible** audited against
   CR 120/704. (Wither/Infect damage-as-counters already ships; lethal-by-power
