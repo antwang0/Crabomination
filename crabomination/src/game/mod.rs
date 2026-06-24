@@ -37,6 +37,9 @@ mod tests_recent;
 #[path = "../tests/freerunning.rs"]
 mod tests_freerunning;
 #[cfg(test)]
+#[path = "../tests/recent2.rs"]
+mod tests_recent2;
+#[cfg(test)]
 #[path = "../tests/innistrad.rs"]
 mod tests_innistrad;
 #[cfg(test)]

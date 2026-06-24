@@ -2026,6 +2026,23 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
+- ⏳ **Equip-granted *observer* triggered abilities (CR 702.6e).** The death/
+  combat paths already fire an equipped creature's equipment triggers when the
+  *creature itself* is the event subject (Skullclamp self-death, Sword combat
+  damage). An equipment whose trigger watches a *different* object — Tarrian's
+  Soulcleaver "whenever another creature dies, put a +1/+1 counter on equipped
+  creature" — isn't dispatched. Adding `EquipBonus.triggered_abilities` (with
+  `triggers_on_equipment == false`) into the battlefield observer-walk in
+  `dispatch_triggers_for_events` would wire it, but must dedupe against the
+  existing self-death / combat-damage paths to avoid double-firing. Tarrian's
+  Soulcleaver is held out of `decks::recent2` pending this.
+- ⏳ **recent2 card approximations** (`decks::recent2`, all noted in doc
+  comments): March of Otherworldly Light drops the "exile white cards to reduce
+  cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static
+  (not the {T} cast-from-graveyard half); Lord Skitter's Rat-ETB exiles a card
+  rather than "up to one target"; Llanowar Greenwidow drops the Domain cost
+  reduction + the exile-if-it-would-leave rider.
+
 - ⏳ **Haunt / Ripple / Unearth follow-ups** (shipped this push):
   - Haunt's haunted-creature is auto-picked (prefers an opponent's) and the
     exile-haunting is modeled as a `route_to_graveyard` replacement, not a real
