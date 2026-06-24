@@ -366,6 +366,8 @@ static DECKS: &[Factory] = &[
     super::decks::distract_the_guards,
     super::decks::chain_assassination,
     super::decks::restart_sequence,
+    super::decks::escape_detection,
+    super::decks::overpowering_attack,
     super::decks::viewpoint_synchronization,
     super::decks::crumb_and_get_it,
     super::decks::blooming_blast,

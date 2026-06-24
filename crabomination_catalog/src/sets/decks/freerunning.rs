@@ -13,7 +13,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w, Color, ManaCost};
+use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
 
 /// CR 702.179 — the freerunning alternative cost: pay `mana`, legal only if a
 /// creature you control dealt combat damage to a player this turn.
@@ -173,6 +173,57 @@ pub fn restart_sequence() -> CardDefinition {
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         },
         alternative_cost: Some(freerunning(cost(&[generic(1), b()]))),
+        ..Default::default()
+    }
+}
+
+/// Escape Detection — {1}{U}{U} Instant. Return target creature to its owner's
+/// hand, then draw a card. Its freerunning cost is "return a blue creature you
+/// control" (no mana), still gated on the combat-damage condition.
+pub fn escape_detection() -> CardDefinition {
+    CardDefinition {
+        name: "Escape Detection",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        alternative_cost: Some(AlternativeCost {
+            return_to_hand: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Blue)),
+                1,
+            )),
+            condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn { who: PlayerRef::You }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Overpowering Attack — {3}{R}{R} Sorcery. Freerunning {2}{R}. Untap all
+/// creatures you control that attacked this turn; then take an additional
+/// combat phase followed by an additional main phase.
+pub fn overpowering_attack() -> CardDefinition {
+    CardDefinition {
+        name: "Overpowering Attack",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::AttackedThisTurn),
+                ),
+                up_to: None,
+            },
+            Effect::AdditionalCombatPhaseAfterMain { count: Value::Const(1) },
+        ]),
+        alternative_cost: Some(freerunning(cost(&[generic(2), r()]))),
         ..Default::default()
     }
 }

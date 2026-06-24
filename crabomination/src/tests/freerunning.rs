@@ -166,6 +166,49 @@ fn viewpoint_synchronization_fetches_basics() {
     assert_eq!(g.players[0].hand.len(), hand_before + 3);
 }
 
+/// Escape Detection bounces a creature and cantrips.
+#[test]
+fn escape_detection_bounces_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::escape_detection());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Escape Detection");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "bounced to owner's hand");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "cantrip drew (net of the cast)");
+}
+
+/// Overpowering Attack untaps attackers and grants an extra combat phase.
+#[test]
+fn overpowering_attack_untaps_attackers() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(g.battlefield_find(atk).unwrap().tapped, "attacker is tapped after combat");
+    let id = g.add_card_to_hand(0, catalog::overpowering_attack());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Overpowering Attack");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(atk).unwrap().tapped, "attacker untapped");
+}
+
 /// Restart Sequence reanimates a creature card from your graveyard.
 #[test]
 fn restart_sequence_reanimates() {

@@ -1850,7 +1850,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   damage→token scaled by `Value::TriggerEventAmount` (Quartzwood Crasher,
   `DealsCombatDamageToPlayer`; CR 510.2/119.3).
 - ✅ CR 114 — Emblems
-- ✅ CR 702.179 — Freerunning. Alt cost gated on `Predicate::DealtCombatDamageToPlayerThisTurn` (`Player.dealt_combat_damage_to_player_this_turn`, set in `fire_combat_damage_to_player_triggers`). ACR batch in `decks::freerunning` (Brotherhood Ambushers, Merciless Harlequin, Achilles Davenport, Eagle Vision, Distract the Guards, Chain Assassination, Restart Sequence, Viewpoint Synchronization). The "with an Assassin or commander" sub-clause is approximated as "with any creature." ⏳ remaining cards: Petty Larceny, Monastery Raid (Freerunning {X}), Overpowering Attack, Escape Detection.
+- ✅ CR 702.179 — Freerunning. Alt cost gated on `Predicate::DealtCombatDamageToPlayerThisTurn` (`Player.dealt_combat_damage_to_player_this_turn`, set in `fire_combat_damage_to_player_triggers`). ACR batch in `decks::freerunning` (Brotherhood Ambushers, Merciless Harlequin, Achilles Davenport, Eagle Vision, Distract the Guards, Chain Assassination, Restart Sequence, Viewpoint Synchronization, Escape Detection, Overpowering Attack). The "with an Assassin or commander" sub-clause is approximated as "with any creature." ⏳ remaining cards: Petty Larceny (exile-and-play-from-exile + any-color), Monastery Raid (Freerunning {X} + was-freerun provenance rider).
 - ✅ CR 712 — Transforming Permanents
 - 🟡 CR 708 — Face-Down Permanents
 - ✅ CR 702.146 — Daybound/Nightbound
