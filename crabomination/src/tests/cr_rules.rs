@@ -15,7 +15,8 @@
 //! (CR 120.6), "up to N target" spells accepting fewer targets
 //! (CR 601.2c), scoped unpreventable combat damage (CR 615.12 — Questing
 //! Beast vs. fog), the stun-counter untap replacement (CR 122.1c),
-//! Cycling (CR 702.29), Cleave bracket-removal (CR 702.149), and reflexive
+//! Cycling (CR 702.29), Cleave bracket-removal (CR 702.148), Training
+//! (CR 702.149), Exploit payoffs (CR 702.110), and reflexive
 //! sacrifice costs (CR 701.16 — `Effect::MaySacrifice`).
 
 use crate::catalog;
@@ -4113,13 +4114,13 @@ fn cr_701_56_time_travel_advances_own_suspended_card() {
     assert_eq!(after, 4, "one time counter removed");
 }
 
-// ── CR 702.149 — Cleave ──────────────────────────────────────────────────────
+// ── CR 702.148 — Cleave ──────────────────────────────────────────────────────
 
 /// Casting Path of Peril normally destroys only creatures of mana value 2 or
 /// less; casting it for its cleave cost removes the bracketed clause and wipes
 /// every creature (the bracket-removal is the broader `effect_override`).
 #[test]
-fn cr_702_149_cleave_removes_bracketed_clause() {
+fn cr_702_148_cleave_removes_bracketed_clause() {
     // Normal cast: a 5/5 survives.
     let mut g = two_player_game();
     let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
@@ -4273,4 +4274,99 @@ fn cr_702_41_affinity_for_spirits_reduces_cost() {
     g.add_card_to_battlefield(0, catalog::millicent_restless_revenant()); // a Spirit
     g.add_card_to_battlefield(0, catalog::millicent_restless_revenant());
     assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "two Spirits → 2 generic off");
+}
+
+// ── CR 702.149 — Training ────────────────────────────────────────────────────
+
+/// CR 702.149a — "Whenever this creature attacks with another creature with
+/// greater power, put a +1/+1 counter on this creature." Rural Recruit (1/1)
+/// grows when it attacks beside a bigger creature, and not when alone.
+#[test]
+fn cr_702_149_training_grows_beside_a_bigger_attacker() {
+    let mut g = two_player_game();
+    let recruit = g.add_card_to_battlefield(0, catalog::rural_recruit()); // 1/1 trainer
+    let big = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    g.clear_sickness(recruit);
+    g.clear_sickness(big);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: recruit, target: AttackTarget::Player(1) },
+        Attack { attacker: big, target: AttackTarget::Player(1) },
+    ]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(recruit).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "training fired beside a bigger attacker",
+    );
+}
+
+/// CR 702.149a — a lone training attacker (no bigger ally attacking) gets no
+/// counter.
+#[test]
+fn cr_702_149_training_silent_when_alone() {
+    let mut g = two_player_game();
+    let recruit = g.add_card_to_battlefield(0, catalog::rural_recruit());
+    g.clear_sickness(recruit);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: recruit,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(recruit).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        None,
+        "no bigger ally → no training counter",
+    );
+}
+
+// ── CR 702.110 — Exploit ─────────────────────────────────────────────────────
+
+/// CR 702.110b/c — Exploit lets the creature be sacrificed on entry; its
+/// "when this exploits a creature" payoff then resolves. Mindleech Ghoul makes
+/// each opponent exile a card from hand.
+#[test]
+fn cr_702_110_exploit_payoff_fires_on_sacrifice() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // accept exploit
+    let opp_hand = g.players[1].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::mindleech_ghoul());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "opponent exiled a card from hand");
+}
+
+// ── CR 702.147 — Decayed (attack-sacrifice half) ─────────────────────────────
+
+/// CR 702.147a — "When it attacks, sacrifice it at end of combat." A decayed
+/// Zombie that attacks is gone by the post-combat main phase.
+#[test]
+fn cr_702_147_decayed_attacker_sacrificed_at_end_of_combat() {
+    let mut g = two_player_game();
+    let proc = g.add_card_to_battlefield(0, catalog::ghoulish_procession());
+    let trig = catalog::ghoulish_procession().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(proc, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let zombie = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).unwrap();
+    g.clear_sickness(zombie);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: zombie,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(zombie).is_none(), "decayed attacker sacrificed at end of combat");
 }
