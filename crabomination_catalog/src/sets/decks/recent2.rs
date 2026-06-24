@@ -473,6 +473,110 @@ pub fn valgavoths_faithful() -> CardDefinition {
     }
 }
 
+/// Charforger — {1}{B}{R} 2/3 Phyrexian Beast. ETB create a 1/1 red Phyrexian
+/// Goblin. Whenever another creature you control dies, put a +1/+1 counter on
+/// it. (The "or artifact" half of the death watch is dropped.)
+pub fn charforger() -> CardDefinition {
+    let goblin = TokenDefinition {
+        name: "Phyrexian Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Charforger",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: goblin }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Voracious Vermin — {2}{B} 2/1 Rat. ETB create a 1/1 black Rat that can't
+/// block. Whenever another creature you control dies, put a +1/+1 counter on it.
+pub fn voracious_vermin() -> CardDefinition {
+    let rat = TokenDefinition {
+        name: "Rat".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        keywords: vec![Keyword::CantBlock],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Voracious Vermin",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: rat }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mocking Sprite — {2}{U} 2/1 Faerie Rogue with flying. Instant and sorcery
+/// spells you cast cost {1} less.
+pub fn mocking_sprite() -> CardDefinition {
+    CardDefinition {
+        name: "Mocking Sprite",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::Or(
+                    Box::new(SelectionRequirement::HasCardType(CardType::Instant)),
+                    Box::new(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Lord Skitter, Sewer King — {2}{B} 3/3 Legendary Rat Noble. Whenever another
 /// Rat you control enters, exile a card from an opponent's graveyard. At the
 /// beginning of combat on your turn, create a 1/1 black Rat that can't block.

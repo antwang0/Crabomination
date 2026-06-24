@@ -1,6 +1,6 @@
 //! Functionality tests for the `catalog::sets::decks::recent2` batch.
 
-use crate::card::{CreatureType, Keyword};
+use crate::card::{CounterType, CreatureType, Keyword, StaticEffect};
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget, TurnStep};
 use crate::game::*;
@@ -296,6 +296,70 @@ fn valgavoths_faithful_reanimates() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(faithful).is_none(), "Faithful sacrificed");
     assert!(g.battlefield_find(dead).is_some(), "Serra Angel reanimated");
+}
+
+/// Charforger makes a Goblin on ETB and grows when another of your creatures dies.
+#[test]
+fn charforger_etb_token_and_death_growth() {
+    let mut g = two_player_game();
+    let charforger = g.move_card_to_battlefield_for_test(0, catalog::charforger());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Phyrexian Goblin"));
+    // Kill another creature you control via lethal damage so the death goes
+    // through the SBA + observer-trigger dispatch (not the self-source helper).
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(fodder)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt fodder");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(charforger).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "grew when another creature you control died",
+    );
+}
+
+/// Voracious Vermin makes a Rat on ETB.
+#[test]
+fn voracious_vermin_makes_a_rat() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::voracious_vermin());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Rat)));
+}
+
+/// Mocking Sprite reduces your instant/sorcery costs by {1}.
+#[test]
+fn mocking_sprite_discounts_instants() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mocking_sprite());
+    // Lightning Bolt {R} would normally need {R}; with the discount a {1}{R}
+    // instant should be castable off two mana. Use a {1}{R} instant: Flame Lash
+    // is {3}{R}; instead verify the static is wired and matches instants.
+    let d = catalog::mocking_sprite();
+    assert!(matches!(d.static_abilities[0].effect, StaticEffect::CostReduction { amount: 1, .. }));
+    // Functional check: a {1}{U} instant (Disdainful Stroke) is castable for {U}.
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    let spell = g.add_card_to_hand(1, catalog::serra_angel());
+    g.players[1].mana_pool.add(Color::White, 2);
+    g.players[1].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts");
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    let ds = g.add_card_to_hand(0, catalog::disdainful_stroke());
+    g.players[0].mana_pool.add(Color::Blue, 1); // only {U}, discount covers the {1}
+    g.perform_action(GameAction::CastSpell {
+        card_id: ds, target: Some(Target::Permanent(spell)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Disdainful Stroke castable for {U} under Mocking Sprite");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_none(), "countered");
 }
 
 /// Lord Skitter makes a Rat at the beginning of combat on your turn.
