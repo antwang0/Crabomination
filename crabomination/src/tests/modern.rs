@@ -48500,7 +48500,7 @@ fn disturb_casts_back_face_from_graveyard() {
     let id = g.add_card_to_graveyard(0, catalog::baithook_angler());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastDisturb { card_id: id }).expect("disturb");
+    g.perform_action(GameAction::CastDisturb { card_id: id, target: None, additional_targets: vec![] }).expect("disturb");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).expect("on battlefield");
     assert_eq!(c.definition.name, "Hook-Haunt Drifter");
@@ -48517,7 +48517,7 @@ fn disturb_back_face_exiles_instead_of_dying() {
     let id = g.add_card_to_graveyard(0, catalog::baithook_angler());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastDisturb { card_id: id }).expect("disturb");
+    g.perform_action(GameAction::CastDisturb { card_id: id, target: None, additional_targets: vec![] }).expect("disturb");
     drain_stack(&mut g);
     g.remove_from_battlefield_to_graveyard_raw(id);
     assert!(g.exile.iter().any(|c| c.id == id), "exiled instead");
@@ -48529,11 +48529,11 @@ fn disturb_back_face_exiles_instead_of_dying() {
 fn disturb_requires_graveyard_and_cost() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::beloved_beggar());
-    assert!(g.perform_action(GameAction::CastDisturb { card_id: id }).is_err(),
+    assert!(g.perform_action(GameAction::CastDisturb { card_id: id, target: None, additional_targets: vec![] }).is_err(),
         "hand card can't be disturb-cast");
     let gy = g.add_card_to_graveyard(0, catalog::beloved_beggar());
     // no mana
-    assert!(g.perform_action(GameAction::CastDisturb { card_id: gy }).is_err());
+    assert!(g.perform_action(GameAction::CastDisturb { card_id: gy, target: None, additional_targets: vec![] }).is_err());
 }
 
 /// Lunarch Veteran's front face gains 1 on each other creature ETB.
@@ -48781,7 +48781,7 @@ fn bot_offers_disturb_recast() {
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     let action = RandomBot::new().next_action(&g, 0);
-    assert!(matches!(action, Some(GameAction::CastDisturb { card_id }) if card_id == id),
+    assert!(matches!(action, Some(GameAction::CastDisturb { card_id, .. }) if card_id == id),
         "bot disturb-casts Baithook Angler: {action:?}");
 }
 

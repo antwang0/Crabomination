@@ -1591,9 +1591,25 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             }
         }
         if c.definition.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_))) {
-            let action = GameAction::CastDisturb { card_id: c.id };
-            if state.would_accept(action.clone()) {
-                castable.push(action);
+            // The back face goes on the stack; an Aura back needs an enchant
+            // target (creature backs need none).
+            let back = c.definition.back_face.as_deref();
+            let (target, additional_targets) = match back {
+                Some(b) if b.effect.requires_target() => {
+                    let (t, extras) =
+                        state.auto_targets_for_effect_all_slots(&b.effect, seat, None);
+                    (t, extras)
+                }
+                _ => (None, vec![]),
+            };
+            let needs_target = back.is_some_and(|b| b.effect.requires_target());
+            if !(needs_target && target.is_none()) {
+                let action = GameAction::CastDisturb {
+                    card_id: c.id, target, additional_targets,
+                };
+                if state.would_accept(action.clone()) {
+                    castable.push(action);
+                }
             }
         }
         // Mayhem (CR 702.187): if the card was discarded this turn and has a

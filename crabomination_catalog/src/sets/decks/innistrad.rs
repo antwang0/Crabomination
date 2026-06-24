@@ -4,13 +4,497 @@
 //! functionality test in `crabomination/src/tests/innistrad.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes,
-    TokenDefinition, TriggeredAbility, Value, WardCost,
+    ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
+    CreatureType, Effect, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
+    Predicate, Selector, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    WardCost,
 };
-use crate::effect::shortcut::{etb, on_dies, on_other_dies, target_filtered};
+use crate::effect::shortcut::{etb, magecraft_self_pump, on_attack, on_dies, on_other_dies, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
+
+// ── MID/VOW Daybound werewolf DFCs, disturb spirits, and supporting spells ───
+// Werewolf fronts carry `Keyword::Daybound`; the engine transforms them to
+// their `Keyword::Nightbound` back face when it becomes night (CR 702.146).
+// Disturb cards (`Keyword::Disturb`) cast their back face from the graveyard;
+// when the back is an Aura it's cast targeting a creature (engine threads the
+// target through `GameAction::CastDisturb`).
+
+/// Helper: a Daybound/Nightbound werewolf DFC built from front/back specs that
+/// differ only in stats + keywords + triggers (the common MID/VOW shape).
+#[allow(clippy::too_many_arguments)] // a card-shape builder; each arg is a printed face stat
+fn werewolf_dfc(
+    front_name: &'static str,
+    front_cost: crate::mana::ManaCost,
+    front_types: Vec<CreatureType>,
+    front_pt: (i32, i32),
+    front_kw: Vec<Keyword>,
+    front_triggers: Vec<TriggeredAbility>,
+    back_name: &'static str,
+    back_pt: (i32, i32),
+    back_kw: Vec<Keyword>,
+    back_triggers: Vec<TriggeredAbility>,
+) -> CardDefinition {
+    let mut back_keywords = back_kw;
+    back_keywords.push(Keyword::Nightbound);
+    let back = CardDefinition {
+        name: back_name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: back_pt.0,
+        toughness: back_pt.1,
+        keywords: back_keywords,
+        triggered_abilities: back_triggers,
+        ..Default::default()
+    };
+    let mut front_keywords = front_kw;
+    front_keywords.push(Keyword::Daybound);
+    CardDefinition {
+        name: front_name,
+        cost: front_cost,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: front_types, ..Default::default() },
+        power: front_pt.0,
+        toughness: front_pt.1,
+        keywords: front_keywords,
+        triggered_abilities: front_triggers,
+        back_face: Some(Box::new(back)),
+        ..Default::default()
+    }
+}
+
+/// Helper: a disturb DFC whose back face is an Aura granting `bonus` to the
+/// enchanted creature (`Effect::Attach` provides the enchant target slot).
+fn disturb_aura_dfc(
+    front: CardDefinition,
+    disturb_cost: crate::mana::ManaCost,
+    back_name: &'static str,
+    bonus: EquipBonus,
+) -> CardDefinition {
+    let aura = CardDefinition {
+        name: back_name,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(bonus),
+        ..Default::default()
+    };
+    let mut front = front;
+    front.keywords.push(Keyword::Disturb(disturb_cost));
+    front.back_face = Some(Box::new(aura));
+    front
+}
+
+/// Helper: "Whenever this creature deals combat damage to a player, `effect`."
+fn on_combat_damage_to_player(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect,
+    }
+}
+
+/// Suspicious Stowaway // Seafaring Werewolf — {1}{U} 1/1 unblockable Human
+/// Rogue Werewolf. Combat damage → loot. Back: 2/1, combat damage → draw.
+pub fn suspicious_stowaway() -> CardDefinition {
+    werewolf_dfc(
+        "Suspicious Stowaway",
+        cost(&[generic(1), u()]),
+        vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Werewolf],
+        (1, 1),
+        vec![Keyword::Unblockable],
+        vec![on_combat_damage_to_player(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]))],
+        "Seafaring Werewolf",
+        (2, 1),
+        vec![Keyword::Unblockable],
+        vec![on_combat_damage_to_player(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+    )
+}
+
+/// Tireless Hauler // Dire-Strain Brawler — {4}{G} 4/5 vigilant Werewolf.
+/// Back: 6/6 vigilance.
+pub fn tireless_hauler() -> CardDefinition {
+    werewolf_dfc(
+        "Tireless Hauler",
+        cost(&[generic(4), g()]),
+        vec![CreatureType::Human, CreatureType::Werewolf],
+        (4, 5),
+        vec![Keyword::Vigilance],
+        vec![],
+        "Dire-Strain Brawler",
+        (6, 6),
+        vec![Keyword::Vigilance],
+        vec![],
+    )
+}
+
+/// Bird Admirer // Wing Shredder — {2}{G} 1/4 reach Werewolf. Back: 3/5 reach.
+pub fn bird_admirer() -> CardDefinition {
+    werewolf_dfc(
+        "Bird Admirer",
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Human, CreatureType::Archer, CreatureType::Werewolf],
+        (1, 4),
+        vec![Keyword::Reach],
+        vec![],
+        "Wing Shredder",
+        (3, 5),
+        vec![Keyword::Reach],
+        vec![],
+    )
+}
+
+/// Hookhand Mariner // Riphook Raider — {3}{G} 4/4 Werewolf. Back: 6/4 that
+/// can't be blocked by creatures with power 2 or less.
+pub fn hookhand_mariner() -> CardDefinition {
+    werewolf_dfc(
+        "Hookhand Mariner",
+        cost(&[generic(3), g()]),
+        vec![CreatureType::Human, CreatureType::Werewolf],
+        (4, 4),
+        vec![],
+        vec![],
+        "Riphook Raider",
+        (6, 4),
+        vec![Keyword::CantBeBlockedByPowerAtMost(2)],
+        vec![],
+    )
+}
+
+/// Fearful Villager // Fearsome Werewolf — {2}{R} 2/3 menace Werewolf.
+/// Back: 4/3 menace.
+pub fn fearful_villager() -> CardDefinition {
+    werewolf_dfc(
+        "Fearful Villager",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Human, CreatureType::Werewolf],
+        (2, 3),
+        vec![Keyword::Menace],
+        vec![],
+        "Fearsome Werewolf",
+        (4, 3),
+        vec![Keyword::Menace],
+        vec![],
+    )
+}
+
+/// Lambholt Raconteur // Lambholt Ravager — {3}{R} 2/4 Werewolf. Noncreature
+/// cast → 1 damage to each opponent. Back: 4/4, deals 2 instead.
+pub fn lambholt_raconteur() -> CardDefinition {
+    let noncreature_ping = |n: i32| TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+        effect: Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(n),
+        },
+    };
+    werewolf_dfc(
+        "Lambholt Raconteur",
+        cost(&[generic(3), r()]),
+        vec![CreatureType::Human, CreatureType::Werewolf],
+        (2, 4),
+        vec![],
+        vec![noncreature_ping(1)],
+        "Lambholt Ravager",
+        (4, 4),
+        vec![],
+        vec![noncreature_ping(2)],
+    )
+}
+
+/// Spellrune Painter // Spellrune Howler — {2}{R} 2/3 Werewolf. Instant/sorcery
+/// cast → +1/+1 until EOT. Back: 3/4, +2/+2 instead.
+pub fn spellrune_painter() -> CardDefinition {
+    werewolf_dfc(
+        "Spellrune Painter",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Human, CreatureType::Shaman, CreatureType::Werewolf],
+        (2, 3),
+        vec![],
+        vec![magecraft_self_pump(1, 1)],
+        "Spellrune Howler",
+        (3, 4),
+        vec![],
+        vec![magecraft_self_pump(2, 2)],
+    )
+}
+
+/// Wolfkin Outcast // Wedding Crasher — {5}{G} 5/4 Werewolf; costs {2} less if
+/// you control a Wolf or Werewolf. Back: 6/5; a Wolf/Werewolf you control
+/// dying → draw a card.
+pub fn wolfkin_outcast() -> CardDefinition {
+    let wolf_or_werewolf =
+        SelectionRequirement::HasCreatureType(CreatureType::Wolf).or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf));
+    let mut card = werewolf_dfc(
+        "Wolfkin Outcast",
+        cost(&[generic(5), g()]),
+        vec![CreatureType::Human, CreatureType::Werewolf],
+        (5, 4),
+        vec![],
+        vec![],
+        "Wedding Crasher",
+        (6, 5),
+        vec![],
+        // "this creature or another Wolf/Werewolf you control dies" — modeled
+        // as the "another of yours" leave-trigger (the self case is rare).
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: wolf_or_werewolf.clone(),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+    );
+    card.self_cost_reduction_if_control = Some((wolf_or_werewolf, 2));
+    card
+}
+
+/// Galedrifter // Waildrifter — {3}{U} 3/2 flying Hippogriff. Disturb {4}{U}
+/// into a 2/2 flying Hippogriff Spirit.
+pub fn galedrifter() -> CardDefinition {
+    let waildrifter = CardDefinition {
+        name: "Waildrifter",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hippogriff, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Galedrifter",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hippogriff], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Disturb(cost(&[generic(4), u()]))],
+        back_face: Some(Box::new(waildrifter)),
+        ..Default::default()
+    }
+}
+
+/// Kindly Ancestor // Ancestor's Embrace — {2}{W} 2/3 lifelink Spirit. Disturb
+/// {1}{W} into an Aura granting lifelink.
+pub fn kindly_ancestor() -> CardDefinition {
+    let front = CardDefinition {
+        name: "Kindly Ancestor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        ..Default::default()
+    };
+    disturb_aura_dfc(
+        front,
+        cost(&[generic(1), w()]),
+        "Ancestor's Embrace",
+        EquipBonus { keywords: vec![Keyword::Lifelink], ..Default::default() },
+    )
+}
+
+/// Twinblade Geist // Twinblade Invocation — {1}{W} 1/1 double strike Spirit
+/// Warrior. Disturb {2}{W} into an Aura granting double strike.
+pub fn twinblade_geist() -> CardDefinition {
+    let front = CardDefinition {
+        name: "Twinblade Geist",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike],
+        ..Default::default()
+    };
+    disturb_aura_dfc(
+        front,
+        cost(&[generic(2), w()]),
+        "Twinblade Invocation",
+        EquipBonus { keywords: vec![Keyword::DoubleStrike], ..Default::default() },
+    )
+}
+
+/// Mischievous Catgeist // Catlike Curiosity — {1}{U} 1/1 Cat Spirit; combat
+/// damage → draw. Disturb {2}{U} into an Aura granting that combat-damage draw.
+pub fn mischievous_catgeist() -> CardDefinition {
+    let front = CardDefinition {
+        name: "Mischievous Catgeist",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_combat_damage_to_player(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    };
+    disturb_aura_dfc(
+        front,
+        cost(&[generic(2), u()]),
+        "Catlike Curiosity",
+        EquipBonus {
+            triggered_abilities: vec![on_combat_damage_to_player(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            })],
+            ..Default::default()
+        },
+    )
+}
+
+/// Olivia's Midnight Ambush — {1}{B} Instant. Target creature gets -2/-2, or
+/// -13/-13 if it's night.
+pub fn olivias_midnight_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Olivia's Midnight Ambush",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::IsNight,
+            then: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-13),
+                toughness: Value::Const(-13),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Moonrager's Slash — {2}{R} Instant; costs {2} less if it's night. Deal 3
+/// damage to any target.
+pub fn moonragers_slash() -> CardDefinition {
+    CardDefinition {
+        name: "Moonrager's Slash",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_night: Some(2),
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lunar Rejection — {1}{U} Instant. Return target Wolf or Werewolf to its
+/// owner's hand, then draw. Cleave {3}{U} — return any creature instead.
+pub fn lunar_rejection() -> CardDefinition {
+    let wolf_or_werewolf =
+        SelectionRequirement::HasCreatureType(CreatureType::Wolf).or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf));
+    let bounce_and_draw = |filter: SelectionRequirement| {
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(filter),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ])
+    };
+    CardDefinition {
+        name: "Lunar Rejection",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: bounce_and_draw(wolf_or_werewolf),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(3), u()]),
+            effect_override: Some(bounce_and_draw(SelectionRequirement::Creature)),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Shipwreck Sifters — {1}{U} 1/2 Spirit. ETB loot. Discarding a Spirit card
+/// or a card with disturb → +1/+1 counter.
+pub fn shipwreck_sifters() -> CardDefinition {
+    CardDefinition {
+        name: "Shipwreck Sifters",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                            .or(SelectionRequirement::HasDisturb),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gryffwing Cavalry — {3}{W} 2/2 flying Knight with Training. When it attacks,
+/// you may pay {1}{W}; if you do, target creature can't block this turn.
+pub fn gryffwing_cavalry() -> CardDefinition {
+    CardDefinition {
+        name: "Gryffwing Cavalry",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::training(), on_attack(Effect::MayPay {
+            description: "Pay {1}{W}: target creature can't block this turn".into(),
+            mana_cost: cost(&[generic(1), w()]),
+            body: Box::new(Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            }),
+            else_: None,
+        })],
+        ..Default::default()
+    }
+}
 
 // ── token helpers ──────────────────────────────────────────────────────────
 
@@ -1926,6 +2410,87 @@ pub fn rot_tide_gargantua() -> CardDefinition {
             count: Value::Const(1),
             filter: SelectionRequirement::Creature,
         })],
+        ..Default::default()
+    }
+}
+
+/// Weary Prisoner // Wrathful Jailbreaker — {3}{R} 2/6 Defender Werewolf.
+/// Back: 6/6 that attacks each combat if able.
+pub fn weary_prisoner() -> CardDefinition {
+    werewolf_dfc(
+        "Weary Prisoner",
+        cost(&[generic(3), r()]),
+        vec![CreatureType::Human, CreatureType::Werewolf],
+        (2, 6),
+        vec![Keyword::Defender],
+        vec![],
+        "Wrathful Jailbreaker",
+        (6, 6),
+        vec![Keyword::MustAttack],
+        vec![],
+    )
+}
+
+/// Cobbled Lancer — {U} 3/3 Zombie Horse; additional cost: exile a creature
+/// card from your graveyard. {3}{U}, Exile this from your graveyard: draw.
+pub fn cobbled_lancer() -> CardDefinition {
+    use crate::card::{ActivatedAbility, AdditionalCastCost};
+    CardDefinition {
+        name: "Cobbled Lancer",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Horse],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyard {
+            filter: SelectionRequirement::Creature,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ground Pounder — {1}{G} 2/2 Goblin Warrior. {3}{G}: roll a d6; it gets
+/// +X/+X until end of turn, where X is the result. (The "roll 5+ → trample"
+/// rider is omitted — no die-result trigger predicate yet.)
+pub fn ground_pounder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Ground Pounder",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::RollDie {
+                sides: 6,
+                count: Value::Const(1),
+                modifier: Value::Const(0),
+                reroll_at_most: 0,
+                results: vec![(1, 6, Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::LastDieRoll,
+                    toughness: Value::LastDieRoll,
+                    duration: Duration::EndOfTurn,
+                })],
+                on_doubles: None,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

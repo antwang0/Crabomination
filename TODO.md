@@ -96,10 +96,13 @@ plays its headline pattern):
 
 Riders deliberately approximated/omitted while shipping the Innistrad batch
 (each card otherwise plays its headline pattern):
-- **Disturb-into-Aura back faces** — Binding Geist // Spectral Binding,
-  Mischievous Catgeist // Catlike Curiosity, Dorothea // Dorothea's Retribution
-  all disturb into an *Aura* (not a creature). Needs the disturb cast path to
-  route an enchant-creature target like a normal Aura cast.
+- **Disturb-into-Aura back faces** ✅ shipped — `GameAction::CastDisturb` now
+  carries a `target`, so an Aura back face is cast targeting a creature (engine +
+  bot wired; Kindly Ancestor, Twinblade Geist, Mischievous Catgeist). Remaining:
+  the client targeting affordance (the GUI never built these recasts directly),
+  and the Aura backs that grant a *targeted* triggered ability (Distracting Geist
+  // Clever Distraction's "attacks → tap target", Gutter Skulker's attacking-alone
+  unblockable static).
 - **Olivia, Crimson Bride** — the reanimated creature's "when you don't control a
   legendary Vampire, exile this" rider is omitted (needs a granted
   count-gated delayed exile).
@@ -112,9 +115,10 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
 - **Skipped this run for want of a primitive:** Spectral Adversary (the
   scale-with-kicks *phase-out* rider — `ApplyToTargets` takes a fixed `max_targets`,
   not a runtime `Value`); Mulch (`MillThenToHand` picks one card, not *all*
-  matching — needs a "mill N, all matching → hand" variant); Moonrager's Slash
-  (conditional cost reduction "if it's night" — no `cost_reduction_if_predicate`
-  primitive yet).
+  matching — needs a "mill N, all matching → hand" variant). **Moonrager's Slash**
+  ✅ shipped — new `CardDefinition.self_cost_reduction_if_night` ("{N} less if it's
+  night"). A fully general `cost_reduction_if_predicate` is still future work
+  (e.g. Geistlight Snare's two stacked board conditions).
 - **Sigarda's Vanguard** ✅ shipped approximated (up-to-three targets gain double
   strike); the printed "any number of creatures with *different powers*" coven-
   style distinct-power `ChooseN` is still the only gap.
@@ -134,10 +138,14 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
   `SacrificeAndRemember`, dropping the pay-instead branch) both want a real
   "pay alt-cost OR sacrifice" additional-cost modal at cast.
 - **Spend-restriction mana from creatures** — Unblinking Observer ("{T}: Add
-  {U}. Spend only to pay a disturb cost or cast an instant/sorcery") and Cobbled
-  Lancer's graveyard cantrip / additional-cost-exile are not yet shipped.
-- **Cleave** (Lantern Flare, Lunar Rejection) — no `cleave` alt-cast that strips
-  the bracketed clause for spells; deferred.
+  {U}. Spend only to pay a disturb cost or cast an instant/sorcery") is not yet
+  shipped. (Cobbled Lancer ✅ — additional-cost graveyard-exile + the {3}{U}
+  exile-from-graveyard cantrip both ride existing primitives.)
+- **Cleave** ✅ — Lunar Rejection ships via the existing `AlternativeCost`
+  cleave (strips the bracketed Wolf/Werewolf restriction). Lantern Flare still
+  deferred (its cleave changes an `{X}` damage spell into a board wipe).
+- **`SelectionRequirement::HasDisturb`** ✅ — payload-agnostic "card has Disturb"
+  predicate (Shipwreck Sifters' discard payoff).
 - **Patchwork Crawler** — "has all activated abilities of cards exiled with it"
   needs a granted-abilities-from-linked-exile primitive.
 
@@ -3859,6 +3867,11 @@ were stale). See git history for the per-card details.
   right-click "Cast for Mayhem" entry wired to `GameAction::CastMayhem`
   (mirror the flashback/disturb affordances). The GUI crate can't build in the
   headless cloud env (wayland-sys), so this wasn't verifiable here.
+- **Disturb-into-Aura target picker.** The engine + bot now route an enchant
+  target through `GameAction::CastDisturb` for Aura back faces. The GUI graveyard
+  browser is read-only (it never built any graveyard-recast action), so a
+  right-click "Cast for Disturb" entry — and, when the back is an Aura, a
+  target-selection step — still needs wiring. Unverifiable headless (wayland).
 - **Surface new combat riders in tooltips.** The reminder/ability panel should
   note `Keyword::CantBeBlockedByPowerLess` (Formation Breaker) and a
   turn-scoped "can attack despite defender" badge once

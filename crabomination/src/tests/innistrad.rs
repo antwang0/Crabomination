@@ -845,3 +845,325 @@ fn rot_tide_gargantua_edicts() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their creature");
 }
+
+// ── MID/VOW Daybound werewolves + Disturb DFCs (2026-06 batch) ───────────────
+
+use crate::game::types::DayNight;
+
+/// Helper: transform a Daybound front to its Nightbound back by becoming night.
+fn become_night(g: &mut GameState) {
+    let mut ev = vec![];
+    g.set_day_night(DayNight::Night, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(g);
+}
+
+/// Tireless Hauler transforms into a 6/6 vigilant Dire-Strain Brawler at night.
+#[test]
+fn tireless_hauler_transforms_at_night() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::tireless_hauler());
+    become_night(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.transformed, "flipped to back face");
+    assert_eq!(c.definition.name, "Dire-Strain Brawler");
+    assert_eq!((c.power(), c.toughness()), (6, 6));
+    assert!(c.definition.keywords.contains(&Keyword::Vigilance));
+    assert!(c.definition.keywords.contains(&Keyword::Nightbound));
+}
+
+/// Bird Admirer's back, Wing Shredder, is a 3/5 with reach.
+#[test]
+fn bird_admirer_back_has_reach() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::bird_admirer());
+    become_night(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 5));
+    assert!(c.definition.keywords.contains(&Keyword::Reach));
+}
+
+/// Hookhand Mariner's back can't be blocked by power-2-or-less creatures.
+#[test]
+fn hookhand_mariner_back_evasion() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::hookhand_mariner());
+    become_night(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (6, 4));
+    assert!(c.definition.keywords.contains(&Keyword::CantBeBlockedByPowerAtMost(2)));
+}
+
+/// Fearful Villager keeps menace and grows to 4/3 as Fearsome Werewolf.
+#[test]
+fn fearful_villager_back_menace() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::fearful_villager());
+    become_night(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 3));
+    assert!(c.definition.keywords.contains(&Keyword::Menace));
+}
+
+/// Weary Prisoner's back, Wrathful Jailbreaker, must attack each combat.
+#[test]
+fn weary_prisoner_back_must_attack() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::weary_prisoner());
+    become_night(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (6, 6));
+    assert!(c.definition.keywords.contains(&Keyword::MustAttack));
+}
+
+/// Suspicious Stowaway flips into the unblockable 2/1 Seafaring Werewolf.
+#[test]
+fn suspicious_stowaway_transforms() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::suspicious_stowaway());
+    become_night(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.definition.name, "Seafaring Werewolf");
+    assert_eq!((c.power(), c.toughness()), (2, 1));
+    assert!(c.definition.keywords.contains(&Keyword::Unblockable));
+}
+
+/// Lambholt Raconteur pings each opponent when you cast a noncreature spell.
+#[test]
+fn lambholt_raconteur_pings_on_noncreature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lambholt_raconteur());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    // 3 from Bolt + 1 from Raconteur's noncreature-cast trigger.
+    assert_eq!(g.players[1].life, before - 4);
+}
+
+/// Spellrune Painter pumps itself when you cast an instant or sorcery.
+#[test]
+fn spellrune_painter_magecraft_pump() {
+    let mut g = two_player_game();
+    let painter = g.add_card_to_battlefield(0, catalog::spellrune_painter());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(painter).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+1 until EOT");
+}
+
+/// Wolfkin Outcast costs {2} less to cast while you control a Wolf/Werewolf.
+#[test]
+fn wolfkin_outcast_cost_reduction() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lightning_wolf()); // a Wolf
+    let id = g.add_card_to_hand(0, catalog::wolfkin_outcast());
+    // {5}{G} reduced by {2} → {3}{G} = 4 mana.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for the reduced cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "resolved onto the battlefield");
+}
+
+/// Galedrifter's disturb back is the 2/2 flying Waildrifter.
+#[test]
+fn galedrifter_disturb_back() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::galedrifter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: id, target: None, additional_targets: vec![],
+    }).expect("disturb");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!(c.definition.name, "Waildrifter");
+    assert_eq!((c.power(), c.toughness()), (2, 2));
+    assert!(c.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// Kindly Ancestor's disturb back is an Aura that grants lifelink (exercising
+/// the disturb→Aura target plumbing).
+#[test]
+fn kindly_ancestor_disturb_aura_grants_lifelink() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_graveyard(0, catalog::kindly_ancestor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+    }).expect("disturb the Aura onto the bear");
+    drain_stack(&mut g);
+    let aura = g.battlefield_find(id).expect("Aura on battlefield");
+    assert_eq!(aura.attached_to, Some(bear), "attached to the chosen creature");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+/// Twinblade Geist's disturb Aura grants double strike.
+#[test]
+fn twinblade_geist_disturb_aura_double_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_graveyard(0, catalog::twinblade_geist());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+    }).expect("disturb");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Mischievous Catgeist's disturb Aura attaches to the chosen creature.
+#[test]
+fn mischievous_catgeist_disturb_aura_attaches() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_graveyard(0, catalog::mischievous_catgeist());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+    }).expect("disturb");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().attached_to, Some(bear));
+}
+
+/// Olivia's Midnight Ambush is -2/-2 by day, -13/-13 at night.
+#[test]
+fn olivias_midnight_ambush_day_and_night() {
+    use crate::card::Effect;
+    let _ = Effect::Noop;
+    // Day: -2/-2 kills a 2/2.
+    let mut g = two_player_game();
+    g.day_night = Some(DayNight::Day);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::olivias_midnight_ambush().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "-2/-2 kills the 2/2");
+    // Night: -13/-13 kills a 4/4.
+    let mut g = two_player_game();
+    g.day_night = Some(DayNight::Night);
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::olivias_midnight_ambush().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "-13/-13 kills the 4/4 at night");
+}
+
+/// Moonrager's Slash deals 3, and costs {2} less to cast at night.
+#[test]
+fn moonragers_slash_damage_and_night_discount() {
+    // Damage.
+    let mut g = two_player_game();
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Player(1)];
+    let before = g.players[1].life;
+    g.resolve_effect(&catalog::moonragers_slash().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 3);
+    // Night discount: {2}{R} → {R}, castable with a single red.
+    let mut g = two_player_game();
+    g.day_night = Some(DayNight::Night);
+    let id = g.add_card_to_hand(0, catalog::moonragers_slash());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {R} at night");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 3);
+}
+
+/// Lunar Rejection bounces a Wolf/Werewolf and draws a card.
+#[test]
+fn lunar_rejection_bounces_wolf_and_draws() {
+    let mut g = two_player_game();
+    let wolf = g.add_card_to_battlefield(1, catalog::lightning_wolf());
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(wolf)];
+    g.resolve_effect(&catalog::lunar_rejection().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wolf).is_none(), "wolf bounced");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+/// Shipwreck Sifters grows when you discard a card with disturb.
+#[test]
+fn shipwreck_sifters_grows_on_disturb_discard() {
+    let mut g = two_player_game();
+    let sifters = g.add_card_to_battlefield(0, catalog::shipwreck_sifters());
+    let disturb_card = g.add_card_to_hand(0, catalog::galedrifter()); // has disturb, not a Spirit
+    let mut ev = vec![];
+    g.discard_card(0, disturb_card, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(sifters).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "a discarded disturb card adds a +1/+1 counter",
+    );
+}
+
+/// Cobbled Lancer requires exiling a creature card from your graveyard to cast.
+#[test]
+fn cobbled_lancer_additional_cost() {
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::cobbled_lancer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with a creature in the graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "resolved");
+    assert!(g.exile.iter().any(|c| c.id == corpse), "exiled the graveyard creature as a cost");
+}
+
+/// Gryffwing Cavalry: paying {1}{W} when it attacks stops a creature blocking.
+#[test]
+fn gryffwing_cavalry_attack_pay_cant_block() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // pay {1}{W}
+    let cav = catalog::gryffwing_cavalry();
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(foe)];
+    // Ability 0 is Training; ability 1 is the attack "may pay" rider.
+    g.resolve_effect(&cav.triggered_abilities[1].effect, &ctx).unwrap();
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Ground Pounder's die-roll ability pumps itself by the rolled amount.
+#[test]
+fn ground_pounder_die_pump() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let gp = g.add_card_to_battlefield(0, catalog::ground_pounder());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(4)]));
+    let ability = catalog::ground_pounder().activated_abilities[0].effect.clone();
+    let ctx = EffectContext::for_ability(gp, 0, None);
+    g.resolve_effect(&ability, &ctx).unwrap();
+    let cp = g.computed_permanent(gp).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "+4/+4 from a rolled 4");
+}

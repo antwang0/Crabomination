@@ -1307,6 +1307,11 @@ impl GameState {
                             | crate::card::Keyword::Landcycling(_, _)
                             | crate::card::Keyword::Typecycling(_)
                     )),
+                    R::HasDisturb => card
+                        .definition
+                        .keywords
+                        .iter()
+                        .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
                     R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
@@ -1598,6 +1603,11 @@ impl GameState {
                     | crate::card::Keyword::Landcycling(_, _)
                     | crate::card::Keyword::Typecycling(_)
             )),
+            R::HasDisturb => card
+                .definition
+                .keywords
+                .iter()
+                .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
             // No source/battlefield context in the on-card evaluator (used

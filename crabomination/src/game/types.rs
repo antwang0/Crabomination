@@ -457,8 +457,15 @@ pub enum GameAction {
         x_value: Option<u32>,
     },
     /// Cast a graveyard card with `Keyword::Disturb` (CR 702.146) transformed
-    /// — the back face goes on the stack — for its disturb cost.
-    CastDisturb { card_id: CardId },
+    /// — the back face goes on the stack — for its disturb cost. `target` is
+    /// used when the back face is an Aura (it needs an enchant target).
+    CastDisturb {
+        card_id: CardId,
+        #[serde(default)]
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+    },
     /// Cast a graveyard card with `Keyword::Retrace` (CR 702.81) for its
     /// mana cost plus discarding a land card from hand. Unlike Flashback,
     /// the spell returns to the graveyard after resolving (no exile).

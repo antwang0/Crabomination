@@ -5338,7 +5338,9 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_harmonize(card_id, tap_creature, target, additional_targets, mode, x_value),
-            GameAction::CastDisturb { card_id } => self.cast_disturb(card_id),
+            GameAction::CastDisturb { card_id, target, additional_targets } => {
+                self.cast_disturb(card_id, target, additional_targets)
+            }
             GameAction::CastRetrace {
                 card_id,
                 target,

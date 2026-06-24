@@ -382,6 +382,12 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(*amount);
     }
+    // Card-intrinsic "costs {amount} less if it's night" (Moonrager's Slash).
+    if let Some(amount) = card.definition.self_cost_reduction_if_night
+        && state.day_night == Some(crate::game::types::DayNight::Night)
+    {
+        reduction = reduction.saturating_add(amount);
+    }
     // Card-intrinsic "costs {X} less, where X is the greatest power among
     // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
     // Power` static carried by the spell being cast. Generic-only, clamped by
@@ -4676,6 +4682,8 @@ impl GameState {
     pub(crate) fn cast_disturb(
         &mut self,
         card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let graveyard_pos = self.players[p]
@@ -4730,11 +4738,14 @@ impl GameState {
         card.front_face = Some(card.definition.clone());
         card.definition = std::sync::Arc::new(back);
         card.transformed = true;
+        // The back face is usually a creature (no target); when it's an Aura it
+        // needs an enchant target chosen as the spell goes on the stack (CR
+        // 601.2c). Resolution re-checks the target's legality (608.2b).
         let events = vec![
             GameEvent::CardLeftGraveyard { player: p, card_id },
             GameEvent::SpellCast { player: p, card_id, face: CastFace::Front },
         ];
-        self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent);
+        self.finalize_cast(p, card, target, additional_targets, None, 0, 0, mana_spent);
         Ok(events)
     }
 

@@ -998,6 +998,9 @@ pub enum SelectionRequirement {
     /// The card has any cycling ability (Cycling / CyclingLife /
     /// Landcycling — CR 702.29). Zenith Flare's graveyard count.
     HasCyclingAbility,
+    /// The card has Disturb (CR 702.146), regardless of its cost (Shipwreck
+    /// Sifters' "Spirit card or a card with disturb" discard payoff).
+    HasDisturb,
     PowerAtMost(i32),
     ToughnessAtMost(i32),
     WithCounter(CounterType),
@@ -1670,6 +1673,11 @@ pub struct CardDefinition {
     /// back-compat.
     #[serde(default)]
     pub self_cost_reduction_if_control: Option<(SelectionRequirement, u32)>,
+    /// "This spell costs `{amount}` less to cast if it's night" (Moonrager's
+    /// Slash). Generic-only, clamped by the caller. `None` by default for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub self_cost_reduction_if_night: Option<u32>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
