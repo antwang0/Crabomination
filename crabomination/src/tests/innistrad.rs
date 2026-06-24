@@ -1292,6 +1292,49 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Duelcraft Trainer grants double strike to a target creature under Coven.
+#[test]
+fn duelcraft_trainer_grants_double_strike() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let trainer = g.add_card_to_battlefield(0, catalog::duelcraft_trainer()); // power 3
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
+    g.add_card_to_battlefield(0, catalog::rot_tide_gargantua()); // power 5 → coven
+    let mut ctx = EffectContext::for_ability(trainer, 0, Some(Target::Permanent(ally)));
+    ctx.targets = vec![Target::Permanent(ally)];
+    g.resolve_effect(&catalog::duelcraft_trainer().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Harvesttide Sentry gains a power-based evasion grant under Coven.
+#[test]
+fn harvesttide_sentry_evasion_under_coven() {
+    let mut g = two_player_game();
+    let sentry = g.add_card_to_battlefield(0, catalog::harvesttide_sentry());
+    g.resolve_effect(
+        &catalog::harvesttide_sentry().triggered_abilities[0].effect,
+        &EffectContext::for_ability(sentry, 0, None),
+    ).unwrap();
+    assert!(g
+        .computed_permanent(sentry)
+        .unwrap()
+        .keywords
+        .contains(&Keyword::CantBeBlockedByPowerAtMost(2)));
+}
+
+/// Grizzly Ghoul enters with a +1/+1 counter per creature that died this turn.
+#[test]
+fn grizzly_ghoul_scales_with_deaths() {
+    let mut g = two_player_game();
+    g.players[0].creatures_died_this_turn = 2;
+    let ghoul = g.add_card_to_battlefield(0, catalog::grizzly_ghoul());
+    g.resolve_effect(
+        &catalog::grizzly_ghoul().triggered_abilities[0].effect,
+        &EffectContext::for_ability(ghoul, 0, None),
+    ).unwrap();
+    assert_eq!(g.battlefield_find(ghoul).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
 /// Crossroads Candleguide exiles a graveyard card and taps for any color.
 #[test]
 fn crossroads_candleguide_exile_and_mana() {

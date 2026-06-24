@@ -3840,3 +3840,85 @@ pub fn candlegrove_witch() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 16: more MID/VOW creatures ─────────────────────────────────────────
+
+/// Duelcraft Trainer — {3}{W} 3/3 first strike Soldier. Coven — at combat on
+/// your turn, target creature you control gains double strike until end of turn.
+pub fn duelcraft_trainer() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Duelcraft Trainer",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                .with_filter(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Harvesttide Sentry — {1}{G} 3/1 Warrior. Coven — at combat on your turn, it
+/// can't be blocked by creatures with power 2 or less this turn.
+pub fn harvesttide_sentry() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Harvesttide Sentry",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                .with_filter(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::CantBeBlockedByPowerAtMost(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grizzly Ghoul — {2}{B}{G} 4/3 trample Zombie Bear. Enters with a +1/+1
+/// counter for each creature that died this turn.
+pub fn grizzly_ghoul() -> CardDefinition {
+    CardDefinition {
+        name: "Grizzly Ghoul",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Bear],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CreaturesDiedThisTurnTotal,
+        })],
+        ..Default::default()
+    }
+}
