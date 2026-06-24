@@ -6067,3 +6067,64 @@ fn gisa_exiles_then_reanimates_with_decayed() {
     assert!(g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::Decayed),
         "gains decayed");
 }
+
+/// Mounted Dreadknight enters with a counter only if an opponent lost life.
+#[test]
+fn mounted_dreadknight_counter_on_opp_life_loss() {
+    let mut g = two_player_game();
+    g.players[1].lost_life_this_turn = true;
+    let md = g.move_card_to_battlefield_for_test(0, catalog::mounted_dreadknight());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(md).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 5), "5/4 + counter after opp lost life");
+}
+
+/// Path to the Festival fetches a basic land onto the battlefield tapped.
+#[test]
+fn path_to_the_festival_fetches_basic() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&catalog::path_to_the_festival().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(after, before + 1, "fetched a land to the battlefield");
+}
+
+/// Thraben Exorcism exiles a Spirit.
+#[test]
+fn thraben_exorcism_exiles_spirit() {
+    let mut g = two_player_game();
+    let spirit = g.add_card_to_battlefield(1, catalog::millicent_restless_revenant()); // a Spirit
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(spirit)];
+    g.resolve_effect(&catalog::thraben_exorcism().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == spirit), "Spirit exiled");
+}
+
+/// Falkenrath Celebrants makes two Blood tokens on entry.
+#[test]
+fn falkenrath_celebrants_makes_two_blood() {
+    let mut g = two_player_game();
+    let fc = g.add_card_to_battlefield(0, catalog::falkenrath_celebrants());
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let etb = catalog::falkenrath_celebrants().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(fc, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 2);
+}
+
+/// Slaughter Specialist grows when an opponent's creature dies.
+#[test]
+fn slaughter_specialist_grows_on_opp_death() {
+    let mut g = two_player_game();
+    let ss = g.add_card_to_battlefield(0, catalog::slaughter_specialist());
+    let trig = catalog::slaughter_specialist().triggered_abilities[1].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(ss, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let cp = g.computed_permanent(ss).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "3/3 + one counter");
+}

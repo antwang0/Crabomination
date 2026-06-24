@@ -10269,3 +10269,137 @@ pub fn gisa_glorious_resurrector() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mounted Dreadknight — {4}{R} 5/4 Vampire Knight. Trample. Enters with a
+/// +1/+1 counter if an opponent lost life this turn.
+pub fn mounted_dreadknight() -> CardDefinition {
+    CardDefinition {
+        name: "Mounted Dreadknight",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Path to the Festival — {2}{G} Sorcery. Search for a basic land onto the
+/// battlefield tapped, then scry 1 if you control three or more basic land
+/// types. Flashback {4}{G}.
+pub fn path_to_the_festival() -> CardDefinition {
+    CardDefinition {
+        name: "Path to the Festival",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), g()]))],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::DomainCount(PlayerRef::You), Value::Const(3)),
+                then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Thraben Exorcism — {1}{W} Instant. Exile target Spirit or enchantment. (The
+/// "creature with disturb" sub-filter is approximated away.)
+pub fn thraben_exorcism() -> CardDefinition {
+    CardDefinition {
+        name: "Thraben Exorcism",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                    .or(SelectionRequirement::Enchantment),
+            ),
+            to: ZoneDest::Exile,
+        },
+        ..Default::default()
+    }
+}
+
+/// Falkenrath Celebrants — {4}{R} 4/4 Vampire. Menace. ETB create two Blood
+/// tokens.
+pub fn falkenrath_celebrants() -> CardDefinition {
+    CardDefinition {
+        name: "Falkenrath Celebrants",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: crabomination_base::tokens::blood_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Slaughter Specialist — {1}{B} 3/3 Vampire Warrior. ETB each opponent creates
+/// a 1/1 white Human. Whenever a creature an opponent controls dies, put a
+/// +1/+1 counter on this creature.
+pub fn slaughter_specialist() -> CardDefinition {
+    CardDefinition {
+        name: "Slaughter Specialist",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::EachOpponent,
+                count: Value::Const(1),
+                definition: crate::card::TokenDefinition {
+                    name: "Human".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Human],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
