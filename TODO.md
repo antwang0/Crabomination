@@ -158,6 +158,20 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
 ## Discovered follow-ups — missing-card sweep (modern_decks)
 
 Real cards confirmed absent, deferred for want of a mechanic:
+- **Owner-choice top/bottom of library** for a battlefield permanent — Revenge
+  of the Drowned, Diver Skaab ("its owner puts it on top or bottom"). Need a
+  `ZoneDest`/effect that bounces a permanent to its owner's library with a
+  top-or-bottom decision (the countered-spell `OwnerLibraryTopOrBottom` zone
+  exists but isn't reachable from a generic `Move`).
+- **Temporary "sacrifice at the next end step" tokens** — Hungry for More (3/1
+  Vampire that sacs itself at the next end step). Want a token-mint that
+  registers a `DelayedKind::NextEndStep` self-sacrifice, distinct from decayed.
+- **Shared-card-type cost reduction off linked exile** — Cemetery Prowler
+  ("spells cost {1} less for each card type they share with cards exiled with
+  this creature"); needs a cost-reduction static keyed on `exiled_with`.
+- **Cast-from-top once-per-turn static** — Cemetery Illuminator's "once each
+  turn you may cast a spell from the top of your library" (play-from-top exists
+  for lands/permanents; the once-per-turn any-spell variant doesn't).
 - **Class enchantments** (Bandit's/Stormchaser's/Innkeeper's Talent, and the
   whole DSK/BLB Class cycle) — need a Class type with sorcery-speed pay-to-
   level-up (CR 714-adjacent) layering on abilities per level band. `level_bands`
