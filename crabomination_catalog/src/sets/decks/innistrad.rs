@@ -3643,3 +3643,33 @@ pub fn graf_reaver() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 13: more MID/VOW commons & uncommons ───────────────────────────────
+
+/// Blood Hypnotist — {2}{R} 3/3 Vampire that can't block. Whenever you sacrifice
+/// one or more Blood tokens, target creature can't block this turn (once/turn).
+pub fn blood_hypnotist() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Hypnotist",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::CantBlock],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                })
+                .once_per_turn(),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

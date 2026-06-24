@@ -1292,6 +1292,18 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Blood Hypnotist's reflexive grant makes a target creature unable to block.
+#[test]
+fn blood_hypnotist_locks_a_blocker() {
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::blood_hypnotist());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(h, 0, Some(Target::Permanent(foe)));
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::blood_hypnotist().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
 /// Grisly Ritual destroys a creature and makes two Blood.
 #[test]
 fn grisly_ritual_destroys_and_makes_blood() {
