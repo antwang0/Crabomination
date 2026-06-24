@@ -3347,3 +3347,90 @@ pub fn aim_for_the_head() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 10: more MID/VOW commons & uncommons ───────────────────────────────
+
+fn green_insect_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Insect".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Rise of the Ants — {4}{G}{G} Sorcery. Create two 3/3 green Insect tokens and
+/// gain 2 life. Flashback {6}{G}{G}.
+pub fn rise_of_the_ants() -> CardDefinition {
+    CardDefinition {
+        name: "Rise of the Ants",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(6), g(), g()]))],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: green_insect_token(),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Soul-Guide Gryff — {4}{W} 3/4 flying Hippogriff Spirit. ETB exile up to one
+/// target card from a graveyard.
+pub fn soul_guide_gryff() -> CardDefinition {
+    CardDefinition {
+        name: "Soul-Guide Gryff",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hippogriff, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::InGraveyard,
+            effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Honored Heirloom — {3} Artifact. {T}: add one mana of any color. {2}, {T}:
+/// exile target card from a graveyard.
+pub fn honored_heirloom() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Honored Heirloom",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::Exile {
+                    what: target_filtered(SelectionRequirement::InGraveyard),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

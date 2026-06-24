@@ -1292,6 +1292,45 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Rise of the Ants makes two 3/3 Insects and gains 2 life.
+#[test]
+fn rise_of_the_ants_makes_insects() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    g.resolve_effect(&catalog::rise_of_the_ants().effect, &ctx0(&g)).unwrap();
+    assert_eq!(count_named(&g, 0, "Insect"), 2);
+    assert_eq!(g.players[0].life, 22);
+}
+
+/// Soul-Guide Gryff exiles a card from a graveyard on entry.
+#[test]
+fn soul_guide_gryff_exiles_graveyard_card() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let gryff = g.add_card_to_battlefield(0, catalog::soul_guide_gryff());
+    let mut ctx = EffectContext::for_ability(gryff, 0, Some(Target::Permanent(dead)));
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&catalog::soul_guide_gryff().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead), "card exiled from graveyard");
+}
+
+/// Honored Heirloom taps for any color and exiles a graveyard card.
+#[test]
+fn honored_heirloom_mana_and_graveyard_exile() {
+    let mut g = two_player_game();
+    let heirloom = g.add_card_to_battlefield(0, catalog::honored_heirloom());
+    g.resolve_effect(
+        &catalog::honored_heirloom().activated_abilities[0].effect,
+        &EffectContext::for_ability(heirloom, 0, None),
+    ).unwrap();
+    assert!(g.players[0].mana_pool.total() >= 1, "added a mana");
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(heirloom, 0, Some(Target::Permanent(dead)));
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&catalog::honored_heirloom().activated_abilities[1].effect, &ctx).unwrap();
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead), "graveyard card exiled");
+}
+
 /// Stuffed Bear animates into a 4/4 Bear.
 #[test]
 fn stuffed_bear_becomes_a_bear() {
