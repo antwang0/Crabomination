@@ -6816,3 +6816,136 @@ fn glassdust_hulk_grows_on_artifact_etb() {
     assert_eq!((cp.power, cp.toughness), (4, 5), "+1/+1");
     assert!(cp.keywords.contains(&Keyword::Unblockable));
 }
+
+// === Second modern_decks batch tests. ===
+
+/// Logic Knot counters a spell unless its controller pays {X}.
+#[test]
+fn logic_knot_counters_with_x() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(1, catalog::sign_in_blood());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).ok();
+    let knot = g.add_card_to_hand(0, catalog::logic_knot());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    g.perform_action(GameAction::CastSpell {
+        card_id: knot, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast logic knot X=2");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell countered (opp couldn't pay {{2}})");
+}
+
+/// Beanstalk Giant's power and toughness track lands you control.
+#[test]
+fn beanstalk_giant_scales_with_lands() {
+    let mut g = two_player_game();
+    let bg = g.add_card_to_battlefield(0, catalog::beanstalk_giant());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let cp = g.computed_permanent(bg).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "*/* = three lands");
+}
+
+/// Beanstalk Giant has the Fertile Footsteps adventure.
+#[test]
+fn beanstalk_giant_has_adventure() {
+    let d = catalog::beanstalk_giant();
+    let adv = d.adventure.expect("adventure half");
+    assert_eq!(adv.name, "Fertile Footsteps");
+}
+
+/// Ambush Viper is a flash deathtouch creature.
+#[test]
+fn ambush_viper_flash_deathtouch() {
+    let d = catalog::ambush_viper();
+    assert!(d.keywords.contains(&Keyword::Flash));
+    assert!(d.keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Etherium Sculptor makes your artifact spells cost {1} less.
+#[test]
+fn etherium_sculptor_discounts_artifacts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::etherium_sculptor());
+    let art = g.add_card_to_hand(0, catalog::worn_powerstone()); // {3}
+    // {3} artifact costs {2} with the discount.
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: art, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast discounted artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_some(), "powerstone resolved for {{2}}");
+}
+
+/// Toolcraft Exemplar grows at combat when you control artifacts.
+#[test]
+fn toolcraft_exemplar_grows_with_artifacts() {
+    let mut g = two_player_game();
+    let tc = g.add_card_to_battlefield(0, catalog::toolcraft_exemplar());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::worn_powerstone());
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(tc).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "+2/+1");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike with 3 artifacts");
+}
+
+/// Vampire Gourmand sacrifices a creature on attack to draw and gain evasion.
+#[test]
+fn vampire_gourmand_sacs_to_draw() {
+    let mut g = two_player_game();
+    let vg = g.add_card_to_battlefield(0, catalog::vampire_gourmand());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // fodder
+    g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand = g.players[0].hand.len();
+    let eff = catalog::vampire_gourmand().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(vg, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert!(g.computed_permanent(vg).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
+/// Recruitment Officer digs four for a small creature.
+#[test]
+fn recruitment_officer_digs() {
+    let mut g = two_player_game();
+    let ro = g.add_card_to_battlefield(0, catalog::recruitment_officer());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // MV2 creature
+    g.add_card_to_library(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ro, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("dig");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "took a creature to hand");
+}
+
+/// Squee returns from the graveyard at your upkeep.
+#[test]
+fn squee_returns_from_graveyard() {
+    let mut g = two_player_game();
+    let squee = g.add_card_to_graveyard(0, catalog::squee_goblin_nabob());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == squee), "Squee back in hand");
+}

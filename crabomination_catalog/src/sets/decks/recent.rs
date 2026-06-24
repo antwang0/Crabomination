@@ -11474,3 +11474,224 @@ pub fn glassdust_hulk() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// === Second modern_decks batch: control / midrange staples. ===
+
+/// Logic Knot — {X}{U}{U} Instant. Delve. Counter target spell unless its
+/// controller pays {X}.
+pub fn logic_knot() -> CardDefinition {
+    CardDefinition {
+        name: "Logic Knot",
+        cost: cost(&[crate::mana::x(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Delve],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[]),
+            exile: false,
+            extra_generic: Some(Value::XFromCost),
+        },
+        ..Default::default()
+    }
+}
+
+/// Beanstalk Giant — {6}{G} Giant whose power and toughness each equal the
+/// number of lands you control. Adventure — Fertile Footsteps {2}{G}: search
+/// your library for a basic land, put it onto the battlefield, then shuffle.
+pub fn beanstalk_giant() -> CardDefinition {
+    use crate::card::{Adventure, DynamicPt};
+    CardDefinition {
+        name: "Beanstalk Giant",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        dynamic_pt: Some(DynamicPt::LandsControlled { base: 0 }),
+        adventure: Some(Box::new(Adventure {
+            name: "Fertile Footsteps",
+            cost: cost(&[generic(2), g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Ambush Viper — {1}{G} 2/1 Snake. Flash, deathtouch.
+pub fn ambush_viper() -> CardDefinition {
+    CardDefinition {
+        name: "Ambush Viper",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Etherium Sculptor — {1}{U} 1/2 Vedalken Artificer. Artifact spells you cast
+/// cost {1} less.
+pub fn etherium_sculptor() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Etherium Sculptor",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Artifact spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction { filter: SelectionRequirement::Artifact, amount: 1 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Toolcraft Exemplar — {W} 1/1 Dwarf Artificer. At combat on your turn, if you
+/// control an artifact it gets +2/+1; with three or more artifacts it also
+/// gains first strike.
+pub fn toolcraft_exemplar() -> CardDefinition {
+    let artifacts = Value::count(Selector::EachPermanent(
+        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+    ));
+    CardDefinition {
+        name: "Toolcraft Exemplar",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(artifacts.clone(), Value::Const(1)),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(2),
+                        toughness: Value::Const(1),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(artifacts, Value::Const(3)),
+                        then: Box::new(Effect::GrantKeyword {
+                            what: Selector::This,
+                            keyword: Keyword::FirstStrike,
+                            duration: Duration::EndOfTurn,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vampire Gourmand — {1}{B} 2/2 Vampire. Attacks → you may sacrifice another
+/// creature; if you do, draw a card and it can't be blocked this turn.
+pub fn vampire_gourmand() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire Gourmand",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MaySacrifice {
+                description: "Sacrifice another creature? (draw + unblockable)".into(),
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                count: Value::Const(1),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Unblockable,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Recruitment Officer — {W} 2/1 Human Soldier. {3}{W}: look at the top four
+/// cards, you may reveal a creature card with mana value 3 or less to hand,
+/// rest on the bottom.
+pub fn recruitment_officer() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Recruitment Officer",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: false,
+                pick_filter: Some(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                take: Some(Value::Const(1)),
+                to_battlefield: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Squee, Goblin Nabob — {2}{R} 1/1 Legendary Goblin. At your upkeep, you may
+/// return it from your graveyard to your hand.
+pub fn squee_goblin_nabob() -> CardDefinition {
+    CardDefinition {
+        name: "Squee, Goblin Nabob",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::MayDo {
+                description: "Return Squee from your graveyard to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
