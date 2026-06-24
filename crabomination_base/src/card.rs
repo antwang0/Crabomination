@@ -1029,6 +1029,10 @@ pub enum SelectionRequirement {
     HasSpellSubtype(SpellSubtype),
     PowerAtLeast(i32),
     ToughnessAtLeast(i32),
+    /// Creature whose toughness is strictly greater than its power (Catapult
+    /// Fodder's "creatures that each have toughness greater than their power").
+    /// Battlefield-only; false for non-creatures.
+    ToughnessGreaterThanPower,
     /// Candidate's power + toughness (layer-computed) is at most `n`. Used
     /// by Cut Down ("destroy target creature with total power and toughness
     /// 5 or less"). Battlefield-only; false for non-creatures.

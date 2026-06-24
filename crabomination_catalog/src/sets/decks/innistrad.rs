@@ -1337,6 +1337,58 @@ pub fn bloodsworn_squire() -> CardDefinition {
     }
 }
 
+/// Catapult Fodder // Catapult Captain — {2}{B} 1/5 Zombie. At combat, if you
+/// control 3+ creatures with toughness greater than power, transform it. Back:
+/// 2/6 with {2}{B}, {T}, Sacrifice another creature: an opponent loses life
+/// equal to the sacrificed creature's toughness.
+pub fn catapult_fodder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::game::types::TurnStep;
+    let captain = CardDefinition {
+        name: "Catapult Captain",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 6,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::SacrificedToughness,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Catapult Fodder",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::ToughnessGreaterThanPower),
+                    ),
+                    n: Value::Const(3),
+                },
+                then: Box::new(Effect::Transform { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        back_face: Some(Box::new(captain)),
+        ..Default::default()
+    }
+}
+
 /// Voldaren Bloodcaster // Bloodbat Summoner — {1}{B} 2/1 flying Vampire Wizard.
 /// Whenever it or another nontoken creature you control dies, make a Blood; once
 /// you control five+ Blood, transform it. Back: combat trigger turns a Blood into

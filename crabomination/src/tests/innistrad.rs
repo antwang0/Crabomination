@@ -1292,6 +1292,38 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Catapult Fodder transforms once you control three defensive creatures, and
+/// the back drains an opponent for a sacrificed creature's toughness.
+#[test]
+fn catapult_fodder_transforms_and_captain_drains() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let fodder = g.add_card_to_battlefield(0, catalog::catapult_fodder()); // 1/5, t>p
+    let effect = catalog::catapult_fodder().triggered_abilities[0].effect.clone();
+    // Only one toughness>power creature (the fodder) → no transform.
+    g.resolve_effect(&effect, &EffectContext::for_ability(fodder, 0, None)).unwrap();
+    assert_eq!(g.battlefield_find(fodder).unwrap().definition.name, "Catapult Fodder");
+    // Add two more defensive creatures (Rot-Tide Gargantua is 5/4 = p>t, so use
+    // two more high-toughness bodies).
+    g.add_card_to_battlefield(0, catalog::catapult_fodder());
+    g.add_card_to_battlefield(0, catalog::catapult_fodder());
+    g.resolve_effect(&effect, &EffectContext::for_ability(fodder, 0, None)).unwrap();
+    assert_eq!(g.battlefield_find(fodder).unwrap().definition.name, "Catapult Captain");
+    // Captain's sac drain: sacrifice a 1/5 → opponent loses 5.
+    g.players[1].life = 20;
+    let victim = g.add_card_to_battlefield(0, catalog::catapult_fodder()); // 1/5
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fodder, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("captain drain");
+    drain_stack(&mut g);
+    let _ = victim;
+    assert_eq!(g.players[1].life, 15, "opponent loses 5 (sacrificed toughness)");
+}
+
 /// Voldaren Bloodcaster transforms when you create a Blood while controlling
 /// five or more Blood tokens (exercises the new TokenCreated trigger).
 #[test]

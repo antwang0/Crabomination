@@ -1317,6 +1317,9 @@ impl GameState {
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
                     R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::ToughnessGreaterThanPower => {
+                        card.definition.is_creature() && card.toughness() > card.power()
+                    }
                     R::PowerPlusToughnessAtMost(n) => {
                         card.definition.is_creature() && card.power() + card.toughness() <= *n
                     }
@@ -1619,6 +1622,9 @@ impl GameState {
             R::PowerGreaterThanSource => false,
             R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
             R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+            R::ToughnessGreaterThanPower => {
+                card.definition.is_creature() && card.toughness() > card.power()
+            }
             R::PowerPlusToughnessAtMost(n) => {
                 card.definition.is_creature() && card.power() + card.toughness() <= *n
             }
