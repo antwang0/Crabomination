@@ -98,8 +98,8 @@ fn main() {
                 Err(reason) => {
                     let s = slots.snapshot();
                     eprintln!(
-                        "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip)",
-                        s.current, s.peak, s.refused_global, s.refused_per_ip,
+                        "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip, {ips} distinct IPs)",
+                        s.current, s.peak, s.refused_global, s.refused_per_ip, ips = s.distinct_ips,
                     );
                     let _ = stream.shutdown(std::net::Shutdown::Both);
                     continue;
@@ -273,8 +273,8 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
             Err(reason) => {
                 let s = slots.snapshot();
                 eprintln!(
-                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip)",
-                    s.current, s.peak, s.refused_global, s.refused_per_ip,
+                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip, {ips} distinct IPs)",
+                    s.current, s.peak, s.refused_global, s.refused_per_ip, ips = s.distinct_ips,
                 );
                 let _ = stream.shutdown(std::net::Shutdown::Both);
                 continue;
@@ -605,8 +605,11 @@ mod tests {
         assert_eq!(snap.peak, 2, "peaked at two concurrent");
         assert_eq!(snap.refused_global, 1);
         assert_eq!(snap.refused_per_ip, 1);
+        assert_eq!(snap.distinct_ips, 1, "one IP still holds a slot");
         drop(a);
-        assert_eq!(s.snapshot().current, 0, "all released");
+        let final_snap = s.snapshot();
+        assert_eq!(final_snap.current, 0, "all released");
+        assert_eq!(final_snap.distinct_ips, 0, "no IPs hold slots once released");
     }
 
     #[test]

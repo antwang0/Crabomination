@@ -49,6 +49,10 @@ pub(crate) struct SlotSnapshot {
     pub(crate) peak: usize,
     pub(crate) refused_global: u64,
     pub(crate) refused_per_ip: u64,
+    /// Distinct remote IPs currently holding at least one slot. Read against
+    /// `current` it separates "one IP holding many slots" (possible abuse)
+    /// from "many IPs each holding a few" (healthy load).
+    pub(crate) distinct_ips: usize,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -101,6 +105,7 @@ impl SlotManager {
             peak: state.peak,
             refused_global: state.refused_global,
             refused_per_ip: state.refused_per_ip,
+            distinct_ips: state.per_ip.len(),
         }
     }
 }
