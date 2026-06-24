@@ -7160,3 +7160,52 @@ fn pheres_band_tromper_inspired() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// === Fifth modern_decks batch tests. ===
+
+/// Dwarven Berserker swells when blocked.
+#[test]
+fn dwarven_berserker_swells_when_blocked() {
+    let mut g = two_player_game();
+    let db = g.add_card_to_battlefield(0, catalog::dwarven_berserker());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::BlockerDeclared { blocker, attacker: db }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(db).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 1), "+3/+0");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Elvish Hexhunter sacrifices to destroy an enchantment.
+#[test]
+fn elvish_hexhunter_destroys_enchantment() {
+    let mut g = two_player_game();
+    let eh = g.add_card_to_battlefield(0, catalog::elvish_hexhunter());
+    g.clear_sickness(eh);
+    let ench = g.add_card_to_battlefield(1, catalog::hardened_scales());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eh, ability_index: 0, target: Some(Target::Permanent(ench)), additional_targets: vec![], x_value: None,
+    }).expect("sac to destroy enchantment");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+    assert!(g.battlefield_find(eh).is_none(), "hexhunter sacrificed");
+}
+
+/// Felidar Savior buffs two other creatures on ETB.
+#[test]
+fn felidar_savior_buffs_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let savior = g.add_card_to_battlefield(0, catalog::felidar_savior());
+    let eff = catalog::felidar_savior().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(savior, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(a), Target::Permanent(b)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    // Up to two other creatures you control each get a +1/+1 counter.
+    let buffed = [a, b].iter()
+        .filter(|c| g.battlefield_find(**c).unwrap().counter_count(CounterType::PlusOnePlusOne) == 1)
+        .count();
+    assert_eq!(buffed, 2, "both other creatures buffed");
+}

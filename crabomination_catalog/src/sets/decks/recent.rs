@@ -12046,3 +12046,97 @@ pub fn pheres_band_tromper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// === Fifth modern_decks batch: combat tricks + utility bodies. ===
+
+/// Dwarven Berserker — {1}{R} 1/1 Dwarf Berserker. Whenever it becomes blocked,
+/// it gets +3/+0 and gains trample.
+pub fn dwarven_berserker() -> CardDefinition {
+    CardDefinition {
+        name: "Dwarven Berserker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elvish Hexhunter — {G/W} 1/1 Elf Shaman. {G/W}, {T}, Sacrifice this:
+/// destroy target enchantment.
+pub fn elvish_hexhunter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::mana::{hybrid, Color};
+    CardDefinition {
+        name: "Elvish Hexhunter",
+        cost: cost(&[hybrid(Color::Green, Color::White)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[hybrid(Color::Green, Color::White)]),
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Enchantment),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Felidar Savior — {3}{W} 2/3 Cat Beast with lifelink. ETB put a +1/+1 counter
+/// on each of up to two other target creatures you control.
+pub fn felidar_savior() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Felidar Savior",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 2,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+            effect: Box::new(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        ..Default::default()
+    }
+}
