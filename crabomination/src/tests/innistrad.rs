@@ -1292,6 +1292,65 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Blood Servitor makes a Blood token on entry.
+#[test]
+fn blood_servitor_makes_blood() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::blood_servitor());
+    g.resolve_effect(
+        &catalog::blood_servitor().triggered_abilities[0].effect,
+        &EffectContext::for_ability(s, 0, None),
+    ).unwrap();
+    assert_eq!(count_named(&g, 0, "Blood"), 1);
+}
+
+/// Dreadfeast Demon sacrifices a creature at end step to copy itself.
+#[test]
+fn dreadfeast_demon_sacs_to_copy() {
+    let mut g = two_player_game();
+    let demon = g.add_card_to_battlefield(0, catalog::dreadfeast_demon());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // non-Demon fodder
+    g.resolve_effect(
+        &catalog::dreadfeast_demon().triggered_abilities[0].effect,
+        &EffectContext::for_ability(demon, 0, None),
+    ).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Dreadfeast Demon"), 2, "made a copy after the sacrifice");
+}
+
+/// Dying to Serve mints a tapped Zombie when you discard (once per turn).
+#[test]
+fn dying_to_serve_makes_tapped_zombie_on_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dying_to_serve());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let evs = g.resolve_effect(
+        &crate::card::Effect::Discard { who: crate::card::Selector::You, amount: crate::card::Value::Const(1), random: false },
+        &ctx0(&g),
+    ).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let z = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Zombie");
+    assert!(z.is_some() && z.unwrap().tapped, "tapped Zombie minted");
+}
+
+/// Laid to Rest draws when a Human dies and gains life when a counter-bearing
+/// creature dies.
+#[test]
+fn laid_to_rest_death_payoffs() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::laid_to_rest());
+    g.add_card_to_library(0, catalog::island());
+    let hand0 = g.players[0].hand.len();
+    // Lambholt Pacifist is a Human; kill it → Laid to Rest draws.
+    let lh = g.add_card_to_battlefield(0, catalog::lambholt_pacifist());
+    g.battlefield_find_mut(lh).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew when a Human died");
+}
+
 /// Rise of the Ants makes two 3/3 Insects and gains 2 life.
 #[test]
 fn rise_of_the_ants_makes_insects() {

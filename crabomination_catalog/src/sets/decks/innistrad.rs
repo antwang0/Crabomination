@@ -3434,3 +3434,127 @@ pub fn honored_heirloom() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 11: more MID/VOW commons & uncommons ───────────────────────────────
+
+/// Blood Servitor — {3} 2/2 Construct. ETB create a Blood token.
+pub fn blood_servitor() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Servitor",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dreadfeast Demon — {5}{B}{B} 6/6 flying Demon. At your end step, sacrifice a
+/// non-Demon creature; if you do, create a token copy of this creature.
+pub fn dreadfeast_demon() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Dreadfeast Demon",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::HasCreatureType(CreatureType::Demon),
+                        ))),
+                },
+                Effect::If {
+                    cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                    then: Box::new(Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        source: Selector::This,
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: None,
+                        non_legendary: false,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dying to Serve — {2}{B} Enchantment. Whenever you discard one or more cards,
+/// create a tapped 2/2 black Zombie token. Triggers only once each turn.
+pub fn dying_to_serve() -> CardDefinition {
+    CardDefinition {
+        name: "Dying to Serve",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl).once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: tapped_zombie_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+fn tapped_zombie_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        tapped: true,
+        ..Default::default()
+    }
+}
+
+/// Laid to Rest — {3}{G} Enchantment. Whenever a Human you control dies, draw a
+/// card. Whenever a creature you control with a +1/+1 counter on it dies, gain
+/// 2 life.
+pub fn laid_to_rest() -> CardDefinition {
+    CardDefinition {
+        name: "Laid to Rest",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
+                    }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                    }),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            },
+        ],
+        ..Default::default()
+    }
+}
