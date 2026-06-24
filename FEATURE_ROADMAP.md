@@ -301,7 +301,10 @@ Each a small targeted feature; sweep batch by batch.
 - 🟡 **Conditional / additional costs** as a general modal layer. Card-intrinsic
   target-conditional reduction ships (`self_cost_reduction_if_target` — Ride's
   End's "{3} less if it targets a tapped permanent", generic-only / colored-pip
-  safe). Remaining: board-state-gated flat reductions and per-mode Spree costs.
+  safe). Board-state / per-turn-counter scaling reductions ship too
+  (`self_cost_reduction_if_control` — Pearl of Wisdom;
+  `StaticEffect::SelfCostReducedPer{Discard,CreatureAttacked}ThisTurn` — Hollow
+  One, Search Party Captain). Remaining: per-mode Spree costs.
 - ⏳ **{X} in activated abilities** generalized; **delve/convoke colored**
   contribution.
 - ⏳ **Snow-mana-only** and **mana-value-X** cost gates.

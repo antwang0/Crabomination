@@ -437,7 +437,7 @@ fn timberland_guide_counter() {
 fn pestilent_wolf_deathtouch() {
     let mut g = two_player_game();
     let wolf = g.add_card_to_battlefield(0, catalog::pestilent_wolf());
-    let mut ctx = EffectContext::for_ability(wolf, 0, None);
+    let ctx = EffectContext::for_ability(wolf, 0, None);
     g.resolve_effect(&catalog::pestilent_wolf().activated_abilities[0].effect, &ctx).unwrap();
     assert!(g.computed_permanent(wolf).unwrap().keywords.contains(&Keyword::Deathtouch));
 }
@@ -603,7 +603,7 @@ fn end_the_festivities_sweeps_opponent() {
 fn belligerent_guest_blood_on_hit() {
     let mut g = two_player_game();
     let bg = g.add_card_to_battlefield(0, catalog::belligerent_guest());
-    let mut ctx = EffectContext::for_ability(bg, 0, None);
+    let ctx = EffectContext::for_ability(bg, 0, None);
     g.resolve_effect(&catalog::belligerent_guest().triggered_abilities[0].effect, &ctx).unwrap();
     assert_eq!(count_named(&g, 0, "Blood"), 1);
 }

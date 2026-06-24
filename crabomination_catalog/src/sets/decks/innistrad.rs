@@ -1446,8 +1446,8 @@ pub fn mindleech_ghoul() -> CardDefinition {
     }
 }
 
-/// Morkrut Behemoth — {4}{B} 7/6 Zombie Giant. Menace. As an additional cost,
-/// sacrifice a creature or pay {1}{B} (the sacrifice path is modeled).
+/// Morkrut Behemoth — {4}{B} 7/6 Zombie Giant. Menace. (The "sacrifice a
+/// creature or pay {1}{B}" additional cast cost is omitted — body only.)
 pub fn morkrut_behemoth() -> CardDefinition {
     CardDefinition {
         name: "Morkrut Behemoth",

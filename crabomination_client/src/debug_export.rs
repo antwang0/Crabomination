@@ -199,6 +199,7 @@ mod tests {
                 commander_damage_taken: vec![],
                 team: 0,
                 coven_active: false,
+                speed: 0,
             }],
             battlefield: vec![],
             stack: vec![],

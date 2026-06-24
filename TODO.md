@@ -126,6 +126,20 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
 - **Lier, Disciple of the Drowned** ✅ shipped — new
   `StaticEffect::GraveyardInstantsSorceriesHaveFlashback` (graveyard I/S gain
   flashback = mana cost), wired into the flashback-cast path + graveyard view.
+- **Search Party Captain** ✅ shipped — new
+  `StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn` ("{1} less per
+  creature you attacked with this turn").
+- **"Sacrifice a creature or pay {N}" additional cast costs** — Morkrut
+  Behemoth (body only) and Eaten Alive (mandatory-sacrifice approximation via
+  `SacrificeAndRemember`, dropping the pay-instead branch) both want a real
+  "pay alt-cost OR sacrifice" additional-cost modal at cast.
+- **Spend-restriction mana from creatures** — Unblinking Observer ("{T}: Add
+  {U}. Spend only to pay a disturb cost or cast an instant/sorcery") and Cobbled
+  Lancer's graveyard cantrip / additional-cost-exile are not yet shipped.
+- **Cleave** (Lantern Flare, Lunar Rejection) — no `cleave` alt-cast that strips
+  the bracketed clause for spells; deferred.
+- **Patchwork Crawler** — "has all activated abilities of cards exiled with it"
+  needs a granted-abilities-from-linked-exile primitive.
 
 ## Discovered follow-ups — missing-card sweep (modern_decks)
 
