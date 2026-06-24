@@ -148,6 +148,20 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
   predicate (Shipwreck Sifters' discard payoff).
 - **Patchwork Crawler** — "has all activated abilities of cards exiled with it"
   needs a granted-abilities-from-linked-exile primitive.
+- **Threshold / counter-driven transform DFCs** (batch 4–6 sweep) — Restless
+  Bloodseeker, Bloodsworn Squire, Daring Sleuth // Bearer, Gnarled Grovestrider
+  // Dormant Grove, Voldaren Bloodcaster, Lambholt Pacifist (classic
+  no-spell-cast werewolf, not Daybound) all transform on a counter/token/Clue/
+  spell-history threshold — want a generic `transform-when-condition` helper.
+- **Damage-redirect enrage on a werewolf DFC** — Ill-Tempered Loner //
+  Howlpack Avenger ("when dealt damage, deal that much to any target" + a
+  `{1}{R}: +2/+0` firebreathing ability on both faces); needs `werewolf_dfc`
+  extended to carry activated abilities, plus an enrage-redirect-to-any-target.
+- **Two-condition cost reduction** — Geistlight Snare ("{1} less if you control
+  a Spirit; also {1} less if you control an enchantment") wants a vec of
+  board-state cost-reduction clauses, not the single `self_cost_reduction_if_control`.
+- **Augur of Autumn** ✅ shipped (play-lands-from-top); its coven cast-creatures-
+  from-top rider is the only remaining gap.
 
 ## Discovered follow-ups — missing-card sweep (modern_decks)
 
