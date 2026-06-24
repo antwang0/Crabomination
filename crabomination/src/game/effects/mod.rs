@@ -3505,6 +3505,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::HauntCreature { body } => {
+                // CR 702.55 — pick a creature to haunt (prefer an opponent's),
+                // exile the source card, and register the death-watch trigger.
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let Some(src) = ctx.source else { return Ok(()); };
+                let ctrl = ctx.controller;
+                let haunted = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && c.id != src)
+                    .min_by_key(|c| (c.controller == ctrl) as u8)
+                    .map(|c| c.id);
+                let Some(haunted) = haunted else { return Ok(()); };
+                // Creature haunt: the card is already in a graveyard (it died
+                // before this dies-trigger resolved) — move it straight to
+                // exile and register now. Spell haunt: the card is still mid-
+                // resolution off-stack, so stash for the post-resolution route.
+                let in_gy = self
+                    .players
+                    .iter()
+                    .position(|p| p.graveyard.iter().any(|c| c.id == src));
+                if let Some(p) = in_gy {
+                    let pos = self.players[p].graveyard.iter().position(|c| c.id == src).unwrap();
+                    let card = self.players[p].graveyard.remove(pos);
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: src });
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctrl,
+                        source: src,
+                        kind: DelayedKind::WhenHauntedCreatureDies(haunted),
+                        effect: (**body).clone(),
+                        target: None,
+                        bound_token: None,
+                        fires_once: true,
+                    });
+                } else {
+                    self.haunt_pending = Some((haunted, (**body).clone()));
+                }
+                Ok(())
+            }
+
             Effect::ExileTaggedWithSource { what } => {
                 let source = ctx.source;
                 for ent in self.resolve_selector(what, ctx) {

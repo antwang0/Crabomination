@@ -3385,6 +3385,10 @@ static FEM: &[Factory] = &[
 ];
 static GPT: &[Factory] = &[
     super::gpt::mourning_thrull,
+    super::gpt::shrieking_grotesque,
+    super::gpt::cry_of_contrition,
+    super::gpt::douse_in_gloom,
+    super::gpt::castigate,
 ];
 static ICE: &[Factory] = &[
     super::ice::brainstorm,

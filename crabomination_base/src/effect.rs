@@ -2373,6 +2373,12 @@ pub enum Effect {
     /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).
     /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
     ExileReturnNextEndStep { what: Selector },
+    /// CR 702.55 — Haunt. Exile the source card (the dying creature, or the
+    /// resolving instant/sorcery) "haunting" a creature, then register a
+    /// `DelayedKind::WhenHauntedCreatureDies` delayed trigger that runs `body`
+    /// when that creature dies. The haunted creature is auto-picked (preferring
+    /// an opponent's) — the controller's choice is a deferred UI follow-up.
+    HauntCreature { body: Box<Effect> },
     Tap     { what: Selector },
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).

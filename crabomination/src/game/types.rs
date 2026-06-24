@@ -657,6 +657,10 @@ pub enum DelayedKind {
     /// watched card leaves the battlefield, any turn (not turn-scoped).
     /// Hofri Ghostforge's token rider.
     WhenCardLeavesBattlefield(crate::card::CardId),
+    /// CR 702.55 — Haunt. Fires when the haunted creature (the watched id)
+    /// dies, any turn (not turn-scoped, never expires at cleanup). The source
+    /// is the exiled haunting card. Registered by `Effect::HauntCreature`.
+    WhenHauntedCreatureDies(crate::card::CardId),
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

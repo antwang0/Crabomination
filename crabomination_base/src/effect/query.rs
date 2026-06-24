@@ -157,6 +157,8 @@ impl Effect {
             // Targets are chosen at resolution (Decision::ChooseCards), so no
             // cast-time target slot is demanded.
             Effect::TapUpToValue { .. } => false,
+            // CR 702.55 — the haunted creature is auto-picked at resolution.
+            Effect::HauntCreature { .. } => false,
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,

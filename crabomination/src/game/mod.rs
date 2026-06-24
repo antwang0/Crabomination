@@ -84,6 +84,9 @@ mod tests_chk;
 #[cfg(test)]
 #[path = "../tests/bro.rs"]
 mod tests_bro;
+#[cfg(test)]
+#[path = "../tests/gpt.rs"]
+mod tests_gpt;
 pub mod types;
 
 #[cfg(test)]
@@ -535,6 +538,14 @@ pub struct GameState {
     /// instead of the graveyard. Cleared once consumed.
     #[serde(skip)]
     pub(crate) cipher_encode_pending: Option<CardId>,
+    /// CR 702.55 — Haunt. Set by `Effect::HauntCreature` while an instant/
+    /// sorcery resolves to the creature it should haunt plus the haunt body;
+    /// the post-resolution routing exiles the spell card (instead of the
+    /// graveyard) and registers the `WhenHauntedCreatureDies` delayed trigger.
+    /// Cleared once consumed. (Creature haunt is handled inline since the card
+    /// is already in the graveyard when its dies-trigger resolves.)
+    #[serde(skip)]
+    pub(crate) haunt_pending: Option<(CardId, crate::effect::Effect)>,
     /// Transient: the `CardId`s of cards discarded within the current
     /// effect resolution. Populated alongside the count fields above. Used
     /// by Mind Roots's "Put up to one land card discarded this way onto
@@ -1052,6 +1063,7 @@ impl Clone for GameState {
             exile_resolving_spell: self.exile_resolving_spell,
             end_turn_requested: self.end_turn_requested,
             cipher_encode_pending: self.cipher_encode_pending,
+            haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
@@ -1184,6 +1196,7 @@ impl GameState {
             exile_resolving_spell: false,
             end_turn_requested: false,
             cipher_encode_pending: None,
+            haunt_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
@@ -6448,7 +6461,13 @@ impl GameState {
             let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
             let mut watched: Vec<CardId> = Vec::new();
             self.delayed_triggers.retain(|dt| {
-                if let DelayedKind::WhenCardDies(cid) = dt.kind
+                let watched_id = match dt.kind {
+                    // CR 702.55 — Haunt's death-watch fires any turn.
+                    DelayedKind::WhenCardDies(cid)
+                    | DelayedKind::WhenHauntedCreatureDies(cid) => Some(cid),
+                    _ => None,
+                };
+                if let Some(cid) = watched_id
                     && died.contains(&cid)
                 {
                     fire.push(dt.clone());
@@ -8872,6 +8891,24 @@ impl GameState {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
             self.exile.push(card);
+            return Ok(events);
+        }
+        // CR 702.55 — Haunt. `Effect::HauntCreature` set `haunt_pending` to the
+        // creature this resolving instant/sorcery should haunt. Exile the spell
+        // card (not the graveyard) and register the death-watch delayed trigger.
+        if let Some((haunted, body)) = self.haunt_pending.take() {
+            use crate::game::types::{DelayedKind, DelayedTrigger};
+            let src = card.id;
+            self.exile.push(card);
+            self.delayed_triggers.push(DelayedTrigger {
+                controller: caster,
+                source: src,
+                kind: DelayedKind::WhenHauntedCreatureDies(haunted),
+                effect: body,
+                target: None,
+                bound_token: None,
+                fires_once: true,
+            });
             return Ok(events);
         }
         // CR 702.46 — Cipher. `Effect::Cipher` set `cipher_encode_pending` to
