@@ -3558,3 +3558,88 @@ pub fn laid_to_rest() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 12: more MID/VOW commons & uncommons ───────────────────────────────
+
+/// Grisly Ritual — {5}{B} Sorcery. Destroy target creature or planeswalker and
+/// create two Blood tokens.
+pub fn grisly_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Grisly Ritual",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crabomination_base::tokens::blood_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dominating Vampire — {1}{R}{R} 3/3 Vampire. ETB gain control of target
+/// creature with mana value ≤ the number of Vampires you control until end of
+/// turn; untap it and it gains haste.
+pub fn dominating_vampire() -> CardDefinition {
+    CardDefinition {
+        name: "Dominating Vampire",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::ManaValueAtMostControlledCount(Box::new(
+                        SelectionRequirement::HasCreatureType(CreatureType::Vampire),
+                    )),
+                )),
+                to: Some(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Graf Reaver — {1}{B} 3/3 Zombie Warrior. Exploit; when it exploits a
+/// creature, destroy target planeswalker. At your upkeep it deals 1 to you.
+pub fn graf_reaver() -> CardDefinition {
+    use crate::effect::shortcut::exploit;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Graf Reaver",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            exploit(Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Planeswalker),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+                effect: Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}

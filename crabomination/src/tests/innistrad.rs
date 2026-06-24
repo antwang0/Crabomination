@@ -1292,6 +1292,48 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Grisly Ritual destroys a creature and makes two Blood.
+#[test]
+fn grisly_ritual_destroys_and_makes_blood() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::grisly_ritual().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(count_named(&g, 0, "Blood"), 2);
+}
+
+/// Dominating Vampire steals a small creature (MV gated by your Vampire count).
+#[test]
+fn dominating_vampire_steals_small_creature() {
+    let mut g = two_player_game();
+    let dv = g.add_card_to_battlefield(0, catalog::dominating_vampire()); // a Vampire
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2 ≤ 1 Vampire? no
+    // One Vampire (the Dominating Vampire itself) → can only steal MV ≤ 1. A MV-2
+    // bear is out of range, so control stays. Add a second Vampire to reach MV 2.
+    g.add_card_to_battlefield(0, catalog::vampire_interloper());
+    let mut ctx = EffectContext::for_ability(dv, 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::dominating_vampire().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stole the bear (2 Vampires)");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Graf Reaver pings its controller at upkeep.
+#[test]
+fn graf_reaver_pings_you_at_upkeep() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    let reaver = g.add_card_to_battlefield(0, catalog::graf_reaver());
+    g.resolve_effect(
+        &catalog::graf_reaver().triggered_abilities[1].effect,
+        &EffectContext::for_ability(reaver, 0, None),
+    ).unwrap();
+    assert_eq!(g.players[0].life, 19, "dealt 1 to you");
+}
+
 /// Blood Servitor makes a Blood token on entry.
 #[test]
 fn blood_servitor_makes_blood() {
