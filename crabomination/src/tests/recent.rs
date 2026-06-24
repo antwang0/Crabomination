@@ -6994,3 +6994,136 @@ fn patchwork_beastie_needs_delirium() {
     assert!(g.delirium_active(0), "four card types");
     assert!(g.legal_attackers(0).contains(&pb), "attacks with delirium");
 }
+
+// === Third modern_decks batch tests. ===
+
+/// Fervent Champion pumps another attacking Knight.
+#[test]
+fn fervent_champion_pumps_knight() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::fervent_champion());
+    let ally = g.add_card_to_battlefield(0, catalog::fervent_champion());
+    let eff = catalog::fervent_champion().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(champ, 0, Some(Target::Permanent(ally)), 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let cp = g.computed_permanent(ally).unwrap();
+    assert_eq!(cp.power, 2, "+1/+0");
+}
+
+/// Porcelain Legionnaire can be cast paying life for its Phyrexian pip.
+#[test]
+fn porcelain_legionnaire_phyrexian_cast() {
+    let mut g = two_player_game();
+    let pl = g.add_card_to_hand(0, catalog::porcelain_legionnaire());
+    g.players[0].mana_pool.add_colorless(2); // pay {2}, then 2 life for {W/P}
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: pl, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast paying Phyrexian life");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pl).is_some(), "resolved");
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life for {{W/P}}");
+}
+
+/// Short Sword grants +1/+1 when equipped.
+#[test]
+fn short_sword_pumps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::short_sword());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: sword, target: bear }).expect("equip");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+}
+
+/// Axebane Beast is a 3/4 vanilla.
+#[test]
+fn axebane_beast_stats() {
+    let d = catalog::axebane_beast();
+    assert_eq!((d.power, d.toughness), (3, 4));
+}
+
+/// Yavimaya Sapherd makes a Saproling on ETB.
+#[test]
+fn yavimaya_sapherd_makes_saproling() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::yavimaya_sapherd());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Saproling" && c.is_token));
+}
+
+/// Faerie Guidemother's Gift of the Fae pumps and grants flying.
+#[test]
+fn faerie_guidemother_adventure_buffs() {
+    let mut g = two_player_game();
+    let d = catalog::faerie_guidemother();
+    let adv = d.adventure.expect("adventure");
+    assert_eq!(adv.name, "Gift of the Fae");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(99), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&adv.effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1");
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// All That Glitters scales with your artifacts and enchantments.
+#[test]
+fn all_that_glitters_scales() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::worn_powerstone()); // artifact
+    g.add_card_to_battlefield(0, catalog::short_sword());     // artifact
+    let aura = g.add_card_to_hand(0, catalog::all_that_glitters());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    // The aura itself is an enchantment you control, so 2 artifacts + 1
+    // enchantment (the aura) = +3/+3 → 5/5.
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+}
+
+/// Scorching Dragonfire exiles a creature it kills.
+#[test]
+fn scorching_dragonfire_exiles_on_kill() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::scorching_dragonfire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, bolt, Target::Permanent(foe));
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(foe).is_none(), "creature dead");
+    assert!(g.exile.iter().any(|c| c.id == foe), "exiled, not in graveyard");
+}
+
+/// Slaying Fire deals 3 to any target.
+#[test]
+fn slaying_fire_burns() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::slaying_fire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.players[1].life, 17, "3 damage");
+}
+
+/// Searing Barrage deals 5 to a creature.
+#[test]
+fn searing_barrage_burns_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let bolt = g.add_card_to_hand(0, catalog::searing_barrage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_at(&mut g, bolt, Target::Permanent(foe));
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(foe).is_none(), "5 damage kills the 4/4");
+}

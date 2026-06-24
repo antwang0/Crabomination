@@ -11752,3 +11752,231 @@ pub fn patchwork_beastie() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// === Third modern_decks batch: aggro + equipment + adventure staples. ===
+
+/// Fervent Champion — {R} 1/1 Human Knight. First strike, haste. Whenever it
+/// attacks, another target Knight you control gets +1/+0. (The equip-cost
+/// rider is dropped — the engine has no self-targeted equip discount.)
+pub fn fervent_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Fervent Champion",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Knight)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Porcelain Legionnaire — {2}{W/P} 3/1 Phyrexian Soldier with first strike.
+pub fn porcelain_legionnaire() -> CardDefinition {
+    use crate::mana::{phyrexian, Color};
+    CardDefinition {
+        name: "Porcelain Legionnaire",
+        cost: cost(&[generic(2), phyrexian(Color::White)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        ..Default::default()
+    }
+}
+
+/// Short Sword — {1} Equipment. Equipped creature gets +1/+1. Equip {1}.
+pub fn short_sword() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Short Sword",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Axebane Beast — {3}{G} 3/4 Beast.
+pub fn axebane_beast() -> CardDefinition {
+    CardDefinition {
+        name: "Axebane Beast",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
+/// Yavimaya Sapherd — {2}{G} 2/2 Fungus. ETB create a 1/1 green Saproling.
+pub fn yavimaya_sapherd() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::etb;
+    use crate::mana::Color;
+    let saproling = TokenDefinition {
+        name: "Saproling".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Yavimaya Sapherd",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: saproling,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Faerie Guidemother — {W} 1/1 Faerie with flying. Adventure — Gift of the Fae
+/// {1}{W}: target creature gets +2/+1 and gains flying until end of turn.
+pub fn faerie_guidemother() -> CardDefinition {
+    use crate::card::Adventure;
+    CardDefinition {
+        name: "Faerie Guidemother",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(Adventure {
+            name: "Gift of the Fae",
+            cost: cost(&[generic(1), w()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(2),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// All That Glitters — {1}{W} Aura. Enchanted creature gets +1/+1 for each
+/// artifact and/or enchantment you control.
+pub fn all_that_glitters() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, EquipScale};
+    CardDefinition {
+        name: "All That Glitters",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(EquipScale {
+                filter: SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .and(SelectionRequirement::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: None,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Scorching Dragonfire — {1}{R} Instant. Deal 3 damage to target creature or
+/// planeswalker; if it would die this turn, exile it instead.
+pub fn scorching_dragonfire() -> CardDefinition {
+    CardDefinition {
+        name: "Scorching Dragonfire",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            // Install the death replacement before the damage so a lethal hit
+            // exiles rather than buries (mirrors Anger of the Gods).
+            Effect::ExileIfWouldDieThisTurn {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Slaying Fire — {2}{R} Instant. Deal 3 damage to any target. (Adamant's
+/// "4 instead if three red was spent" is dropped — no per-color spend tracking.)
+pub fn slaying_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Slaying Fire",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Searing Barrage — {4}{R} Instant. Deal 5 damage to target creature.
+/// (Adamant's controller-burn rider is dropped — no per-color spend tracking.)
+pub fn searing_barrage() -> CardDefinition {
+    CardDefinition {
+        name: "Searing Barrage",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}
