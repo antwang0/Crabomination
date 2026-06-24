@@ -1655,6 +1655,30 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
                 castable.push(action);
             }
         }
+        // Graveyard-activated abilities (CR 702.84 Unearth, and the SOS
+        // "return this from your graveyard" cycle): offer each `from_graveyard`
+        // activated ability. `would_accept` enforces zone / cost / sorcery
+        // timing, so these only surface when actually activatable.
+        for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
+            if !ab.from_graveyard {
+                continue;
+            }
+            let (target, additional_targets) = if ab.effect.requires_target() {
+                let (t, extras) = state.auto_targets_for_effect_all_slots(&ab.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::ActivateAbility {
+                card_id: c.id, ability_index: idx, target, additional_targets, x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
     }
 
     // MDFC back faces (CR 712): cast the back of a hand MDFC, or the back of a
@@ -4805,6 +4829,21 @@ mod tests {
         match main_phase_action(&g, 0) {
             GameAction::CastSpellBack { card_id, .. } => assert_eq!(card_id, pc),
             other => panic!("expected a graveyard back-face cast, got {other:?}"),
+        }
+    }
+
+    /// The bot activates an Unearth ability (CR 702.84) from its graveyard when
+    /// it can afford it (a `from_graveyard` activated ability).
+    #[test]
+    fn bot_unearths_from_graveyard() {
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        let dragger = g.add_card_to_graveyard(0, catalog::viscera_dragger());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1); // {1}{B} unearth cost
+        match main_phase_action(&g, 0) {
+            GameAction::ActivateAbility { card_id, .. } => assert_eq!(card_id, dragger),
+            other => panic!("expected an unearth activation, got {other:?}"),
         }
     }
 
