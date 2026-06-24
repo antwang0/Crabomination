@@ -1221,6 +1221,163 @@ pub fn gluttonous_guest() -> CardDefinition {
     }
 }
 
+/// Dormant Grove // Gnarled Grovestrider — {3}{G} Enchantment. At the beginning
+/// of combat on your turn, put a +1/+1 counter on target creature you control;
+/// then if that creature has toughness 6+, transform it into a 3/6 vigilant
+/// Treefolk that gives your other creatures vigilance.
+pub fn dormant_grove() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::game::types::TurnStep;
+    let grovestrider = CardDefinition {
+        name: "Gnarled Grovestrider",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        power: 3,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control have vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dormant Grove",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::ToughnessOf(Box::new(Selector::Target(0))),
+                        Value::Const(6),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(grovestrider)),
+        ..Default::default()
+    }
+}
+
+/// Bloodsworn Squire // Bloodsworn Knight — {3}{B} 3/3 Vampire Soldier.
+/// {1}{B}, Discard a card: gains indestructible until end of turn, tap it; then
+/// if four or more creature cards are in your graveyard, transform it. Back is a
+/// */* Vampire Knight (power/toughness = creature cards in your graveyard).
+pub fn bloodsworn_squire() -> CardDefinition {
+    use crate::card::{ActivatedAbility, DynamicPt};
+    // Shared cost line: indestructible until end of turn, then tap self.
+    let indestructible_then_tap = || {
+        vec![
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Tap { what: Selector::This },
+        ]
+    };
+    let ability = |extra: Vec<Effect>| ActivatedAbility {
+        mana_cost: cost(&[generic(1), b()]),
+        discard_cost: Some((SelectionRequirement::Any, 1)),
+        effect: Effect::Seq(indestructible_then_tap().into_iter().chain(extra).collect()),
+        ..Default::default()
+    };
+    let knight = CardDefinition {
+        name: "Bloodsworn Knight",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        dynamic_pt: Some(DynamicPt::BasePlusCreaturesInControllerGraveyard { base: 0 }),
+        activated_abilities: vec![ability(vec![])],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Bloodsworn Squire",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ability(vec![Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::CardsInGraveyardMatching {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature,
+                },
+                Value::Const(4),
+            ),
+            then: Box::new(Effect::Transform { what: Selector::This }),
+            else_: Box::new(Effect::Noop),
+        }])],
+        back_face: Some(Box::new(knight)),
+        ..Default::default()
+    }
+}
+
+/// Daring Sleuth // Bearer of Overwhelming Truths — {1}{U} 2/1 Human Rogue.
+/// When you sacrifice a Clue, transform it. Back: 3/2 Human Wizard with prowess
+/// that investigates on combat damage to a player.
+pub fn daring_sleuth() -> CardDefinition {
+    use crate::effect::shortcut::investigate;
+    let bearer = CardDefinition {
+        name: "Bearer of Overwhelming Truths",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![on_combat_damage_to_player(investigate(1))],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Daring Sleuth",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Clue),
+                }),
+            effect: Effect::Transform { what: Selector::This },
+        }],
+        back_face: Some(Box::new(bearer)),
+        ..Default::default()
+    }
+}
+
 /// Restless Bloodseeker // Bloodsoaked Reveler — {1}{B} 1/3 Vampire. End step,
 /// if you gained life this turn, make a Blood token. Sacrifice two Blood: transform
 /// (sorcery speed). Back: 3/3 with {4}{B}: each opponent loses 2, you gain 2.

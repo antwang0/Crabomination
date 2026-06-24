@@ -1292,6 +1292,74 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Daring Sleuth transforms when you sacrifice a Clue; the back has prowess.
+#[test]
+fn daring_sleuth_transforms_on_clue_sacrifice() {
+    use crate::card::{Effect, Selector, SelectionRequirement, Value};
+    let mut g = two_player_game();
+    let sleuth = g.add_card_to_battlefield(0, catalog::daring_sleuth());
+    // Mint a Clue, then sacrifice it — the sacrifice fires the transform trigger.
+    g.resolve_effect(&crate::effect::shortcut::investigate(1), &ctx0(&g)).unwrap();
+    let evs = g
+        .resolve_effect(
+            &Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Clue),
+            },
+            &ctx0(&g),
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(sleuth).unwrap();
+    assert_eq!(back.definition.name, "Bearer of Overwhelming Truths");
+    assert!(back.definition.keywords.contains(&Keyword::Prowess));
+}
+
+/// Bloodsworn Squire's reflexive transform fires once four creature cards are
+/// in your graveyard; the back's P/T scales with that count.
+#[test]
+fn bloodsworn_squire_transforms_with_full_graveyard() {
+    let mut g = two_player_game();
+    let squire = g.add_card_to_battlefield(0, catalog::bloodsworn_squire());
+    let effect = catalog::bloodsworn_squire().activated_abilities[0].effect.clone();
+    // Empty graveyard → ability resolves (indestructible + tap) but no transform.
+    g.resolve_effect(&effect, &EffectContext::for_ability(squire, 0, None)).unwrap();
+    assert_eq!(g.battlefield_find(squire).unwrap().definition.name, "Bloodsworn Squire");
+    assert!(g.battlefield_find(squire).unwrap().tapped, "tapped itself");
+    // Four creature cards in the graveyard → the reflexive clause transforms it.
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.resolve_effect(&effect, &EffectContext::for_ability(squire, 0, None)).unwrap();
+    assert_eq!(g.battlefield_find(squire).unwrap().definition.name, "Bloodsworn Knight");
+    assert_eq!(
+        g.computed_permanent(squire).unwrap().power,
+        4,
+        "*/* = creature cards in your graveyard"
+    );
+}
+
+/// Dormant Grove pumps a creature and transforms once it reaches toughness 6.
+#[test]
+fn dormant_grove_transforms_when_toughness_six() {
+    let mut g = two_player_game();
+    let grove = g.add_card_to_battlefield(0, catalog::dormant_grove());
+    let big = g.add_card_to_battlefield(0, catalog::rot_tide_gargantua()); // 5/4
+    let effect = catalog::dormant_grove().triggered_abilities[0].effect.clone();
+    let mut ctx = EffectContext::for_ability(grove, 0, Some(Target::Permanent(big)));
+    ctx.targets = vec![Target::Permanent(big)];
+    // First counter: toughness 4→5, below 6, no transform.
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(grove).unwrap().definition.name, "Dormant Grove");
+    // Second counter: toughness 6 → transforms into Gnarled Grovestrider.
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let strider = g.battlefield_find(grove).unwrap();
+    assert_eq!(strider.definition.name, "Gnarled Grovestrider");
+    assert!(strider.definition.keywords.contains(&Keyword::Vigilance));
+}
+
 /// Restless Bloodseeker mints a Blood at end step only if you gained life.
 #[test]
 fn restless_bloodseeker_end_step_blood_on_lifegain() {
