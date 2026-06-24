@@ -1680,8 +1680,9 @@ pub enum GameEventWire {
     CoinFlipWon { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipLost` (CR 705.1).
     CoinFlipLost { player: usize },
-    /// Wire mirror of `GameEvent::DiceRolled` (CR 706.6).
-    DiceRolled { player: usize, count: u32 },
+    /// Wire mirror of `GameEvent::DiceRolled` (CR 706.6). `high` is the
+    /// greatest result rolled, surfaced so the log can show what was rolled.
+    DiceRolled { player: usize, count: u32, #[serde(default)] high: u8 },
     CreatureDied { card_id: CardId },
     /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
@@ -1824,8 +1825,8 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
             GameEvent::CoinFlipLost { player } => GameEventWire::CoinFlipLost { player: *player },
-            GameEvent::DiceRolled { player, count, .. } => {
-                GameEventWire::DiceRolled { player: *player, count: *count }
+            GameEvent::DiceRolled { player, count, high } => {
+                GameEventWire::DiceRolled { player: *player, count: *count, high: *high }
             }
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
@@ -2060,7 +2061,13 @@ impl GameEventWire {
             E::EnergyGained { player, amount } => format!("{} gets {amount} energy", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
             E::CoinFlipLost { player } => format!("{} lost a coin flip", pn(*player)),
-            E::DiceRolled { player, count } => format!("{} rolled {count} dice", pn(*player)),
+            E::DiceRolled { player, count, high } => {
+                if *count == 1 {
+                    format!("{} rolled a {high}", pn(*player))
+                } else {
+                    format!("{} rolled {count} dice (highest {high})", pn(*player))
+                }
+            }
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
             E::CreatureSacrificed { card_id, who } => {
                 format!("{} sacrificed creature {}", pn(*who), name(*card_id))

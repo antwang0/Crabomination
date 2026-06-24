@@ -1043,8 +1043,6 @@ fn mischievous_catgeist_disturb_aura_attaches() {
 /// Olivia's Midnight Ambush is -2/-2 by day, -13/-13 at night.
 #[test]
 fn olivias_midnight_ambush_day_and_night() {
-    use crate::card::Effect;
-    let _ = Effect::Noop;
     // Day: -2/-2 kills a 2/2.
     let mut g = two_player_game();
     g.day_night = Some(DayNight::Day);
