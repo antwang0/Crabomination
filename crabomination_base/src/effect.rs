@@ -3257,6 +3257,15 @@ pub enum Effect {
     /// than one qualifies the controller takes the highest-value one.
     ReturnFromExileWithCounter { counter: crate::card::CounterType },
 
+    /// Put every creature card stamped `exiled_with == ctx.source` (exiled by
+    /// this permanent — e.g. via `StaticEffect::ExileDyingOpponentCreatures`)
+    /// onto the battlefield under the controller, optionally granting each
+    /// `Keyword::Decayed`. Gisa, Glorious Resurrector's upkeep.
+    ReturnExiledBySourceToBattlefield {
+        #[serde(default)]
+        decayed: bool,
+    },
+
     /// Kianne, Dean of Substance — exile the top card of the controller's
     /// library; if it's a land card, put it into their hand, otherwise leave it
     /// exiled with one `counter` counter on it.

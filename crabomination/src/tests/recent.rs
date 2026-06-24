@@ -6041,3 +6041,29 @@ fn sawblade_slinger_destroys_artifact() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(rock).is_none(), "artifact destroyed");
 }
+
+/// Gisa exiles a dying opponent creature (stamped with Gisa), then her upkeep
+/// reanimates it under your control with decayed.
+#[test]
+fn gisa_exiles_then_reanimates_with_decayed() {
+    let mut g = two_player_game();
+    let gisa = g.add_card_to_battlefield(0, catalog::gisa_glorious_resurrector());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Kill the opponent's creature → Gisa exiles it instead of the graveyard.
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, murder, Target::Permanent(opp));
+    let exiled = g.exile.iter().find(|c| c.id == opp).expect("exiled by Gisa");
+    assert_eq!(exiled.exiled_with, Some(gisa), "stamped with Gisa");
+    // Gisa's upkeep brings it back under seat 0 with decayed.
+    let trig = catalog::gisa_glorious_resurrector().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(gisa, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let back = g.battlefield_find(opp).expect("reanimated onto battlefield");
+    assert_eq!(back.controller, 0, "under your control");
+    assert!(g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::Decayed),
+        "gains decayed");
+}

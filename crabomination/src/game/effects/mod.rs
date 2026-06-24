@@ -7791,6 +7791,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnExiledBySourceToBattlefield { decayed } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let ids: Vec<crate::card::CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src) && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                for id in ids {
+                    self.move_card_to(
+                        id,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        ctx,
+                        events,
+                    );
+                    if *decayed
+                        && let Some(c) = self.battlefield_find_mut(id)
+                        && !c.definition.keywords.contains(&crate::card::Keyword::Decayed)
+                    {
+                        std::sync::Arc::make_mut(&mut c.definition)
+                            .keywords
+                            .push(crate::card::Keyword::Decayed);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::StudyTopCard { counter } => {
                 let p = ctx.controller;
                 let Some(top) = self.players[p].library.first().map(|c| c.id) else {

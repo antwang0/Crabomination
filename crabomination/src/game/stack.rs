@@ -2729,7 +2729,7 @@ impl GameState {
     /// `sacrifice_one` instead (audit P3: death-funnel bypass family).
     pub(crate) fn remove_from_battlefield_to_graveyard_raw(&mut self, id: CardId) {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == id) {
-            let card = self.battlefield.remove(pos);
+            let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             self.collect_leaver_counters(&card);
@@ -2744,7 +2744,7 @@ impl GameState {
             // `ExileDyingOpponentCreatures` static controlled by an opponent of
             // the dying creature, redirect to exile, and capture its reflexive
             // "when you do" effect to fire after placement.
-            let valentin_redirect: Option<(usize, Option<Effect>)> = if card.definition.is_creature()
+            let valentin_redirect: Option<(CardId, usize, Option<Effect>)> = if card.definition.is_creature()
                 && !card.is_token
             {
                 self.battlefield.iter().find_map(|src| {
@@ -2753,7 +2753,7 @@ impl GameState {
                             &sa.effect
                             && src.controller != card.controller
                         {
-                            Some((src.controller, when_you_do.as_deref().cloned()))
+                            Some((src.id, src.controller, when_you_do.as_deref().cloned()))
                         } else {
                             None
                         }
@@ -2788,12 +2788,19 @@ impl GameState {
             if card.controller < self.players.len() {
                 self.players[card.controller].permanent_left_battlefield_this_turn = true;
             }
+            // Stamp `exiled_with` so the static's controller can recur the
+            // card later (Gisa, Glorious Resurrector's upkeep mass-reanimate).
+            if let (Some((src_id, _, _)), crate::card::Zone::Exile) =
+                (&valentin_redirect, resolved)
+            {
+                card.exiled_with = Some(*src_id);
+            }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
             // Fire Valentin's reflexive "when you do, …" for the static's
             // controller (CR 603.x reflexive trigger off the replacement).
-            if let Some((controller, Some(effect))) = valentin_redirect {
+            if let Some((_src, controller, Some(effect))) = valentin_redirect {
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&effect, controller, None);
                 self.stack.push(

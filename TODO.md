@@ -105,9 +105,10 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
   count-gated delayed exile).
 - **Henrika Domnathi** — begin-combat "choose one that hasn't been chosen
   before" needs per-source mode-history tracking across turns.
-- **Gisa, Glorious Resurrector / Toxrill** — opponent-creature-dies→exile-under-
-  you replacement + upkeep mass-reanimate-with-decayed (Gisa) and slime-counter
-  team-shrink (Toxrill) both want new replacement/counter machinery.
+- **Gisa, Glorious Resurrector** ✅ shipped — the redirect now stamps
+  `exiled_with` and `Effect::ReturnExiledBySourceToBattlefield { decayed }` mass-
+  reanimates them at upkeep. **Toxrill** still wants slime-counter team-shrink
+  (per-end-step counter + scaling `-X/-X` static + sacrifice-at-zero).
 - **Skipped this run for want of a primitive:** Spectral Adversary (the
   scale-with-kicks *phase-out* rider — `ApplyToTargets` takes a fixed `max_targets`,
   not a runtime `Value`); Mulch (`MillThenToHand` picks one card, not *all*

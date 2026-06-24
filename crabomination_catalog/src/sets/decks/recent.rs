@@ -10237,3 +10237,35 @@ pub fn sawblade_slinger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gisa, Glorious Resurrector — {2}{B}{B} 4/4 Human Wizard. If a creature an
+/// opponent controls would die, exile it instead. At your upkeep, put all
+/// creature cards exiled with Gisa onto the battlefield under your control with
+/// decayed.
+pub fn gisa_glorious_resurrector() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, Supertype};
+    CardDefinition {
+        name: "Gisa, Glorious Resurrector",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "If a creature an opponent controls would die, exile it instead.",
+            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::ReturnExiledBySourceToBattlefield { decayed: true },
+        }],
+        ..Default::default()
+    }
+}

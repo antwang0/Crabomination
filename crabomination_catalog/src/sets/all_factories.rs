@@ -2858,6 +2858,7 @@ static DECKS: &[Factory] = &[
     super::decks::mossbeard_ancient,
     super::decks::shadowbeast_sighting,
     super::decks::sawblade_slinger,
+    super::decks::gisa_glorious_resurrector,
     super::decks::withering_torment,
     super::decks::voltage_surge,
     super::decks::corpse_appraiser,

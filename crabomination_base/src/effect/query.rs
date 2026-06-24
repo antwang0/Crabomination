@@ -150,6 +150,7 @@ impl Effect {
             Effect::NameCardRevealTop { .. } => false,
             Effect::RevealTopToHandOpponentsLoseMv => false,
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
+            Effect::ReturnExiledBySourceToBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
