@@ -2562,3 +2562,43 @@ pub fn diregraf_rebirth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Edgar's Awakening — {3}{B}{B} Sorcery. Return target creature card from your
+/// graveyard to the battlefield. (The discard-mode hand-return rider is omitted.)
+pub fn edgars_awakening() -> CardDefinition {
+    CardDefinition {
+        name: "Edgar's Awakening",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Ceremonial Knife — {1} Equipment. Equipped creature gets +1/+0 and makes a
+/// Blood token whenever it deals combat damage. Equip {2}.
+pub fn ceremonial_knife() -> CardDefinition {
+    CardDefinition {
+        name: "Ceremonial Knife",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 0,
+            triggered_abilities: vec![on_combat_damage_to_player(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::blood_token(),
+            })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

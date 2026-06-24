@@ -1201,3 +1201,31 @@ fn diregraf_rebirth_reanimates() {
     assert!(g.battlefield_find(corpse).is_some(), "returned to the battlefield");
     assert!(g.players[0].graveyard.iter().all(|c| c.id != corpse), "left the graveyard");
 }
+
+/// Edgar's Awakening reanimates a creature card from your graveyard.
+#[test]
+fn edgars_awakening_reanimates() {
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(corpse)];
+    g.resolve_effect(&catalog::edgars_awakening().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(corpse).is_some(), "returned to the battlefield");
+}
+
+/// Ceremonial Knife grants +1/+0 and a Blood-on-combat-damage trigger.
+#[test]
+fn ceremonial_knife_equips_and_makes_blood() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let knife = g.add_card_to_battlefield(0, catalog::ceremonial_knife());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::Equip { equipment: knife, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+0");
+    // The equipment grants a combat-damage Blood-making triggered ability.
+    let bonus = catalog::ceremonial_knife().equipped_bonus.unwrap();
+    assert_eq!(bonus.triggered_abilities.len(), 1, "grants the Blood-on-combat-damage trigger");
+}

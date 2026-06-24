@@ -464,6 +464,8 @@ static DECKS: &[Factory] = &[
     super::decks::augur_of_autumn,
     super::decks::secrets_of_the_key,
     super::decks::diregraf_rebirth,
+    super::decks::edgars_awakening,
+    super::decks::ceremonial_knife,
     super::decks::blackcleave_cliffs,
     super::decks::blooming_marsh,
     super::decks::copperline_gorge,
