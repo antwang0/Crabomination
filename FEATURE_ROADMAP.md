@@ -261,7 +261,10 @@ Each a small targeted feature; sweep batch by batch.
   Amass — all via `shortcut::*` builders.
 - **Cast-from-elsewhere:** ✅ play-from-library-top statics (Courser, Oracle of
   Mul Daya, Mystic Forge), ✅ Suspend (creature-suspend haste + free-cast target
-  UI are follow-ups), ✅ Forecast, ✅ Hideaway, ⏳ Aftermath.
+  UI are follow-ups), ✅ Forecast, ✅ Hideaway, ⏳ Aftermath,
+  ✅ Unearth (CR 702.84 — `shortcut::unearth`: a `from_graveyard` sorcery-speed
+  ability that returns the card with haste + an end-step exile; the bot offers
+  graveyard-activated abilities, the client hover panel labels them).
 - **Combat-flavor:** ✅ Bushido, Flanking, Rampage, Provoke, Battle Cry, Exalted,
   Frenzy, Melee, Dash, Boast, Afflict, Enlist, Mobilize, Myriad, Amass.
 - **Value/ETB:** ✅ Investigate, Fabricate, Riot, Raid, Afterlife, Explore, Squad,
@@ -292,6 +295,12 @@ Each a small targeted feature; sweep batch by batch.
   card from the graveyard or exiles it; Coldsnap I/S in `decks::recent`).
   Spiritcraft "cast a Spirit or Arcane spell" triggers
   ride `SelectionRequirement::HasSpellSubtype` + `shortcut::spiritcraft`.
+  ✅ Haunt (CR 702.55 — `Effect::HauntCreature` + `DelayedKind::
+  WhenHauntedCreatureDies`: a dying creature / resolved I/S is exiled haunting a
+  creature, firing its haunt body when that creature dies; Guildpact cycle in
+  `catalog::sets::gpt`). ✅ Ripple (CR 702.20 — `Effect::Ripple` +
+  `shortcut::ripple`: a cast trigger that reveals the top N, free-casts
+  same-named copies, and bottoms the rest; Coldsnap Surging cards).
 
 ## Tier 5 — Mana & cost system
 

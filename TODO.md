@@ -1998,6 +1998,19 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
+- ⏳ **Haunt / Ripple / Unearth follow-ups** (shipped this push):
+  - Haunt's haunted-creature is auto-picked (prefers an opponent's) and the
+    exile-haunting is modeled as a `route_to_graveyard` replacement, not a real
+    targeted stack trigger — add a controller choice + a proper trigger.
+    Combat-damage haunt (Souls of the Faultless) is unmodeled.
+  - Ripple's free-cast prompts go through `Decision::OptionalTrigger`; the
+    "Spells you cast have ripple N" static (Thrumming Stone) isn't wired.
+  - Unearth models only the end-step exile, not "exile it if it would leave the
+    battlefield" (same gap as Goryo's). A client affordance to surface
+    graveyard-activated abilities (the bot already offers them) is missing.
+  - Card approximations: Surging Æther's "target spell or permanent" → creature;
+    Surging Sentinels' protection-on-white-cast rider dropped.
+
 - ⏳ **Per-color mana-spent tracking** (unblocks Adamant, CR 702.137; and any
   "if N mana of one color was spent" rider). `ConvergedValue` tracks *distinct*
   colors but not per-color counts; `mana_spent` is a bare `u32`. Thread a
