@@ -824,10 +824,22 @@ fn hover_info_lines(name: &str) -> Vec<(String, bool)> {
         if aa.sac_cost {
             cost.push("Sacrifice this".into());
         }
+        if aa.exile_self_cost {
+            cost.push("Exile this from your graveyard".into());
+        }
         if cost.is_empty() {
             cost.push("{0}".into());
         }
-        lines.push((format!("{}: {body}.", cost.join(", ")), true));
+        let mut line = format!("{}: {body}.", cost.join(", "));
+        // Surface the zone / timing restrictions the cost line alone hides
+        // (Unearth, Renew, the SOS graveyard-return cycle, …).
+        if aa.from_graveyard && !aa.exile_self_cost {
+            line.push_str(" (from your graveyard)");
+        }
+        if aa.sorcery_speed {
+            line.push_str(" (sorcery speed only)");
+        }
+        lines.push((line, true));
     }
     for la in &def.loyalty_abilities {
         let body = la.effect.effect_short_text();
@@ -1653,11 +1665,23 @@ pub fn reveal_popup(
 #[cfg(test)]
 mod tests {
     use super::{
-        live_override_lines, preview_anchor, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN,
-        HOVER_PREVIEW_WIDTH,
+        hover_info_lines, live_override_lines, preview_anchor, HOVER_PREVIEW_HEIGHT,
+        HOVER_PREVIEW_MARGIN, HOVER_PREVIEW_WIDTH,
     };
     use bevy::math::Vec2;
     use crabomination::card::CreatureType;
+
+    /// An Unearth ability's hover line is annotated as a sorcery-speed
+    /// graveyard ability.
+    #[test]
+    fn unearth_ability_line_notes_graveyard_and_sorcery_speed() {
+        let lines = hover_info_lines("Viscera Dragger");
+        assert!(
+            lines.iter().any(|(t, _)| t.contains("from your graveyard")
+                && t.contains("sorcery speed only")),
+            "expected a graveyard / sorcery-speed annotated line, got {lines:?}"
+        );
+    }
 
     #[test]
     fn override_lines_note_fish_and_lost_abilities() {
