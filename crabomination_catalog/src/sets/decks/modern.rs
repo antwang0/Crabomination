@@ -16256,6 +16256,18 @@ pub fn lure() -> CardDefinition {
     simple_aura("Lure", cost(&[generic(1), g(), g()]), 0, 0, vec![Keyword::AllMustBlock])
 }
 
+/// Arrest — {1}{W} Enchantment — Aura. Enchant creature. Enchanted creature
+/// can't attack, block, or activate abilities.
+pub fn arrest() -> CardDefinition {
+    simple_aura(
+        "Arrest",
+        cost(&[generic(1), w()]),
+        0,
+        0,
+        vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities],
+    )
+}
+
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
 /// 2/3 with Vigilance. "When this creature enters, create a Map token."
 pub fn loot_the_pathfinder() -> CardDefinition {

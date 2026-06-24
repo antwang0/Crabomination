@@ -118,3 +118,13 @@ fn castigate_haunt_repeats_hand_exile() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 0, "haunt exiled the second nonland");
 }
+
+/// Absolver Thrull's enters-or-haunt trigger destroys an enchantment.
+#[test]
+fn absolver_thrull_etb_destroys_enchantment() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::pacifism());
+    g.move_card_to_battlefield_for_test(0, catalog::absolver_thrull());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "ETB destroyed the enchantment");
+}

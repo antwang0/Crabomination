@@ -6384,3 +6384,113 @@ fn rotting_rats_unearth_repeats_etb_discard() {
     assert!(g.battlefield_find(rats).is_some(), "unearthed");
     assert_eq!(g.players[1].hand.len(), h1 - 1, "ETB discard re-fired");
 }
+
+// ── Simple-staple coverage ───────────────────────────────────────────────────
+
+#[test]
+fn moment_of_craving_shrinks_and_gains() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::moment_of_craving());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    cast_at(&mut g, spell, Target::Permanent(foe));
+    assert!(g.battlefield_find(foe).is_none(), "2/2 with -2/-2 dies");
+    assert_eq!(g.players[0].life, life + 2, "gained 2");
+}
+
+#[test]
+fn kindled_fury_grants_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::kindled_fury());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+0");
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+}
+
+#[test]
+fn bond_beetle_adds_a_counter_on_enter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::bond_beetle());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.toughness, 3, "bear got a +1/+1 counter");
+}
+
+#[test]
+fn surging_aether_bounces_a_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::surging_aether());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, spell, Target::Permanent(foe));
+    assert!(g.battlefield_find(foe).is_none(), "bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == foe), "to owner's hand");
+}
+
+#[test]
+fn arrest_locks_down_a_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::arrest());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, aura, Target::Permanent(foe));
+    let cp = g.computed_permanent(foe).unwrap();
+    assert!(cp.keywords.contains(&Keyword::CantAttack));
+    assert!(cp.keywords.contains(&Keyword::CantBlock));
+}
+
+#[test]
+fn brute_strength_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::brute_strength());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3), "+3/+1");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn gather_courage_pumps_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::gather_courage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
+    assert!(g.battlefield_find(spell).is_none(), "convoke spell carries Convoke keyword");
+    assert!(catalog::gather_courage().keywords.contains(&Keyword::Convoke));
+}
+
+#[test]
+fn skeletal_kathari_unearths_a_flyer() {
+    let mut g = two_player_game();
+    let k = g.add_card_to_graveyard(0, catalog::skeletal_kathari());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: k, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("unearth {2}{B}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(k).expect("on battlefield");
+    assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn surging_sentinels_is_a_three_one_ripple_spirit() {
+    let s = catalog::surging_sentinels();
+    assert_eq!((s.power, s.toughness), (3, 1));
+    assert!(s.subtypes.creature_types.contains(&CreatureType::Spirit));
+    assert_eq!(s.triggered_abilities.len(), 1, "carries the ripple trigger");
+}

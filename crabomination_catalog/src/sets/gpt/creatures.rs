@@ -38,6 +38,30 @@ pub fn mourning_thrull() -> CardDefinition {
     }
 }
 
+/// Absolver Thrull — {2}{W} 2/2 Thrull. Haunt. When it enters or the creature
+/// it haunts dies, destroy target enchantment.
+pub fn absolver_thrull() -> CardDefinition {
+    let destroy = Effect::Destroy {
+        what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Enchantment },
+    };
+    CardDefinition {
+        name: "Absolver Thrull",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: destroy.clone(),
+            },
+            on_dies(Effect::HauntCreature { body: Box::new(destroy) }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Shrieking Grotesque — {2}{W} 2/1 Gargoyle. Flying, haunt. When the creature
 /// it haunts dies, target player discards a card.
 pub fn shrieking_grotesque() -> CardDefinition {

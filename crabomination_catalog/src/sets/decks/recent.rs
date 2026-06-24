@@ -7153,6 +7153,155 @@ pub fn surging_might() -> CardDefinition {
     }
 }
 
+/// Surging Sentinels — {3}{W} 3/1 Spirit. Ripple 4. (Its "gains protection from
+/// black when you cast a white spell" rider is omitted.)
+pub fn surging_sentinels() -> CardDefinition {
+    use crate::effect::shortcut::ripple;
+    CardDefinition {
+        name: "Surging Sentinels",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![ripple(4)],
+        ..Default::default()
+    }
+}
+
+/// Surging Æther — {2}{U} Instant. Ripple 4. Return target creature to its
+/// owner's hand. (Printed "target spell or permanent"; modeled as a creature.)
+pub fn surging_aether() -> CardDefinition {
+    use crate::effect::shortcut::{ripple, target_filtered};
+    CardDefinition {
+        name: "Surging Æther",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(target_filtered(
+                SelectionRequirement::Creature,
+            )))),
+        },
+        triggered_abilities: vec![ripple(4)],
+        ..Default::default()
+    }
+}
+
+// ── Simple staples (existing primitives) ─────────────────────────────────────
+
+/// Moment of Craving — {1}{B} Instant. Target creature gets -2/-2; you gain 2.
+pub fn moment_of_craving() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Moment of Craving",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Kindled Fury — {R} Instant. Target creature gets +1/+0 and gains first
+/// strike until end of turn.
+pub fn kindled_fury() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Kindled Fury",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Brute Strength — {1}{R} Instant. Target creature gets +3/+1 and gains
+/// trample until end of turn.
+pub fn brute_strength() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Brute Strength",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gather Courage — {G} Instant. Convoke. Target creature gets +2/+2 until end
+/// of turn.
+pub fn gather_courage() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Gather Courage",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Convoke],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Bond Beetle — {G} 0/1 Insect. When it enters, put a +1/+1 counter on target
+/// creature.
+pub fn bond_beetle() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Bond Beetle",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Unearth (Shards of Alara, CR 702.84) ────────────────────────────────────
 // `shortcut::unearth(cost)` builds the sorcery-speed graveyard ability that
 // returns the card with haste and schedules an end-step exile.
@@ -7171,6 +7320,25 @@ pub fn viscera_dragger() -> CardDefinition {
         power: 3,
         toughness: 2,
         activated_abilities: vec![unearth(cost(&[generic(1), b()]))],
+        ..Default::default()
+    }
+}
+
+/// Skeletal Kathari — {3}{B} 2/1 Bird Skeleton. Flying. Unearth {2}{B}.
+pub fn skeletal_kathari() -> CardDefinition {
+    use crate::effect::shortcut::unearth;
+    CardDefinition {
+        name: "Skeletal Kathari",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Skeleton],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![unearth(cost(&[generic(2), b()]))],
         ..Default::default()
     }
 }
