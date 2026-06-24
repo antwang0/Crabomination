@@ -5765,3 +5765,60 @@ fn storm_skreelix_pumps_on_spell() {
     g.resolve_effect(&trig, &ctx).unwrap();
     assert_eq!(g.computed_permanent(ss).unwrap().power, 4, "2 base +2");
 }
+
+/// Bloodvial Purveyor's attack trigger pumps +1/+0 per Blood the opponent has.
+#[test]
+fn bloodvial_purveyor_pumps_per_opponent_blood() {
+    use crate::effect::{Effect, Value};
+    let mut g = two_player_game();
+    let bv = g.add_card_to_battlefield(0, catalog::bloodvial_purveyor());
+    // Give the opponent two Blood tokens.
+    let ctx0 = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 1, None);
+    g.resolve_effect(&Effect::CreateToken {
+        who: crate::effect::PlayerRef::You, count: Value::Const(2),
+        definition: crabomination_base::tokens::blood_token(),
+    }, &ctx0).unwrap();
+    let trig = catalog::bloodvial_purveyor().triggered_abilities[1].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(bv, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(bv).unwrap().power, 7, "5 base +2 for two Blood");
+}
+
+/// Croaking Counterpart copies a creature as a 1/1 Frog.
+#[test]
+fn croaking_counterpart_makes_frog_copy() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let before = g.battlefield.len();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::croaking_counterpart().effect, &ctx).unwrap();
+    assert_eq!(g.battlefield.len(), before + 1, "made a token copy");
+    let tok = g.battlefield.iter().find(|c| c.is_token && c.id != bear).unwrap();
+    assert_eq!((tok.definition.base_power(), tok.definition.base_toughness()), (1, 1));
+    assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Frog));
+}
+
+/// Voldaren Estate's {5},{T} ability creates a Blood token.
+#[test]
+fn voldaren_estate_makes_blood() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::voldaren_estate());
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let eff = catalog::voldaren_estate().activated_abilities[2].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1);
+}
+
+/// Sigarda's Vanguard grants double strike on enter.
+#[test]
+fn sigardas_vanguard_grants_double_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sv = g.add_card_to_battlefield(0, catalog::sigardas_vanguard());
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(sv, 0, None, 0);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::sigardas_vanguard().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}

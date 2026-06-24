@@ -9542,3 +9542,135 @@ pub fn storm_skreelix() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Bloodvial Purveyor — {2}{B}{B} 5/6 Vampire. Flying, trample. Whenever an
+/// opponent casts a spell, that player creates a Blood token. Whenever it
+/// attacks, it gets +1/+0 until end of turn for each Blood token the defending
+/// player controls (read as Blood an opponent controls).
+pub fn bloodvial_purveyor() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodvial Purveyor",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::Triggerer,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::blood_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::CountOf(Box::new(Selector::EachPermanent(
+                        SelectionRequirement::HasArtifactSubtype(
+                            crate::card::ArtifactSubtype::Blood,
+                        )
+                        .and(SelectionRequirement::ControlledByOpponent),
+                    ))),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Croaking Counterpart — {1}{G}{U} Sorcery. Create a token that's a copy of
+/// target creature, except it's a 1/1 Frog. Flashback {3}{G}{U}. (The copy's
+/// recolor to green is approximated — it keeps the original's colors plus the
+/// Frog type and 1/1 body.)
+pub fn croaking_counterpart() -> CardDefinition {
+    CardDefinition {
+        name: "Croaking Counterpart",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), g(), u()]))],
+        effect: Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(SelectionRequirement::Creature),
+            extra_creature_types: vec![CreatureType::Frog],
+            extra_card_types: vec![],
+            override_pt: Some((1, 1)),
+            non_legendary: true,
+        },
+        ..Default::default()
+    }
+}
+
+/// Voldaren Estate — Land. {T}: Add {C}. {T}, Pay 1 life: Add one mana of any
+/// color. {5}, {T}: Create a Blood token. (The "only for Vampire spells" spend
+/// restriction and per-Vampire cost reduction are approximated away.)
+pub fn voldaren_estate() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Voldaren Estate",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5)]),
+                tap_cost: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::blood_token(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sigarda's Vanguard — {4}{W} 3/3 Angel. Flash, flying. Whenever it enters or
+/// attacks, up to three target creatures gain double strike until end of turn.
+/// (The "any number of creatures with different powers" clause is approximated
+/// as up to three targets.)
+pub fn sigardas_vanguard() -> CardDefinition {
+    let grant = || Effect::ApplyToTargets {
+        max_targets: 3,
+        filter: SelectionRequirement::Creature,
+        effect: Box::new(Effect::GrantKeyword {
+            what: Selector::Target(0),
+            keyword: Keyword::DoubleStrike,
+            duration: Duration::EndOfTurn,
+        }),
+    };
+    CardDefinition {
+        name: "Sigarda's Vanguard",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![
+            etb(grant()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: grant(),
+            },
+        ],
+        ..Default::default()
+    }
+}
