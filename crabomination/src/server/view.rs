@@ -692,13 +692,19 @@ fn graveyard_entry(
         power: card.definition.base_power(),
         toughness: card.definition.base_toughness(),
         // Jump-start (CR 702.103) rides the flashback cast path at the
-        // card's own cost (+ discard, paid at cast time).
-        flashback_cost: card.definition.has_flashback().cloned().or_else(|| {
-            card.definition
-                .keywords
-                .contains(&crate::card::Keyword::JumpStart)
-                .then(|| card.definition.cost.clone())
-        }),
+        // card's own cost (+ discard, paid at cast time). Lier grants
+        // flashback (= mana cost) to I/S in the graveyard.
+        flashback_cost: card
+            .definition
+            .has_flashback()
+            .cloned()
+            .or_else(|| {
+                card.definition
+                    .keywords
+                    .contains(&crate::card::Keyword::JumpStart)
+                    .then(|| card.definition.cost.clone())
+            })
+            .or_else(|| state.graveyard_flashback_grant(seat, card)),
         retrace: state.effective_retrace(card, seat),
         escape: state.effective_escape(card, seat),
         bestow_cost: card.definition.has_bestow().cloned(),

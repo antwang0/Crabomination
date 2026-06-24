@@ -9331,3 +9331,214 @@ pub fn soul_transfer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// === Innistrad: Midnight Hunt / Crimson Vow — second batch ===
+
+/// Lier, Disciple of the Drowned — {3}{U}{U} 3/4 Human Wizard. Spells can't be
+/// countered; each instant and sorcery card in your graveyard has flashback
+/// equal to its mana cost (`StaticEffect::GraveyardInstantsSorceriesHaveFlashback`).
+pub fn lier_disciple_of_the_drowned() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, Supertype};
+    CardDefinition {
+        name: "Lier, Disciple of the Drowned",
+        cost: cost(&[generic(3), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spells can't be countered.",
+                effect: StaticEffect::SpellsUncounterable { filter: SelectionRequirement::Any },
+            },
+            StaticAbility {
+                description: "Each instant and sorcery card in your graveyard has flashback equal to its mana cost.",
+                effect: StaticEffect::GraveyardInstantsSorceriesHaveFlashback,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Markov Crusader — {4}{B} 4/3 Vampire Knight. Lifelink; has haste as long as
+/// you control another Vampire.
+pub fn markov_crusader() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Markov Crusader",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "This creature has haste as long as you control another Vampire.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Haste],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stensia Masquerade — {2}{R} Enchantment. Attacking creatures you control
+/// have first strike; whenever a Vampire you control deals combat damage to a
+/// player, put a +1/+1 counter on it. Madness {2}{R}.
+pub fn stensia_masquerade() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Stensia Masquerade",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Madness(cost(&[generic(2), r()]))],
+        static_abilities: vec![StaticAbility {
+            description: "Attacking creatures you control have first strike.",
+            effect: StaticEffect::GrantKeywordToAttackers { keyword: Keyword::FirstStrike },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Vampire),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cradle of the Accursed — Desert land. {T}: Add {C}. {3}, {T}, Sacrifice it:
+/// create a 2/2 black Zombie. Activate only as a sorcery.
+pub fn cradle_of_the_accursed() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType, TokenDefinition};
+    CardDefinition {
+        name: "Cradle of the Accursed",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Desert], ..Default::default() },
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                sac_cost: true,
+                sorcery_speed: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Zombie".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Zombie],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kessig Wolfrider — {R} 1/2 Human Knight. Menace. {2}{R}, {T}, exile three
+/// cards from your graveyard: create a 3/2 red Wolf.
+pub fn kessig_wolfrider() -> CardDefinition {
+    use crate::card::{ActivatedAbility, TokenDefinition};
+    CardDefinition {
+        name: "Kessig Wolfrider",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            tap_cost: true,
+            exile_other_filter: Some((SelectionRequirement::Any, 3)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Wolf".into(),
+                    power: 3,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Wolf],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Storm Skreelix — {3}{U}{R} 2/4 Drake Horror. Flying. Instant and sorcery
+/// spells you cast cost {1} less; whenever you cast an instant or sorcery
+/// spell, this creature gets +2/+0 until end of turn.
+pub fn storm_skreelix() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Storm Skreelix",
+        cost: cost(&[generic(3), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                amount: 1,
+            },
+        }],
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}

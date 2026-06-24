@@ -826,6 +826,33 @@ impl crate::game::GameState {
         false
     }
 
+    /// Lier, Disciple of the Drowned: if `seat` controls a permanent granting
+    /// "each instant and sorcery card in your graveyard has flashback (= its
+    /// mana cost)", returns the flashback cost for an I/S `card` that lacks a
+    /// printed/granted flashback of its own. Consulted by the flashback-cast
+    /// path and the graveyard view.
+    pub(crate) fn graveyard_flashback_grant(
+        &self,
+        seat: usize,
+        card: &crate::card::CardInstance,
+    ) -> Option<crate::mana::ManaCost> {
+        if card.effective_flashback().is_some()
+            || !(card.definition.is_instant() || card.definition.is_sorcery())
+        {
+            return None;
+        }
+        let granted = self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::GraveyardInstantsSorceriesHaveFlashback
+                    )
+                })
+        });
+        granted.then(|| card.definition.cost.clone())
+    }
+
     /// Note restricted-mana riders from a cast's payment: spending
     /// Cavern-of-Souls mana stamps the cast uncounterable (consumed by
     /// `finalize_cast`).
@@ -4740,6 +4767,11 @@ impl GameState {
         let mayhem = card.effective_flashback().is_none()
             && !jumpstart
             && card.definition.mayhem_cost().is_some();
+        // Lier — battlefield static grants flashback (= mana cost) to I/S in
+        // the graveyard when nothing else applies.
+        let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem)
+            .then(|| self.graveyard_flashback_grant(p, &card))
+            .flatten();
         let flashback_cost = match card.effective_flashback() {
             Some(c) => c.clone(),
             None if jumpstart => card.definition.cost.clone(),
@@ -4749,7 +4781,10 @@ impl GameState {
                 }
                 card.definition.mayhem_cost().unwrap().clone()
             }
-            None => return Err(GameError::SorcerySpeedOnly),
+            None => match lier_cost {
+                Some(c) => c,
+                None => return Err(GameError::SorcerySpeedOnly),
+            },
         };
 
         // Timing: instants can be cast at instant speed, others at sorcery

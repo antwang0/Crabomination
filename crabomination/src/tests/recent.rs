@@ -5667,3 +5667,101 @@ fn sheltering_boughs_draw_and_buff() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew on ETB");
     assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((3, 5)), "+1/+3");
 }
+
+/// Lier grants flashback (= mana cost) to instants and sorceries in your
+/// graveyard, so a Bolt in the bin can be recast and then exiles.
+#[test]
+fn lier_flashbacks_graveyard_instants() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lier_disciple_of_the_drowned());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Lier grants flashback to the Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "Bolt dealt 3");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "flashback exiles the spell");
+}
+
+/// Lier's static makes spells uncounterable.
+#[test]
+fn lier_makes_spells_uncounterable() {
+    use crate::effect::StaticEffect;
+    let lier = catalog::lier_disciple_of_the_drowned();
+    assert!(lier.static_abilities.iter().any(|sa|
+        matches!(sa.effect, StaticEffect::SpellsUncounterable { .. })));
+}
+
+/// Markov Crusader has haste only while you control another Vampire.
+#[test]
+fn markov_crusader_conditional_haste() {
+    let mut g = two_player_game();
+    let mc = g.add_card_to_battlefield(0, catalog::markov_crusader());
+    assert!(!g.computed_permanent(mc).unwrap().keywords.contains(&Keyword::Haste),
+        "no haste alone");
+    g.add_card_to_battlefield(0, catalog::vampire_spawn()); // another Vampire
+    assert!(g.computed_permanent(mc).unwrap().keywords.contains(&Keyword::Haste),
+        "haste with another Vampire");
+}
+
+/// Stensia Masquerade gives your attacking creatures first strike.
+#[test]
+fn stensia_masquerade_attackers_first_strike() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stensia_masquerade());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "attacking creature gained first strike");
+}
+
+/// Cradle of the Accursed's sac ability makes a 2/2 black Zombie.
+#[test]
+fn cradle_of_the_accursed_makes_zombie() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::cradle_of_the_accursed());
+    let before = g.battlefield.len();
+    let eff = catalog::cradle_of_the_accursed().activated_abilities[1].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(land, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield.len(), before + 1, "made a token");
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Zombie").unwrap();
+    assert_eq!((tok.definition.power, tok.definition.toughness), (2, 2));
+    assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Zombie));
+}
+
+/// Kessig Wolfrider's activated ability makes a 3/2 red Wolf.
+#[test]
+fn kessig_wolfrider_makes_wolf() {
+    let mut g = two_player_game();
+    let kw = g.add_card_to_battlefield(0, catalog::kessig_wolfrider());
+    let eff = catalog::kessig_wolfrider().activated_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(kw, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Wolf").unwrap();
+    assert_eq!((tok.definition.power, tok.definition.toughness), (3, 2));
+}
+
+/// Storm Skreelix grows +2/+0 when you cast an instant or sorcery.
+#[test]
+fn storm_skreelix_pumps_on_spell() {
+    let mut g = two_player_game();
+    let ss = g.add_card_to_battlefield(0, catalog::storm_skreelix());
+    let trig = catalog::storm_skreelix().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(ss, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(ss).unwrap().power, 4, "2 base +2");
+}

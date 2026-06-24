@@ -9779,7 +9779,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // Attack-permission static, read in `ignores_defender_for_attack`.
             | StaticEffect::CanAttackIgnoringDefenderWhile { .. }
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.
-            | StaticEffect::OpponentsCantCastFromAnywhereButHand => vec![],
+            | StaticEffect::OpponentsCantCastFromAnywhereButHand
+            // Lier — read by the flashback-cast path / graveyard view.
+            | StaticEffect::GraveyardInstantsSorceriesHaveFlashback => vec![],
         })
         .collect()
 }

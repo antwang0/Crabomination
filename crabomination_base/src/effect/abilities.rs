@@ -385,6 +385,11 @@ pub enum StaticEffect {
     /// "You may cast [filter] spells as though they had flash." Sigarda's
     /// Aid (Auras + Equipment). Consulted at the cast-timing gate.
     ControllerSpellsHaveFlash { filter: SelectionRequirement },
+    /// "Each instant and sorcery card in your graveyard has flashback. The
+    /// flashback cost is equal to that card's mana cost." Lier, Disciple of
+    /// the Drowned. Consulted by the flashback-cast path and surfaced in the
+    /// graveyard view so the UI offers the recast.
+    GraveyardInstantsSorceriesHaveFlashback,
     /// "If one or more tokens would be created under your control, twice
     /// that many tokens are created instead." Used by Adrix and Nev,
     /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a
