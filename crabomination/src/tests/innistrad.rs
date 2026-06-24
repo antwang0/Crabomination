@@ -1165,3 +1165,39 @@ fn ground_pounder_die_pump() {
     let cp = g.computed_permanent(gp).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 6), "+4/+4 from a rolled 4");
 }
+
+/// Augur of Autumn lets you play lands from the top of your library.
+#[test]
+fn augur_of_autumn_plays_lands_from_top() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::augur_of_autumn());
+    let top = g.next_id();
+    g.players[0].add_to_library_top(top, catalog::forest());
+    g.perform_action(GameAction::PlayLand(top)).expect("land playable off the top");
+    assert!(g.battlefield_find(top).is_some(), "Forest entered from the library top");
+}
+
+/// Secrets of the Key investigates (creates a Clue) and has flashback.
+#[test]
+fn secrets_of_the_key_investigates() {
+    let mut g = two_player_game();
+    let ctx = ctx0(&g);
+    g.resolve_effect(&catalog::secrets_of_the_key().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Clue"), 1, "investigated");
+    assert!(catalog::secrets_of_the_key().keywords.iter().any(|k|
+        matches!(k, Keyword::Flashback(_))));
+}
+
+/// Diregraf Rebirth reanimates a creature card from your graveyard.
+#[test]
+fn diregraf_rebirth_reanimates() {
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(corpse)];
+    g.resolve_effect(&catalog::diregraf_rebirth().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(corpse).is_some(), "returned to the battlefield");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != corpse), "left the graveyard");
+}

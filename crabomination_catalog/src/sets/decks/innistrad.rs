@@ -2503,3 +2503,62 @@ pub fn ground_pounder() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Augur of Autumn — {1}{G}{G} 2/3 Human Druid. You may play lands from the top
+/// of your library. (The coven cast-creatures-from-top rider is omitted.)
+pub fn augur_of_autumn() -> CardDefinition {
+    use crate::card::{StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Augur of Autumn",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "You may play lands from the top of your library.",
+            effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Land },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Secrets of the Key — {U} Instant. Investigate. Flashback {3}{U}. (The
+/// "investigate twice if cast from a graveyard" rider is omitted.)
+pub fn secrets_of_the_key() -> CardDefinition {
+    CardDefinition {
+        name: "Secrets of the Key",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::clue_token(),
+        },
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
+        ..Default::default()
+    }
+}
+
+/// Diregraf Rebirth — {3}{B}{G} Sorcery. Return target creature card from your
+/// graveyard to the battlefield. Flashback {5}{B}{G}. (The cost-reduction-per-
+/// creature-that-died-this-turn rider is omitted.)
+pub fn diregraf_rebirth() -> CardDefinition {
+    CardDefinition {
+        name: "Diregraf Rebirth",
+        cost: cost(&[generic(3), b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), b(), g()]))],
+        ..Default::default()
+    }
+}
