@@ -577,6 +577,159 @@ pub fn mocking_sprite() -> CardDefinition {
     }
 }
 
+/// Ancestral Reminiscence — {3}{U} Sorcery. Draw three cards, then discard a card.
+pub fn ancestral_reminiscence() -> CardDefinition {
+    CardDefinition {
+        name: "Ancestral Reminiscence",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Charge — {W} Instant. Creatures you control get +1/+1 until end of turn.
+pub fn charge() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Charge",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Heroic Reinforcements — {2}{R}{W} Sorcery. Create two 1/1 white Soldiers; until
+/// end of turn, creatures you control get +1/+1 and gain haste.
+pub fn heroic_reinforcements() -> CardDefinition {
+    use crate::effect::Duration;
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    let your_creatures = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Heroic Reinforcements",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: soldier },
+            Effect::PumpPT {
+                what: your_creatures(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: your_creatures(),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pyrewood Gearhulk — {2}{R}{R}{G}{G} 7/7 Construct with vigilance and menace.
+/// ETB: other creatures you control get +2/+2 and gain vigilance and menace
+/// until end of turn.
+pub fn pyrewood_gearhulk() -> CardDefinition {
+    use crate::effect::Duration;
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Pyrewood Gearhulk",
+        cost: cost(&[generic(2), r(), r(), g(), g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Vigilance, Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: others(),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword { what: others(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: others(), keyword: Keyword::Menace, duration: Duration::EndOfTurn },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Beastbond Outcaster — {2}{G} 3/3 Human Druid. ETB: if you control a creature
+/// with power 4 or greater, draw a card. Plot {1}{G}.
+pub fn beastbond_outcaster() -> CardDefinition {
+    CardDefinition {
+        name: "Beastbond Outcaster",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        plot_cost: Some(cost(&[generic(1), g()])),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mindwhisker — {2}{U} 3/2 Rat Wizard. At the beginning of your upkeep, surveil 1.
+pub fn mindwhisker() -> CardDefinition {
+    CardDefinition {
+        name: "Mindwhisker",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Lord Skitter, Sewer King — {2}{B} 3/3 Legendary Rat Noble. Whenever another
 /// Rat you control enters, exile a card from an opponent's graveyard. At the
 /// beginning of combat on your turn, create a 1/1 black Rat that can't block.

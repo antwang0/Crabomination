@@ -1,6 +1,6 @@
 //! Functionality tests for the `catalog::sets::decks::recent2` batch.
 
-use crate::card::{CounterType, CreatureType, Keyword, StaticEffect};
+use crate::card::{CounterType, CreatureType, Effect, Keyword, StaticEffect};
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget, TurnStep};
 use crate::game::*;
@@ -360,6 +360,94 @@ fn mocking_sprite_discounts_instants() {
     }).expect("Disdainful Stroke castable for {U} under Mocking Sprite");
     drain_stack(&mut g);
     assert!(g.battlefield_find(spell).is_none(), "countered");
+}
+
+/// Ancestral Reminiscence draws three then discards one (net +2).
+#[test]
+fn ancestral_reminiscence_draws_three_discards_one() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::ancestral_reminiscence());
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // cast (-1) + draw 3 (+3) - discard 1 (-1) = +1 vs before.
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// Charge pumps your team +1/+1.
+#[test]
+fn charge_pumps_team() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::charge());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Charge");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
+
+/// Heroic Reinforcements makes two Soldiers and pumps + hastes the team.
+#[test]
+fn heroic_reinforcements_makes_soldiers_and_pumps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::heroic_reinforcements());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let soldiers: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Soldier").collect();
+    assert_eq!(soldiers.len(), 2);
+    let sid = soldiers[0].id;
+    assert_eq!(g.computed_permanent(sid).unwrap().power, 2, "1/1 pumped to 2/2");
+    assert!(g.computed_permanent(sid).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Pyrewood Gearhulk buffs your other creatures on ETB.
+#[test]
+fn pyrewood_gearhulk_buffs_others() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::pyrewood_gearhulk());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 4, "other creature got +2/+2");
+    assert!(cp.keywords.contains(&Keyword::Menace));
+}
+
+/// Beastbond Outcaster draws on ETB only with a power-4+ creature.
+#[test]
+fn beastbond_outcaster_conditional_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 → condition met
+    let before = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, catalog::beastbond_outcaster());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew with a big creature out");
+    assert!(catalog::beastbond_outcaster().plot_cost.is_some());
+}
+
+/// Mindwhisker surveils at the beginning of your upkeep.
+#[test]
+fn mindwhisker_surveils_on_upkeep() {
+    let d = catalog::mindwhisker();
+    assert_eq!((d.power, d.toughness), (3, 2));
+    assert!(matches!(d.triggered_abilities[0].effect, Effect::Surveil { .. }));
+    assert!(matches!(
+        d.triggered_abilities[0].event.kind,
+        crate::card::EventKind::StepBegins(TurnStep::Upkeep)
+    ));
 }
 
 /// Lord Skitter makes a Rat at the beginning of combat on your turn.
