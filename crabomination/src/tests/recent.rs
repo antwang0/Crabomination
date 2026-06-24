@@ -6166,3 +6166,73 @@ fn overcharged_amalgam_counters_via_exploit() {
         | crate::effect::Effect::Seq(_)),
         "exploit wires a counter payoff");
 }
+
+/// Hobbling Zombie leaves a decayed Zombie when it dies.
+#[test]
+fn hobbling_zombie_dies_into_decayed() {
+    let mut g = two_player_game();
+    let hz = g.add_card_to_battlefield(0, catalog::hobbling_zombie());
+    let on_dies = catalog::hobbling_zombie().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(hz, 0, None, 0);
+    g.resolve_effect(&on_dies, &ctx).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.is_token
+        && c.definition.keywords.contains(&Keyword::Decayed)));
+}
+
+/// Selhoff Entomber draws by discarding a creature card.
+#[test]
+fn selhoff_entomber_loots() {
+    let mut g = two_player_game();
+    let se = g.add_card_to_battlefield(0, catalog::selhoff_entomber());
+    let eff = catalog::selhoff_entomber().activated_abilities[0].effect.clone();
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let ctx = crate::game::effects::EffectContext::for_ability(se, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert!(catalog::selhoff_entomber().activated_abilities[0].discard_cost.is_some());
+}
+
+/// Falkenrath Perforator pings the defending player on attack.
+#[test]
+fn falkenrath_perforator_pings_on_attack() {
+    let mut g = two_player_game();
+    let fp = g.add_card_to_battlefield(0, catalog::falkenrath_perforator());
+    g.clear_sickness(fp);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: fp, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 damage from the attack trigger");
+}
+
+/// Foul Play destroys a small creature and investigates.
+#[test]
+fn foul_play_destroys_small_and_investigates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::foul_play().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "destroyed");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Clue"),
+        "investigated a Clue");
+}
+
+/// Rotten Reunion makes a decayed Zombie.
+#[test]
+fn rotten_reunion_makes_decayed_zombie() {
+    let mut g = two_player_game();
+    let junk = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(junk)];
+    g.resolve_effect(&catalog::rotten_reunion().effect, &ctx).unwrap();
+    assert!(g.battlefield.iter().any(|c| c.is_token
+        && c.definition.keywords.contains(&Keyword::Decayed)));
+}

@@ -10480,3 +10480,127 @@ pub fn overcharged_amalgam() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hobbling Zombie — {2}{B} 2/2 Zombie. Deathtouch. When it dies, create a 2/2
+/// black Zombie with decayed.
+pub fn hobbling_zombie() -> CardDefinition {
+    CardDefinition {
+        name: "Hobbling Zombie",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: decayed_zombie_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Selhoff Entomber — {1}{U} 1/3 Zombie. {T}, Discard a creature card: draw a
+/// card.
+pub fn selhoff_entomber() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Selhoff Entomber",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            discard_cost: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Falkenrath Perforator — {1}{R} 2/1 Vampire. Whenever it attacks, it deals 1
+/// damage to the defending player.
+pub fn falkenrath_perforator() -> CardDefinition {
+    CardDefinition {
+        name: "Falkenrath Perforator",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::DefendingPlayer),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crawl from the Cellar — {B} Sorcery. Return target creature card from your
+/// graveyard to your hand. Flashback {3}{B}. (The optional Zombie counter rider
+/// is omitted.)
+pub fn crawl_from_the_cellar() -> CardDefinition {
+    CardDefinition {
+        name: "Crawl from the Cellar",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), b()]))],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Foul Play — {1}{B} Sorcery. Destroy target creature with power 2 or less,
+/// then investigate.
+pub fn foul_play() -> CardDefinition {
+    use crate::effect::shortcut::investigate;
+    CardDefinition {
+        name: "Foul Play",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+                ),
+            },
+            investigate(1),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rotten Reunion — {B} Sorcery. Exile up to one target card from a graveyard,
+/// then create a 2/2 black Zombie with decayed. Flashback {1}{B}.
+pub fn rotten_reunion() -> CardDefinition {
+    CardDefinition {
+        name: "Rotten Reunion",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), b()]))],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+                to: ZoneDest::Exile,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: decayed_zombie_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}

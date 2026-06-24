@@ -676940,5 +676940,726 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=705820&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/111034?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
-  }
+  },
+  "Gisas Bidding": {
+    "object": "card",
+    "id": "5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8",
+    "oracle_id": "0abc993b-18c7-4bb8-aa58-0d06a41cb48f",
+    "multiverse_ids": [
+      685943
+    ],
+    "mtgo_id": 135614,
+    "tcgplayer_id": 609955,
+    "cardmarket_id": 805759,
+    "name": "Gisa's Bidding",
+    "lang": "en",
+    "released_at": "2025-01-24",
+    "uri": "https://api.scryfall.com/cards/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8",
+    "scryfall_uri": "https://scryfall.com/card/inr/111/gisas-bidding?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/5/a/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8.jpg?1737936164",
+      "normal": "https://cards.scryfall.io/normal/front/5/a/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8.jpg?1737936164",
+      "large": "https://cards.scryfall.io/large/front/5/a/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8.jpg?1737936164",
+      "png": "https://cards.scryfall.io/png/front/5/a/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8.png?1737936164",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/5/a/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8.jpg?1737936164",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/5/a/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8.jpg?1737936164"
+    },
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4.0,
+    "type_line": "Sorcery",
+    "oracle_text": "Create two 2/2 black Zombie creature tokens.\nMadness {2}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Madness"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "6eda8787-8f57-4894-a911-a91f92812062",
+        "component": "combo_piece",
+        "name": "Gisa's Bidding",
+        "type_line": "Sorcery",
+        "uri": "https://api.scryfall.com/cards/6eda8787-8f57-4894-a911-a91f92812062"
+      },
+      {
+        "object": "related_card",
+        "id": "e6474e0d-a3ca-439f-b9b8-82022c59ff14",
+        "component": "token",
+        "name": "Zombie",
+        "type_line": "Token Creature — Zombie",
+        "uri": "https://api.scryfall.com/cards/e6474e0d-a3ca-439f-b9b8-82022c59ff14"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": true,
+    "variation": false,
+    "set_id": "b9618c8c-9f31-4b42-9798-2991893c27bf",
+    "set": "inr",
+    "set_name": "Innistrad Remastered",
+    "set_type": "masters",
+    "set_uri": "https://api.scryfall.com/sets/b9618c8c-9f31-4b42-9798-2991893c27bf",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Ainr&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/inr?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/5ad2fdbf-4a68-42e8-9c4f-7a075261ddf8/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A0abc993b-18c7-4bb8-aa58-0d06a41cb48f&unique=prints",
+    "collector_number": "111",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"Soft dirt makes for light work.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Jason Felix",
+    "artist_ids": [
+      "af42a44c-8ec3-47a7-9047-5d29ddad186d"
+    ],
+    "illustration_id": "461362b4-35b9-4b44-bed2-debc67239dc1",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": true,
+    "story_spotlight": false,
+    "edhrec_rank": 13413,
+    "penny_rank": 10044,
+    "prices": {
+      "usd": "0.20",
+      "usd_foil": "0.24",
+      "usd_etched": null,
+      "eur": "0.08",
+      "eur_foil": "0.13",
+      "tix": "0.04"
+    },
+    "related_uris": {
+      "gatherer": "https://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=685943&printed=false",
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DGisa%2527s%2BBidding",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DGisa%2527s%2BBidding",
+      "edhrec": "https://edhrec.com/route/?cc=Gisa%27s+Bidding"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F609955%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=805759&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/135614?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Ghoulcallers Harvest": {
+    "object": "card",
+    "id": "6a507ea6-d818-4443-b468-cf65c3e7031c",
+    "oracle_id": "bbef4d8e-5861-4d50-9589-14b46c71e9af",
+    "multiverse_ids": [
+      535019
+    ],
+    "mtgo_id": 93452,
+    "arena_id": 78590,
+    "tcgplayer_id": 247980,
+    "cardmarket_id": 574800,
+    "name": "Ghoulcaller's Harvest",
+    "lang": "en",
+    "released_at": "2021-09-24",
+    "uri": "https://api.scryfall.com/cards/6a507ea6-d818-4443-b468-cf65c3e7031c",
+    "scryfall_uri": "https://scryfall.com/card/mid/225/ghoulcallers-harvest?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/6/a/6a507ea6-d818-4443-b468-cf65c3e7031c.jpg?1636684311",
+      "normal": "https://cards.scryfall.io/normal/front/6/a/6a507ea6-d818-4443-b468-cf65c3e7031c.jpg?1636684311",
+      "large": "https://cards.scryfall.io/large/front/6/a/6a507ea6-d818-4443-b468-cf65c3e7031c.jpg?1636684311",
+      "png": "https://cards.scryfall.io/png/front/6/a/6a507ea6-d818-4443-b468-cf65c3e7031c.png?1636684311",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/6/a/6a507ea6-d818-4443-b468-cf65c3e7031c.jpg?1636684311",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/6/a/6a507ea6-d818-4443-b468-cf65c3e7031c.jpg?1636684311"
+    },
+    "mana_cost": "{B}{G}",
+    "cmc": 2.0,
+    "type_line": "Sorcery",
+    "oracle_text": "Create X 2/2 black Zombie creature tokens with decayed, where X is half the number of creature cards in your graveyard, rounded up. (A creature with decayed can't block. When it attacks, sacrifice it at end of combat.)\nFlashback {3}{B}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+    "colors": [
+      "B",
+      "G"
+    ],
+    "color_identity": [
+      "B",
+      "G"
+    ],
+    "keywords": [
+      "Flashback"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "6adb8607-1066-451d-a719-74ad32358278",
+        "component": "token",
+        "name": "Zombie",
+        "type_line": "Token Creature — Zombie",
+        "uri": "https://api.scryfall.com/cards/6adb8607-1066-451d-a719-74ad32358278"
+      },
+      {
+        "object": "related_card",
+        "id": "bdb2dc53-57aa-4327-8700-6396fd86e3d1",
+        "component": "combo_piece",
+        "name": "Ghoulcaller's Harvest",
+        "type_line": "Sorcery",
+        "uri": "https://api.scryfall.com/cards/bdb2dc53-57aa-4327-8700-6396fd86e3d1"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "arena",
+      "paper",
+      "mtgo"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "44b8eb8f-fa23-401a-98b5-1fbb9871128e",
+    "set": "mid",
+    "set_name": "Innistrad: Midnight Hunt",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/44b8eb8f-fa23-401a-98b5-1fbb9871128e",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amid&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/mid?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/6a507ea6-d818-4443-b468-cf65c3e7031c/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Abbef4d8e-5861-4d50-9589-14b46c71e9af&unique=prints",
+    "collector_number": "225",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Anna Steinbauer",
+    "artist_ids": [
+      "3516496c-c279-4b56-8239-720683d03ae0"
+    ],
+    "illustration_id": "049265cf-28c8-47ee-a4ea-c616016dac94",
+    "border_color": "black",
+    "frame": "2015",
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": true,
+    "story_spotlight": false,
+    "edhrec_rank": 18529,
+    "penny_rank": 11240,
+    "preview": {
+      "source": "Clintus",
+      "source_uri": "https://twitter.com/clintus/status/1434552311871799301",
+      "previewed_at": "2021-09-05"
+    },
+    "prices": {
+      "usd": "0.21",
+      "usd_foil": "0.21",
+      "usd_etched": null,
+      "eur": "0.27",
+      "eur_foil": "0.25",
+      "tix": "0.02"
+    },
+    "related_uris": {
+      "gatherer": "https://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=535019&printed=false",
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DGhoulcaller%2527s%2BHarvest",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DGhoulcaller%2527s%2BHarvest",
+      "edhrec": "https://edhrec.com/route/?cc=Ghoulcaller%27s+Harvest"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F247980%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=574800&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/93452?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  " Minion": {
+    "object": "card",
+    "id": "a9930d11-4772-4fc2-abbd-9af0a9b23a3e",
+    "oracle_id": "62738f7a-1987-4e6c-a7fc-638ef6aaef13",
+    "multiverse_ids": [
+      207998
+    ],
+    "tcgplayer_id": 78565,
+    "cardmarket_id": 22348,
+    "name": "Minion",
+    "lang": "en",
+    "released_at": "2010-03-19",
+    "uri": "https://api.scryfall.com/cards/a9930d11-4772-4fc2-abbd-9af0a9b23a3e",
+    "scryfall_uri": "https://scryfall.com/card/tdde/2/minion?utm_source=api",
+    "layout": "token",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/a/9/a9930d11-4772-4fc2-abbd-9af0a9b23a3e.jpg?1561757789",
+      "normal": "https://cards.scryfall.io/normal/front/a/9/a9930d11-4772-4fc2-abbd-9af0a9b23a3e.jpg?1561757789",
+      "large": "https://cards.scryfall.io/large/front/a/9/a9930d11-4772-4fc2-abbd-9af0a9b23a3e.jpg?1561757789",
+      "png": "https://cards.scryfall.io/png/front/a/9/a9930d11-4772-4fc2-abbd-9af0a9b23a3e.png?1561757789",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/a/9/a9930d11-4772-4fc2-abbd-9af0a9b23a3e.jpg?1561757789",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/a/9/a9930d11-4772-4fc2-abbd-9af0a9b23a3e.jpg?1561757789"
+    },
+    "mana_cost": "",
+    "cmc": 0.0,
+    "type_line": "Token Creature — Minion",
+    "oracle_text": "",
+    "power": "*",
+    "toughness": "*",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "04789161-f0a8-4ba5-832f-4d585c5117a6",
+        "component": "combo_piece",
+        "name": "Phyrexian Processor",
+        "type_line": "Artifact",
+        "uri": "https://api.scryfall.com/cards/04789161-f0a8-4ba5-832f-4d585c5117a6"
+      },
+      {
+        "object": "related_card",
+        "id": "a9930d11-4772-4fc2-abbd-9af0a9b23a3e",
+        "component": "token",
+        "name": "Minion",
+        "type_line": "Token Creature — Minion",
+        "uri": "https://api.scryfall.com/cards/a9930d11-4772-4fc2-abbd-9af0a9b23a3e"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": false,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "f0431641-4f76-4a4a-bc80-37a95f986d73",
+    "set": "tdde",
+    "set_name": "Duel Decks: Phyrexia vs. the Coalition Tokens",
+    "set_type": "token",
+    "set_uri": "https://api.scryfall.com/sets/f0431641-4f76-4a4a-bc80-37a95f986d73",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atdde&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/tdde?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/a9930d11-4772-4fc2-abbd-9af0a9b23a3e/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A62738f7a-1987-4e6c-a7fc-638ef6aaef13&unique=prints",
+    "collector_number": "2",
+    "digital": false,
+    "rarity": "common",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Dave Kendall",
+    "artist_ids": [
+      "8a5540a8-18c9-4fa9-802c-59d6866114d5"
+    ],
+    "illustration_id": "24d67765-88c2-43d0-b83b-481bcd95cd8e",
+    "border_color": "black",
+    "frame": "2003",
+    "full_art": true,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "setpromo"
+    ],
+    "prices": {
+      "usd": "5.78",
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": "4.50",
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "gatherer": "https://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=207998&printed=false",
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DMinion",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DMinion",
+      "edhrec": "https://edhrec.com/route/?cc=Minion"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F78565%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=22348&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Minion&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Sigardas Imprisonment": {
+    "object": "card",
+    "id": "118995a6-8471-47ac-9404-700ce7fc46f6",
+    "oracle_id": "574230c7-b949-4c90-b107-c26458a6e469",
+    "multiverse_ids": [
+      540869
+    ],
+    "mtgo_id": 94366,
+    "arena_id": 78817,
+    "tcgplayer_id": 253231,
+    "cardmarket_id": 581898,
+    "name": "Sigarda's Imprisonment",
+    "lang": "en",
+    "released_at": "2021-11-19",
+    "uri": "https://api.scryfall.com/cards/118995a6-8471-47ac-9404-700ce7fc46f6",
+    "scryfall_uri": "https://scryfall.com/card/vow/35/sigardas-imprisonment?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/1/1/118995a6-8471-47ac-9404-700ce7fc46f6.jpg?1643587023",
+      "normal": "https://cards.scryfall.io/normal/front/1/1/118995a6-8471-47ac-9404-700ce7fc46f6.jpg?1643587023",
+      "large": "https://cards.scryfall.io/large/front/1/1/118995a6-8471-47ac-9404-700ce7fc46f6.jpg?1643587023",
+      "png": "https://cards.scryfall.io/png/front/1/1/118995a6-8471-47ac-9404-700ce7fc46f6.png?1643587023",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/1/118995a6-8471-47ac-9404-700ce7fc46f6.jpg?1643587023",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/1/118995a6-8471-47ac-9404-700ce7fc46f6.jpg?1643587023"
+    },
+    "mana_cost": "{2}{W}",
+    "cmc": 3.0,
+    "type_line": "Enchantment — Aura",
+    "oracle_text": "Enchant creature\nEnchanted creature can't attack or block.\n{4}{W}: Exile enchanted creature. Create a Blood token. (It's an artifact with \"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [
+      "Enchant"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "a6f374bc-cd29-469f-808a-6a6c004ee8aa",
+        "component": "token",
+        "name": "Blood",
+        "type_line": "Token Artifact — Blood",
+        "uri": "https://api.scryfall.com/cards/a6f374bc-cd29-469f-808a-6a6c004ee8aa"
+      },
+      {
+        "object": "related_card",
+        "id": "118995a6-8471-47ac-9404-700ce7fc46f6",
+        "component": "combo_piece",
+        "name": "Sigarda's Imprisonment",
+        "type_line": "Enchantment — Aura",
+        "uri": "https://api.scryfall.com/cards/118995a6-8471-47ac-9404-700ce7fc46f6"
+      }
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "arena",
+      "paper",
+      "mtgo"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "8144b676-569f-4716-8005-bc8f0778f3fa",
+    "set": "vow",
+    "set_name": "Innistrad: Crimson Vow",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/8144b676-569f-4716-8005-bc8f0778f3fa",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Avow&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/vow?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/118995a6-8471-47ac-9404-700ce7fc46f6/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A574230c7-b949-4c90-b107-c26458a6e469&unique=prints",
+    "collector_number": "35",
+    "digital": false,
+    "rarity": "common",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Bryan Sola",
+    "artist_ids": [
+      "e6879299-a28b-48bc-8db1-9cafcf36de09"
+    ],
+    "illustration_id": "5b19a96c-7a3a-450a-8d75-33c02fd524bd",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": true,
+    "story_spotlight": true,
+    "edhrec_rank": 19640,
+    "penny_rank": 14135,
+    "preview": {
+      "source": "Pokde.net",
+      "source_uri": "https://pokde.net/gaming/esports/mtg-sigardas-imprisonment-preview",
+      "previewed_at": "2021-11-01"
+    },
+    "prices": {
+      "usd": "0.13",
+      "usd_foil": "0.11",
+      "usd_etched": null,
+      "eur": "0.04",
+      "eur_foil": "0.08",
+      "tix": "0.03"
+    },
+    "related_uris": {
+      "gatherer": "https://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=540869&printed=false",
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DSigarda%2527s%2BImprisonment",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DSigarda%2527s%2BImprisonment",
+      "edhrec": "https://edhrec.com/route/?cc=Sigarda%27s+Imprisonment"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F253231%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=581898&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/94366?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Bladestitched": "__not_found__",
+  "Bird Counts": "__not_found__",
+  "Olivias Midnight Ambush": {
+    "object": "card",
+    "id": "9c1adede-22ad-4c1c-9501-ad731fbe1742",
+    "oracle_id": "a3b8a08b-5409-4d5f-9bab-8a7a6376a5b9",
+    "multiverse_ids": [
+      534892
+    ],
+    "mtgo_id": 93198,
+    "arena_id": 78463,
+    "tcgplayer_id": 248325,
+    "cardmarket_id": 575047,
+    "name": "Olivia's Midnight Ambush",
+    "lang": "en",
+    "released_at": "2021-09-24",
+    "uri": "https://api.scryfall.com/cards/9c1adede-22ad-4c1c-9501-ad731fbe1742",
+    "scryfall_uri": "https://scryfall.com/card/mid/118/olivias-midnight-ambush?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/9/c/9c1adede-22ad-4c1c-9501-ad731fbe1742.jpg?1634350180",
+      "normal": "https://cards.scryfall.io/normal/front/9/c/9c1adede-22ad-4c1c-9501-ad731fbe1742.jpg?1634350180",
+      "large": "https://cards.scryfall.io/large/front/9/c/9c1adede-22ad-4c1c-9501-ad731fbe1742.jpg?1634350180",
+      "png": "https://cards.scryfall.io/png/front/9/c/9c1adede-22ad-4c1c-9501-ad731fbe1742.png?1634350180",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/9/c/9c1adede-22ad-4c1c-9501-ad731fbe1742.jpg?1634350180",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/9/c/9c1adede-22ad-4c1c-9501-ad731fbe1742.jpg?1634350180"
+    },
+    "mana_cost": "{1}{B}",
+    "cmc": 2.0,
+    "type_line": "Instant",
+    "oracle_text": "Target creature gets -2/-2 until end of turn. If it's night, that creature gets -13/-13 until end of turn instead.",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "not_legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "not_legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "arena",
+      "paper",
+      "mtgo"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "44b8eb8f-fa23-401a-98b5-1fbb9871128e",
+    "set": "mid",
+    "set_name": "Innistrad: Midnight Hunt",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/44b8eb8f-fa23-401a-98b5-1fbb9871128e",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Amid&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/mid?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/9c1adede-22ad-4c1c-9501-ad731fbe1742/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Aa3b8a08b-5409-4d5f-9bab-8a7a6376a5b9&unique=prints",
+    "collector_number": "118",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"And you were almost finished with that ritual, weren't you, darling? How very rude of me. To make it up to you, I'll send you an invitation to my wedding.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Chris Rallis",
+    "artist_ids": [
+      "a8e7b854-b15a-421a-b66d-6e68187ae285"
+    ],
+    "illustration_id": "7bc21547-66aa-404c-8314-5c2053d75138",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": true,
+    "story_spotlight": true,
+    "edhrec_rank": 26176,
+    "prices": {
+      "usd": "0.09",
+      "usd_foil": "0.18",
+      "usd_etched": null,
+      "eur": "0.06",
+      "eur_foil": "0.09",
+      "tix": "0.03"
+    },
+    "related_uris": {
+      "gatherer": "https://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=534892&printed=false",
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DOlivia%2527s%2BMidnight%2BAmbush",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DOlivia%2527s%2BMidnight%2BAmbush",
+      "edhrec": "https://edhrec.com/route/?cc=Olivia%27s+Midnight+Ambush"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F248325%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=575047&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/93198?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Soul-Reaper Zombie": "__not_found__"
 }
