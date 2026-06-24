@@ -2036,6 +2036,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `dispatch_triggers_for_events` would wire it, but must dedupe against the
   existing self-death / combat-damage paths to avoid double-firing. Tarrian's
   Soulcleaver is held out of `decks::recent2` pending this.
+- ⏳ **"Blocks a creature with [attribute]" trigger filter.** `EventKind::Blocks`
+  binds `Selector::TriggerSource` to the *blocker*, so a blocker-side trigger
+  can't filter on the blocked attacker's keywords (Snarespinner — "whenever this
+  blocks a creature with flying"). Needs the blocked attacker exposed as a
+  second subject (or a `BlockedCreatureMatches` predicate). Snarespinner held
+  out of `decks::recent2` pending this.
 - ⏳ **recent2 card approximations** (`decks::recent2`, all noted in doc
   comments): March of Otherworldly Light drops the "exile white cards to reduce
   cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static
