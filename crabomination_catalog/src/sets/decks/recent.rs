@@ -11980,3 +11980,69 @@ pub fn searing_barrage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// === Fourth modern_decks batch: small beaters. ===
+
+/// Brazen Wolves — {2}{R} 2/3 Wolf. Whenever it attacks, it gets +2/+0.
+pub fn brazen_wolves() -> CardDefinition {
+    CardDefinition {
+        name: "Brazen Wolves",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glory Seeker — {1}{W} 2/2 Human Soldier.
+pub fn glory_seeker() -> CardDefinition {
+    CardDefinition {
+        name: "Glory Seeker",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Pheres-Band Tromper — {3}{G} 3/3 Centaur Warrior. Inspired — whenever it
+/// becomes untapped, put a +1/+1 counter on it.
+pub fn pheres_band_tromper() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Pheres-Band Tromper",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

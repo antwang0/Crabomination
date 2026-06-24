@@ -7127,3 +7127,36 @@ fn searing_barrage_burns_creature() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(foe).is_none(), "5 damage kills the 4/4");
 }
+
+// === Fourth modern_decks batch tests. ===
+
+/// Brazen Wolves pumps when it attacks.
+#[test]
+fn brazen_wolves_attack_pump() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::brazen_wolves());
+    let eff = catalog::brazen_wolves().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(w, 0, None, 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let cp = g.computed_permanent(w).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+0");
+}
+
+/// Glory Seeker is a 2/2 vanilla.
+#[test]
+fn glory_seeker_stats() {
+    let d = catalog::glory_seeker();
+    assert_eq!((d.power, d.toughness), (2, 2));
+    assert!(d.triggered_abilities.is_empty() && d.activated_abilities.is_empty());
+}
+
+/// Pheres-Band Tromper grows when it untaps (Inspired).
+#[test]
+fn pheres_band_tromper_inspired() {
+    let mut g = two_player_game();
+    let t = g.add_card_to_battlefield(0, catalog::pheres_band_tromper());
+    g.battlefield_find_mut(t).unwrap().tapped = true;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentUntapped { card_id: t }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
