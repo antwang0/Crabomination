@@ -710,6 +710,35 @@ pub fn ripple(n: u32) -> TriggeredAbility {
     }
 }
 
+/// Unearth `cost` (CR 702.84). "[cost]: Return this card from your graveyard to
+/// the battlefield. It gains haste. Exile it at the beginning of the next end
+/// step …" — a sorcery-speed graveyard-activated ability. The "exile it if it
+/// would leave the battlefield" clause is approximated by the end-step exile
+/// only (the same model Goryo's Vengeance uses).
+pub fn unearth(cost: crate::mana::ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        from_graveyard: true,
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: crate::card::Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Exile { what: Selector::This }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Squad (CR 702.157) — the ETB trigger that mints one token copy of this
 /// creature per time its squad cost was paid (`Value::SquadCount`). Pair with
 /// `Keyword::Squad(cost)` on the card.

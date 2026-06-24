@@ -7153,6 +7153,76 @@ pub fn surging_might() -> CardDefinition {
     }
 }
 
+// ── Unearth (Shards of Alara, CR 702.84) ────────────────────────────────────
+// `shortcut::unearth(cost)` builds the sorcery-speed graveyard ability that
+// returns the card with haste and schedules an end-step exile.
+
+/// Viscera Dragger — {4}{B} 3/2 Zombie Warrior. Unearth {1}{B}.
+pub fn viscera_dragger() -> CardDefinition {
+    use crate::effect::shortcut::unearth;
+    CardDefinition {
+        name: "Viscera Dragger",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        activated_abilities: vec![unearth(cost(&[generic(1), b()]))],
+        ..Default::default()
+    }
+}
+
+/// Rotting Rats — {1}{B} 1/1 Zombie Rat. ETB each player discards a card.
+/// Unearth {1}{B}.
+pub fn rotting_rats() -> CardDefinition {
+    use crate::effect::shortcut::unearth;
+    CardDefinition {
+        name: "Rotting Rats",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+                random: false,
+            },
+        }],
+        activated_abilities: vec![unearth(cost(&[generic(1), b()]))],
+        ..Default::default()
+    }
+}
+
+/// Fledgling Mawcor — {3}{U} 2/2 Beast. Flying. {T}: deal 1 damage to any
+/// target. Unearth {5}{U}.
+pub fn fledgling_mawcor() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::{deal, target_any, unearth};
+    CardDefinition {
+        name: "Fledgling Mawcor",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility { tap_cost: true, effect: deal(1, target_any()), ..Default::default() },
+            unearth(cost(&[generic(5), u()])),
+        ],
+        ..Default::default()
+    }
+}
+
 // ── More recent-set staples ─────────────────────────────────────────────────
 
 /// Bloodthirsty Conqueror — {3}{B}{B} 5/5 Vampire Knight. Flying, deathtouch.

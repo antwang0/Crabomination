@@ -6328,3 +6328,59 @@ fn surging_dementia_each_player_discards() {
     assert_eq!(g.players[1].hand.len(), h1 - 1, "opponent discarded once");
     assert_eq!(g.players[0].hand.len(), h0 - 1 - 1, "caster lost the spell + a discard");
 }
+
+// ── Unearth (CR 702.84) ──────────────────────────────────────────────────────
+
+/// Unearth returns the card from the graveyard with haste.
+#[test]
+fn viscera_dragger_unearth_returns_with_haste() {
+    let mut g = two_player_game();
+    let dragger = g.add_card_to_graveyard(0, catalog::viscera_dragger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dragger, ability_index: 0,
+        target: None, additional_targets: vec![], x_value: None,
+    }).expect("unearth activatable for {1}{B}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(dragger).expect("on the battlefield");
+    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == dragger), "left graveyard");
+}
+
+/// An unearthed creature is exiled at the beginning of the next end step.
+#[test]
+fn unearth_exiles_at_end_step() {
+    let mut g = two_player_game();
+    let dragger = g.add_card_to_graveyard(0, catalog::viscera_dragger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dragger, ability_index: 0,
+        target: None, additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == dragger), "exiled at end step");
+    assert!(g.battlefield_find(dragger).is_none(), "off the battlefield");
+}
+
+/// Rotting Rats' unearth re-triggers its enters-the-battlefield discard.
+#[test]
+fn rotting_rats_unearth_repeats_etb_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::forest());
+    let rats = g.add_card_to_graveyard(0, catalog::rotting_rats());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let h1 = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rats, ability_index: 0,
+        target: None, additional_targets: vec![], x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rats).is_some(), "unearthed");
+    assert_eq!(g.players[1].hand.len(), h1 - 1, "ETB discard re-fired");
+}
