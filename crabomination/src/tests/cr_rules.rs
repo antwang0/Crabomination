@@ -17,7 +17,10 @@
 //! Beast vs. fog), the stun-counter untap replacement (CR 122.1c),
 //! Cycling (CR 702.29), Cleave bracket-removal (CR 702.148), Training
 //! (CR 702.149), Exploit payoffs (CR 702.110), and reflexive
-//! sacrifice costs (CR 701.16 — `Effect::MaySacrifice`).
+//! sacrifice costs (CR 701.16 — `Effect::MaySacrifice`), token-created
+//! triggers (CR 111.10 — `EventKind::TokenCreated`) including the
+//! token-doubling interaction (CR 614.13), and attack-only "can't attack
+//! unless you control N" restrictions (CR 508.1a).
 
 use crate::catalog;
 use crate::card::CounterType;
@@ -4412,4 +4415,82 @@ fn cr_702_146e_disturb_aura_back_exiles_on_leave() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == id), "Aura back exiled, not in graveyard");
     assert!(g.players[0].graveyard.iter().all(|c| c.id != id), "not in graveyard");
+}
+
+// ── CR 111.10 — "When you create a token" triggers ───────────────────────────
+
+/// CR 111.10 — `EventKind::TokenCreated` fires per token created. Voldaren
+/// Bloodcaster (4 Blood already out) crosses its five-Blood transform threshold
+/// when its fifth Blood is minted.
+#[test]
+fn cr_111_10_token_created_fires_per_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let caster = g.add_card_to_battlefield(0, catalog::voldaren_bloodcaster());
+    for _ in 0..4 {
+        g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    }
+    let evs = g.resolve_effect(
+        &crate::card::Effect::CreateToken {
+            who: crate::effect::PlayerRef::You,
+            count: crate::card::Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        },
+        &EffectContext::for_ability(crate::card::CardId(0), 0, None),
+    ).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
+}
+
+/// CR 614.13 — a token-doubling replacement multiplies the count, and each
+/// resulting token fires its own `TokenCreated` event (CR 111.10). With a
+/// doubler out, Voldaren at 3 Blood mints one → two Blood enter → it reaches
+/// five and transforms off the doubled token.
+#[test]
+fn cr_614_13_token_doubling_fires_per_doubled_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let caster = g.add_card_to_battlefield(0, catalog::voldaren_bloodcaster());
+    g.add_card_to_battlefield(0, catalog::elspeth_storm_slayer()); // doubles tokens
+    for _ in 0..3 {
+        g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    }
+    let evs = g.resolve_effect(
+        &crate::card::Effect::CreateToken {
+            who: crate::effect::PlayerRef::You,
+            count: crate::card::Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        },
+        &EffectContext::for_ability(crate::card::CardId(0), 0, None),
+    ).unwrap();
+    // The single mint doubled to two tokens → five Blood total.
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Blood").count(),
+        5,
+        "doubler made two Blood from one mint"
+    );
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
+}
+
+// ── CR 508.1a — attack-only restriction ──────────────────────────────────────
+
+/// CR 508.1a — "can't attack unless you control [N matching]" restricts only
+/// attacking, not blocking, when flagged attack-only (Lambholt Pacifist).
+#[test]
+fn cr_508_1a_attack_only_gate_allows_blocking() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let pacifist = g.add_card_to_battlefield(0, catalog::lambholt_pacifist());
+    g.clear_sickness(pacifist);
+    g.step = TurnStep::DeclareAttackers;
+    assert!(!g.legal_attackers(0).contains(&pacifist), "no power-4 creature → can't attack");
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    assert!(g.blocker_can_block_attacker(pacifist, atk), "but it can still block");
 }
