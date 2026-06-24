@@ -9909,3 +9909,146 @@ pub fn sigarda_font_of_blessings() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sungold Barrage — {2}{W} Instant. Destroy target creature with toughness 4
+/// or greater.
+pub fn sungold_barrage() -> CardDefinition {
+    CardDefinition {
+        name: "Sungold Barrage",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ToughnessAtLeast(4)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ghoulcaller Gisa — {3}{B}{B} 3/4 Human Wizard. {B}, {T}, Sacrifice another
+/// creature: create X 2/2 black Zombies, where X is the sacrificed creature's
+/// power.
+pub fn ghoulcaller_gisa() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Supertype};
+    CardDefinition {
+        name: "Ghoulcaller Gisa",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::SacrificedPower,
+                    definition: black_zombie_token(),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ghoulish Procession — {1}{B} Enchantment. Whenever one or more nontoken
+/// creatures die, create a 2/2 black Zombie with decayed. Once each turn.
+pub fn ghoulish_procession() -> CardDefinition {
+    CardDefinition {
+        name: "Ghoulish Procession",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::IsToken.negate(),
+                })
+                .once_per_turn(),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: decayed_zombie_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Necroduality — {3}{U} Enchantment. Whenever a nontoken Zombie you control
+/// enters, create a token that's a copy of that creature.
+pub fn necroduality() -> CardDefinition {
+    CardDefinition {
+        name: "Necroduality",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::IsToken.negate()),
+                }),
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: Selector::TriggerSource,
+                extra_creature_types: vec![],
+                extra_card_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Falkenrath Forebear — {2}{B} 3/1 Vampire. Flying; can't block. Whenever it
+/// deals combat damage to a player, create a Blood token. {B}, Sacrifice two
+/// Blood tokens: return this card from your graveyard to the battlefield.
+pub fn falkenrath_forebear() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype};
+    CardDefinition {
+        name: "Falkenrath Forebear",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::blood_token(),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            from_graveyard: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                2,
+            )),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

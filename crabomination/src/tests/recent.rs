@@ -5895,3 +5895,63 @@ fn sigarda_font_grants_hexproof_to_others() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof));
 }
+
+/// Sungold Barrage destroys a toughness-4+ creature but not a small one.
+#[test]
+fn sungold_barrage_hits_big_toughness() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(big)];
+    g.resolve_effect(&catalog::sungold_barrage().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "4-toughness creature destroyed");
+}
+
+/// Ghoulcaller Gisa sacrifices a creature for Zombies equal to its power.
+#[test]
+fn ghoulcaller_gisa_makes_zombies_equal_to_power() {
+    let mut g = two_player_game();
+    let gisa = g.add_card_to_battlefield(0, catalog::ghoulcaller_gisa());
+    g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4 to sacrifice
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let eff = catalog::ghoulcaller_gisa().activated_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(gisa, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 4, "4 Zombies");
+}
+
+/// Ghoulish Procession makes a decayed Zombie when a nontoken creature dies.
+#[test]
+fn ghoulish_procession_spawns_on_death() {
+    let mut g = two_player_game();
+    let proc = g.add_card_to_battlefield(0, catalog::ghoulish_procession());
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let trig = catalog::ghoulish_procession().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(proc, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let tok = g.battlefield.iter().find(|c| c.is_token).unwrap();
+    assert!(tok.definition.keywords.contains(&Keyword::Decayed));
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1);
+}
+
+/// Necroduality copies a nontoken Zombie that enters.
+#[test]
+fn necroduality_copies_entering_zombie() {
+    let mut g = two_player_game();
+    let nd = g.add_card_to_battlefield(0, catalog::necroduality());
+    let zomb = g.add_card_to_battlefield(0, catalog::diregraf_colossus());
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let ctx = crate::game::effects::EffectContext::for_trigger(nd, 0, Some(Target::Permanent(zomb)), 0);
+    g.resolve_effect(&catalog::necroduality().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1, "copied the Zombie");
+}
+
+/// Falkenrath Forebear has flying and can't block.
+#[test]
+fn falkenrath_forebear_flying_cant_block() {
+    let ff = catalog::falkenrath_forebear();
+    assert!(ff.keywords.contains(&Keyword::Flying));
+    assert!(ff.keywords.contains(&Keyword::CantBlock));
+    assert!(ff.activated_abilities[0].from_graveyard, "recurs from graveyard");
+}
