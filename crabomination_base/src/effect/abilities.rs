@@ -420,6 +420,14 @@ pub enum StaticEffect {
     /// Each active copy adds one to a +1/+1 placement onto the controller's
     /// creatures; applied before any `DoubleCounters` multiplier.
     ExtraPlusOneCounters,
+    /// CR 614.16 additive variant for *every* counter kind — "If one or more
+    /// counters would be put on an artifact or creature you control, that many
+    /// plus one of each of those kinds are put on it instead."
+    /// Winding Constrictor-class. Each active copy adds one to a placement of
+    /// any kind onto the controller's creatures (the "counters you'd get"
+    /// player-counter clause is approximated away); applied alongside
+    /// `ExtraPlusOneCounters` before the `DoubleCounters` multiplier.
+    ExtraCounterAllKinds,
     /// CR 614.2 — "If a source would deal damage … it deals double that
     /// damage instead." A *global* damage-replacement (Furnace of Rath,
     /// Gratuitous Violence-class, Fiery Emancipation as ×2 stacking): read

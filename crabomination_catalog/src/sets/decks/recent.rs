@@ -11005,3 +11005,472 @@ pub fn rotten_reunion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// === Counter-synergy + Phyrexian-infect + artifact-aristocrat batch
+// (claude/modern_decks). Each rides an existing primitive; the only new
+// engine piece is `StaticEffect::ExtraCounterAllKinds` (Winding Constrictor). ===
+
+/// Winding Constrictor — {B}{G} 2/3 Snake. If one or more counters would be put
+/// on an artifact or creature you control, that many plus one are put on it
+/// instead. (The "counters you'd get" player-counter clause is approximated.)
+pub fn winding_constrictor() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Winding Constrictor",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "If one or more counters would be put on an artifact or \
+                          creature you control, that many plus one are put on it \
+                          instead.",
+            effect: StaticEffect::ExtraCounterAllKinds,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Conclave Mentor — {G}{W} 2/2 Centaur Cleric. +1/+1 counters on your creatures
+/// get the Hardened-Scales bonus; when it dies, gain life equal to its power.
+pub fn conclave_mentor() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Conclave Mentor",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "If one or more +1/+1 counters would be put on a creature \
+                          you control, that many plus one are put on it instead.",
+            effect: StaticEffect::ExtraPlusOneCounters,
+        }],
+        triggered_abilities: vec![on_dies(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Branching Evolution — {2}{G} Enchantment. Double +1/+1 counters placed on
+/// your creatures (CR 614.16 counter-doubling).
+pub fn branching_evolution() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Branching Evolution",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If one or more +1/+1 counters would be put on a creature \
+                          you control, twice that many are put on it instead.",
+            effect: StaticEffect::DoubleCounters,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blight Mamba — {1}{G} 1/1 Phyrexian Snake. Infect; {1}{G}: Regenerate.
+pub fn blight_mamba() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Blight Mamba",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Infect],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ichorclaw Myr — {2} Artifact Creature — Phyrexian Myr 1/1. Infect; when it
+/// becomes blocked, +2/+2 until end of turn.
+pub fn ichorclaw_myr() -> CardDefinition {
+    CardDefinition {
+        name: "Ichorclaw Myr",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Myr],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Infect],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Necropede — {2} Artifact Creature — Phyrexian Insect 1/1. Infect; when it
+/// dies, you may put a -1/-1 counter on target creature.
+pub fn necropede() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Necropede",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Infect],
+        triggered_abilities: vec![on_dies(Effect::MayDo {
+            description: "put a -1/-1 counter on target creature".into(),
+            body: Box::new(Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fuel for the Cause — {2}{U}{U} Instant. Counter target spell, then
+/// proliferate.
+pub fn fuel_for_the_cause() -> CardDefinition {
+    CardDefinition {
+        name: "Fuel for the Cause",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+            Effect::Proliferate,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Contagion Engine — {6} Artifact. ETB put a -1/-1 counter on each creature an
+/// opponent controls (the "target player" prompt collapses to each opponent);
+/// {4}, {T}: Proliferate twice.
+pub fn contagion_engine() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    CardDefinition {
+        name: "Contagion Engine",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::Seq(vec![Effect::Proliferate, Effect::Proliferate]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kami of False Hope — {W} 1/1 Spirit. Sacrifice it: prevent all combat damage
+/// this turn.
+pub fn kami_of_false_hope() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Kami of False Hope",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PreventAllCombatDamageThisTurn,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Renegade Rallier — {1}{G}{W} 3/2 Human Warrior. Revolt — ETB, if a permanent
+/// left under your control this turn, return target permanent card with mana
+/// value 2 or less from your graveyard to the battlefield.
+pub fn renegade_rallier() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Renegade Rallier",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::RevoltActive { who: PlayerRef::You },
+            then: Box::new(Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::InGraveyard
+                        .and(SelectionRequirement::PermanentCard)
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pitiless Plunderer — {3}{B} 1/4 Human Pirate. Whenever another creature you
+/// control dies, create a Treasure token.
+pub fn pitiless_plunderer() -> CardDefinition {
+    use crate::effect::shortcut::{mint_treasures, on_other_dies};
+    CardDefinition {
+        name: "Pitiless Plunderer",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![on_other_dies(mint_treasures(1))],
+        ..Default::default()
+    }
+}
+
+/// Falkenrath Aristocrat — {2}{B}{R} 4/1 Vampire Noble. Flying, haste. Sacrifice
+/// a creature: this gains indestructible until end of turn. (The "+1/+1 if the
+/// sacrificed creature was a Human" rider is approximated away.)
+pub fn falkenrath_aristocrat() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Falkenrath Aristocrat",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Terrarion — {1} Artifact, enters tapped. {2}, {T}, Sacrifice this: Add two
+/// mana in any combination of colors. When it's sacrificed, draw a card.
+pub fn terrarion() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility, StaticEffect};
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Terrarion",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColors(Value::Const(2)) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Implement of Combustion — {1} Artifact. {R}, Sacrifice this: 1 damage to any
+/// target. When it's sacrificed, draw a card.
+pub fn implement_of_combustion() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Implement of Combustion",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            sac_cost: true,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reckless Fireweaver — {1}{R} 1/3 Human Artificer. Whenever an artifact you
+/// control enters, this deals 1 damage to each opponent.
+pub fn reckless_fireweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Reckless Fireweaver",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Disciple of the Vault — {B} 1/1 Human Cleric. Whenever an artifact is
+/// sacrificed, you may have target opponent lose 1. (The "put into a graveyard"
+/// destroy case is approximated to the sacrifice path.)
+pub fn disciple_of_the_vault() -> CardDefinition {
+    CardDefinition {
+        name: "Disciple of the Vault",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::MayDo {
+                description: "target opponent loses 1 life".into(),
+                body: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Marionette Master — {4}{B}{B} 1/3 Human Artificer. Fabricate 3; whenever an
+/// artifact you control is sacrificed, target opponent loses life equal to that
+/// artifact's mana value. (Destroy case approximated to the sacrifice path.)
+pub fn marionette_master() -> CardDefinition {
+    use crate::effect::shortcut::fabricate;
+    let mut abilities = vec![fabricate(3)];
+    abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Artifact,
+            }),
+        effect: Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+        },
+    });
+    CardDefinition {
+        name: "Marionette Master",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: abilities,
+        ..Default::default()
+    }
+}
+
+/// Glassdust Hulk — {3}{W}{U} 3/4 Golem. Whenever another artifact you control
+/// enters, this gets +1/+1 and can't be blocked this turn. Cycling {W/U}.
+pub fn glassdust_hulk() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
+    CardDefinition {
+        name: "Glassdust Hulk",
+        cost: cost(&[generic(3), w(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Cycling(cost(&[hybrid(Color::White, Color::Blue)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

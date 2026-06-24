@@ -1977,6 +1977,10 @@ impl GameState {
     ) -> u32 {
         use crate::card::CounterType;
         let mut n = base;
+        if is_creature {
+            // Winding Constrictor: +1 to any counter kind on a creature you control.
+            n = n.saturating_add(self.extra_any_kind_adders_for(ctrl));
+        }
         if is_creature && kind == CounterType::PlusOnePlusOne {
             n = n.saturating_add(self.plus_counter_adders_for(ctrl));
         }
@@ -1987,6 +1991,24 @@ impl GameState {
             n = n.saturating_mul(2);
         }
         n
+    }
+
+    /// Number of `StaticEffect::ExtraCounterAllKinds` permanents `seat`
+    /// controls — each adds one to a placement of *any* counter kind onto one
+    /// of `seat`'s creatures (Winding Constrictor). Additive, before doubling.
+    pub fn extra_any_kind_adders_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::ExtraCounterAllKinds))
+                    .count() as u32
+            })
+            .sum()
     }
 
     /// CR 614.5 — how many -1/-1 counters to shave off a placement onto one
@@ -9577,6 +9599,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // resolution via `GameState::scaled_counter_count`; no layer effect.
             | StaticEffect::DoubleCounters
             | StaticEffect::ExtraPlusOneCounters
+            | StaticEffect::ExtraCounterAllKinds
             // Damage doubling/halving — read at damage time via
             // `GameState::damage_doublers` / `damage_halvers` /
             // `scale_damage_to`; no layer effect.

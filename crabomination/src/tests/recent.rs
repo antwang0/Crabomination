@@ -6534,3 +6534,285 @@ fn run_amok_pumps_and_tramples() {
     assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3");
     assert!(cp.keywords.contains(&Keyword::Trample));
 }
+
+// === Counter-synergy + infect + artifact-aristocrat batch tests
+// (claude/modern_decks). ===
+
+/// Winding Constrictor adds one to any counter kind on your creature.
+#[test]
+fn winding_constrictor_boosts_any_counter() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::winding_constrictor());
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    // +1/+1: 1 → 2.
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(1),
+    }, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    // A different kind (Charge) on a creature also gets the +1.
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::Charge, amount: Value::Const(1),
+    }, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Charge), 2);
+}
+
+/// Conclave Mentor gains you life equal to its power when it dies.
+#[test]
+fn conclave_mentor_dies_gains_life() {
+    let mut g = two_player_game();
+    let cm = g.add_card_to_battlefield(0, catalog::conclave_mentor());
+    let life = g.players[0].life;
+    g.battlefield_find_mut(cm).unwrap().damage = 2; // lethal vs 2 toughness
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 2 = its power");
+}
+
+/// Branching Evolution doubles +1/+1 counters placed on your creatures.
+#[test]
+fn branching_evolution_doubles_counters() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::branching_evolution());
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2),
+    }, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+/// Blight Mamba has infect and can regenerate itself.
+#[test]
+fn blight_mamba_infect_and_regen() {
+    let mut g = two_player_game();
+    let bm = g.add_card_to_battlefield(0, catalog::blight_mamba());
+    assert!(g.battlefield_find(bm).unwrap().definition.keywords.contains(&Keyword::Infect));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bm, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bm).unwrap().regeneration_shields, 1);
+}
+
+/// Ichorclaw Myr grows +2/+2 when it becomes blocked.
+#[test]
+fn ichorclaw_myr_grows_when_blocked() {
+    let mut g = two_player_game();
+    let myr = g.add_card_to_battlefield(0, catalog::ichorclaw_myr());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::BlockerDeclared { blocker, attacker: myr }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(myr).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+2/+2");
+}
+
+/// Necropede puts a -1/-1 counter on a creature when it dies.
+#[test]
+fn necropede_dies_shrinks_a_creature() {
+    let mut g = two_player_game();
+    let np = g.add_card_to_battlefield(0, catalog::necropede());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let on_dies = catalog::necropede().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(np, 0, Some(Target::Permanent(foe)), 0);
+    g.resolve_effect(&on_dies, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+}
+
+/// Fuel for the Cause counters a spell and proliferates.
+#[test]
+fn fuel_for_the_cause_counters_and_proliferates() {
+    let mut g = two_player_game();
+    // A creature of ours already carries a +1/+1 counter to proliferate.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    // Opponent casts a sorcery we'll counter.
+    let spell = g.add_card_to_hand(1, catalog::sign_in_blood());
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 2);
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).ok();
+    let _ = foe;
+    // We respond with Fuel for the Cause.
+    let fuel = g.add_card_to_hand(0, catalog::fuel_for_the_cause());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fuel, target: Some(Target::Permanent(spell)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast fuel at the spell");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "spell was countered");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferated our counter");
+}
+
+/// Contagion Engine's ETB shrinks every opposing creature.
+#[test]
+fn contagion_engine_etb_shrinks_opponents() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.move_card_to_battlefield_for_test(0, catalog::contagion_engine());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+}
+
+/// Kami of False Hope sacrifices to fog all combat damage.
+#[test]
+fn kami_of_false_hope_fogs() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::kami_of_false_hope());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kami, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for fog");
+    drain_stack(&mut g);
+    assert!(g.prevent_combat_damage_this_turn, "combat damage prevented");
+}
+
+/// Renegade Rallier reanimates a cheap permanent when Revolt is active.
+#[test]
+fn renegade_rallier_revolt_reanimates() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    g.players[0].permanent_left_battlefield_this_turn = true; // Revolt active
+    let rr = g.move_card_to_battlefield_for_test(0, catalog::renegade_rallier());
+    // bind the trigger target manually via the trigger effect.
+    let eff = catalog::renegade_rallier().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(rr, 0, Some(Target::Permanent(dead)), 0);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    assert!(g.battlefield_find(dead).is_some(), "grizzly returned to the battlefield");
+}
+
+/// Pitiless Plunderer makes a Treasure when another of your creatures dies.
+#[test]
+fn pitiless_plunderer_makes_treasure() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pitiless_plunderer());
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "treasure minted");
+}
+
+/// Falkenrath Aristocrat sacrifices a creature to become indestructible.
+#[test]
+fn falkenrath_aristocrat_sacs_for_indestructible() {
+    let mut g = two_player_game();
+    let fa = g.add_card_to_battlefield(0, catalog::falkenrath_aristocrat());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fa, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac a creature");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(fa).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// Terrarion enters tapped, sacs for two mana, and cantrips on death.
+#[test]
+fn terrarion_taps_ramps_and_cantrips() {
+    let mut g = two_player_game();
+    let t = g.move_card_to_battlefield_for_test(0, catalog::terrarion());
+    assert!(g.battlefield_find(t).unwrap().tapped, "enters tapped");
+    g.battlefield_find_mut(t).unwrap().tapped = false; // ready to tap for its ability
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: t, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for mana");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.total() >= 2, "added two mana");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cantrip drew a card");
+}
+
+/// Implement of Combustion pings and cantrips.
+#[test]
+fn implement_of_combustion_pings_and_cantrips() {
+    let mut g = two_player_game();
+    let imp = g.add_card_to_battlefield(0, catalog::implement_of_combustion());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: imp, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 damage to opponent");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "cantrip on death");
+}
+
+/// Reckless Fireweaver pings each opponent when an artifact enters.
+#[test]
+fn reckless_fireweaver_pings_on_artifact_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::reckless_fireweaver());
+    let art = g.move_card_to_battlefield_for_test(0, catalog::terrarion());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 damage when an artifact entered");
+}
+
+/// Disciple of the Vault drains when an artifact dies.
+#[test]
+fn disciple_of_the_vault_drains_on_artifact_death() {
+    let mut g = two_player_game();
+    use crate::effect::{Effect, Selector, Value};
+    g.add_card_to_battlefield(0, catalog::disciple_of_the_vault());
+    g.add_card_to_battlefield(0, catalog::worn_powerstone()); // a vanilla artifact
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    let evs = g.resolve_effect(&Effect::Sacrifice {
+        who: Selector::You, count: Value::Const(1), filter: SelectionRequirement::Artifact,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent lost 1");
+}
+
+/// Marionette Master drains by the dying artifact's mana value.
+#[test]
+fn marionette_master_drains_by_mana_value() {
+    let mut g = two_player_game();
+    let mm = catalog::marionette_master();
+    assert_eq!(mm.triggered_abilities.len(), 2, "fabricate + artifact-death drain");
+    use crate::effect::{Effect, Selector, Value};
+    g.add_card_to_battlefield(0, mm);
+    // A {3} artifact (mana value 3) is sacrificed.
+    let art = g.add_card_to_battlefield(0, catalog::worn_powerstone());
+    let mv = g.battlefield_find(art).unwrap().definition.cost.cmc();
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    let evs = g.resolve_effect(&Effect::Sacrifice {
+        who: Selector::You, count: Value::Const(1), filter: SelectionRequirement::Artifact,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - mv as i32, "lost life = artifact mana value");
+}
+
+/// Glassdust Hulk grows and turns unblockable when another artifact enters.
+#[test]
+fn glassdust_hulk_grows_on_artifact_etb() {
+    let mut g = two_player_game();
+    let hulk = g.add_card_to_battlefield(0, catalog::glassdust_hulk());
+    let art = g.move_card_to_battlefield_for_test(0, catalog::terrarion());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(hulk).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 5), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Unblockable));
+}
