@@ -10052,6 +10052,12 @@ pub(crate) fn can_block_attacker_computed(
     {
         return false;
     }
+    // Wanderlight Spirit: this blocker can block only creatures with flying.
+    if blocker_kws.contains(&Keyword::CanBlockOnlyFlying)
+        && !attacker_kws.contains(&Keyword::Flying)
+    {
+        return false;
+    }
     // Horsemanship: can only be blocked by other Horsemanship creatures.
     if attacker_kws.contains(&Keyword::Horsemanship)
         && !blocker_kws.contains(&Keyword::Horsemanship)

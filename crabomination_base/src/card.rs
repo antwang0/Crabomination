@@ -906,6 +906,11 @@ pub enum Keyword {
     /// blocker's computed power being `<= N`. Enforced in
     /// `can_block_attacker_computed`.
     CantBeBlockedByPowerAtMost(u32),
+    /// "This creature can block only creatures with flying." A blocker-side
+    /// restriction (the inverse of the others here): when set, the bearer
+    /// can't be declared as a blocker for an attacker that lacks Flying.
+    /// Enforced in `can_block_attacker_computed` (Wanderlight Spirit).
+    CanBlockOnlyFlying,
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each

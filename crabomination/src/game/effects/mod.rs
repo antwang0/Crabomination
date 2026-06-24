@@ -11062,6 +11062,20 @@ impl GameState {
                 .into_iter()
                 .collect(),
 
+            // The controller's greatest-toughness *other* creature.
+            Selector::GreatestToughnessYouControl => self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == ctx.controller
+                        && c.definition.is_creature()
+                        && Some(c.id) != ctx.source
+                })
+                .max_by_key(|c| c.toughness())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
             // The least-power creature among ALL players' (Porphyry Nodes).
             // Battlefield-order tie-break stands in for "you choose one".
             Selector::LeastPowerAmongAll => self

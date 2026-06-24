@@ -181,6 +181,12 @@ pub enum Selector {
     /// no creatures. Powers Triumph of Gerrard's "target creature you control
     /// with the greatest power" chapters (modeled non-targeted).
     GreatestPowerYouControl,
+    /// The single *other* creature `ctx.controller` controls with the greatest
+    /// toughness (first in battlefield order on a tie), excluding the effect's
+    /// own source. Empty when the controller has no other creatures. Powers
+    /// "greatest toughness among other creatures you control" (Flourishing
+    /// Hunter, read through `Value::ToughnessOf`).
+    GreatestToughnessYouControl,
     /// The single creature with the least power among ALL creatures on the
     /// battlefield, any controller (first in battlefield order on a tie —
     /// stands in for "you choose one"). Porphyry Nodes' upkeep destroy.

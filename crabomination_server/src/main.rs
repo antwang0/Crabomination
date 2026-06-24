@@ -245,6 +245,7 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
                 let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
                 s.record_pair(duration, bin_format);
                 s.observe_turns(outcome.final_turn);
+                s.observe_format_turns(bin_format, outcome.final_turn);
                 s.observe_winner(outcome.winner);
                 if let Some(Some(w)) = outcome.winner {
                     s.observe_win_life_delta(w, &outcome.final_life_totals);
@@ -352,6 +353,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
         s.record_bot(duration, format);
         s.observe_turns(outcome.final_turn);
+        s.observe_format_turns(format, outcome.final_turn);
         s.observe_winner(outcome.winner);
         if let Some(Some(w)) = outcome.winner {
             s.observe_win_life_delta(w, &outcome.final_life_totals);
@@ -408,6 +410,7 @@ fn run_pair_match(
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
         s.record_pair(duration, format);
         s.observe_turns(outcome.final_turn);
+        s.observe_format_turns(format, outcome.final_turn);
         s.observe_winner(outcome.winner);
         if let Some(Some(w)) = outcome.winner {
             s.observe_win_life_delta(w, &outcome.final_life_totals);
@@ -925,6 +928,23 @@ mod tests {
         let mut s = MatchStats::default();
         s.observe_win_life_delta(5, &[20, 0]); // seat 5 doesn't exist
         assert_eq!(s.win_life_samples, 0, "out-of-range silently skipped");
+    }
+
+    #[test]
+    pub(crate) fn format_match_stats_shows_per_format_avg_turns() {
+        let mut s = MatchStats::default();
+        // Two demo matches (8 and 12 turns → avg 10), one cube (20 turns).
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_format_turns(Format::Demo, 8);
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_format_turns(Format::Demo, 12);
+        s.record_bot(Duration::from_secs(60), Format::Cube);
+        s.observe_format_turns(Format::Cube, 20);
+        assert_eq!(s.format_avg_turns(format_index(Format::Demo)), Some(10));
+        assert_eq!(s.format_avg_turns(format_index(Format::Cube)), Some(20));
+        let line = format_match_stats(&s);
+        assert!(line.contains("demo:2(10t)"), "got: {line}");
+        assert!(line.contains("cube:1(20t)"), "got: {line}");
     }
 
     #[test]

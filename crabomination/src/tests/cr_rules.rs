@@ -4494,3 +4494,40 @@ fn cr_508_1a_attack_only_gate_allows_blocking() {
     g.clear_sickness(atk);
     assert!(g.blocker_can_block_attacker(pacifist, atk), "but it can still block");
 }
+
+// ── CR 509.1b — "can block only creatures with flying" restriction ────────────
+
+/// Shacklegeist (and Wanderlight Spirit) can block only flyers: a ground
+/// attacker can't be blocked by it, but a flyer can.
+#[test]
+fn cr_509_1b_can_block_only_flying_restriction() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let blk = g.add_card_to_battlefield(1, catalog::shacklegeist());
+    let binst = g.battlefield_find(blk).unwrap();
+    let bcomp = g.computed_permanent(blk).unwrap();
+    assert!(
+        !crate::game::can_block_attacker_computed(binst, &bcomp, &[], &[], 3),
+        "ground attacker can't be blocked by a fly-only blocker"
+    );
+    assert!(
+        crate::game::can_block_attacker_computed(binst, &bcomp, &[Keyword::Flying], &[], 3),
+        "a flyer can be blocked"
+    );
+}
+
+// ── CR 726 — Day and Night (spell-driven) ────────────────────────────────────
+
+/// A spell with "It becomes night" sets the day/night state to night from
+/// outside the upkeep transition.
+#[test]
+fn cr_726_spell_becomes_night() {
+    use crate::game::effects::EffectContext;
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    assert_eq!(g.day_night, None, "starts neither day nor night");
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&catalog::into_the_night().effect, &ctx).unwrap();
+    assert_eq!(g.day_night, Some(DayNight::Night), "spell forced night");
+}

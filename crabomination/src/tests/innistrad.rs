@@ -1,7 +1,7 @@
 //! Functionality tests for the MID/VOW cards in
 //! `catalog::sets::decks::innistrad`.
 
-use crate::card::{CounterType, CreatureType, Keyword};
+use crate::card::{CardType, CounterType, CreatureType, Keyword};
 use crate::catalog;
 use crate::game::effects::EffectContext;
 use crate::game::types::{Attack, AttackTarget};
@@ -1910,4 +1910,338 @@ fn restless_bloodseeker_end_step_blood_on_lifegain() {
     g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Blood"), 1, "lifegain → Blood");
+}
+
+// ── VOW/MID batch 17 ─────────────────────────────────────────────────────────
+
+/// Unholy Officiant's {4}{W} ability puts a +1/+1 counter on it.
+#[test]
+fn unholy_officiant_counter() {
+    let mut g = two_player_game();
+    let off = g.add_card_to_battlefield(0, catalog::unholy_officiant());
+    g.resolve_effect(
+        &catalog::unholy_officiant().activated_abilities[0].effect,
+        &EffectContext::for_ability(off, 0, None),
+    ).unwrap();
+    assert_eq!(
+        g.battlefield_find(off).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1)
+    );
+}
+
+/// Nebelgast Beguiler's ability taps a target creature.
+#[test]
+fn nebelgast_beguiler_taps() {
+    let mut g = two_player_game();
+    let beg = g.add_card_to_battlefield(0, catalog::nebelgast_beguiler());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(beg, 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::nebelgast_beguiler().activated_abilities[0].effect, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target creature is tapped");
+}
+
+/// Vampire Slayer destroys a Vampire it damages.
+#[test]
+fn vampire_slayer_destroys_vampire() {
+    let mut g = two_player_game();
+    let slayer = g.add_card_to_battlefield(0, catalog::vampire_slayer());
+    let vamp = g.add_card_to_battlefield(1, catalog::gluttonous_guest()); // Vampire 1/4
+    let mut ctx = EffectContext::for_ability(slayer, 0, Some(Target::Permanent(vamp)));
+    ctx.targets = vec![Target::Permanent(vamp)];
+    g.resolve_effect(&catalog::vampire_slayer().triggered_abilities[0].effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(vamp).is_none(), "Vampire destroyed");
+}
+
+/// Odric's Outrider drops a +1/+1 counter on a creature when one dies.
+#[test]
+fn odrics_outrider_counter_on_death() {
+    let mut g = two_player_game();
+    let outrider = g.add_card_to_battlefield(0, catalog::odrics_outrider());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(outrider, 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::odrics_outrider().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1)
+    );
+}
+
+/// Syphon Essence counters a creature spell and mints a Blood token.
+#[test]
+fn syphon_essence_counters_and_makes_blood() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add_colorless(1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bears)));
+    ctx.targets = vec![Target::Permanent(bears)];
+    g.resolve_effect(&catalog::syphon_essence().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "creature spell countered");
+    assert_eq!(count_named(&g, 0, "Blood"), 1, "Blood token created");
+}
+
+/// Wanderlight Spirit can block only flyers.
+#[test]
+fn wanderlight_spirit_blocks_only_flying() {
+    let mut g = two_player_game();
+    let blk = g.add_card_to_battlefield(1, catalog::wanderlight_spirit());
+    let binst = g.battlefield_find(blk).unwrap();
+    let bcomp = g.computed_permanent(blk).unwrap();
+    assert!(
+        !crate::game::can_block_attacker_computed(binst, &bcomp, &[], &[], 2),
+        "can't block a ground attacker"
+    );
+    assert!(
+        crate::game::can_block_attacker_computed(binst, &bcomp, &[Keyword::Flying], &[], 2),
+        "can block a flyer"
+    );
+}
+
+/// Dreadlight Monstrosity's ability makes it unblockable for the turn.
+#[test]
+fn dreadlight_monstrosity_unblockable() {
+    let mut g = two_player_game();
+    let mon = g.add_card_to_battlefield(0, catalog::dreadlight_monstrosity());
+    g.resolve_effect(
+        &catalog::dreadlight_monstrosity().activated_abilities[0].effect,
+        &EffectContext::for_ability(mon, 0, None),
+    ).unwrap();
+    assert!(g.computed_permanent(mon).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
+/// Skulking Killer gives -2/-2 only when the opponent has no other creatures.
+#[test]
+fn skulking_killer_minus_when_lonely() {
+    let mut g = two_player_game();
+    let killer = g.add_card_to_battlefield(0, catalog::skulking_killer());
+    let lone = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // opponent's only creature
+    let mut ctx = EffectContext::for_ability(killer, 0, Some(Target::Permanent(lone)));
+    ctx.targets = vec![Target::Permanent(lone)];
+    g.resolve_effect(&catalog::skulking_killer().triggered_abilities[0].effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lone).is_none(), "lone 2/2 dies to -2/-2");
+    // With a second opponent creature, the condition fails — no shrink.
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(killer, 0, Some(Target::Permanent(a)));
+    ctx.targets = vec![Target::Permanent(a)];
+    g.resolve_effect(&catalog::skulking_killer().triggered_abilities[0].effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_some() && g.battlefield_find(b).is_some(),
+        "no shrink when opponent has multiple creatures");
+}
+
+/// Pyre Spawn deals 3 on death.
+#[test]
+fn pyre_spawn_dies_deals_three() {
+    let mut g = two_player_game();
+    let spawn = g.add_card_to_battlefield(0, catalog::pyre_spawn());
+    let mut ctx = EffectContext::for_ability(spawn, 0, Some(Target::Player(1)));
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&catalog::pyre_spawn().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 17, "3 damage to opponent");
+}
+
+/// Sanguine Statuette mints a Blood on entry and animates on a Blood sacrifice.
+#[test]
+fn sanguine_statuette_etb_and_animate() {
+    let mut g = two_player_game();
+    let stat = g.move_card_to_battlefield_for_test(0, catalog::sanguine_statuette());
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Blood"), 1, "ETB Blood token");
+    g.resolve_effect(
+        &catalog::sanguine_statuette().triggered_abilities[1].effect,
+        &EffectContext::for_ability(stat, 0, None),
+    ).unwrap();
+    let cp = g.computed_permanent(stat).unwrap();
+    assert_eq!(cp.power, 3, "animated to 3/3");
+    assert!(g.battlefield_find(stat).unwrap().definition.is_creature() || cp.card_types.contains(&CardType::Creature));
+}
+
+/// Runebound Wolf deals damage equal to the Wolves/Werewolves you control.
+#[test]
+fn runebound_wolf_damage_scales() {
+    let mut g = two_player_game();
+    let wolf = g.add_card_to_battlefield(0, catalog::runebound_wolf());
+    g.add_card_to_battlefield(0, catalog::runebound_wolf()); // second Wolf → count 2
+    let mut ctx = EffectContext::for_ability(wolf, 0, Some(Target::Player(1)));
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&catalog::runebound_wolf().activated_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[1].life, 18, "2 Wolves → 2 damage");
+}
+
+/// Into the Night turns it to night and loots (discard 0 → draw 1).
+#[test]
+fn into_the_night_night_and_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&catalog::into_the_night().effect, &ctx0(&g)).unwrap();
+    assert_eq!(g.day_night, Some(crate::game::types::DayNight::Night), "it becomes night");
+    assert_eq!(g.players[0].hand.len(), before + 1, "discard 0, draw 1");
+}
+
+/// Cloaked Cadet draws when +1/+1 counters land on a Human you control.
+#[test]
+fn cloaked_cadet_draws_on_human_counter() {
+    let mut g = two_player_game();
+    let cadet = g.add_card_to_battlefield(0, catalog::cloaked_cadet());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    g.battlefield_find_mut(cadet).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.dispatch_triggers_for_events(&[GameEvent::CounterAdded {
+        card_id: cadet, counter_type: CounterType::PlusOnePlusOne, count: 1,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew off the Human counter trigger");
+}
+
+/// Flourishing Hunter gains life equal to the greatest toughness among OTHER
+/// creatures (excluding itself).
+#[test]
+fn flourishing_hunter_gains_other_toughness() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rot_tide_gargantua()); // 5/4
+    let before = g.players[0].life;
+    let hunter = g.move_card_to_battlefield_for_test(0, catalog::flourishing_hunter()); // 6/6
+    let _ = hunter;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 4, "gains 4 (other's toughness), not 6 (its own)");
+}
+
+/// Witch's Web pumps, grants reach, and untaps the target.
+#[test]
+fn witchs_web_pump_reach_untap() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::witchs_web().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 5, "+3/+3");
+    assert!(cp.keywords.contains(&Keyword::Reach), "gains reach");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
+}
+
+/// Vilespawn Spider makes one Insect per creature card in your graveyard.
+#[test]
+fn vilespawn_spider_makes_insects() {
+    let mut g = two_player_game();
+    let spider = g.add_card_to_battlefield(0, catalog::vilespawn_spider());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.resolve_effect(
+        &catalog::vilespawn_spider().activated_abilities[0].effect,
+        &EffectContext::for_ability(spider, 0, None),
+    ).unwrap();
+    assert_eq!(count_named(&g, 0, "Insect"), 3, "one Insect per graveyard creature");
+}
+
+/// Lantern of the Lost exiles a graveyard card on entry, then can sweep all.
+#[test]
+fn lantern_of_the_lost_exiles() {
+    let mut g = two_player_game();
+    let lantern = g.add_card_to_battlefield(0, catalog::lantern_of_the_lost());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(lantern, 0, Some(Target::Permanent(dead)));
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&catalog::lantern_of_the_lost().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead), "ETB exiled the gy card");
+    // Sweep ability empties all graveyards.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.resolve_effect(
+        &catalog::lantern_of_the_lost().activated_abilities[0].effect,
+        &EffectContext::for_ability(lantern, 0, None),
+    ).unwrap();
+    assert!(g.players[0].graveyard.is_empty() && g.players[1].graveyard.is_empty(),
+        "all graveyards exiled");
+}
+
+/// Nebelgast Intruder shrinks an opponent's creature by -2/-0.
+#[test]
+fn nebelgast_intruder_shrinks() {
+    let mut g = two_player_game();
+    let intruder = g.add_card_to_battlefield(0, catalog::nebelgast_intruder());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(intruder, 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::nebelgast_intruder().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 0, "-2/-0 on a 2/2");
+}
+
+/// Candlelit Cavalry gains trample under Coven (three different powers).
+#[test]
+fn candlelit_cavalry_coven_trample() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let cav = g.add_card_to_battlefield(0, catalog::candlelit_cavalry()); // power 5
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
+    let third = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(third).unwrap().add_counters(CounterType::PlusOnePlusOne, 1); // power 3
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(cav).unwrap().keywords.contains(&Keyword::Trample),
+        "Coven grants trample");
+}
+
+/// Purifying Dragon pings 1 on attack, or 2 to a Zombie.
+#[test]
+fn purifying_dragon_attack_ping() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::purifying_dragon());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(dragon, 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::purifying_dragon().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1, "1 to a non-Zombie");
+    let zombie = g.add_card_to_battlefield(1, catalog::larder_zombie());
+    let mut ctx = EffectContext::for_ability(dragon, 0, Some(Target::Permanent(zombie)));
+    ctx.targets = vec![Target::Permanent(zombie)];
+    g.resolve_effect(&catalog::purifying_dragon().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.battlefield_find(zombie).unwrap().damage, 2, "2 to a Zombie");
+}
+
+/// Obsessive Astronomer makes it day on entry when neither day nor night.
+#[test]
+fn obsessive_astronomer_makes_day() {
+    let mut g = two_player_game();
+    assert_eq!(g.day_night, None);
+    g.move_card_to_battlefield_for_test(0, catalog::obsessive_astronomer());
+    drain_stack(&mut g);
+    assert_eq!(g.day_night, Some(crate::game::types::DayNight::Day), "becomes day on entry");
+}
+
+/// Hungry for More mints a hasty Vampire that sacrifices itself at end step.
+#[test]
+fn hungry_for_more_temp_token() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.resolve_effect(&catalog::hungry_for_more().effect, &ctx0(&g)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Vampire"), 1, "token minted");
+    let tok = g.battlefield.iter().find(|c| c.definition.name == "Vampire").unwrap();
+    assert!(tok.definition.keywords.contains(&Keyword::Haste), "hasty");
+    assert!(tok.definition.keywords.contains(&Keyword::Lifelink), "lifelink");
+    // End step → the token sacrifices itself and ceases to exist.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Vampire"), 0, "token gone at end step");
 }

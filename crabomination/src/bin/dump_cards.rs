@@ -163,6 +163,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
         | Keyword::CantBeBlockedByPowerLess
         | Keyword::CantBeBlockedByPowerAtMost(_)
+        | Keyword::CanBlockOnlyFlying
         | Keyword::CantBeCounteredIfXAtLeast(_)
         | Keyword::ProtectionFromCreatures | Keyword::UmbraArmor => return None,
         Keyword::Unleash => "Unleash",

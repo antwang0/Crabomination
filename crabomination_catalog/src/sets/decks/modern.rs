@@ -23168,8 +23168,8 @@ pub fn mightform_harmonizer() -> CardDefinition {
 }
 
 /// Pinnacle Emissary — {1}{U}{R} 3/3. Whenever you cast an artifact spell,
-/// create a 1/1 colorless Drone artifact creature token with flying. (Warp and
-/// the token's "can block only flyers" rider are dropped.)
+/// create a 1/1 colorless Drone artifact creature token with flying that can
+/// block only creatures with flying. (Warp is dropped.)
 pub fn pinnacle_emissary() -> CardDefinition {
     use crate::card::TokenDefinition;
     CardDefinition {
@@ -23191,7 +23191,7 @@ pub fn pinnacle_emissary() -> CardDefinition {
                     name: "Drone".into(),
                     power: 1,
                     toughness: 1,
-                    keywords: vec![Keyword::Flying],
+                    keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
                     card_types: vec![CardType::Artifact, CardType::Creature],
                     subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
                     ..Default::default()
@@ -54142,9 +54142,9 @@ pub fn harbinger_of_the_tides() -> CardDefinition {
     }
 }
 
-/// Shacklegeist — {1}{U} 2/2 flying Spirit. Tap two untapped Spirits you
-/// control: tap target creature you don't control. (The "can block only
-/// fliers" rider is dropped.)
+/// Shacklegeist — {1}{U} 2/2 flying Spirit that can block only creatures with
+/// flying. Tap two untapped Spirits you control: tap target creature you don't
+/// control.
 pub fn shacklegeist() -> CardDefinition {
     CardDefinition {
         name: "Shacklegeist",
@@ -54153,7 +54153,7 @@ pub fn shacklegeist() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
         activated_abilities: vec![ActivatedAbility {
             tap_n_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Spirit), 2)),
             effect: Effect::Tap {

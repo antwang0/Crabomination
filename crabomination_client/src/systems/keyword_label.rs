@@ -98,6 +98,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // less than this" (Formation Breaker) / "power N or less" (Questing
         // Beast).
         CantBeBlockedByPowerLess | CantBeBlockedByPowerAtMost(_) => "Eva",
+        // "Can block only creatures with flying" (Wanderlight Spirit).
+        CanBlockOnlyFlying => "FlyBlk",
         MustBeBlocked => "Lure",
         // "Attacks each combat if able" (Impending Doom, The Akroan War II) —
         // a board-relevant combat compulsion.

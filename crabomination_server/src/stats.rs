@@ -42,6 +42,12 @@ pub(crate) struct MatchStats {
     /// the running cube-vs-demo split in the rolling summary line. Push
     /// (claude/modern_decks batch 162).
     pub(crate) format_buckets: [u64; FORMAT_BUCKET_COUNT],
+    /// Per-format cumulative final turn count, indexed like
+    /// `format_buckets`. Divided by the matching `format_buckets` count to
+    /// surface each format's average game length in the summary
+    /// (`demo:7(9t) cube:3(14t)`), so operators can tell a slow format apart
+    /// from a slow build without sampling per-match logs.
+    pub(crate) format_turn_totals: [u64; FORMAT_BUCKET_COUNT],
     /// Cumulative turn count across all matches — divided by total
     /// matches in the summary line. Operators see at a glance whether
     /// games are concession-heavy (low avg turn count) or grindy
@@ -496,6 +502,24 @@ impl MatchStats {
         let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
         self.format_buckets[idx] = self.format_buckets[idx].saturating_add(1);
     }
+    /// Accumulate a completed match's final turn count into its format
+    /// bucket. Called once per match alongside `observe_turns`; divided by
+    /// `format_buckets` in the summary to surface each format's average
+    /// game length.
+    pub(crate) fn observe_format_turns(&mut self, f: Format, turns: u32) {
+        let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
+        self.format_turn_totals[idx] = self.format_turn_totals[idx].saturating_add(turns as u64);
+    }
+    /// Average final turn count for format bucket `i`, or `None` if no turn
+    /// data has been recorded for that format (so callers fall back to the
+    /// bare `label:count` rather than rendering a misleading `(0t)`).
+    pub(crate) fn format_avg_turns(&self, i: usize) -> Option<u64> {
+        let total = *self.format_turn_totals.get(i)?;
+        if total == 0 {
+            return None;
+        }
+        total.checked_div(*self.format_buckets.get(i)?)
+    }
     /// Shared bookkeeping for both record paths — accumulates the
     /// total + tracks the new min/max envelope. Pulled out of the
     /// recorders so the min/max maintenance is canonical at one site.
@@ -826,7 +850,10 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                 if count == 0 {
                     return None;
                 }
-                format_label_for_bucket(i).map(|label| format!("{label}:{count}"))
+                format_label_for_bucket(i).map(|label| match s.format_avg_turns(i) {
+                    Some(avg) => format!("{label}:{count}({avg}t)"),
+                    None => format!("{label}:{count}"),
+                })
             })
             .collect();
         if !format_chunks.is_empty() {
