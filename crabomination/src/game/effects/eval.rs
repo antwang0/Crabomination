@@ -613,6 +613,7 @@ impl GameState {
                 .any(|p| self.players[p].city_blessing),
             Predicate::IsDay => self.day_night == Some(crate::game::types::DayNight::Day),
             Predicate::IsNight => self.day_night == Some(crate::game::types::DayNight::Night),
+            Predicate::DieResultAtLeast(n) => ctx.event_amount >= *n as u32,
             Predicate::IsMonarch { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

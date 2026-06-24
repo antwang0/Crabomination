@@ -1824,7 +1824,7 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
             GameEvent::CoinFlipLost { player } => GameEventWire::CoinFlipLost { player: *player },
-            GameEvent::DiceRolled { player, count } => {
+            GameEvent::DiceRolled { player, count, .. } => {
                 GameEventWire::DiceRolled { player: *player, count: *count }
             }
             GameEvent::CreatureDied { card_id } => {

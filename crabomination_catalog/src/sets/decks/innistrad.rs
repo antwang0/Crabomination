@@ -2460,8 +2460,8 @@ pub fn cobbled_lancer() -> CardDefinition {
 }
 
 /// Ground Pounder — {1}{G} 2/2 Goblin Warrior. {3}{G}: roll a d6; it gets
-/// +X/+X until end of turn, where X is the result. (The "roll 5+ → trample"
-/// rider is omitted — no die-result trigger predicate yet.)
+/// +X/+X until end of turn, where X is the result. Whenever you roll a 5 or
+/// higher on a die, it gains trample until end of turn.
 pub fn ground_pounder() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -2490,6 +2490,15 @@ pub fn ground_pounder() -> CardDefinition {
                 on_doubles: None,
             },
             ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::RolledDice, EventScope::YourControl)
+                .with_filter(Predicate::DieResultAtLeast(5)),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
         }],
         ..Default::default()
     }

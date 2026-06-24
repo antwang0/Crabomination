@@ -1305,8 +1305,10 @@ pub enum GameEvent {
     /// Goblin Bomb).
     CoinFlipLost { player: usize },
     /// CR 706.6 — `player` rolled one or more dice (`count` dice). Fires
-    /// once per roll instruction (Barbarian Class, Wand of Wonder).
-    DiceRolled { player: usize, count: u32 },
+    /// once per roll instruction (Barbarian Class, Wand of Wonder). `high` is
+    /// the greatest (modified) result rolled, so result-gated triggers like
+    /// "whenever you roll a 5 or higher" can filter on `event_amount`.
+    DiceRolled { player: usize, count: u32, high: u8 },
     CreatureDied { card_id: CardId },
     /// A creature was sacrificed by `who` (CR 701.16). Fires before the
     /// corresponding `CreatureDied` event so order-sensitive sacrifice

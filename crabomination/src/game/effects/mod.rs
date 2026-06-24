@@ -948,15 +948,6 @@ impl GameState {
             Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 let sides = (*sides).max(2);
-                // CR 706.6 — "whenever a player rolls one or more dice" fires
-                // once for the whole roll. Emitted before the per-die result
-                // dispatch so the roll-count is known to listeners.
-                if n > 0 {
-                    events.push(GameEvent::DiceRolled {
-                        player: ctx.controller,
-                        count: n as u32,
-                    });
-                }
                 // CR 706.2 — the flat result modifier applied to every die
                 // this resolution.
                 let modifier = self.evaluate_value(modifier, ctx);
@@ -974,6 +965,8 @@ impl GameState {
                 };
                 // CR 706.5 — track natural faces to detect "doubles".
                 let mut naturals: Vec<u8> = Vec::with_capacity(n as usize);
+                // Greatest modified result this roll, for result-gated triggers.
+                let mut high_rolled: u8 = 0;
                 for _ in 0..n {
                     let mut natural = roll_one(self);
                     // CR 706.2b — reroll a low natural result exactly once.
@@ -986,6 +979,7 @@ impl GameState {
                     // The result may exceed `sides`, letting a top "N+"
                     // arm catch boosted rolls.
                     let rolled = (natural as i32 + modifier).max(1).min(u8::MAX as i32) as u8;
+                    high_rolled = high_rolled.max(rolled);
                     // CR 706.3a — first matching arm fires. If no arm
                     // matches the roll, the die has no result-table
                     // effect (per CR 706.3a "If the result was in this
@@ -1008,6 +1002,17 @@ impl GameState {
                     if sorted.windows(2).any(|w| w[0] == w[1]) {
                         self.run_effect(doubles_effect, ctx, events)?;
                     }
+                }
+                // CR 706.6 — "whenever a player rolls one or more dice" fires
+                // once for the whole roll, after the results resolve. Carries
+                // the greatest result so result-gated triggers ("roll a 5 or
+                // higher") can filter on it via `event_amount`.
+                if n > 0 {
+                    events.push(GameEvent::DiceRolled {
+                        player: ctx.controller,
+                        count: n as u32,
+                        high: high_rolled,
+                    });
                 }
                 Ok(())
             }

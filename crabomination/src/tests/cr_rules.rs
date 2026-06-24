@@ -4370,3 +4370,46 @@ fn cr_702_147_decayed_attacker_sacrificed_at_end_of_combat() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(zombie).is_none(), "decayed attacker sacrificed at end of combat");
 }
+
+/// CR 706.4 — a result-gated roll trigger ("whenever you roll a 5 or higher")
+/// fires off the `RolledDice` event's greatest result. Ground Pounder gains
+/// trample on a 5+, and stays vanilla on a low roll.
+#[test]
+fn cr_706_4_die_result_trigger_grants_trample() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let roll = |face: u8| {
+        let mut g = two_player_game();
+        let gp = g.add_card_to_battlefield(0, catalog::ground_pounder());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(face)]));
+        let effect = catalog::ground_pounder().activated_abilities[0].effect.clone();
+        let ctx = crate::game::effects::EffectContext::for_ability(gp, 0, None);
+        let evs = g.resolve_effect(&effect, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        g.computed_permanent(gp).unwrap().keywords.contains(&Keyword::Trample)
+    };
+    assert!(roll(5), "rolling a 5 grants trample");
+    assert!(!roll(3), "rolling a 3 does not");
+}
+
+/// CR 702.146e — a Disturb back face that's an Aura is exiled (not put into a
+/// graveyard) when it leaves the battlefield, just like a creature back.
+#[test]
+fn cr_702_146e_disturb_aura_back_exiles_on_leave() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_graveyard(0, catalog::kindly_ancestor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastDisturb {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+    }).expect("disturb the Aura");
+    drain_stack(&mut g);
+    // Kill the host; the orphaned Aura would normally go to the graveyard.
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == id), "Aura back exiled, not in graveyard");
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != id), "not in graveyard");
+}

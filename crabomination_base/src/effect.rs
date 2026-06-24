@@ -649,6 +649,10 @@ pub enum Predicate {
     IsDay,
     /// CR 731 — it's currently night.
     IsNight,
+    /// CR 706.4 — true when the firing roll's greatest result is at least `n`.
+    /// Gates "whenever you roll a 5 or higher" triggers off a `RolledDice`
+    /// event via `EffectContext.event_amount` (Ground Pounder's trample rider).
+    DieResultAtLeast(u8),
     /// CR 724 — `who` is the monarch ("as long as you're the monarch, …").
     IsMonarch { who: PlayerRef },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
