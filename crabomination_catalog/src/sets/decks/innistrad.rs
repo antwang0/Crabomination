@@ -1835,3 +1835,97 @@ pub fn gavony_dawnguard() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 3: simple commons ──────────────────────────────────────────────────
+
+/// Lightning Wolf — {3}{R} 4/3 Wolf. {1}{R}: gains first strike until end of
+/// turn. Activate only as a sorcery.
+pub fn lightning_wolf() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning Wolf",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            sorcery_speed: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ritual Guardian — {2}{W} 3/2 Human Soldier. Coven — at the beginning of
+/// combat on your turn, if you control three or more creatures with different
+/// powers, it gains lifelink until end of turn.
+pub fn ritual_guardian() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Ritual Guardian",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                .with_filter(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Defend the Celestus — {2}{G}{G} Instant. Distribute three +1/+1 counters
+/// among one, two, or three target creatures you control.
+pub fn defend_the_celestus() -> CardDefinition {
+    CardDefinition {
+        name: "Defend the Celestus",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DistributeCounters {
+            total: Value::Const(3),
+            counter: CounterType::PlusOnePlusOne,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            max_targets: 3,
+        },
+        ..Default::default()
+    }
+}
+
+/// Rot-Tide Gargantua — {3}{B}{B} 5/4 Zombie Kraken. Exploit. When it exploits
+/// a creature, each opponent sacrifices a creature of their choice.
+pub fn rot_tide_gargantua() -> CardDefinition {
+    use crate::effect::shortcut::exploit;
+    CardDefinition {
+        name: "Rot-Tide Gargantua",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Kraken],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![exploit(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        })],
+        ..Default::default()
+    }
+}

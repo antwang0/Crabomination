@@ -795,3 +795,53 @@ fn blood_fountain_etb_and_recur() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == corpse), "creature returned to hand");
 }
+
+// ── Batch 3 ──────────────────────────────────────────────────────────────────
+
+/// Lightning Wolf grants itself first strike.
+#[test]
+fn lightning_wolf_first_strike() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::lightning_wolf());
+    let ctx = EffectContext::for_ability(w, 0, None);
+    g.resolve_effect(&catalog::lightning_wolf().activated_abilities[0].effect, &ctx).unwrap();
+    assert!(g.computed_permanent(w).unwrap().keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Ritual Guardian gains lifelink at combat when coven is active.
+#[test]
+fn ritual_guardian_coven_lifelink() {
+    let mut g = two_player_game();
+    let rg = g.add_card_to_battlefield(0, catalog::ritual_guardian()); // power 3
+    let ctx = EffectContext::for_ability(rg, 0, None);
+    g.resolve_effect(&catalog::ritual_guardian().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.computed_permanent(rg).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+/// Defend the Celestus distributes three +1/+1 counters across your creatures.
+#[test]
+fn defend_the_celestus_distributes() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(a)];
+    g.resolve_effect(&catalog::defend_the_celestus().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(a).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(3),
+        "all three counters land on the single target",
+    );
+}
+
+/// Rot-Tide Gargantua's exploit makes each opponent sacrifice a creature.
+#[test]
+fn rot_tide_gargantua_edicts() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // accept exploit
+    g.move_card_to_battlefield_for_test(0, catalog::rot_tide_gargantua());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their creature");
+}
