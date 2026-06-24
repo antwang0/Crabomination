@@ -166,6 +166,18 @@ Real cards confirmed absent, deferred for want of a mechanic:
 - ✅ **Temporary "sacrifice at the next end step" tokens** — Hungry for More
   ships; the minted token carries an end-step self-sacrifice trigger
   (`StepBegins(End)` → `Move(This → Graveyard)`), same shape as Dress Down.
+- **Spend-restricted "cast from your graveyard" mana** — Rootcoil Creeper's
+  second ability (its ramp half is currently dropped); add a
+  `SpendRestriction::GraveyardCastOnly` to `mana.rs`.
+- **Both-dynamic-P/T tokens** — Seize the Storm's `*/*` Elemental (P=T= I/S in
+  gy + flashback-in-exile). `DynamicPt::InstantsSorceriesInGraveyardAndExile`
+  only drives power; want a variant (or token CDA) that sets both.
+- **Assign-combat-damage-by-toughness** — Doran / Ancient Lumberknot ("assigns
+  combat damage equal to its toughness"); needs a keyword/static read in the
+  combat-damage assignment step.
+- **Cast-time "choose one or both" modal with a targeted mode** — Markov
+  Retribution (mode 2 targets a Vampire + another creature). `Effect::ChooseN`
+  exists but per-mode target-slot derivation for the targeted half is fiddly.
 - **Shared-card-type cost reduction off linked exile** — Cemetery Prowler
   ("spells cost {1} less for each card type they share with cards exiled with
   this creature"); needs a cost-reduction static keyed on `exiled_with`.

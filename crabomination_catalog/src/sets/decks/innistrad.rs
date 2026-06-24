@@ -1,6 +1,7 @@
 //! Innistrad: Midnight Hunt (MID) / Crimson Vow (VOW) commons & uncommons that
 //! round out the modern-era pool. Mechanics in play: coven, decayed, exploit,
-//! Blood tokens, day/night, training, flashback. Each card has at least one
+//! Blood tokens, day/night, training, flashback, disturb, plus block-only-flying
+//! Spirits and temporary (end-step self-sac) tokens. Each card has at least one
 //! functionality test in `crabomination/src/tests/innistrad.rs`.
 
 use crate::card::{
@@ -4514,6 +4515,313 @@ pub fn hungry_for_more() -> CardDefinition {
             count: Value::Const(1),
             definition: token,
         },
+        ..Default::default()
+    }
+}
+
+// ── VOW/MID batch 18 ─────────────────────────────────────────────────────────
+
+/// Flip the Switch — {2}{U} Instant. Counter target spell unless its controller
+/// pays {4}. Create a 2/2 black Zombie with decayed.
+pub fn flip_the_switch() -> CardDefinition {
+    CardDefinition {
+        name: "Flip the Switch",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: cost(&[generic(4)]),
+                exile: false,
+                extra_generic: None,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: decayed_zombie_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Jack-o'-Lantern — {1} Artifact. {1}, {T}, Sacrifice this: exile up to one
+/// target card from a graveyard, then draw a card. (The graveyard mana ability
+/// is dropped.)
+pub fn jack_o_lantern() -> CardDefinition {
+    CardDefinition {
+        name: "Jack-o'-Lantern",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 1,
+                    filter: SelectionRequirement::InGraveyard,
+                    effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ominous Roost — {2}{U} Enchantment. On entry and whenever you cast a spell
+/// from your graveyard, create a 1/1 blue Bird with flying that can block only
+/// creatures with flying.
+pub fn ominous_roost() -> CardDefinition {
+    let bird = TokenDefinition {
+        name: "Bird".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        ..Default::default()
+    };
+    let make_bird = move || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: bird.clone(),
+    };
+    CardDefinition {
+        name: "Ominous Roost",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(make_bird()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastFromGraveyard),
+                effect: make_bird(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Serpentine Ambush — {1}{U} Instant. Until end of turn, target creature
+/// becomes a 5/5 Serpent. (Color set to blue is approximated.)
+pub fn serpentine_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Serpentine Ambush",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BecomeCreature {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(5),
+            toughness: Value::Const(5),
+            creature_types: vec![CreatureType::Serpent],
+            keywords: vec![],
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Turn the Earth — {G} Instant. Choose up to three target cards in graveyards;
+/// their owners shuffle them into their libraries. Gain 2 life. Flashback {1}{G}.
+pub fn turn_the_earth() -> CardDefinition {
+    CardDefinition {
+        name: "Turn the Earth",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), g()]))],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 3,
+                filter: SelectionRequirement::InGraveyard,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: crate::effect::ZoneDest::Library {
+                        who: PlayerRef::OwnerOfMoved,
+                        pos: crate::effect::LibraryPosition::Shuffled,
+                    },
+                }),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Moonsilver Key — {2} Artifact. {1}, {T}, Sacrifice this: search your library
+/// for an artifact or basic land card, reveal it, put it into your hand, then
+/// shuffle. (The "artifact with a mana ability" sub-filter is approximated as
+/// any artifact.)
+pub fn moonsilver_key() -> CardDefinition {
+    CardDefinition {
+        name: "Moonsilver Key",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::IsBasicLand),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unblinking Observer — {1}{U} 2/1 Homunculus. {T}: add {U}, spendable only on
+/// instant/sorcery spells. (The disturb-cost clause is approximated.)
+pub fn unblinking_observer() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Unblinking Observer",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Homunculus], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::OfColor(Color::Blue, Value::Const(1))),
+                    crate::mana::SpendRestriction::InstantSorceryOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rootcoil Creeper — {G}{U} 2/2 Plant Horror. {T}: add one mana of any color.
+/// (Its second, graveyard-cast-restricted ramp ability is dropped — the engine
+/// has no "spend only to cast from your graveyard" restriction yet.)
+pub fn rootcoil_creeper() -> CardDefinition {
+    use crate::effect::shortcut::add_any_one_color;
+    CardDefinition {
+        name: "Rootcoil Creeper",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: add_any_one_color(1),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Duel for Dominance — {1}{G} Instant. Coven — choose a creature you control
+/// and one you don't; if you control three or more creatures with different
+/// powers, put a +1/+1 counter on the chosen creature you control. Then they
+/// fight.
+pub fn duel_for_dominance() -> CardDefinition {
+    let yours = Selector::TargetFiltered {
+        slot: 0,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    };
+    let theirs = Selector::TargetFiltered {
+        slot: 1,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+    };
+    CardDefinition {
+        name: "Duel for Dominance",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::CovenActive { who: PlayerRef::You },
+                then: Box::new(Effect::AddCounter {
+                    what: yours.clone(),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Fight { attacker: yours, defender: theirs },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── VOW/MID batch 19 ─────────────────────────────────────────────────────────
+
+/// Spiked Ripsaw — {2}{G} Equipment. Equipped creature gets +3/+3. Whenever it
+/// attacks, you may sacrifice a Forest; if you do, it gains trample until end of
+/// turn. Equip {3}.
+pub fn spiked_ripsaw() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, LandType};
+    CardDefinition {
+        name: "Spiked Ripsaw",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+                description: "Sacrifice a Forest?".into(),
+                filter: SelectionRequirement::HasLandType(LandType::Forest),
+                count: Value::Const(1),
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: None,
+            })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Fleeting Spirit — {1}{W} 3/1 Spirit. {W}, Exile three cards from your
+/// graveyard: gains first strike until end of turn. Discard a card: exile it,
+/// returning at the next end step.
+pub fn fleeting_spirit() -> CardDefinition {
+    CardDefinition {
+        name: "Fleeting Spirit",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                exile_other_filter: Some((SelectionRequirement::Any, 3)),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                discard_cost: Some((SelectionRequirement::Any, 1)),
+                effect: Effect::ExileReturnNextEndStep { what: Selector::This },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

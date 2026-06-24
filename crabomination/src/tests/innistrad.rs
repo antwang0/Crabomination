@@ -2245,3 +2245,181 @@ fn hungry_for_more_temp_token() {
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Vampire"), 0, "token gone at end step");
 }
+
+// ── VOW/MID batch 18 ─────────────────────────────────────────────────────────
+
+/// Flip the Switch counters an unaffordable spell and mints a decayed Zombie.
+#[test]
+fn flip_the_switch_counters_and_makes_zombie() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add_colorless(1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    // Opponent has no mana to pay {4} → countered.
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bears)));
+    ctx.targets = vec![Target::Permanent(bears)];
+    g.resolve_effect(&catalog::flip_the_switch().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "spell countered");
+    assert_eq!(count_named(&g, 0, "Zombie"), 1, "decayed Zombie minted");
+}
+
+/// Jack-o'-Lantern exiles a graveyard card and draws.
+#[test]
+fn jack_o_lantern_exile_and_draw() {
+    let mut g = two_player_game();
+    let lantern = g.add_card_to_battlefield(0, catalog::jack_o_lantern());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    let mut ctx = EffectContext::for_ability(lantern, 0, Some(Target::Permanent(dead)));
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&catalog::jack_o_lantern().activated_abilities[0].effect, &ctx).unwrap();
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead), "exiled gy card");
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
+}
+
+/// Ominous Roost mints a fly-only-blocking Bird on entry.
+#[test]
+fn ominous_roost_etb_bird() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::ominous_roost());
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Bird"), 1, "ETB Bird");
+    let bird = g.battlefield.iter().find(|c| c.definition.name == "Bird").unwrap();
+    assert!(bird.definition.keywords.contains(&Keyword::CanBlockOnlyFlying));
+}
+
+/// Serpentine Ambush turns a creature into a 5/5 Serpent.
+#[test]
+fn serpentine_ambush_makes_serpent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::serpentine_ambush().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "becomes 5/5");
+    assert!(cp.subtypes.creature_types.contains(&CreatureType::Serpent), "is a Serpent");
+}
+
+/// Turn the Earth shuffles graveyard cards back and gains 2 life.
+#[test]
+fn turn_the_earth_recycles_and_gains() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let before_life = g.players[0].life;
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(dead)));
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&catalog::turn_the_earth().effect, &ctx).unwrap();
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != dead), "shuffled out of graveyard");
+    assert_eq!(g.players[0].life, before_life + 2, "gained 2 life");
+}
+
+/// Moonsilver Key fetches a basic land to hand.
+#[test]
+fn moonsilver_key_fetches_land() {
+    let mut g = two_player_game();
+    let key = g.add_card_to_battlefield(0, catalog::moonsilver_key());
+    let land = g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(land)),
+    ]));
+    g.resolve_effect(
+        &catalog::moonsilver_key().activated_abilities[0].effect,
+        &EffectContext::for_ability(key, 0, None),
+    ).unwrap();
+    assert_eq!(g.players[0].hand.len(), before + 1, "fetched a card to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "fetched the Forest");
+}
+
+/// Unblinking Observer taps for restricted blue mana.
+#[test]
+fn unblinking_observer_makes_mana() {
+    let mut g = two_player_game();
+    let obs = g.add_card_to_battlefield(0, catalog::unblinking_observer());
+    g.resolve_effect(
+        &catalog::unblinking_observer().activated_abilities[0].effect,
+        &EffectContext::for_ability(obs, 0, None),
+    ).unwrap();
+    assert!(g.players[0].mana_pool.restricted_total() >= 1, "added restricted blue mana");
+}
+
+/// Duel for Dominance pumps under Coven, then fights.
+#[test]
+fn duel_for_dominance_coven_fight() {
+    let mut g = two_player_game();
+    // Coven: three creatures with powers 5, 2, 3.
+    let mine = g.add_card_to_battlefield(0, catalog::candlelit_cavalry()); // 5/5
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let third = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(third).unwrap().add_counters(CounterType::PlusOnePlusOne, 1); // 3/3
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(mine), Target::Permanent(foe)];
+    g.resolve_effect(&catalog::duel_for_dominance().effect, &ctx).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    // Coven counter made the cavalry 6/6; it fought the 2/2 (which dies).
+    assert_eq!(
+        g.battlefield_find(mine).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "coven +1/+1"
+    );
+    assert!(g.battlefield_find(foe).is_none(), "the opposing 2/2 died in the fight");
+}
+
+/// Rootcoil Creeper taps for one mana of any color.
+#[test]
+fn rootcoil_creeper_ramps() {
+    let mut g = two_player_game();
+    let creep = g.add_card_to_battlefield(0, catalog::rootcoil_creeper());
+    g.resolve_effect(
+        &catalog::rootcoil_creeper().activated_abilities[0].effect,
+        &EffectContext::for_ability(creep, 0, None),
+    ).unwrap();
+    assert!(g.players[0].mana_pool.total() >= 1, "ramped one mana");
+}
+
+// ── VOW/MID batch 19 ─────────────────────────────────────────────────────────
+
+/// Spiked Ripsaw grants +3/+3 and a sac-a-Forest-for-trample attack trigger.
+#[test]
+fn spiked_ripsaw_sac_forest_for_trample() {
+    let mut g = two_player_game();
+    assert_eq!(catalog::spiked_ripsaw().equipped_bonus.unwrap().power, 3, "+3/+3 bonus");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let trig = catalog::spiked_ripsaw().equipped_bonus.unwrap().triggered_abilities[0].effect.clone();
+    g.resolve_effect(&trig, &EffectContext::for_trigger(bear, 0, None, 0)).unwrap();
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(g.battlefield_find(forest).is_none(), "Forest sacrificed");
+}
+
+/// Fleeting Spirit's first ability grants first strike; the second blinks it.
+#[test]
+fn fleeting_spirit_abilities() {
+    let mut g = two_player_game();
+    let spirit = g.add_card_to_battlefield(0, catalog::fleeting_spirit());
+    g.resolve_effect(
+        &catalog::fleeting_spirit().activated_abilities[0].effect,
+        &EffectContext::for_ability(spirit, 0, None),
+    ).unwrap();
+    assert!(g.computed_permanent(spirit).unwrap().keywords.contains(&Keyword::FirstStrike));
+    // Second ability exiles it (returns at the next end step).
+    g.resolve_effect(
+        &catalog::fleeting_spirit().activated_abilities[1].effect,
+        &EffectContext::for_ability(spirit, 0, None),
+    ).unwrap();
+    assert!(g.battlefield_find(spirit).is_none(), "exiled by the blink ability");
+}
