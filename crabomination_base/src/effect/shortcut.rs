@@ -700,6 +700,16 @@ pub fn cascade(mv: u32) -> TriggeredAbility {
     }
 }
 
+/// Ripple N (CR 702.20). Wires the "when you cast this spell" trigger whose
+/// body is [`Effect::Ripple`] — reveal the top N, free-cast same-named copies,
+/// bottom the rest.
+pub fn ripple(n: u32) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+        effect: Effect::Ripple { n: Value::Const(n as i32) },
+    }
+}
+
 /// Squad (CR 702.157) — the ETB trigger that mints one token copy of this
 /// creature per time its squad cost was paid (`Value::SquadCount`). Pair with
 /// `Keyword::Squad(cost)` on the card.

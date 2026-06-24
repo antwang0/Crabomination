@@ -10285,6 +10285,68 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Ripple { n } => {
+                // CR 702.20: reveal the top N cards; cast any with the same
+                // name as the rippling spell for free (from exile, like
+                // Cascade); bottom the rest. A rippled copy re-fires its own
+                // cast trigger, so ripple-of-ripples recurses naturally.
+                use crate::card::Zone;
+                use crate::effect::{LibraryPosition, ZoneDest};
+                let p = ctx.controller;
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(name) = self.find_card_anywhere(src).map(|c| c.definition.name) else {
+                    return Ok(());
+                };
+                let count = self.evaluate_value(n, ctx).max(0) as u32;
+                let mut revealed: Vec<crate::card::CardId> = Vec::new();
+                for _ in 0..count {
+                    if self.players[p].library.is_empty() {
+                        break;
+                    }
+                    let cid = self.players[p].library[0].id;
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    revealed.push(cid);
+                }
+                // Offer each same-named revealed card for a free cast.
+                for cid in revealed.clone() {
+                    let same_name = self
+                        .exile
+                        .iter()
+                        .find(|c| c.id == cid)
+                        .is_some_and(|c| c.definition.name == name);
+                    if !same_name {
+                        continue;
+                    }
+                    use crate::decision::{Decision, DecisionAnswer};
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    let Some(card_def) = card_def else { continue };
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source: src,
+                        description: "Ripple: cast the revealed copy without paying its mana cost?"
+                            .to_string(),
+                    });
+                    if matches!(answer, DecisionAnswer::Bool(true)) {
+                        let auto_target =
+                            self.auto_target_for_effect_avoiding(&card_def.effect, p, Some(cid));
+                        let cast_events =
+                            self.cast_card_for_free(p, cid, Zone::Exile, auto_target, vec![], None, None, false)?;
+                        events.extend(cast_events);
+                    }
+                }
+                // Bottom whatever's still in exile (didn't get cast).
+                for cid in revealed {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library { who: PlayerRef::Seat(p), pos: LibraryPosition::Bottom },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Discover { n, filter } => {
                 // CR 701.57: exile cards from the top of the controller's
                 // library until a nonland card with MV ≤ n is exiled; the

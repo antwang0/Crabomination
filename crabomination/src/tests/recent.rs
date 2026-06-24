@@ -6256,3 +6256,75 @@ fn rotten_reunion_makes_decayed_zombie() {
     assert!(g.battlefield.iter().any(|c| c.is_token
         && c.definition.keywords.contains(&Keyword::Decayed)));
 }
+
+// ── Ripple (CR 702.20) ───────────────────────────────────────────────────────
+
+/// Surging Flame's Ripple 4 reveals the top four; same-named copies are cast
+/// for free (each dealing 2 more), and non-copies are bottomed.
+#[test]
+fn surging_flame_ripple_casts_copies() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Top four of the library: two Surging Flame copies, then two Forests.
+    let c1 = g.add_card_to_library(0, catalog::surging_flame());
+    let c2 = g.add_card_to_library(0, catalog::surging_flame());
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true); 6]));
+
+    let flame = g.add_card_to_hand(0, catalog::surging_flame());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, flame, Target::Player(1));
+
+    // 2 (original) + 2 + 2 (the two rippled copies, auto-aimed at the opponent).
+    assert_eq!(g.players[1].life, 14, "three Surging Flames hit for 2 each");
+    assert!(!g.players[0].library.iter().any(|c| c.id == c1 || c.id == c2), "copies cast");
+    assert!(g.players[0].library.iter().any(|c| c.id == f1), "non-copy bottomed");
+    assert!(g.players[0].library.iter().any(|c| c.id == f2), "non-copy bottomed");
+}
+
+/// With no same-named cards in the top four, Ripple just bottoms them — the
+/// library size is preserved and only the original spell resolves.
+#[test]
+fn surging_flame_ripple_bottoms_non_copies() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let n = g.players[0].library.len();
+    let flame = g.add_card_to_hand(0, catalog::surging_flame());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, flame, Target::Player(1));
+    assert_eq!(g.players[1].life, 18, "only the original 2 damage");
+    assert_eq!(g.players[0].library.len(), n, "revealed cards bottomed, none lost");
+}
+
+/// Surging Might pumps a creature +1/+1 and grants trample.
+#[test]
+fn surging_might_pumps_and_grants_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let might = g.add_card_to_hand(0, catalog::surging_might());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, might, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+}
+
+/// Surging Dementia makes each player discard; a rippled copy doubles it.
+#[test]
+fn surging_dementia_each_player_discards() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::forest()); }
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::forest()); }
+    let dem = g.add_card_to_hand(0, catalog::surging_dementia());
+    let h0 = g.players[0].hand.len();
+    let h1 = g.players[1].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, dem);
+    // No copies on top → one discard each (the spell itself left hand to stack).
+    assert_eq!(g.players[1].hand.len(), h1 - 1, "opponent discarded once");
+    assert_eq!(g.players[0].hand.len(), h0 - 1 - 1, "caster lost the spell + a discard");
+}

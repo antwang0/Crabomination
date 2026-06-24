@@ -7093,6 +7093,66 @@ pub fn resize() -> CardDefinition {
     }
 }
 
+// ── Ripple (Coldsnap, CR 702.20) ────────────────────────────────────────────
+// `shortcut::ripple(n)` wires the "when you cast this spell" trigger that
+// reveals the top N, free-casts same-named copies, and bottoms the rest.
+
+/// Surging Flame — {1}{R} Sorcery. Ripple 4. Deals 2 damage to any target.
+pub fn surging_flame() -> CardDefinition {
+    use crate::effect::shortcut::{deal, ripple, target_any};
+    CardDefinition {
+        name: "Surging Flame",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: deal(2, target_any()),
+        triggered_abilities: vec![ripple(4)],
+        ..Default::default()
+    }
+}
+
+/// Surging Dementia — {1}{B} Sorcery. Ripple 4. Each player discards a card.
+pub fn surging_dementia() -> CardDefinition {
+    use crate::effect::shortcut::ripple;
+    CardDefinition {
+        name: "Surging Dementia",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Discard {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(1),
+            random: false,
+        },
+        triggered_abilities: vec![ripple(4)],
+        ..Default::default()
+    }
+}
+
+/// Surging Might — {G} Instant. Ripple 4. Target creature gets +1/+1 and gains
+/// trample until end of turn.
+pub fn surging_might() -> CardDefinition {
+    use crate::effect::shortcut::{ripple, target_filtered};
+    CardDefinition {
+        name: "Surging Might",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        triggered_abilities: vec![ripple(4)],
+        ..Default::default()
+    }
+}
+
 // ── More recent-set staples ─────────────────────────────────────────────────
 
 /// Bloodthirsty Conqueror — {3}{B}{B} 5/5 Vampire Knight. Flying, deathtouch.

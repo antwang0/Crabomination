@@ -3012,6 +3012,12 @@ pub enum Effect {
     /// unaffected by cost reduction per CR 702.85b). The shortcut
     /// [`cascade`] wires the standard SpellCast/SelfSource trigger.
     Cascade { max_mv: Value },
+    /// CR 702.20 — Ripple N. The source spell's cast trigger: reveal the top N
+    /// cards of your library; you may cast any with the same name as the source
+    /// for free; put the rest on the bottom. Cast-from-library recursion (a
+    /// rippled copy ripples again) falls out of the cast path naturally — the
+    /// shortcut [`ripple`] wires the SpellCast/SelfSource trigger.
+    Ripple { n: Value },
 
     /// Exile the top card of `who`'s library and stamp a may-play
     /// permission on it for `duration`. Used by Conspiracy Theorist,

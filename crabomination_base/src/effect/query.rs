@@ -486,6 +486,7 @@ impl Effect {
             Effect::CastWithoutPayingImmediate { what, .. } => sel_has_target(what),
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Cascade { .. } => false,
+            Effect::Ripple { .. } => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::PlayerExilesPermanents { count, .. } => value_has_target(count),
             Effect::SacrificeGreatestMV { who, count, .. } => {
