@@ -1292,6 +1292,90 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Stuffed Bear animates into a 4/4 Bear.
+#[test]
+fn stuffed_bear_becomes_a_bear() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::stuffed_bear());
+    g.resolve_effect(
+        &catalog::stuffed_bear().activated_abilities[0].effect,
+        &EffectContext::for_ability(bear, 0, None),
+    ).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.card_types.contains(&crate::card::CardType::Creature));
+}
+
+/// Circle of Confinement exiles a small opposing creature until it leaves.
+#[test]
+fn circle_of_confinement_exiles_cheap_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let circle = g.add_card_to_battlefield(0, catalog::circle_of_confinement());
+    let mut ctx = EffectContext::for_ability(circle, 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::circle_of_confinement().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_none(), "cheap creature exiled");
+}
+
+/// Stolen Vitality pumps +3/+1 and grants trample on your turn.
+#[test]
+fn stolen_vitality_pumps_and_tramples_on_your_turn() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::stolen_vitality().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3), "+3/+1");
+    assert!(cp.keywords.contains(&Keyword::Trample), "your turn → trample");
+}
+
+/// Gift of Fangs is a +2/+2 boon on a Vampire but a -2/-2 bane otherwise.
+#[test]
+fn gift_of_fangs_helps_vampires_hurts_others() {
+    let mut g = two_player_game();
+    let vamp = g.add_card_to_battlefield(0, catalog::vampire_interloper()); // 2/1 Vampire
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 non-Vampire
+    let gf1 = g.add_card_to_battlefield(0, catalog::gift_of_fangs());
+    let gf2 = g.add_card_to_battlefield(0, catalog::gift_of_fangs());
+    let mut c1 = EffectContext::for_ability(gf1, 0, Some(Target::Permanent(vamp)));
+    c1.targets = vec![Target::Permanent(vamp)];
+    g.resolve_effect(&catalog::gift_of_fangs().effect, &c1).unwrap();
+    let mut c2 = EffectContext::for_ability(gf2, 0, Some(Target::Permanent(bear)));
+    c2.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::gift_of_fangs().effect, &c2).unwrap();
+    assert_eq!(g.computed_permanent(vamp).unwrap().power, 4, "Vampire +2/+2");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 0, "non-Vampire -2/-2");
+}
+
+/// Silver Bolt deals 3 and destroys a Werewolf outright.
+#[test]
+fn silver_bolt_destroys_werewolf() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let wolf = g.add_card_to_battlefield(1, catalog::lambholt_pacifist()); // 3/3 Werewolf
+    let bolt = g.add_card_to_battlefield(0, catalog::silver_bolt());
+    let mut ctx = EffectContext::for_ability(bolt, 0, Some(Target::Permanent(wolf)));
+    ctx.targets = vec![Target::Permanent(wolf)];
+    g.resolve_effect(&catalog::silver_bolt().activated_abilities[0].effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wolf).is_none(), "Werewolf destroyed despite surviving 3 damage");
+}
+
+/// Aim for the Head exiles a Zombie (mode 0).
+#[test]
+fn aim_for_the_head_exiles_zombie() {
+    let mut g = two_player_game();
+    let zombie = g.add_card_to_battlefield(1, catalog::diregraf_colossus());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(zombie)));
+    ctx.targets = vec![Target::Permanent(zombie)];
+    ctx.mode = 0;
+    g.resolve_effect(&catalog::aim_for_the_head().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(zombie).is_none(), "Zombie exiled");
+}
+
 /// Borrowed Time exiles an opponent's permanent until it leaves.
 #[test]
 fn borrowed_time_exiles_until_it_leaves() {

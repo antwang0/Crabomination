@@ -3186,3 +3186,164 @@ pub fn cathars_call() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 9: more MID/VOW commons & uncommons ────────────────────────────────
+
+/// Stuffed Bear — {2} Artifact. {2}: becomes a 4/4 green Bear artifact creature
+/// until end of turn.
+pub fn stuffed_bear() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Stuffed Bear",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                creature_types: vec![CreatureType::Bear],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Circle of Confinement — {1}{W} Enchantment. ETB exile target creature an
+/// opponent controls with mana value 3 or less until this leaves.
+pub fn circle_of_confinement() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Circle of Confinement",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stolen Vitality — {1}{R} Instant. Target creature gets +3/+1; it gains
+/// trample on your turn, otherwise first strike.
+pub fn stolen_vitality() -> CardDefinition {
+    CardDefinition {
+        name: "Stolen Vitality",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::IsTurnOf(PlayerRef::You),
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gift of Fangs — {B} Aura. Enchanted creature gets +2/+2 while it's a Vampire,
+/// otherwise -2/-2.
+pub fn gift_of_fangs() -> CardDefinition {
+    use crate::card::ConditionalEquipBonus;
+    CardDefinition {
+        name: "Gift of Fangs",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: -2,
+            toughness: -2,
+            conditional: vec![ConditionalEquipBonus {
+                host_filter: SelectionRequirement::HasCreatureType(CreatureType::Vampire),
+                power: 4,
+                toughness: 4,
+                keywords: vec![],
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Silver Bolt — {1} Artifact. {3}, {T}, Sacrifice: deal 3 damage to target
+/// creature; if a Werewolf was dealt damage this way, destroy it.
+pub fn silver_bolt() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Silver Bolt",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(3),
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Werewolf),
+                    },
+                    then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aim for the Head — {2}{B} Sorcery. Choose one — exile target Zombie; or
+/// target opponent exiles two cards from their hand.
+pub fn aim_for_the_head() -> CardDefinition {
+    CardDefinition {
+        name: "Aim for the Head",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::HasCreatureType(CreatureType::Zombie)),
+            },
+            Effect::ExileFromHand {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
