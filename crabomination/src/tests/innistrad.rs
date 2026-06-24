@@ -1292,6 +1292,81 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Borrowed Time exiles an opponent's permanent until it leaves.
+#[test]
+fn borrowed_time_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bt = g.add_card_to_battlefield(0, catalog::borrowed_time());
+    let mut ctx = EffectContext::for_ability(bt, 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::borrowed_time().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.battlefield_find(bear).is_none(), "bear exiled");
+}
+
+/// Join the Dance makes two 1/1 white Humans and carries Flashback.
+#[test]
+fn join_the_dance_makes_two_humans() {
+    let mut g = two_player_game();
+    g.resolve_effect(&catalog::join_the_dance().effect, &ctx0(&g)).unwrap();
+    assert_eq!(count_named(&g, 0, "Human"), 2);
+    assert!(catalog::join_the_dance()
+        .keywords
+        .iter()
+        .any(|k| matches!(k, Keyword::Flashback(_))));
+}
+
+/// No Way Out makes the opponent discard two and mints a decayed Zombie.
+#[test]
+fn no_way_out_discard_and_decayed_zombie() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&catalog::no_way_out().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "opponent discarded both");
+    let z = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.is_creature());
+    assert!(z.unwrap().definition.keywords.contains(&Keyword::Decayed), "decayed Zombie");
+}
+
+/// Pack's Betrayal steals a creature with haste; scry 2 rider needs a Wolf.
+#[test]
+fn packs_betrayal_steals_with_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::packs_betrayal().effect, &ctx).unwrap();
+    let stolen = g.battlefield_find(bear).unwrap();
+    assert_eq!(stolen.controller, 0, "gained control");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Dryad's Revival returns a graveyard card to hand and carries Flashback.
+#[test]
+fn dryads_revival_returns_from_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(bear)));
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::dryads_revival().effect, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "card returned to hand");
+    assert!(catalog::dryads_revival()
+        .keywords
+        .iter()
+        .any(|k| matches!(k, Keyword::Flashback(_))));
+}
+
+/// Cathar's Call grants vigilance via its aura bonus and an end-step Human maker.
+#[test]
+fn cathars_call_grants_vigilance_and_token() {
+    let bonus = catalog::cathars_call().equipped_bonus.unwrap();
+    assert!(bonus.keywords.contains(&Keyword::Vigilance));
+    assert_eq!(bonus.triggered_abilities.len(), 1, "end-step Human-maker");
+}
+
 /// Bleeding Edge shrinks a creature and amasses Zombies 2.
 #[test]
 fn bleeding_edge_shrinks_and_amasses() {

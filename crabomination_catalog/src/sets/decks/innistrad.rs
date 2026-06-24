@@ -3042,3 +3042,147 @@ pub fn lantern_bearer() -> CardDefinition {
         EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Flying], ..Default::default() },
     )
 }
+
+// ── Batch 8: more MID/VOW commons & uncommons ────────────────────────────────
+
+/// Borrowed Time — {2}{W} Enchantment. ETB exile target nonland permanent an
+/// opponent controls until this leaves the battlefield.
+pub fn borrowed_time() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Borrowed Time",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Nonland
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Join the Dance — {G}{W} Sorcery. Create two 1/1 white Human tokens.
+/// Flashback {3}{G}{W}.
+pub fn join_the_dance() -> CardDefinition {
+    CardDefinition {
+        name: "Join the Dance",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), g(), w()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: white_human_token(),
+        },
+        ..Default::default()
+    }
+}
+
+/// Dryad's Revival — {2}{G} Sorcery. Return target card from your graveyard to
+/// your hand. Flashback {4}{G}.
+pub fn dryads_revival() -> CardDefinition {
+    CardDefinition {
+        name: "Dryad's Revival",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), g()]))],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::InGraveyard),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// No Way Out — {2}{B} Sorcery. Target opponent discards two cards; create a
+/// 2/2 black Zombie with decayed.
+pub fn no_way_out() -> CardDefinition {
+    CardDefinition {
+        name: "No Way Out",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+                random: false,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: decayed_zombie_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pack's Betrayal — {2}{R} Sorcery. Gain control of target creature until end
+/// of turn; untap it and it gains haste. If you control a Wolf or Werewolf,
+/// scry 2.
+pub fn packs_betrayal() -> CardDefinition {
+    CardDefinition {
+        name: "Pack's Betrayal",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: Some(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou.and(
+                        SelectionRequirement::HasCreatureType(CreatureType::Wolf)
+                            .or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf)),
+                    ),
+                )),
+                then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cathar's Call — {2}{W} Aura. Enchanted creature has vigilance and "At the
+/// beginning of your end step, create a 1/1 white Human creature token."
+pub fn cathars_call() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Cathar's Call",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Vigilance],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: white_human_token(),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
