@@ -9766,3 +9766,146 @@ pub fn wilhelt_the_rotcleaver() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// A 1/1 white Spirit token with flying.
+fn white_spirit_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Spirit".into(), power: 1, toughness: 1,
+        card_types: vec![CardType::Creature], colors: vec![crate::mana::Color::White],
+        keywords: vec![Keyword::Flying],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Millicent, Restless Revenant — {5}{W}{U} 4/4 Spirit Soldier. Affinity for
+/// Spirits, flying. Whenever Millicent or another nontoken Spirit you control
+/// dies or deals combat damage to a player, create a 1/1 white flying Spirit.
+pub fn millicent_restless_revenant() -> CardDefinition {
+    use crate::card::Supertype;
+    let spirit_filter = SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+        .and(SelectionRequirement::IsToken.negate());
+    let make_spirit = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: white_spirit_token(),
+    };
+    CardDefinition {
+        name: "Millicent, Restless Revenant",
+        cost: cost(&[generic(5), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(
+            SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                .and(SelectionRequirement::ControlledByYou),
+        ),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: spirit_filter.clone(),
+                    }),
+                effect: make_spirit(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: spirit_filter,
+                    }),
+                effect: make_spirit(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ollenbock Escort — {W} 1/1 Human Cleric. Vigilance. Sacrifice it: target
+/// creature you control with a +1/+1 counter on it gains lifelink and
+/// indestructible until end of turn.
+pub fn ollenbock_escort() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Ollenbock Escort",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                    },
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sigarda, Font of Blessings — {2}{G}{W} 4/4 Angel. Flying. Other permanents
+/// you control have hexproof. Play with the top card of your library revealed;
+/// you may cast Angel and Human spells from the top of your library.
+pub fn sigarda_font_of_blessings() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect, Supertype};
+    CardDefinition {
+        name: "Sigarda, Font of Blessings",
+        cost: cost(&[generic(2), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other permanents you control have hexproof.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::ControlledByYou
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Hexproof,
+                },
+            },
+            StaticAbility {
+                description: "Play with the top card of your library revealed.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may cast Angel and Human spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Angel)
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Human)),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

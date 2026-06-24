@@ -5849,3 +5849,49 @@ fn wilhelt_spawns_decayed_zombie_on_zombie_death() {
     assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Zombie));
     assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1);
 }
+
+/// Millicent makes a flying Spirit when a Spirit you control dies.
+#[test]
+fn millicent_spawns_spirit_on_spirit_death() {
+    let mut g = two_player_game();
+    let mil = g.add_card_to_battlefield(0, catalog::millicent_restless_revenant());
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let trig = catalog::millicent_restless_revenant().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(mil, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let tok = g.battlefield.iter().find(|c| c.is_token).unwrap();
+    assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
+    assert!(tok.definition.keywords.contains(&Keyword::Flying));
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1);
+}
+
+/// Millicent has Affinity for Spirits.
+#[test]
+fn millicent_has_affinity_for_spirits() {
+    assert!(catalog::millicent_restless_revenant().affinity_filter.is_some());
+}
+
+/// Ollenbock Escort buffs a counter-bearing creature with lifelink + indestructible.
+#[test]
+fn ollenbock_escort_grants_lifelink_indestructible() {
+    let mut g = two_player_game();
+    let esc = g.add_card_to_battlefield(0, catalog::ollenbock_escort());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let eff = catalog::ollenbock_escort().activated_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_ability(esc, 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+}
+
+/// Sigarda, Font of Blessings grants hexproof to your other permanents.
+#[test]
+fn sigarda_font_grants_hexproof_to_others() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sigarda_font_of_blessings());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof));
+}
