@@ -1917,6 +1917,14 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Close the game: fire a "deal N to each opponent" / "drain N" / "each
+    // opponent loses N" ability when it's lethal to a living opponent
+    // (Hazoret's discard-burn, drain pingers). Lethal-only, so the bot never
+    // wastes the resource. Dry-run-gated via `would_accept`.
+    if let Some(action) = pick_reach_burn(state, seat) {
+        return action;
+    }
+
     // Fire a "Sacrifice this: destroy target creature" ability (Pus Kami,
     // Nezumi Bone-Reader-style sac-removal) on a favorable trade — only when
     // the destroyed foe is at least as big as the creature being sacrificed.
@@ -1948,6 +1956,54 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
     }
 
     GameAction::PassPriority
+}
+
+/// Fire a "deal N damage to each opponent" / "drain N" / "each opponent loses
+/// N" activated ability when it's lethal to a living opponent. Only fixed
+/// (`Value::Const`) amounts are considered, and only when some opponent's life
+/// is at or below the amount, so the bot spends the resource (mana / a discard
+/// / a tap) exclusively to win — never to chip. Dry-run-gated via
+/// `would_accept`.
+fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{PlayerRef, Selector, Value};
+    // Amount an ability's effect would subtract from each opponent's life, if
+    // it's an each-opponent reach effect with a fixed amount.
+    fn reach_amount(effect: &Effect) -> Option<i32> {
+        match effect {
+            Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
+            | Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) }
+            | Effect::Drain { from: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n), .. } => {
+                Some(*n)
+            }
+            _ => None,
+        }
+    }
+    let lethal_threshold = state
+        .players
+        .iter()
+        .enumerate()
+        .filter(|(p, pl)| !state.same_team(*p, seat) && pl.is_alive())
+        .map(|(_, pl)| pl.life)
+        .min()?;
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            let Some(amount) = reach_amount(&ab.effect) else { continue };
+            if amount < lethal_threshold {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Activate a team-wide "creatures you control get +N/+N until end of turn"
@@ -5323,5 +5379,25 @@ mod stack_response_tests {
         g.add_card_to_battlefield(0, catalog::grizzly_bears()); // a spare body
         assert!(optional_trigger_beneficial(&g, drowner, "Exploit — sacrifice a creature?"),
             "with a spare creature the bot exploits for value");
+    }
+
+    /// The bot fires a "deal N to each opponent" ability for lethal, and only
+    /// then (not to chip).
+    #[test]
+    fn bot_reach_burn_only_for_lethal() {
+        let mut g = two_player_game();
+        let haz = g.add_card_to_battlefield(0, catalog::hazoret_the_fervent());
+        g.clear_sickness(haz);
+        g.add_card_to_hand(0, catalog::mountain()); // discard fodder
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        // Opponent at 5: the 2-damage burn isn't lethal, so the bot holds it.
+        g.players[1].life = 5;
+        assert!(pick_reach_burn(&g, 0).is_none(), "won't chip with a non-lethal burn");
+        // Opponent at 2: now it's lethal, so the bot fires it.
+        g.players[1].life = 2;
+        assert!(matches!(pick_reach_burn(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == haz),
+            "fires the burn for lethal");
     }
 }
