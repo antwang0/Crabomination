@@ -1229,3 +1229,85 @@ fn ceremonial_knife_equips_and_makes_blood() {
     let bonus = catalog::ceremonial_knife().equipped_bonus.unwrap();
     assert_eq!(bonus.triggered_abilities.len(), 1, "grants the Blood-on-combat-damage trigger");
 }
+
+/// Lambholt Pacifist can't attack without a power-4+ creature, but can still
+/// block, and transforms on a quiet turn.
+#[test]
+fn lambholt_pacifist_attack_gate_block_and_transform() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let pacifist = g.add_card_to_battlefield(0, catalog::lambholt_pacifist());
+    g.clear_sickness(pacifist);
+    g.step = TurnStep::DeclareAttackers;
+    // No big creature → can't attack.
+    assert!(!g.legal_attackers(0).contains(&pacifist));
+    // Blocking is unaffected by the attack-only gate.
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    assert!(g.blocker_can_block_attacker(pacifist, atk), "attack-only gate doesn't stop blocking");
+    // A power-4+ creature you control lifts the attack restriction.
+    g.add_card_to_battlefield(0, catalog::rot_tide_gargantua());
+    assert!(g.legal_attackers(0).contains(&pacifist));
+    // Quiet last turn → transforms to Lambholt Butcher.
+    g.step = TurnStep::Upkeep;
+    g.spells_cast_last_turn = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let b = g.battlefield_find(pacifist).unwrap();
+    assert_eq!(b.definition.name, "Lambholt Butcher");
+    assert_eq!((b.power(), b.toughness()), (4, 4));
+}
+
+/// Restless Bloodseeker transforms by sacrificing two Blood tokens; the back
+/// face drains each opponent for 2 and gains you 2.
+#[test]
+fn restless_bloodseeker_blood_transform_and_drain() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let seeker = g.add_card_to_battlefield(0, catalog::restless_bloodseeker());
+    g.clear_sickness(seeker);
+    g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seeker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac two Blood to transform");
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Blood"), 0, "both Blood sacrificed");
+    let reveler = g.battlefield_find(seeker).unwrap();
+    assert_eq!(reveler.definition.name, "Bloodsoaked Reveler");
+    assert_eq!((reveler.power(), reveler.toughness()), (3, 3));
+    // Back-face drain: {4}{B}, each opponent loses 2 and you gain 2.
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seeker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate back-face drain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "opponent lost 2");
+    assert_eq!(g.players[0].life, 22, "you gained 2");
+}
+
+/// Restless Bloodseeker mints a Blood at end step only if you gained life.
+#[test]
+fn restless_bloodseeker_end_step_blood_on_lifegain() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let seeker = g.add_card_to_battlefield(0, catalog::restless_bloodseeker());
+    let _ = seeker;
+    // No life gained → no Blood at end step.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Blood"), 0, "no lifegain → no Blood");
+    // Gain life, then the end-step trigger mints a Blood.
+    g.adjust_life(0, 1);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Blood"), 1, "lifegain → Blood");
+}

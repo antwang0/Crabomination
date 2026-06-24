@@ -7324,6 +7324,7 @@ pub fn topiary_stomper() -> CardDefinition {
             Keyword::CantAttackOrBlockUnlessYouControlCount {
                 filter: Box::new(SelectionRequirement::Land),
                 min: 7,
+                attack_only: false,
             },
         ],
         triggered_abilities: vec![etb(Effect::Search {

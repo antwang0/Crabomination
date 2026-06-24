@@ -297,7 +297,7 @@ impl GameState {
                     Keyword::CantAttackOrBlockUnlessEvenCounters => {
                         c.counters.values().sum::<u32>() % 2 == 0
                     }
-                    Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min } => {
+                    Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min, .. } => {
                         self.battlefield
                             .iter()
                             .filter(|p| {

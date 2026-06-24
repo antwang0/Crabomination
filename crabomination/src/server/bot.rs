@@ -231,6 +231,7 @@ impl Bot for RandomBot {
                                                 Keyword::CantAttackOrBlockUnlessYouControlCount {
                                                     filter,
                                                     min,
+                                                    ..
                                                 } => {
                                                     state
                                                         .battlefield

@@ -5019,8 +5019,9 @@ impl GameState {
             return false;
         }
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).
+        // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
         if let Some((req, min)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
-            Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min } => {
+            Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min, attack_only: false } => {
                 Some((filter.clone(), *min))
             }
             _ => None,

@@ -783,10 +783,15 @@ pub enum Keyword {
     /// "This creature can't attack or block unless you control [N] or more
     /// [filter]." Count-based variant of `CanAttackOnlyIfYouControl`, enforced
     /// on both the attack and block side against the bearer's controller.
-    /// Topiary Stomper ("…unless you control seven or more lands").
+    /// Topiary Stomper ("…unless you control seven or more lands"). When
+    /// `attack_only` is set the gate applies to attacking only, not blocking
+    /// (Lambholt Pacifist — "can't attack unless you control a creature with
+    /// power 4 or greater").
     CantAttackOrBlockUnlessYouControlCount {
         filter: Box<SelectionRequirement>,
         min: u32,
+        #[serde(default)]
+        attack_only: bool,
     },
     /// CR 702.166 — Offspring [cost]. An optional additional cast cost; if
     /// paid, the creature's ETB mints a 1/1 token copy of it. Reuses the

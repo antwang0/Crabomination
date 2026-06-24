@@ -1221,6 +1221,68 @@ pub fn gluttonous_guest() -> CardDefinition {
     }
 }
 
+/// Restless Bloodseeker // Bloodsoaked Reveler — {1}{B} 1/3 Vampire. End step,
+/// if you gained life this turn, make a Blood token. Sacrifice two Blood: transform
+/// (sorcery speed). Back: 3/3 with {4}{B}: each opponent loses 2, you gain 2.
+pub fn restless_bloodseeker() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::game::types::TurnStep;
+    // "At the beginning of your end step, if you gained life this turn, create
+    // a Blood token." (printed on both faces).
+    let blood_on_lifegain = || TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+            .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(1),
+            }),
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::blood_token(),
+        },
+    };
+    let reveler = CardDefinition {
+        name: "Bloodsoaked Reveler",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![blood_on_lifegain()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), b()]),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Restless Bloodseeker",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![blood_on_lifegain()],
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                2,
+            )),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(reveler)),
+        ..Default::default()
+    }
+}
+
 /// Courier Bat — {2}{B} 2/2 Bat. Flying. ETB, if you gained life this turn,
 /// return up to one target creature card from your graveyard to your hand.
 pub fn courier_bat() -> CardDefinition {
@@ -2431,6 +2493,41 @@ pub fn weary_prisoner() -> CardDefinition {
         vec![Keyword::MustAttack],
         vec![],
     )
+}
+
+/// Lambholt Pacifist // Lambholt Butcher — {1}{G} 3/3 Human Shaman Werewolf
+/// that can't attack unless you control a power-4+ creature; classic spells-
+/// cast werewolf transform. Back: 4/4 Werewolf.
+pub fn lambholt_pacifist() -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    let butcher = CardDefinition {
+        name: "Lambholt Butcher",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![werewolf_night_transform()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Lambholt Pacifist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::CantAttackOrBlockUnlessYouControlCount {
+            filter: Box::new(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4))),
+            min: 1,
+            attack_only: true,
+        }],
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(butcher)),
+        ..Default::default()
+    }
 }
 
 /// Cobbled Lancer — {U} 3/3 Zombie Horse; additional cost: exile a creature
