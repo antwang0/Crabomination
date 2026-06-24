@@ -628,3 +628,170 @@ fn frenzied_devils_pumps_on_noncreature() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(fd).unwrap().power, 5, "+2/+2 from noncreature cast");
 }
+
+// ── Batch 2 ──────────────────────────────────────────────────────────────────
+
+/// Component Collector becomes day on entry when it's neither day nor night.
+#[test]
+fn component_collector_becomes_day() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    assert_eq!(g.day_night, None);
+    g.move_card_to_battlefield_for_test(0, catalog::component_collector());
+    drain_stack(&mut g);
+    assert_eq!(g.day_night, Some(DayNight::Day));
+}
+
+/// Stromkirk Bloodthief's end-step trigger grows a Vampire.
+#[test]
+fn stromkirk_bloodthief_counters_vampire() {
+    let mut g = two_player_game();
+    let sb = g.add_card_to_battlefield(0, catalog::stromkirk_bloodthief()); // a Vampire
+    let mut ctx = EffectContext::for_ability(sb, 0, None);
+    ctx.targets = vec![Target::Permanent(sb)];
+    g.resolve_effect(&catalog::stromkirk_bloodthief().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(
+        g.battlefield_find(sb).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1)
+    );
+}
+
+/// Voldaren Ambusher deals damage equal to your Vampire count when an opponent
+/// lost life this turn.
+#[test]
+fn voldaren_ambusher_pings_for_vampires() {
+    let mut g = two_player_game();
+    g.players[1].lost_life_this_turn = true;
+    let amb = g.add_card_to_battlefield(0, catalog::voldaren_ambusher()); // Vampire #1
+    g.add_card_to_battlefield(0, catalog::voldaren_ambusher()); // Vampire #2
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let mut ctx = EffectContext::for_ability(amb, 0, None);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::voldaren_ambusher().triggered_abilities[0].effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 2, "2 Vampires → 2 damage");
+}
+
+/// Chill of the Grave taps a creature, locks its next untap, and draws.
+#[test]
+fn chill_of_the_grave_taps_locks_draws() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::chill_of_the_grave().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(foe).unwrap().tapped, "tapped");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+/// Chill of the Grave costs {1} less if you control a Zombie.
+#[test]
+fn chill_of_the_grave_zombie_discount() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::chill_of_the_grave(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0);
+    g.add_card_to_battlefield(0, catalog::larder_zombie()); // a Zombie
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 1, "Zombie → {{1}} off");
+}
+
+/// Bloody Betrayal steals a creature, untaps it, and grants haste + Blood.
+#[test]
+fn bloody_betrayal_steals_and_hastes() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(foe).unwrap().tapped = true;
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::bloody_betrayal().effect, &ctx).unwrap();
+    let c = g.battlefield_find(foe).unwrap();
+    assert_eq!(c.controller, 0, "control stolen");
+    assert!(!c.tapped, "untapped");
+    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste));
+    assert_eq!(count_named(&g, 0, "Blood"), 1);
+}
+
+/// Wolf Strike fights one-sidedly; at night the attacker is pumped first.
+#[test]
+fn wolf_strike_night_pump_fight() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    g.day_night = Some(DayNight::Night);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 4/2 at night
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(mine), Target::Permanent(foe)];
+    g.resolve_effect(&catalog::wolf_strike().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "4 damage at night kills the 3/3");
+}
+
+/// Fateful Absence destroys the target and gives its controller a Clue.
+#[test]
+fn fateful_absence_destroys_and_clues() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::fateful_absence().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "destroyed");
+    assert_eq!(count_named(&g, 1, "Clue"), 1, "controller investigated");
+}
+
+/// Bloodline Culling mode 1 gives a creature -5/-5.
+#[test]
+fn bloodline_culling_minus_five() {
+    use crate::card::Effect;
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(foe)];
+    let Effect::ChooseMode(modes) = catalog::bloodline_culling().effect else { panic!() };
+    g.resolve_effect(&modes[0], &ctx).unwrap();
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "-5/-5 kills the 4/4");
+}
+
+/// Gavony Dawnguard becomes day on entry.
+#[test]
+fn gavony_dawnguard_becomes_day() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::gavony_dawnguard());
+    drain_stack(&mut g);
+    assert_eq!(g.day_night, Some(DayNight::Day));
+}
+
+/// Abandon the Post stops up to two creatures from blocking.
+#[test]
+fn abandon_the_post_cant_block() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let mut ctx = ctx0(&g);
+    ctx.targets = vec![Target::Permanent(a), Target::Permanent(b)];
+    g.resolve_effect(&catalog::abandon_the_post().effect, &ctx).unwrap();
+    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Blood Fountain mints a Blood token on entry and returns creatures from the
+/// graveyard via its sacrifice ability.
+#[test]
+fn blood_fountain_etb_and_recur() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::blood_fountain());
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Blood"), 1, "ETB Blood");
+    let bf = g.battlefield.iter().find(|c| c.definition.name == "Blood Fountain").map(|c| c.id).unwrap();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(bf, 0, None);
+    ctx.targets = vec![Target::Permanent(corpse)];
+    g.resolve_effect(&catalog::blood_fountain().activated_abilities[0].effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == corpse), "creature returned to hand");
+}

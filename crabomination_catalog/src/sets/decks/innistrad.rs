@@ -1211,7 +1211,7 @@ pub fn abandon_the_post() -> CardDefinition {
             max_targets: 2,
             filter: SelectionRequirement::Creature,
             effect: Box::new(Effect::GrantKeyword {
-                what: Selector::TriggerSource,
+                what: Selector::Target(0),
                 keyword: Keyword::CantBlock,
                 duration: Duration::EndOfTurn,
             }),
@@ -1529,12 +1529,309 @@ pub fn blood_fountain() -> CardDefinition {
                 max_targets: 2,
                 filter: SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
                 effect: Box::new(Effect::Move {
-                    what: Selector::TriggerSource,
+                    what: Selector::Target(0),
                     to: ZoneDest::Hand(PlayerRef::You),
                 }),
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+// ── Batch 2: day/night, threaten, conditional removal ────────────────────────
+
+/// Component Collector — {2}{U} 1/4 Homunculus. Becomes day on entry if neither
+/// day nor night. Whenever day/night flips, you may tap or untap target nonland
+/// permanent.
+pub fn component_collector() -> CardDefinition {
+    CardDefinition {
+        name: "Component Collector",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Homunculus], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::Any(vec![
+                    Predicate::IsDay,
+                    Predicate::IsNight,
+                ]))),
+                then: Box::new(Effect::BecomeDay),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
+                effect: Effect::MayDo {
+                    description: "Tap or untap target nonland permanent?".to_string(),
+                    body: Box::new(Effect::ChooseMode(vec![
+                        Effect::Tap {
+                            what: target_filtered(SelectionRequirement::Nonland),
+                        },
+                        Effect::Untap {
+                            what: target_filtered(SelectionRequirement::Nonland),
+                            up_to: None,
+                        },
+                    ])),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Stromkirk Bloodthief — {2}{B} 2/2 Vampire Rogue. At your end step, if an
+/// opponent lost life this turn, put a +1/+1 counter on target Vampire you
+/// control.
+pub fn stromkirk_bloodthief() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Stromkirk Bloodthief",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                .with_filter(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Voldaren Ambusher — {2}{R} 2/2 Vampire Archer. ETB, if an opponent lost life
+/// this turn, deal X damage to up to one target creature or planeswalker, where
+/// X is the number of Vampires you control.
+pub fn voldaren_ambusher() -> CardDefinition {
+    let vampires = Value::count(Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+            .and(SelectionRequirement::ControlledByYou),
+    ));
+    CardDefinition {
+        name: "Voldaren Ambusher",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: vampires }),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Chill of the Grave — {2}{U} Instant. Costs {1} less if you control a Zombie.
+/// Tap target creature; it doesn't untap during its controller's next untap
+/// step. Draw a card.
+pub fn chill_of_the_grave() -> CardDefinition {
+    CardDefinition {
+        name: "Chill of the Grave",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_control: Some((
+            SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+            1,
+        )),
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::SkipNextUntap { what: Selector::Target(0) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Electric Revelation — {2}{R} Instant. As an additional cost, discard a card.
+/// Draw two cards. Flashback {3}{R}.
+pub fn electric_revelation() -> CardDefinition {
+    CardDefinition {
+        name: "Electric Revelation",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), r()]))],
+        effect: Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bloody Betrayal — {2}{R} Sorcery. Gain control of target creature until end
+/// of turn. Untap it; it gains haste. Create a Blood token.
+pub fn bloody_betrayal() -> CardDefinition {
+    CardDefinition {
+        name: "Bloody Betrayal",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: Some(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::blood_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wolf Strike — {2}{G} Instant. Target creature you control gets +2/+0 until
+/// end of turn if it's night. Then it deals damage equal to its power to target
+/// creature you don't control.
+pub fn wolf_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Wolf Strike",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::IsNight,
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                amount: Value::PowerOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fateful Absence — {1}{W} Instant. Destroy target creature or planeswalker.
+/// Its controller investigates.
+pub fn fateful_absence() -> CardDefinition {
+    CardDefinition {
+        name: "Fateful Absence",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::clue_token(),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bloodline Culling — {1}{B}{B} Instant. Choose one — target creature gets
+/// -5/-5 until end of turn; or creature tokens get -2/-2 until end of turn.
+pub fn bloodline_culling() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodline Culling",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-5),
+                toughness: Value::Const(-5),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsToken),
+                ),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gavony Dawnguard — {1}{W}{W} 3/3 Human Soldier. Ward {1}. Becomes day on
+/// entry if neither day nor night. Whenever day/night flips, look at the top
+/// four cards; you may reveal a creature card and put it into your hand, rest
+/// to the bottom.
+pub fn gavony_dawnguard() -> CardDefinition {
+    CardDefinition {
+        name: "Gavony Dawnguard",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::Any(vec![
+                    Predicate::IsDay,
+                    Predicate::IsNight,
+                ]))),
+                then: Box::new(Effect::BecomeDay),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(SelectionRequirement::Creature),
+                    take: Some(Value::Const(1)),
+                    to_battlefield: false,
+                },
+            },
+        ],
         ..Default::default()
     }
 }
