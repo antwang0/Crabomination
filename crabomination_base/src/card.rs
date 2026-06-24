@@ -742,6 +742,10 @@ pub enum Keyword {
     /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
     /// against the controller's hand size.
     CantAttackOrBlockUnlessHandSizeAtMost(u32),
+    /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
+    /// unless there are four or more card types among cards in your graveyard"
+    /// (Delirium; Patchwork Beastie). Enforced against `delirium_active`.
+    CantAttackOrBlockUnlessDelirium,
     /// "This creature assigns no combat damage this turn" (Master of
     /// Cruelties' attack rider). A marker keyword — typically granted with
     /// `Duration::EndOfTurn` by a trigger — that `combat.rs` checks off the

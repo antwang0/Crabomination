@@ -11726,3 +11726,29 @@ pub fn hazoret_the_fervent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Patchwork Beastie — {G} 3/3 Artifact Creature — Beast. Delirium — can't
+/// attack or block unless there are four or more card types in your graveyard.
+/// At your upkeep, you may mill a card.
+pub fn patchwork_beastie() -> CardDefinition {
+    CardDefinition {
+        name: "Patchwork Beastie",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::CantAttackOrBlockUnlessDelirium],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::MayDo {
+                description: "Mill a card?".into(),
+                body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}

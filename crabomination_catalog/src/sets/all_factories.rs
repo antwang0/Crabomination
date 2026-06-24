@@ -3128,6 +3128,7 @@ static DECKS: &[Factory] = &[
     super::decks::recruitment_officer,
     super::decks::squee_goblin_nabob,
     super::decks::hazoret_the_fervent,
+    super::decks::patchwork_beastie,
     super::decks::viscera_dragger,
     super::decks::rotting_rats,
     super::decks::fledgling_mawcor,

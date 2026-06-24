@@ -82,6 +82,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CantAttackUnlessCastCreatureThisTurn => "Atk?",
         // Hazoret-class hellbent gate reads at a glance on the board.
         CantAttackOrBlockUnlessHandSizeAtMost(_) => "Hand?",
+        CantAttackOrBlockUnlessDelirium => "Dlr?",
         Decayed => "Dcy",
         Flanking => "Flk",
         // Combat-pump statics from the Kamigawa/legacy sets read at a glance.

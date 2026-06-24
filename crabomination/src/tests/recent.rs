@@ -6974,3 +6974,23 @@ fn hazoret_hellbent_gate_and_burn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "2 damage to opponent");
 }
+
+/// Patchwork Beastie can't attack until delirium is active.
+#[test]
+fn patchwork_beastie_needs_delirium() {
+    let mut g = two_player_game();
+    let pb = g.add_card_to_battlefield(0, catalog::patchwork_beastie());
+    g.battlefield_find_mut(pb).unwrap().summoning_sick = false;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(!g.legal_attackers(0).contains(&pb), "locked without delirium");
+    // Seed four card types into the graveyard.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // creature
+    g.add_card_to_graveyard(0, catalog::mountain());      // land
+    g.add_card_to_graveyard(0, catalog::sign_in_blood()); // sorcery
+    g.add_card_to_graveyard(0, catalog::ambush_viper());  // creature (still 3 types)
+    g.add_card_to_graveyard(0, catalog::worn_powerstone()); // artifact -> 4 types
+    assert!(g.delirium_active(0), "four card types");
+    assert!(g.legal_attackers(0).contains(&pb), "attacks with delirium");
+}

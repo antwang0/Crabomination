@@ -158,6 +158,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessYouControlCount { .. }
         | Keyword::CantAttackOrBlockUnlessEvenCounters
         | Keyword::CantAttackOrBlockUnlessHandSizeAtMost(_)
+        | Keyword::CantAttackOrBlockUnlessDelirium
         | Keyword::AttacksAlone | Keyword::CantAttackAlone | Keyword::CantAttackUnlessCastCreatureThisTurn
         | Keyword::DealsNoCombatDamage
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)

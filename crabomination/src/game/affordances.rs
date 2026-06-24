@@ -300,6 +300,7 @@ impl GameState {
                     Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
                         self.players[seat].hand.len() as u32 <= *n
                     }
+                    Keyword::CantAttackOrBlockUnlessDelirium => self.delirium_active(seat),
                     Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min, .. } => {
                         self.battlefield
                             .iter()

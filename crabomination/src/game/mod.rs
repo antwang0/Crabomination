@@ -4489,6 +4489,19 @@ impl GameState {
         seen.len()
     }
 
+    /// CR 700.4-ish — Delirium: `seat`'s graveyard holds four or more card
+    /// types. Shared by the Delirium predicate and the combat-restriction
+    /// keyword (Patchwork Beastie).
+    pub fn delirium_active(&self, seat: usize) -> bool {
+        let mut kinds: std::collections::HashSet<&CardType> = std::collections::HashSet::new();
+        for c in &self.players[seat].graveyard {
+            for t in &c.definition.card_types {
+                kinds.insert(t);
+            }
+        }
+        kinds.len() >= 4
+    }
+
     /// Get the computed state of a single permanent (or None if not on battlefield).
     ///
     /// Gathers the same continuous-effect set as `compute_battlefield` but
@@ -5058,6 +5071,12 @@ impl GameState {
             matches!(k, Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)
                 if self.players[blocker.controller].hand.len() as u32 > *n)
         }) {
+            return false;
+        }
+        // CR 509.1a — Delirium gate (Patchwork Beastie).
+        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
+            && !self.delirium_active(blocker.controller)
+        {
             return false;
         }
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).
