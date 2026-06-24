@@ -1292,6 +1292,30 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Rite of Oblivion exiles a nonland permanent (after its sacrifice cost).
+#[test]
+fn rite_of_oblivion_exiles_nonland() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(foe)));
+    ctx.targets = vec![Target::Permanent(foe)];
+    g.resolve_effect(&catalog::rite_of_oblivion().effect, &ctx).unwrap();
+    assert!(g.battlefield_find(foe).is_none(), "target exiled");
+    assert!(g.exile.iter().any(|c| c.id == foe), "in exile");
+}
+
+/// Can't Stay Away reanimates a small creature with a finality counter.
+#[test]
+fn cant_stay_away_reanimates_with_finality() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(dead)));
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&catalog::cant_stay_away().effect, &ctx).unwrap();
+    let c = g.battlefield_find(dead).expect("reanimated to battlefield");
+    assert_eq!(c.counter_count(CounterType::Finality), 1, "entered with a finality counter");
+}
+
 /// Blood Hypnotist's reflexive grant makes a target creature unable to block.
 #[test]
 fn blood_hypnotist_locks_a_blocker() {

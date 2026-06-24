@@ -3673,3 +3673,51 @@ pub fn blood_hypnotist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 14: more MID/VOW spells ────────────────────────────────────────────
+
+/// Rite of Oblivion — {W}{B} Sorcery. Additional cost: sacrifice a nonland
+/// permanent. Exile target nonland permanent. Flashback {2}{W}{B}.
+pub fn rite_of_oblivion() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    CardDefinition {
+        name: "Rite of Oblivion",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), w(), b()]))],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Nonland,
+            count: 1,
+        }],
+        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Nonland) },
+        ..Default::default()
+    }
+}
+
+/// Can't Stay Away — {W}{B} Sorcery. Return a creature card with mana value 3 or
+/// less from your graveyard to the battlefield with a finality counter (it exiles
+/// instead of dying). Flashback {3}{W}{B}.
+pub fn cant_stay_away() -> CardDefinition {
+    CardDefinition {
+        name: "Can't Stay Away",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), w(), b()]))],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InGraveyard
+                        .and(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Finality,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}

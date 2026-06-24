@@ -415,6 +415,8 @@ static DECKS: &[Factory] = &[
     super::decks::dominating_vampire,
     super::decks::graf_reaver,
     super::decks::blood_hypnotist,
+    super::decks::rite_of_oblivion,
+    super::decks::cant_stay_away,
     super::decks::borrowed_time,
     super::decks::stuffed_bear,
     super::decks::circle_of_confinement,
