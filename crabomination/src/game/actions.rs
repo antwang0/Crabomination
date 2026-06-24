@@ -1458,12 +1458,17 @@ impl GameState {
             }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
+            // CR 115.1c — maximize an "up to N target" self-source ETB trigger
+            // (Gavony Silversmith) by filling slots 1.. with distinct picks.
+            let additional =
+                self.auto_extra_targets_for(&effect, card_id, controller, auto_target.clone());
             // CR 700.2b — modal ETB trigger mode pick at push-time.
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             for _ in 0..multiplier {
                 self.stack.push(
                     TriggerPush::new(card_id, controller, effect.clone())
                         .target(auto_target.clone())
+                        .additional_targets(additional.clone())
                         .mode(mode)
                         .build(),
                 );

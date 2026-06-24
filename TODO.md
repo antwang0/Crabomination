@@ -2046,10 +2046,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ⏳ **Missing keyword mechanics:** Ripple (CR 702.20 — reveal-top-N, cast
   same-named free), Haunt (CR 702.55), Sunburst-on-noncreature charge counters
   (the +1/+1 creature path ships via `Value::ConvergedValue`).
-- ⏳ **Auto-targeter under-fills "up to N" triggered abilities** — an
-  `Effect::ApplyToTargets { max_targets: 2 }` on a *triggered* ability (Gavony
-  Silversmith) auto-selects only one target instead of maximizing to N. The
-  cast path honors `additional_targets`; the trigger path should mirror it.
+- ✅ **Auto-targeter maximizes "up to N" triggered abilities** (CR 115.1c) —
+  `GameState::auto_extra_targets_for` fills slots 1.. with distinct legal picks
+  for an `Effect::ApplyToTargets` on a triggered ability; wired into both the
+  self-source ETB push (`actions.rs`) and the general trigger push
+  (`push_pending_trigger`). Gavony Silversmith now buffs two creatures.
 
 - ✅ **Mutate (CR 702.140).** Shipped: `CardDefinition.mutate: Option<ManaCost>`,
   `GameAction::CastMutate { card_id, target, on_top }`, `CardInstance.mutate_stack`

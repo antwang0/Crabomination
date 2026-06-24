@@ -3683,19 +3683,15 @@ fn gavony_silversmith_counters_two() {
     let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.move_card_to_battlefield_for_test(0, catalog::gavony_silversmith());
     drain_stack(&mut g);
-    // Up-to-two ApplyToTargets distributes +1/+1 counters onto the chosen
-    // creature(s); each picked target gets exactly one.
-    let total: u32 = [a, b]
-        .iter()
-        .map(|id| g.battlefield_find(*id).unwrap().counter_count(CounterType::PlusOnePlusOne))
-        .sum();
-    assert!(total >= 1, "at least one creature got a +1/+1 counter");
-    assert!(
-        [a, b]
-            .iter()
-            .all(|id| g.battlefield_find(*id).unwrap().counter_count(CounterType::PlusOnePlusOne) <= 1),
-        "no creature gets more than one counter from a single resolution"
-    );
+    // CR 115.1c — the engine maximizes an "up to two target" triggered
+    // ability: both creatures get exactly one +1/+1 counter.
+    for id in [a, b] {
+        assert_eq!(
+            g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne),
+            1,
+            "each of the two targets gets exactly one counter"
+        );
+    }
 }
 
 /// Reputable Merchant counters a creature on ETB and again on death.

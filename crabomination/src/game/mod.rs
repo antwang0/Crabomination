@@ -7306,15 +7306,59 @@ impl GameState {
         if let Some(snap) = self.died_card_snapshots.get(&source) {
             self.leaves_bf_lki.insert(source, snap.clone());
         }
+        // CR 115.1c — an engine-resolved "up to N target" triggered ability
+        // (Gavony Silversmith) maximizes its targets: fill slots 1.. with
+        // distinct legal picks the same way the cast path threads
+        // `additional_targets`. Without this the auto-targeter under-filled to
+        // a single target.
+        let additional = self.auto_extra_targets_for(&effect, source, controller, target.clone());
         self.stack.push(
             TriggerPush::new(source, controller, effect)
                 .target(target)
+                .additional_targets(additional)
                 .mode(mode)
                 .trigger_source(subject)
                 .event_amount(event_amount)
                 .intervening_if(intervening_if)
                 .build(),
         );
+    }
+
+    /// Pick the slot-1+ targets for an engine-resolved `Effect::ApplyToTargets`
+    /// (an "up to N target" triggered ability). Returns up to `max_targets - 1`
+    /// distinct legal targets beyond `primary`, preferring permanents other
+    /// than the source. Empty for any other effect or for `max_targets <= 1`.
+    pub(crate) fn auto_extra_targets_for(
+        &self,
+        eff: &Effect,
+        source: CardId,
+        controller: usize,
+        primary: Option<Target>,
+    ) -> Vec<Target> {
+        let max = match eff {
+            Effect::ApplyToTargets { max_targets, .. } => *max_targets as usize,
+            _ => return vec![],
+        };
+        if max <= 1 || primary.is_none() {
+            return vec![];
+        }
+        let mut chosen: Vec<Target> = Vec::new();
+        // First avoid entry doubles as the OtherThanSource avoid-source; keep
+        // the trigger source there, then grow the set with each pick.
+        let mut avoid: Vec<CardId> = vec![source];
+        if let Some(Target::Permanent(c)) = primary {
+            avoid.push(c);
+        }
+        while chosen.len() + 1 < max {
+            match self.auto_target_for_effect_avoiding_set(eff, controller, &avoid) {
+                Some(t @ Target::Permanent(cid)) if !avoid.contains(&cid) => {
+                    avoid.push(cid);
+                    chosen.push(t);
+                }
+                _ => break,
+            }
+        }
+        chosen
     }
 
 
