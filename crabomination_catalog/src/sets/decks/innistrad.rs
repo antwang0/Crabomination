@@ -4825,3 +4825,75 @@ pub fn fleeting_spirit() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Contortionist Troupe — {X}{G} 0/0 Human. Enters with X +1/+1 counters. Coven —
+/// at your end step, if you control three or more creatures with different
+/// powers, put a +1/+1 counter on target creature you control.
+pub fn contortionist_troupe() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Contortionist Troupe",
+        cost: cost(&[crate::mana::x(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
+                .with_filter(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crawling Infestation — {2}{G} Enchantment. Upkeep: you may mill two. Whenever
+/// one or more creature cards are put into your graveyard during your turn,
+/// create a 1/1 green Insect (once each turn).
+pub fn crawling_infestation() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    let insect = TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Crawling Infestation",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+                effect: Effect::MayDo {
+                    description: "Mill two cards?".into(),
+                    body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(2) }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    })
+                    .once_per_turn(),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: insect,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

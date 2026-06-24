@@ -2423,3 +2423,45 @@ fn fleeting_spirit_abilities() {
     ).unwrap();
     assert!(g.battlefield_find(spirit).is_none(), "exiled by the blink ability");
 }
+
+/// Contortionist Troupe enters with X counters and a coven end-step counter.
+#[test]
+fn contortionist_troupe_x_counters_and_coven() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Coven board: powers 5, 2, 3.
+    let cav = g.add_card_to_battlefield(0, catalog::candlelit_cavalry()); // 5
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2
+    let third = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(third).unwrap().add_counters(CounterType::PlusOnePlusOne, 1); // 3
+    // Resolve the end-step coven trigger targeting the cavalry.
+    let trig = catalog::contortionist_troupe().triggered_abilities[0].effect.clone();
+    let mut ctx = EffectContext::for_ability(crate::card::CardId(0), 0, Some(Target::Permanent(cav)));
+    ctx.targets = vec![Target::Permanent(cav)];
+    g.step = TurnStep::End;
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(
+        g.battlefield_find(cav).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "coven end-step counter"
+    );
+}
+
+/// Crawling Infestation makes an Insect when a creature card hits your graveyard.
+#[test]
+fn crawling_infestation_spawns_insect() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.move_card_to_battlefield_for_test(0, catalog::crawling_infestation());
+    drain_stack(&mut g);
+    // A creature card entering the graveyard triggers the once-per-turn spawn.
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::CardPutIntoGraveyard {
+        player: 0,
+        card_id: dead,
+        is_land: false,
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(count_named(&g, 0, "Insect"), 1, "creature-to-graveyard spawns an Insect");
+}

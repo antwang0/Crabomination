@@ -457,6 +457,8 @@ static DECKS: &[Factory] = &[
     super::decks::duel_for_dominance,
     super::decks::spiked_ripsaw,
     super::decks::fleeting_spirit,
+    super::decks::contortionist_troupe,
+    super::decks::crawling_infestation,
     super::decks::borrowed_time,
     super::decks::stuffed_bear,
     super::decks::circle_of_confinement,
