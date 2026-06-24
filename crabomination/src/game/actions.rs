@@ -372,15 +372,17 @@ pub(crate) fn cost_reduction_for_spell_zoned(
     {
         reduction = reduction.saturating_add(*amount);
     }
-    // Card-intrinsic board-state-gated flat reduction (Pearl of Wisdom):
-    // "{amount} less if you control a permanent matching `filter`."
-    if let Some((filter, amount)) = &card.definition.self_cost_reduction_if_control
-        && state
+    // Card-intrinsic board-state-gated flat reductions (Pearl of Wisdom,
+    // Geistlight Snare): each "{amount} less if you control a permanent
+    // matching `filter`" clause applies independently.
+    for (filter, amount) in &card.definition.self_cost_reduction_if_control {
+        if state
             .battlefield
             .iter()
             .any(|c| state.evaluate_requirement_on_card(filter, c, caster))
-    {
-        reduction = reduction.saturating_add(*amount);
+        {
+            reduction = reduction.saturating_add(*amount);
+        }
     }
     // Card-intrinsic "costs {amount} less if it's night" (Moonrager's Slash).
     if let Some(amount) = card.definition.self_cost_reduction_if_night

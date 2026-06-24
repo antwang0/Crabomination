@@ -1666,13 +1666,15 @@ pub struct CardDefinition {
     #[serde(default)]
     pub self_cost_reduction_if_target: Option<(SelectionRequirement, u32)>,
     /// "This spell costs `{amount}` less to cast if you control a permanent
-    /// matching `filter`." A flat (non-scaling) board-state-gated generic
-    /// reduction — Pearl of Wisdom ("{1} less if you control an Otter").
+    /// matching `filter`." Flat (non-scaling) board-state-gated generic
+    /// reductions — Pearl of Wisdom ("{1} less if you control an Otter").
+    /// Multiple clauses each apply independently (Geistlight Snare — "{1} less
+    /// if you control a Spirit; and {1} less if you control an enchantment").
     /// Distinct from `affinity_filter`, which scales per matching permanent.
-    /// Generic-only, clamped by the caller; `None` by default for snapshot
+    /// Generic-only, clamped by the caller; empty by default for snapshot
     /// back-compat.
     #[serde(default)]
-    pub self_cost_reduction_if_control: Option<(SelectionRequirement, u32)>,
+    pub self_cost_reduction_if_control: Vec<(SelectionRequirement, u32)>,
     /// "This spell costs `{amount}` less to cast if it's night" (Moonrager's
     /// Slash). Generic-only, clamped by the caller. `None` by default for
     /// snapshot back-compat.

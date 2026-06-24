@@ -1671,6 +1671,26 @@ fn pearl_of_wisdom_otter_discount() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pearl), "resolved cheaply");
 }
 
+/// Geistlight Snare's two board-state clauses each cut {1} independently, and
+/// only off your own permanents.
+#[test]
+fn geistlight_snare_two_clause_discount() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let snare = crate::card::CardInstance::new(g.next_id(), catalog::geistlight_snare(), 0);
+    // No Spirit, no enchantment: full price.
+    assert_eq!(cost_reduction_for_spell(&g, 0, &snare, None), 0);
+    // Opponent's Spirit doesn't count.
+    g.add_card_to_battlefield(1, catalog::selfless_spirit());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &snare, None), 0);
+    // Your Spirit: {1} less.
+    g.add_card_to_battlefield(0, catalog::selfless_spirit());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &snare, None), 1);
+    // Plus an enchantment: {2} less.
+    g.add_card_to_battlefield(0, catalog::wedding_announcement());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &snare, None), 2);
+}
+
 /// Ride's End costs {3} less when it targets a tapped permanent.
 #[test]
 fn rides_end_cost_reduction_when_tapped() {

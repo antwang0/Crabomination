@@ -5122,12 +5122,42 @@ pub fn pearl_of_wisdom() -> CardDefinition {
         name: "Pearl of Wisdom",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        self_cost_reduction_if_control: Some((
+        self_cost_reduction_if_control: vec![(
             SelectionRequirement::HasCreatureType(CreatureType::Otter)
                 .and(SelectionRequirement::ControlledByYou),
             1,
-        )),
+        )],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Geistlight Snare — {2}{U} Instant. Costs {1} less if you control a Spirit
+/// and {1} less if you control an enchantment. Counter target spell unless its
+/// controller pays {3}.
+pub fn geistlight_snare() -> CardDefinition {
+    CardDefinition {
+        name: "Geistlight Snare",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_control: vec![
+            (
+                SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                    .and(SelectionRequirement::ControlledByYou),
+                1,
+            ),
+            (
+                SelectionRequirement::HasCardType(CardType::Enchantment)
+                    .and(SelectionRequirement::ControlledByYou),
+                1,
+            ),
+        ],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(3)]),
+            exile: false,
+            extra_generic: None,
+        },
         ..Default::default()
     }
 }

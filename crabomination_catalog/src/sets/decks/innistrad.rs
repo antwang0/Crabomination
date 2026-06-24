@@ -255,7 +255,7 @@ pub fn wolfkin_outcast() -> CardDefinition {
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
     );
-    card.self_cost_reduction_if_control = Some((wolf_or_werewolf, 2));
+    card.self_cost_reduction_if_control = vec![(wolf_or_werewolf, 2)];
     card
 }
 
@@ -1735,10 +1735,11 @@ pub fn neonates_rush() -> CardDefinition {
         name: "Neonate's Rush",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        self_cost_reduction_if_control: Some((
-            SelectionRequirement::HasCreatureType(CreatureType::Vampire),
+        self_cost_reduction_if_control: vec![(
+            SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                .and(SelectionRequirement::ControlledByYou),
             1,
-        )),
+        )],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
@@ -2135,10 +2136,11 @@ pub fn chill_of_the_grave() -> CardDefinition {
         name: "Chill of the Grave",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        self_cost_reduction_if_control: Some((
-            SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+        self_cost_reduction_if_control: vec![(
+            SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                .and(SelectionRequirement::ControlledByYou),
             1,
-        )),
+        )],
         effect: Effect::Seq(vec![
             Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
             Effect::SkipNextUntap { what: Selector::Target(0) },

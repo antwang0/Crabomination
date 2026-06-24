@@ -2949,6 +2949,7 @@ static DECKS: &[Factory] = &[
     super::decks::polliwallop,
     super::decks::coiling_rebirth,
     super::decks::pearl_of_wisdom,
+    super::decks::geistlight_snare,
     super::decks::rides_end,
     super::decks::nurturing_pixie,
     super::decks::stab,
