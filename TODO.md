@@ -113,8 +113,18 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
   not a runtime `Value`); Mulch (`MillThenToHand` picks one card, not *all*
   matching — needs a "mill N, all matching → hand" variant); Moonrager's Slash
   (conditional cost reduction "if it's night" — no `cost_reduction_if_predicate`
-  primitive yet); Sigarda's Vanguard / Sigardian Zealot ("choose any number of
-  creatures with *different powers*" — a coven-style distinct-power `ChooseN`).
+  primitive yet).
+- **Sigarda's Vanguard** ✅ shipped approximated (up-to-three targets gain double
+  strike); the printed "any number of creatures with *different powers*" coven-
+  style distinct-power `ChooseN` is still the only gap.
+- **Counter-threshold transform DFCs** — Smoldering Egg // Ashmouth Dragon,
+  Poppet Stitcher // Poppet Factory, Voldaren Bloodcaster // Bloodbat Summoner
+  all "transform when N+ counters/tokens accrue". Needs an `Effect::If` over a
+  `Value` reading counters-on-this / token-count plus a remove-and-`Transform`
+  tail (no `transform-at-threshold` helper yet).
+- **Lier, Disciple of the Drowned** ✅ shipped — new
+  `StaticEffect::GraveyardInstantsSorceriesHaveFlashback` (graveyard I/S gain
+  flashback = mana cost), wired into the flashback-cast path + graveyard view.
 
 ## Discovered follow-ups — missing-card sweep (modern_decks)
 

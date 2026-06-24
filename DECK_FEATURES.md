@@ -48,7 +48,11 @@ trigger** (`EventKind::DayNightChanged` — Brimstone Vandal), the **shares-card
 type** trigger (`Predicate::SharesCardTypeWithExiledBySource` — Cemetery
 Gatekeeper/Protector), bound `CardMilled`'s trigger subject to the milled card,
 taught `MoveAllCounters` to read a dead source's death-LKI counters, and fixed
-`fire_spell_cast_triggers` to honor `once_per_turn` (Whispering Wizard).
+`fire_spell_cast_triggers` to honor `once_per_turn` (Whispering Wizard). A later
+MID/VOW wave added `StaticEffect::GraveyardInstantsSorceriesHaveFlashback`
+(Lier — graveyard I/S gain flashback = mana cost, wired into the flashback-cast
+path + graveyard view) and fixed `blocker_can_block_attacker` to reject Decayed
+creatures (CR 702.147) so the UI/bot no longer offer them as blockers.
 
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
