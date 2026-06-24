@@ -2289,7 +2289,12 @@ fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction
     own.sort_by_key(|c| std::cmp::Reverse(c.power()));
     for card in state.players[seat].graveyard.iter() {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            if !(ab.from_graveyard && ab.exile_self_cost) {
+            // Graveyard-activated abilities worth firing: an exile-self payoff
+            // (Embalm-style value) or a self-return that replays the creature
+            // (Llanowar Greenwidow's "{7}{G}: return this from your graveyard").
+            if !(ab.from_graveyard
+                && (ab.exile_self_cost || effect_returns_self_to_battlefield(&ab.effect)))
+            {
                 continue;
             }
             // Only try a no-target activation when the effect needs none —
@@ -2315,6 +2320,17 @@ fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction
         }
     }
     None
+}
+
+/// True if `eff` returns its own source to the battlefield (a self-reanimating
+/// graveyard ability — Llanowar Greenwidow). Recurses into `Seq`.
+fn effect_returns_self_to_battlefield(eff: &Effect) -> bool {
+    use crate::effect::ZoneDest;
+    match eff {
+        Effect::Move { what: crate::card::Selector::This, to: ZoneDest::Battlefield { .. } } => true,
+        Effect::Seq(v) => v.iter().any(effect_returns_self_to_battlefield),
+        _ => false,
+    }
 }
 
 /// Find a beneficial energy-only activated ability the bot can pay for: an
@@ -5399,5 +5415,21 @@ mod stack_response_tests {
         assert!(matches!(pick_reach_burn(&g, 0),
             Some(GameAction::ActivateAbility { card_id, .. }) if card_id == haz),
             "fires the burn for lethal");
+    }
+
+    /// The bot replays a self-returning graveyard creature (Llanowar Greenwidow)
+    /// even though its ability has no exile-self cost.
+    #[test]
+    fn bot_replays_self_returning_graveyard_creature() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_graveyard(0, catalog::llanowar_greenwidow());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(7);
+        assert!(matches!(pick_graveyard_recursion(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, .. }) if card_id == id),
+            "bot activates the graveyard self-return");
     }
 }

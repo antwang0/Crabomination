@@ -559,7 +559,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
             .definition
             .alternative_cost
             .as_ref()
-            .map(|a| format_mana_cost_for_label(&a.mana_cost))
+            .map(format_alt_cost_label)
             .unwrap_or_default(),
         alt_cost_available: card.definition.alternative_cost.as_ref().is_none_or(|a| {
             // Condition-gated alt costs (Prowl, Archive Trap) and
@@ -677,6 +677,34 @@ fn format_mana_cost_for_label(c: &crate::mana::ManaCost) -> String {
         return String::new();
     }
     c.summary()
+}
+
+/// A player-facing label for an alternative cost: the mana portion plus any
+/// non-mana riders (return-to-hand / sacrifice / pitch / life), so a {0}-mana
+/// alt cost like Escape Detection's "return a blue creature" still reads
+/// sensibly in the cast prompt instead of showing nothing.
+fn format_alt_cost_label(a: &crate::card::AlternativeCost) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    let mana = format_mana_cost_for_label(&a.mana_cost);
+    if !mana.is_empty() {
+        parts.push(mana);
+    }
+    if let Some((_, n)) = &a.return_to_hand {
+        parts.push(format!("Return {n}"));
+    }
+    if let Some((_, n)) = &a.sacrifice_permanents {
+        parts.push(format!("Sacrifice {n}"));
+    }
+    if a.exile_from_graveyard_count > 0 {
+        parts.push(format!("Exile {} from graveyard", a.exile_from_graveyard_count));
+    }
+    if a.exile_filter.is_some() {
+        parts.push("Exile a card from hand".to_string());
+    }
+    if a.life_cost > 0 {
+        parts.push(format!("Pay {} life", a.life_cost));
+    }
+    parts.join(" + ")
 }
 
 fn graveyard_entry(
@@ -2811,5 +2839,17 @@ mod tests {
         let pv = view.battlefield.iter().find(|p| p.id == wagon).expect("wagon in view");
         assert_eq!(pv.power, 3, "power = lands controlled");
         assert!(pv.pt_modified, "noncreature Vehicle flagged as P/T-modified");
+    }
+
+    /// A non-mana alternative cost surfaces a descriptive label (Escape
+    /// Detection's freerunning is "return a creature", not blank).
+    #[test]
+    fn alt_cost_label_describes_non_mana_riders() {
+        let card = crate::card::CardInstance::new(
+            crate::card::CardId(1), catalog::escape_detection(), 0);
+        let k = known_card(&card);
+        assert!(k.has_alternative_cost);
+        assert!(k.alt_cost_label.contains("Return"),
+            "alt-cost label describes the return rider, got {:?}", k.alt_cost_label);
     }
 }
