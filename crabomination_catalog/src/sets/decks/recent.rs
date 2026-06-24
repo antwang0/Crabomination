@@ -10138,3 +10138,102 @@ pub fn wickerwing_effigy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Massive Might — {G} Instant. Target creature gets +2/+2 and gains trample
+/// until end of turn.
+pub fn massive_might() -> CardDefinition {
+    CardDefinition {
+        name: "Massive Might",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mossbeard Ancient — {5}{G}{G} 7/7 Treefolk. Trample. ETB gain 5 life.
+pub fn mossbeard_ancient() -> CardDefinition {
+    CardDefinition {
+        name: "Mossbeard Ancient",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(5) })],
+        ..Default::default()
+    }
+}
+
+/// Shadowbeast Sighting — {3}{G} Sorcery. Create a 4/4 green Beast. Flashback
+/// {6}{G}.
+pub fn shadowbeast_sighting() -> CardDefinition {
+    CardDefinition {
+        name: "Shadowbeast Sighting",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(6), g()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::card::TokenDefinition {
+                name: "Beast".into(),
+                power: 4,
+                toughness: 4,
+                card_types: vec![CardType::Creature],
+                colors: vec![crate::mana::Color::Green],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Sawblade Slinger — {3}{G} 4/3 Human Archer. ETB choose one — destroy target
+/// artifact an opponent controls; or it fights target creature an opponent
+/// controls. (The fight's Zombie sub-restriction is widened to any creature.)
+pub fn sawblade_slinger() -> CardDefinition {
+    CardDefinition {
+        name: "Sawblade Slinger",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+            Effect::Fight {
+                attacker: Selector::This,
+                defender: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]))],
+        ..Default::default()
+    }
+}

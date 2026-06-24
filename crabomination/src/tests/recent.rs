@@ -5990,3 +5990,54 @@ fn wickerwing_effigy_casts_creatures_from_top() {
     assert!(we.static_abilities.iter().any(|sa|
         matches!(sa.effect, StaticEffect::PlayFromLibraryTop { .. })));
 }
+
+/// Massive Might pumps +2/+2 and grants trample.
+#[test]
+fn massive_might_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    ctx.targets = vec![Target::Permanent(bear)];
+    g.resolve_effect(&catalog::massive_might().effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Mossbeard Ancient gains 5 life on entry.
+#[test]
+fn mossbeard_ancient_gains_life() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    let ma = g.add_card_to_battlefield(0, catalog::mossbeard_ancient());
+    let etb = catalog::mossbeard_ancient().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(ma, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert_eq!(g.players[0].life, 25);
+}
+
+/// Shadowbeast Sighting makes a 4/4 Beast and carries flashback.
+#[test]
+fn shadowbeast_sighting_makes_beast() {
+    let mut g = two_player_game();
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&catalog::shadowbeast_sighting().effect, &ctx).unwrap();
+    let tok = g.battlefield.iter().find(|c| c.is_token).unwrap();
+    assert_eq!((tok.definition.power, tok.definition.toughness), (4, 4));
+    assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Beast));
+    assert!(catalog::shadowbeast_sighting().keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))));
+}
+
+/// Sawblade Slinger's first mode destroys an opponent's artifact.
+#[test]
+fn sawblade_slinger_destroys_artifact() {
+    let mut g = two_player_game();
+    let ss = g.add_card_to_battlefield(0, catalog::sawblade_slinger());
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let etb = catalog::sawblade_slinger().triggered_abilities[0].effect.clone();
+    let mut ctx = crate::game::effects::EffectContext::for_trigger(ss, 0, Some(Target::Permanent(rock)), 0);
+    ctx.mode = 0;
+    g.resolve_effect(&etb, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "artifact destroyed");
+}
