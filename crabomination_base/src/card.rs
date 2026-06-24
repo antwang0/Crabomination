@@ -737,6 +737,11 @@ pub enum Keyword {
     /// aggro). Enforced in `declare_attackers` against the controller's
     /// `creatures_cast_this_turn` tally.
     CantAttackUnlessCastCreatureThisTurn,
+    /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
+    /// unless you have N or fewer cards in hand" (Hazoret the Fervent, the
+    /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
+    /// against the controller's hand size.
+    CantAttackOrBlockUnlessHandSizeAtMost(u32),
     /// "This creature assigns no combat damage this turn" (Master of
     /// Cruelties' attack rider). A marker keyword — typically granted with
     /// `Duration::EndOfTurn` by a trigger — that `combat.rs` checks off the

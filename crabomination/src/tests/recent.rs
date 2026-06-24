@@ -6949,3 +6949,28 @@ fn squee_returns_from_graveyard() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == squee), "Squee back in hand");
 }
+
+/// Hazoret can't attack with a full hand, but can when hellbent; the discard
+/// ability burns each opponent.
+#[test]
+fn hazoret_hellbent_gate_and_burn() {
+    let mut g = two_player_game();
+    let haz = g.add_card_to_battlefield(0, catalog::hazoret_the_fervent());
+    g.battlefield_find_mut(haz).unwrap().summoning_sick = false;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_hand(0, catalog::mountain());
+    g.add_card_to_hand(0, catalog::mountain()); // two cards: locked
+    assert!(!g.legal_attackers(0).contains(&haz), "locked with a full hand");
+    g.players[0].hand.pop(); // down to one card: unlocked
+    assert!(g.legal_attackers(0).contains(&haz), "attacks when hellbent");
+    // {2}{R}, discard a card: 2 to each opponent.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: haz, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("discard for damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "2 damage to opponent");
+}

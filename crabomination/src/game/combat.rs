@@ -263,6 +263,11 @@ impl GameState {
                 let cohort_locked = kws
                     .contains(&Keyword::CantAttackUnlessCastCreatureThisTurn)
                     && self.players[p].creatures_cast_this_turn == 0;
+                // CR 508.1a — Hazoret-class: can't attack unless hand is small.
+                let hand_locked = kws.iter().any(|k| {
+                    matches!(k, Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)
+                        if self.players[p].hand.len() as u32 > *n)
+                });
                 let defender_locked =
                     kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
@@ -271,6 +276,7 @@ impl GameState {
                     && !defender_locked
                     && !kws.contains(&Keyword::CantAttack)
                     && !cohort_locked
+                    && !hand_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
@@ -281,6 +287,7 @@ impl GameState {
                         || defender_locked
                         || kws.contains(&Keyword::CantAttack)
                         || cohort_locked
+                        || hand_locked
                     {
                         return Err(GameError::CannotAttack(id));
                     }

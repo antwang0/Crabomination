@@ -5053,6 +5053,13 @@ impl GameState {
         {
             return false;
         }
+        // CR 509.1a — Hazoret-class: can't block unless hand is small.
+        if blocker_cp.keywords.iter().any(|k| {
+            matches!(k, Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)
+                if self.players[blocker.controller].hand.len() as u32 > *n)
+        }) {
+            return false;
+        }
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).
         // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
         if let Some((req, min)) = blocker_cp.keywords.iter().find_map(|kw| match kw {

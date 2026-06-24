@@ -297,6 +297,9 @@ impl GameState {
                     Keyword::CantAttackOrBlockUnlessEvenCounters => {
                         c.counters.values().sum::<u32>() % 2 == 0
                     }
+                    Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
+                        self.players[seat].hand.len() as u32 <= *n
+                    }
                     Keyword::CantAttackOrBlockUnlessYouControlCount { filter, min, .. } => {
                         self.battlefield
                             .iter()

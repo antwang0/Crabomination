@@ -80,6 +80,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Goblin-Cohort lock both read at a glance on the board.
         CantAttack => "NoAtk",
         CantAttackUnlessCastCreatureThisTurn => "Atk?",
+        // Hazoret-class hellbent gate reads at a glance on the board.
+        CantAttackOrBlockUnlessHandSizeAtMost(_) => "Hand?",
         Decayed => "Dcy",
         Flanking => "Flk",
         // Combat-pump statics from the Kamigawa/legacy sets read at a glance.

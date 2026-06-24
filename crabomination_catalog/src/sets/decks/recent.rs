@@ -11695,3 +11695,34 @@ pub fn squee_goblin_nabob() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hazoret the Fervent — {3}{R} 5/4 Legendary God. Indestructible, haste. Can't
+/// attack or block unless you have one or fewer cards in hand. {2}{R}, Discard a
+/// card: deal 2 damage to each opponent.
+pub fn hazoret_the_fervent() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Hazoret the Fervent",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Indestructible,
+            Keyword::Haste,
+            Keyword::CantAttackOrBlockUnlessHandSizeAtMost(1),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
