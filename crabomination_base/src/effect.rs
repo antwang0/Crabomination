@@ -738,6 +738,10 @@ pub enum Predicate {
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.
     PlayerAttackedThisTurn { who: PlayerRef },
+    /// True if a creature `who` controlled dealt combat damage to a player
+    /// this turn (CR 702.179 — Freerunning's alt-cost gate). Backed by
+    /// `Player.dealt_combat_damage_to_player_this_turn`.
+    DealtCombatDamageToPlayerThisTurn { who: PlayerRef },
     /// True if a creature other than the predicate's source entered the
     /// battlefield under `who`'s control last turn (Ephara, God of the
     /// Polis). Backed by `Player.creatures_entered_last_turn`.

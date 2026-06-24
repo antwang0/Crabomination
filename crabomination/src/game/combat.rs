@@ -2096,6 +2096,12 @@ impl GameState {
         damaged_player: usize,
         damage_amount: u32,
     ) {
+        // CR 702.179 — the dealing creature's controller has now dealt combat
+        // damage to a player this turn (Freerunning's alt-cost gate).
+        if let Some(c) = self.battlefield_find(source) {
+            let controller = c.controller;
+            self.players[controller].dealt_combat_damage_to_player_this_turn = true;
+        }
         self.fire_combat_damage_triggers(
             source,
             EventKind::DealsCombatDamageToPlayer,

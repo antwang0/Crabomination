@@ -720,6 +720,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].attacked_this_turn),
+            Predicate::DealtCombatDamageToPlayerThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].dealt_combat_damage_to_player_this_turn),
             Predicate::AnotherCreatureEnteredControlLastTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

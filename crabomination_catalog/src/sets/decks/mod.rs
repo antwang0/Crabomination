@@ -9,6 +9,7 @@
 //! features land.
 
 mod creatures;
+mod freerunning;
 mod gift;
 mod innistrad;
 mod lands;
@@ -22,6 +23,7 @@ mod tarkir;
 mod webslinging;
 
 pub use creatures::*;
+pub use freerunning::*;
 pub use gift::*;
 pub use innistrad::*;
 pub use lands::*;

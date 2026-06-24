@@ -211,6 +211,11 @@ pub struct Player {
     /// Powers `Value::CreaturesAttackedWithThisTurn` (Windbrisk Heights).
     #[serde(default)]
     pub creatures_attacked_this_turn: u32,
+    /// True once a creature this player controlled dealt combat damage to a
+    /// player this turn (CR 702.179 — Freerunning). Set in
+    /// `fire_combat_damage_to_player_triggers`, reset at the turn boundary.
+    #[serde(default)]
+    pub dealt_combat_damage_to_player_this_turn: bool,
     /// Revel in Silence: this player can't cast spells or activate loyalty
     /// abilities for the rest of the turn. Reset at the turn boundary.
     #[serde(default)]
@@ -484,6 +489,7 @@ impl Player {
             prowl_any_type_this_turn: false,
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
+            dealt_combat_damage_to_player_this_turn: false,
             silenced_this_turn: false,
             searched_library_this_turn: false,
             protected_from_everything: false,

@@ -1850,6 +1850,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   damage→token scaled by `Value::TriggerEventAmount` (Quartzwood Crasher,
   `DealsCombatDamageToPlayer`; CR 510.2/119.3).
 - ✅ CR 114 — Emblems
+- ✅ CR 702.179 — Freerunning. Alt cost gated on `Predicate::DealtCombatDamageToPlayerThisTurn` (`Player.dealt_combat_damage_to_player_this_turn`, set in `fire_combat_damage_to_player_triggers`). ACR batch in `decks::freerunning` (Brotherhood Ambushers, Merciless Harlequin, Achilles Davenport, Eagle Vision, Distract the Guards, Chain Assassination, Restart Sequence, Viewpoint Synchronization). The "with an Assassin or commander" sub-clause is approximated as "with any creature." ⏳ remaining cards: Petty Larceny, Monastery Raid (Freerunning {X}), Overpowering Attack, Escape Detection.
 - ✅ CR 712 — Transforming Permanents
 - 🟡 CR 708 — Face-Down Permanents
 - ✅ CR 702.146 — Daybound/Nightbound
@@ -1992,7 +1993,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — see git for detail.
-- 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git. "Opponents can't cast from anywhere but their hands" ✅ via `StaticEffect::OpponentsCantCastFromAnywhereButHand`, checked in `cast_from_zone_blocked` for every non-hand cast path (Drannith Magistrate). Remaining ⏳: adventure/foretell/plot exile casts route through their own gates, not yet covered.
+- 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git. "Opponents can't cast from anywhere but their hands" ✅ via `StaticEffect::OpponentsCantCastFromAnywhereButHand`, checked in `cast_from_zone_blocked`. The foretell / plot / adventure-creature exile-cast paths now gate on it too (`cast_foretold`/`cast_plotted`/`cast_adventure_creature`; test `drannith_magistrate_blocks_foretold_cast`). Remaining ⏳: suspend's eventual cast.
 - 🟡 **CR 702.29 — Cycling** — plain Cycling ✅. Typecycling/Landcycling
   (702.29e) ✅ via `Keyword::Landcycling(cost, LandType)` and the general
   `Keyword::Typecycling(cost, filter)` ("Basic landcycling" — Ash Barrens),

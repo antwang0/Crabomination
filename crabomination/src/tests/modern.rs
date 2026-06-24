@@ -36,6 +36,25 @@ fn foretell_augury_raven_resolves_as_flyer() {
     assert!(r.definition.keywords.contains(&Keyword::Flying));
 }
 
+/// CR 601 — an opponent's Drannith Magistrate stops a foretold spell being
+/// cast from exile (a non-hand zone).
+#[test]
+fn drannith_magistrate_blocks_foretold_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::drannith_magistrate());
+    let id = g.add_card_to_hand(0, catalog::augury_raven());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 20);
+    }
+    g.players[0].mana_pool.add_colorless(20);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
+    g.foretold_this_turn.clear();
+    let err = g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "Drannith Magistrate forbids the foretold cast from exile");
+}
+
 /// Durkwood Baloth suspends for {G} and resolves into a 5/5 after 5 ticks.
 #[test]
 fn suspend_durkwood_baloth_resolves() {

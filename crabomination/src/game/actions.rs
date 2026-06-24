@@ -2756,6 +2756,10 @@ impl GameState {
         if self.foretold_this_turn.contains(&card_id) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        // CR 601 — Drannith Magistrate forbids casting from any non-hand zone.
+        if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         let foretell_cost = self.exile[pos]
             .definition
             .foretell_cost
@@ -2945,6 +2949,10 @@ impl GameState {
             .iter()
             .position(|c| c.id == card_id && c.on_adventure && c.owner == p)
             .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 601 — Drannith Magistrate forbids casting from any non-hand zone.
+        if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         let is_instant = self.exile[pos].definition.is_instant_speed();
         let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -3201,6 +3209,10 @@ impl GameState {
         // CR 702.170d — only as a sorcery, and not the turn it was plotted.
         if self.plotted_this_turn.contains(&card_id) || !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
+        }
+        // CR 601 — Drannith Magistrate forbids casting from any non-hand zone.
+        if self.cast_from_zone_blocked(p, &self.exile[pos].definition, crate::card::Zone::Exile) {
+            return Err(GameError::CardNotInHand(card_id));
         }
         if let Some(ref tgt) = target {
             self.check_target_legality_with_source(tgt, p, Some(card_id))?;

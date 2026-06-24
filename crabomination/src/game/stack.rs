@@ -1628,6 +1628,8 @@ impl GameState {
             pl.searched_library_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
             pl.discarded_this_turn.clear();
+            // CR 702.179 — Freerunning's combat-damage gate is per-turn.
+            pl.dealt_combat_damage_to_player_this_turn = false;
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters
