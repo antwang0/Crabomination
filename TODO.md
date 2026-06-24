@@ -148,12 +148,6 @@ Riders deliberately approximated/omitted while shipping the Innistrad batch
   predicate (Shipwreck Sifters' discard payoff).
 - **Patchwork Crawler** — "has all activated abilities of cards exiled with it"
   needs a granted-abilities-from-linked-exile primitive.
-- **Threshold-transform DFCs** — most of the batch shipped: Restless Bloodseeker
-  (sac-2-Blood), Bloodsworn Squire (reflexive gy-count), Daring Sleuth (Clue-sac),
-  Dormant Grove (toughness-6 reflexive), Lambholt Pacifist (classic werewolf +
-  attack-only gate). Still open: **Voldaren Bloodcaster** — needs a
-  "whenever you create a Blood token" `EventKind` (no token-created event exists)
-  plus the back's animate-a-Blood-into-a-Bat.
 - **Damage-redirect enrage on a werewolf DFC** — Ill-Tempered Loner //
   Howlpack Avenger ("when dealt damage, deal that much to any target" + a
   `{1}{R}: +2/+0` firebreathing ability on both faces); needs `werewolf_dfc`

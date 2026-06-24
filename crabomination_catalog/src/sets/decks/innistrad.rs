@@ -1337,6 +1337,90 @@ pub fn bloodsworn_squire() -> CardDefinition {
     }
 }
 
+/// Voldaren Bloodcaster // Bloodbat Summoner — {1}{B} 2/1 flying Vampire Wizard.
+/// Whenever it or another nontoken creature you control dies, make a Blood; once
+/// you control five+ Blood, transform it. Back: combat trigger turns a Blood into
+/// a 2/2 flying-haste Bat.
+pub fn voldaren_bloodcaster() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    let blood = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: crabomination_base::tokens::blood_token(),
+    };
+    let summoner = CardDefinition {
+        name: "Bloodbat Summoner",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::BecomeCreature {
+                what: target_filtered(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                creature_types: vec![CreatureType::Bat],
+                keywords: vec![Keyword::Flying, Keyword::Haste],
+                duration: Duration::Permanent,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Voldaren Bloodcaster",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            // "This or another nontoken creature you control dies" → Blood.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::NotToken,
+                    }),
+                effect: blood(),
+            },
+            // "Whenever you create a Blood token, if you control five or more
+            // Blood tokens, transform this creature."
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                    }),
+                effect: Effect::If {
+                    cond: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood)
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        n: Value::Const(5),
+                    },
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        back_face: Some(Box::new(summoner)),
+        ..Default::default()
+    }
+}
+
 /// Daring Sleuth // Bearer of Overwhelming Truths — {1}{U} 2/1 Human Rogue.
 /// When you sacrifice a Clue, transform it. Back: 3/2 Human Wizard with prowess
 /// that investigates on combat damage to a player.

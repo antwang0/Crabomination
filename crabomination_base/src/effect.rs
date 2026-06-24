@@ -1329,6 +1329,11 @@ pub enum EventKind {
     /// turned face up", megamorph payoffs). The flipped permanent is the
     /// subject (`EventScope::SelfSource`). Matched to `GameEvent::TurnedFaceUp`.
     TurnedFaceUp,
+    /// CR 111.10 — a token was created ("whenever you create a token" /
+    /// "whenever you create a Blood token"). The new token is the event
+    /// subject; pair `EventScope::YourControl` with a TriggerSource filter
+    /// to narrow by token kind. Matched to `GameEvent::TokenCreated`.
+    TokenCreated,
     /// CR 709.5h — a Room door was unlocked (at cast-entry or via the unlock
     /// special action). Fired with the Room permanent as the subject.
     DoorUnlocked,

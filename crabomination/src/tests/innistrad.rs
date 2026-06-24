@@ -1292,6 +1292,34 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Voldaren Bloodcaster transforms when you create a Blood while controlling
+/// five or more Blood tokens (exercises the new TokenCreated trigger).
+#[test]
+fn voldaren_bloodcaster_transforms_at_five_blood() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let caster = g.add_card_to_battlefield(0, catalog::voldaren_bloodcaster());
+    // Four Blood already out; the fifth (minted now) crosses the threshold and
+    // its TokenCreated trigger fires the transform.
+    for _ in 0..4 {
+        g.add_token_to_battlefield(0, &crate::game::effects::blood_token());
+    }
+    let evs = g
+        .resolve_effect(
+            &crate::card::Effect::CreateToken {
+                who: crate::effect::PlayerRef::You,
+                count: crate::card::Value::Const(1),
+                definition: crabomination_base::tokens::blood_token(),
+            },
+            &ctx0(&g),
+        )
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(caster).unwrap().definition.name, "Bloodbat Summoner");
+}
+
 /// Daring Sleuth transforms when you sacrifice a Clue; the back has prowess.
 #[test]
 fn daring_sleuth_transforms_on_clue_sacrifice() {

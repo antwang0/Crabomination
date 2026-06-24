@@ -63,6 +63,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
         (EventKind::Mutated, GameEvent::Mutated { .. }) => true,
         (EventKind::TurnedFaceUp, GameEvent::TurnedFaceUp { .. }) => true,
+        (EventKind::TokenCreated, GameEvent::TokenCreated { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
