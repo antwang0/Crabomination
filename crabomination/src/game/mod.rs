@@ -34,6 +34,9 @@ mod tests_modern;
 #[path = "../tests/recent.rs"]
 mod tests_recent;
 #[cfg(test)]
+#[path = "../tests/innistrad.rs"]
+mod tests_innistrad;
+#[cfg(test)]
 #[path = "../tests/sos.rs"]
 mod tests_sos;
 #[cfg(test)]

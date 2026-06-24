@@ -10,6 +10,7 @@
 
 mod creatures;
 mod gift;
+mod innistrad;
 mod lands;
 mod mayhem;
 mod modern;
@@ -22,6 +23,7 @@ mod webslinging;
 
 pub use creatures::*;
 pub use gift::*;
+pub use innistrad::*;
 pub use lands::*;
 pub use mayhem::*;
 pub use modern::*;
