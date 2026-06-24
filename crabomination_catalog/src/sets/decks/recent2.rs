@@ -7,7 +7,7 @@ use crate::card::{
     Keyword, Predicate, SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
@@ -205,6 +205,103 @@ pub fn llanowar_greenwidow() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Searchlight Companion — {3} 1/1 Artifact Drone with flying. ETB create a
+/// 1/1 colorless Spirit token.
+pub fn searchlight_companion() -> CardDefinition {
+    CardDefinition {
+        name: "Searchlight Companion",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drone], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::spirit_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Resolute Reinforcements — {1}{W} 1/1 Human Soldier with flash. ETB create a
+/// 1/1 white Soldier token.
+pub fn resolute_reinforcements() -> CardDefinition {
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Resolute Reinforcements",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: soldier,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Jewel Thief — {2}{G} 3/3 Cat Rogue with vigilance and trample. ETB create a
+/// Treasure token.
+pub fn jewel_thief() -> CardDefinition {
+    CardDefinition {
+        name: "Jewel Thief",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::treasure_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sweettooth Witch — {2}{B} 3/2 Human Warlock. ETB create a Food token. (The
+/// "{2}, Sacrifice a Food: target player loses 3 life" ability is dropped.)
+pub fn sweettooth_witch() -> CardDefinition {
+    CardDefinition {
+        name: "Sweettooth Witch",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::food_token(),
+        })],
         ..Default::default()
     }
 }

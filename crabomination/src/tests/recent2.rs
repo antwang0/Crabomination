@@ -1,6 +1,6 @@
 //! Functionality tests for the `catalog::sets::decks::recent2` batch.
 
-use crate::card::{CounterType, CreatureType, Keyword};
+use crate::card::{CreatureType, Keyword};
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget, TurnStep};
 use crate::game::*;
@@ -175,6 +175,47 @@ fn llanowar_greenwidow_returns_from_graveyard() {
     let r = g.battlefield_find(id).expect("returned to battlefield");
     assert!(r.tapped, "returns tapped");
     assert_eq!((r.power(), r.toughness()), (4, 3));
+}
+
+/// Searchlight Companion makes a Spirit token on ETB.
+#[test]
+fn searchlight_companion_makes_a_spirit() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::searchlight_companion());
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 1);
+}
+
+/// Resolute Reinforcements has flash and makes a Soldier on ETB.
+#[test]
+fn resolute_reinforcements_makes_a_soldier() {
+    let mut g = two_player_game();
+    assert!(catalog::resolute_reinforcements().keywords.contains(&Keyword::Flash));
+    g.move_card_to_battlefield_for_test(0, catalog::resolute_reinforcements());
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Soldier").count();
+    assert_eq!(soldiers, 1);
+}
+
+/// Jewel Thief makes a Treasure on ETB.
+#[test]
+fn jewel_thief_makes_a_treasure() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::jewel_thief());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Treasure"));
+}
+
+/// Sweettooth Witch makes a Food on ETB.
+#[test]
+fn sweettooth_witch_makes_a_food() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::sweettooth_witch());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Food"));
 }
 
 /// Lord Skitter makes a Rat at the beginning of combat on your turn.
