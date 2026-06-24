@@ -2994,3 +2994,51 @@ pub fn ceremonial_knife() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 7: simple MID/VOW commons & uncommons ──────────────────────────────
+
+/// Bleeding Edge — {1}{B}{B} Sorcery. Up to one target creature gets -2/-2 until
+/// end of turn; Amass Zombies 2.
+pub fn bleeding_edge() -> CardDefinition {
+    use crate::effect::shortcut::amass_zombies;
+    CardDefinition {
+        name: "Bleeding Edge",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                filter: SelectionRequirement::Creature,
+                effect: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            amass_zombies(2),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lantern Bearer // Lanterns' Lift — {U} 1/1 flying Spirit. Disturb {2}{U} into
+/// an Aura granting +1/+1 and flying.
+pub fn lantern_bearer() -> CardDefinition {
+    let front = CardDefinition {
+        name: "Lantern Bearer",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    disturb_aura_dfc(
+        front,
+        cost(&[generic(2), u()]),
+        "Lanterns' Lift",
+        EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Flying], ..Default::default() },
+    )
+}

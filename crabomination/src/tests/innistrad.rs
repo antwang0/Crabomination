@@ -1292,6 +1292,42 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Bleeding Edge shrinks a creature and amasses Zombies 2.
+#[test]
+fn bleeding_edge_shrinks_and_amasses() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let edge = g.add_card_to_hand(0, catalog::bleeding_edge());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: edge,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("cast Bleeding Edge");
+    drain_stack(&mut g);
+    // -2/-2 kills the 2/2 bear; an Army token (Amass 2) appears.
+    assert!(g.battlefield_find(bear).is_none(), "bear died to -2/-2");
+    let army = g.battlefield.iter().find(|c| {
+        c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)
+    });
+    assert!(army.is_some(), "Amass minted an Army");
+    assert_eq!(g.computed_permanent(army.unwrap().id).unwrap().power, 2, "Army has two counters");
+}
+
+/// Lantern Bearer's disturb back face is an Aura granting +1/+1 and flying.
+#[test]
+fn lantern_bearer_disturb_aura_grants_flying() {
+    let bonus = catalog::lantern_bearer().back_face.unwrap().equipped_bonus.unwrap();
+    assert_eq!((bonus.power, bonus.toughness), (1, 1));
+    assert!(bonus.keywords.contains(&Keyword::Flying));
+}
+
 /// Catapult Fodder transforms once you control three defensive creatures, and
 /// the back drains an opponent for a sacrificed creature's toughness.
 #[test]

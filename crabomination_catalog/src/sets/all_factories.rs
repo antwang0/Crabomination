@@ -402,6 +402,8 @@ static DECKS: &[Factory] = &[
     super::decks::dormant_grove,
     super::decks::voldaren_bloodcaster,
     super::decks::catapult_fodder,
+    super::decks::bleeding_edge,
+    super::decks::lantern_bearer,
     super::decks::courier_bat,
     super::decks::timberland_guide,
     super::decks::pestilent_wolf,
