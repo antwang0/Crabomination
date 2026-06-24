@@ -52,7 +52,13 @@ taught `MoveAllCounters` to read a dead source's death-LKI counters, and fixed
 MID/VOW wave added `StaticEffect::GraveyardInstantsSorceriesHaveFlashback`
 (Lier — graveyard I/S gain flashback = mana cost, wired into the flashback-cast
 path + graveyard view) and fixed `blocker_can_block_attacker` to reject Decayed
-creatures (CR 702.147) so the UI/bot no longer offer them as blockers.
+creatures (CR 702.147) so the UI/bot no longer offer them as blockers. A
+counter/aristocrat/aggro wave added `StaticEffect::ExtraCounterAllKinds` (Winding
+Constrictor — +1 to any counter on your creatures), the conditional combat-gate
+keywords `CantAttackOrBlockUnlessHandSizeAtMost(n)` (Hazoret) and
+`CantAttackOrBlockUnlessDelirium` (Patchwork Beastie, via `delirium_active`), and
+the `pick_reach_burn` bot heuristic (fire "deal N to each opponent" abilities for
+lethal).
 
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief

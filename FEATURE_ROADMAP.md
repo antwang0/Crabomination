@@ -336,7 +336,9 @@ Each a small targeted feature; sweep batch by batch.
   turn-scoped defender-bypass grant (`AttackDespiteDefenderThisTurn` — Krotiq
   Nestguard); count-gated attack+block (`CantAttackOrBlockUnlessYouControlCount`
   — Topiary Stomper's "unless you control seven or more lands", honored in
-  combat, affordances, bot, and the legal-blocker gate). Open: granted
+  combat, affordances, bot, and the legal-blocker gate); hand-size-gated
+  (`CantAttackOrBlockUnlessHandSizeAtMost` — Hazoret) and delirium-gated
+  (`CantAttackOrBlockUnlessDelirium` — Patchwork Beastie). Open: granted
   must-attack with future-turn duration, multiplayer goad-target clause,
   cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
