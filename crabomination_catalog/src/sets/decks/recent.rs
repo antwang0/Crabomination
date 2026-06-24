@@ -7302,6 +7302,78 @@ pub fn bond_beetle() -> CardDefinition {
     }
 }
 
+/// Fleeting Distraction — {U} Instant. Target creature gets -1/-0 until end of
+/// turn. Draw a card.
+pub fn fleeting_distraction() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Fleeting Distraction",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mistral Charge — {1}{U} Instant. Target creature gets +1/+1 and gains flying
+/// until end of turn.
+pub fn mistral_charge() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Mistral Charge",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Run Amok — {2}{R} Instant. Target attacking creature gets +3/+3 and gains
+/// trample until end of turn. (The "attacking" target restriction is relaxed
+/// to any creature.)
+pub fn run_amok() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Run Amok",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 // ── Unearth (Shards of Alara, CR 702.84) ────────────────────────────────────
 // `shortcut::unearth(cost)` builds the sorcery-speed graveyard ability that
 // returns the card with haste and schedules an end-step exile.

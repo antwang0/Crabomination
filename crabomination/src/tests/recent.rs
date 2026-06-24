@@ -6494,3 +6494,43 @@ fn surging_sentinels_is_a_three_one_ripple_spirit() {
     assert!(s.subtypes.creature_types.contains(&CreatureType::Spirit));
     assert_eq!(s.triggered_abilities.len(), 1, "carries the ripple trigger");
 }
+
+#[test]
+fn fleeting_distraction_shrinks_power_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::fleeting_distraction());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 2), "-1/-0");
+    assert_eq!(g.players[0].hand.len(), hand, "spell left hand, drew one back");
+}
+
+#[test]
+fn mistral_charge_grants_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::mistral_charge());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn run_amok_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::run_amok());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, spell, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
