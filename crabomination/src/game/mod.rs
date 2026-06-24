@@ -5003,7 +5003,11 @@ impl GameState {
         if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
             return false;
         }
-        if blocker_cp.keywords.contains(&Keyword::CantBlock) {
+        // CR 702.147 — Decayed creatures can't block (mirrors the
+        // DeclareBlockers validation in `combat.rs`).
+        if blocker_cp.keywords.contains(&Keyword::CantBlock)
+            || blocker_cp.keywords.contains(&Keyword::Decayed)
+        {
             return false;
         }
         if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)

@@ -4197,3 +4197,80 @@ fn entity_matches_any_false_on_empty_target() {
     assert_eq!(g.players[1].life, 20, "no exile → no drain");
     assert_eq!(g.players[0].life, 20, "no exile → no gain");
 }
+
+// ── CR 702.34 — Flashback (graveyard-grant via Lier) ──────────────────────────
+
+/// CR 702.34a/d — Lier grants flashback (= mana cost) to instants/sorceries in
+/// your graveyard; the recast follows alternative-cost timing and the card is
+/// exiled when it leaves the stack.
+#[test]
+fn cr_702_34_lier_grants_graveyard_flashback_and_exiles() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lier_disciple_of_the_drowned());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // The grant is visible to the engine helper.
+    let inst = g.players[0].graveyard.iter().find(|c| c.id == bolt).unwrap().clone();
+    assert!(g.graveyard_flashback_grant(0, &inst).is_some(), "Lier grants flashback");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashback castable via Lier");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "Bolt resolved for 3");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "CR 702.34d — exiled off the stack");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// Without Lier (or printed flashback), a graveyard instant isn't castable.
+#[test]
+fn cr_702_34_no_grant_no_flashback() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let inst = g.players[0].graveyard.iter().find(|c| c.id == bolt).unwrap().clone();
+    assert!(g.graveyard_flashback_grant(0, &inst).is_none(), "no static → no grant");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no flashback grant → not castable");
+}
+
+// ── CR 702.147 — Decayed ──────────────────────────────────────────────────────
+
+/// CR 702.147a — "Decayed" means "this creature can't block". A decayed Zombie
+/// (Ghoulish Procession's token) is denied as a blocker.
+#[test]
+fn cr_702_147_decayed_creature_cant_block() {
+    let mut g = two_player_game();
+    // Mint a decayed Zombie under seat 1 via Ghoulish Procession's effect.
+    let proc = g.add_card_to_battlefield(1, catalog::ghoulish_procession());
+    let trig = catalog::ghoulish_procession().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(proc, 1, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let zombie = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).unwrap();
+    assert!(g.computed_permanent(zombie).unwrap().keywords.contains(&Keyword::Decayed),
+        "token carries Decayed");
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    assert!(!g.blocker_can_block_attacker(zombie, attacker), "CR 702.147 — decayed can't block");
+}
+
+// ── CR 702.41 — Affinity ──────────────────────────────────────────────────────
+
+/// CR 702.41a — "Affinity for [text]" reduces a spell's cost by {1} per matching
+/// permanent. Millicent's Affinity for Spirits discounts the generic pips.
+#[test]
+fn cr_702_41_affinity_for_spirits_reduces_cost() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::millicent_restless_revenant(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no Spirits → no discount");
+    g.add_card_to_battlefield(0, catalog::millicent_restless_revenant()); // a Spirit
+    g.add_card_to_battlefield(0, catalog::millicent_restless_revenant());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "two Spirits → 2 generic off");
+}
