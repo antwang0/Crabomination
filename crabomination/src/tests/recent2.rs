@@ -218,6 +218,86 @@ fn sweettooth_witch_makes_a_food() {
     assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Food"));
 }
 
+/// Ambush Paratrooper's {5} ability pumps the team.
+#[test]
+fn ambush_paratrooper_pumps_team() {
+    let mut g = two_player_game();
+    let trooper = g.add_card_to_battlefield(0, catalog::ambush_paratrooper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: trooper, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "bear pumped +1/+1");
+}
+
+/// Glistening Deluge shrinks all creatures and hits G/W harder.
+#[test]
+fn glistening_deluge_punishes_green_white() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green 2/2 → -3/-3 dies
+    let id = g.add_card_to_hand(0, catalog::glistening_deluge());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Glistening Deluge");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "green 2/2 took -3/-3 and died");
+}
+
+/// Faerie Dreamthief surveils on ETB and can be exiled from the graveyard to draw.
+#[test]
+fn faerie_dreamthief_surveils_and_recurs() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.move_card_to_battlefield_for_test(0, catalog::faerie_dreamthief());
+    drain_stack(&mut g);
+    let d = catalog::faerie_dreamthief();
+    assert_eq!(d.triggered_abilities.len(), 1, "ETB surveil wired");
+    assert!(d.activated_abilities[0].from_graveyard && d.activated_abilities[0].exile_self_cost);
+}
+
+/// Vinereap Mentor makes a Food on ETB (and again on death).
+#[test]
+fn vinereap_mentor_makes_food_on_etb() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::vinereap_mentor());
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Food"));
+    assert_eq!(catalog::vinereap_mentor().triggered_abilities.len(), 2, "etb + dies");
+}
+
+/// Topiary Panther is a 6/5 trampler with basic landcycling.
+#[test]
+fn topiary_panther_has_basic_landcycling() {
+    let d = catalog::topiary_panther();
+    assert_eq!((d.power, d.toughness), (6, 5));
+    assert!(d.keywords.iter().any(|k| matches!(k, Keyword::Typecycling(_))));
+}
+
+/// Valgavoth's Faithful sacrifices itself to reanimate a creature.
+#[test]
+fn valgavoths_faithful_reanimates() {
+    let mut g = two_player_game();
+    let faithful = g.add_card_to_battlefield(0, catalog::valgavoths_faithful());
+    let dead = g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: faithful, ability_index: 0, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], x_value: None,
+    }).expect("reanimate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(faithful).is_none(), "Faithful sacrificed");
+    assert!(g.battlefield_find(dead).is_some(), "Serra Angel reanimated");
+}
+
 /// Lord Skitter makes a Rat at the beginning of combat on your turn.
 #[test]
 fn lord_skitter_makes_a_rat_in_combat() {

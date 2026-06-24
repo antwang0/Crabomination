@@ -306,6 +306,173 @@ pub fn sweettooth_witch() -> CardDefinition {
     }
 }
 
+/// Ambush Paratrooper — {1}{W} 1/2 Human Soldier with flash and flying. {5}:
+/// creatures you control get +1/+1 until end of turn.
+pub fn ambush_paratrooper() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Ambush Paratrooper",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glistening Deluge — {1}{B}{B} Sorcery. All creatures get -1/-1; green and/or
+/// white creatures get an additional -2/-2 until end of turn.
+pub fn glistening_deluge() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Glistening Deluge",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: Selector::EachPermanent(SelectionRequirement::Creature.and(
+                    SelectionRequirement::Or(
+                        Box::new(SelectionRequirement::HasColor(Color::Green)),
+                        Box::new(SelectionRequirement::HasColor(Color::White)),
+                    ),
+                )),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Faerie Dreamthief — {B} 1/1 Faerie Warlock with flying. ETB surveil 1.
+/// {2}{B}, exile this card from your graveyard: draw a card.
+pub fn faerie_dreamthief() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Faerie Dreamthief",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vinereap Mentor — {B}{G} 3/2 Squirrel Druid. When it enters or dies, create
+/// a Food token.
+pub fn vinereap_mentor() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    let food = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: crabomination_base::tokens::food_token(),
+    };
+    CardDefinition {
+        name: "Vinereap Mentor",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(food()), on_dies(food())],
+        ..Default::default()
+    }
+}
+
+/// Topiary Panther — {4}{G}{G} 6/5 Plant Cat with trample. Basic landcycling
+/// {1}{G}.
+pub fn topiary_panther() -> CardDefinition {
+    CardDefinition {
+        name: "Topiary Panther",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Typecycling(Box::new((cost(&[generic(1), g()]), SelectionRequirement::IsBasicLand))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Valgavoth's Faithful — {B} 1/1 Human Cleric. {3}{B}, sacrifice this creature:
+/// return target creature card from your graveyard to the battlefield. Sorcery
+/// speed.
+pub fn valgavoths_faithful() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Valgavoth's Faithful",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Lord Skitter, Sewer King — {2}{B} 3/3 Legendary Rat Noble. Whenever another
 /// Rat you control enters, exile a card from an opponent's graveyard. At the
 /// beginning of combat on your turn, create a 1/1 black Rat that can't block.
