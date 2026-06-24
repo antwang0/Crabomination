@@ -3721,3 +3721,122 @@ pub fn cant_stay_away() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 15: more MID/VOW creatures ─────────────────────────────────────────
+
+/// Crossroads Candleguide — {4} 3/4 Scarecrow. ETB exile up to one target card
+/// from a graveyard. {2}: add one mana of any color.
+pub fn crossroads_candleguide() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Crossroads Candleguide",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Scarecrow], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            filter: SelectionRequirement::InGraveyard,
+            effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Drownyard Amalgam — {4}{U} 3/6 Zombie Horror. ETB target player mills three.
+/// {2}{U}: this creature can't be blocked this turn.
+pub fn drownyard_amalgam() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Drownyard Amalgam",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 6,
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(3),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Firmament Sage — {3}{U} 2/3 Wizard. Becomes day on entry if neither day nor
+/// night. Whenever day becomes night or night becomes day, draw a card.
+pub fn firmament_sage() -> CardDefinition {
+    CardDefinition {
+        name: "Firmament Sage",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::Any(vec![
+                    Predicate::IsDay,
+                    Predicate::IsNight,
+                ]))),
+                then: Box::new(Effect::BecomeDay),
+                else_: Box::new(Effect::Noop),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DayNightChanged, EventScope::AnyPlayer),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Candlegrove Witch — {1}{W} 2/2 Human Warlock. Coven — at combat on your turn,
+/// if you control three or more creatures with different powers, it gains flying.
+pub fn candlegrove_witch() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Candlegrove Witch",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                .with_filter(Predicate::CovenActive { who: PlayerRef::You }),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}

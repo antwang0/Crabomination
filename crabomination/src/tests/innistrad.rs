@@ -1292,6 +1292,64 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
 
+/// Crossroads Candleguide exiles a graveyard card and taps for any color.
+#[test]
+fn crossroads_candleguide_exile_and_mana() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let guide = g.add_card_to_battlefield(0, catalog::crossroads_candleguide());
+    let mut ctx = EffectContext::for_ability(guide, 0, Some(Target::Permanent(dead)));
+    ctx.targets = vec![Target::Permanent(dead)];
+    g.resolve_effect(&catalog::crossroads_candleguide().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead), "graveyard card exiled");
+    g.resolve_effect(
+        &catalog::crossroads_candleguide().activated_abilities[0].effect,
+        &EffectContext::for_ability(guide, 0, None),
+    ).unwrap();
+    assert!(g.players[0].mana_pool.total() >= 1, "added a mana");
+}
+
+/// Drownyard Amalgam mills three on entry.
+#[test]
+fn drownyard_amalgam_mills_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    let amalgam = g.add_card_to_battlefield(0, catalog::drownyard_amalgam());
+    let mut ctx = EffectContext::for_ability(amalgam, 0, Some(Target::Player(1)));
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&catalog::drownyard_amalgam().triggered_abilities[0].effect, &ctx).unwrap();
+    assert_eq!(g.players[1].graveyard.len(), 3, "milled three");
+}
+
+/// Firmament Sage draws when the day/night state flips.
+#[test]
+fn firmament_sage_draws_on_daynight_flip() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let sage = g.add_card_to_battlefield(0, catalog::firmament_sage());
+    let _ = sage;
+    g.day_night = Some(DayNight::Day);
+    let hand0 = g.players[0].hand.len();
+    become_night(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew on the day→night flip");
+}
+
+/// Candlegrove Witch gains flying at combat while Coven is active.
+#[test]
+fn candlegrove_witch_flies_with_coven() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let witch = g.add_card_to_battlefield(0, catalog::candlegrove_witch()); // power 2
+    // Two more creatures with distinct powers → coven active (powers 2,1,5... ).
+    g.add_card_to_battlefield(0, catalog::vampire_interloper()); // power 2 — same, need distinct
+    g.add_card_to_battlefield(0, catalog::rot_tide_gargantua()); // power 5
+    g.add_card_to_battlefield(0, catalog::lambholt_pacifist()); // power 3
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(witch).unwrap().keywords.contains(&Keyword::Flying));
+}
+
 /// Rite of Oblivion exiles a nonland permanent (after its sacrifice cost).
 #[test]
 fn rite_of_oblivion_exiles_nonland() {
