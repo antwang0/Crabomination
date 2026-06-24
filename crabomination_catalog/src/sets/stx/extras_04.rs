@@ -221,18 +221,22 @@ pub fn daring_diversion() -> CardDefinition {
 /// cost. Then they put all cards exiled with this enchantment on the
 /// bottom of their library in a random order."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): The full Oracle requires
-/// a complex deferred-cast-from-exile primitive. We ship the body
-/// (enchantment + no triggered ability) as a chaos-engine placeholder
-/// that toggles a marker on the battlefield for future engine work.
-/// Currently a vanilla enchantment frame; will get its trigger when
-/// the cast-from-exile pipeline lands. Tests:
-/// `possibility_storm_is_a_three_mana_red_enchantment`.
+/// Push (modern_decks): now fully wired via `Effect::PossibilityStorm` — a
+/// "whenever a player casts a spell from their hand" trigger (the caster
+/// exiles it, digs until a shared-card-type card, may free-cast it, bottoms
+/// the rest). Tests: `possibility_storm_is_a_three_mana_red_enchantment`,
+/// `possibility_storm_digs_to_a_shared_type_card`.
 pub fn possibility_storm() -> CardDefinition {
+    use crate::card::{EventScope, Predicate, TriggeredAbility};
     CardDefinition {
         name: "Possibility Storm",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::CastFromHand),
+            effect: Effect::PossibilityStorm,
+        }],
         ..Default::default()
     }
 }

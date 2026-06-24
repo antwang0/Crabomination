@@ -8996,6 +8996,91 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PossibilityStorm => {
+                use crate::card::Zone;
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::{LibraryPosition, ZoneDest};
+                // The just-cast spell is the trigger source.
+                let Some(spell_id) = ctx.trigger_source.and_then(|e| e.as_card_id()) else {
+                    return Ok(());
+                };
+                let Some(pos) = self
+                    .stack
+                    .iter()
+                    .position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == spell_id))
+                else {
+                    return Ok(());
+                };
+                let (caster, types) = match &self.stack[pos] {
+                    StackItem::Spell { card, caster, .. } => {
+                        (*caster, card.definition.card_types.clone())
+                    }
+                    _ => return Ok(()),
+                };
+                // Exile the spell (it bottoms with the rest at the end).
+                let mut exiled: Vec<CardId> = Vec::new();
+                if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                    let mut c = *card;
+                    c.exiled_with = ctx.source;
+                    let eid = c.id;
+                    self.exile.push(c);
+                    events.push(GameEvent::PermanentExiled { card_id: eid });
+                    exiled.push(eid);
+                }
+                // Dig until a card sharing a card type with the spell is exiled.
+                let mut hit: Option<CardId> = None;
+                while !self.players[caster].library.is_empty() {
+                    let top = &self.players[caster].library[0];
+                    let cid = top.id;
+                    let shares = top.definition.card_types.iter().any(|t| types.contains(t));
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    exiled.push(cid);
+                    if shares {
+                        hit = Some(cid);
+                        break;
+                    }
+                }
+                if let Some(cid) = hit {
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    if let Some(card_def) = card_def {
+                        let src = ctx.source.unwrap_or(CardId(0));
+                        let cast = matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: src,
+                                description: "Possibility Storm: cast the exiled card without \
+                                              paying its mana cost?"
+                                    .to_string(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        );
+                        if cast {
+                            exiled.retain(|&x| x != cid);
+                            let auto_target =
+                                self.auto_target_for_effect_avoiding(&card_def.effect, caster, Some(cid));
+                            let cast_events = self.cast_card_for_free(
+                                caster, cid, Zone::Exile, auto_target, vec![], None, None, false,
+                            )?;
+                            events.extend(cast_events);
+                        }
+                    }
+                }
+                // Bottom every card still exiled this way (random order ≈ bottom).
+                for cid in exiled {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library {
+                                who: PlayerRef::Seat(caster),
+                                pos: LibraryPosition::Bottom,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReanimateAurasExileEot => {
                 use crate::effect::ZoneDest;
                 use crate::game::types::Target;

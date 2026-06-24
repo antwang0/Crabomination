@@ -3493,6 +3493,14 @@ pub enum Effect {
     /// hand; you may cast the exiled card without paying its mana cost.
     AllureOfTheUnknown,
 
+    /// Possibility Storm — fires when a player casts a spell from their hand
+    /// (the cast spell is the trigger source). That player exiles the spell,
+    /// then exiles cards from the top of their library until they exile one
+    /// sharing a card type with it; they may cast that card without paying
+    /// its mana cost. All cards exiled this way then go to the bottom of
+    /// their library in a random order.
+    PossibilityStorm,
+
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller
     /// can afford; eliminates the controller otherwise. (No interactive

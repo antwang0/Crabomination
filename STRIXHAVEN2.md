@@ -29,8 +29,9 @@ share Kasmina's loyalty abilities" static
 
 - **~195 cards ship with documented approximations** (≈66 SOS, ≈129 STX —
   grep the catalogs for `Approximation` / `omitted` / `dropped`). Most capture
-  the headline play pattern; a couple remain near-vanilla/stub (Possibility
-  Storm, Hindering Light). Arclight Phoenix (gy-return on 3+ I/S spells) and
+  the headline play pattern. Possibility Storm (cast-trigger exile-and-dig via
+  `Effect::PossibilityStorm`) and Hindering Light (target-restricted counter)
+  are now fully wired. Arclight Phoenix (gy-return on 3+ I/S spells) and
   Detention Sphere (exile-until-it-leaves) are now fully wired. Mavinda,
   Students' Advocate is now ✅ (gy-cast modeled as a once-per-turn {2} ability
   granting a pay-own-cost, exile-after may-play — total = spell cost + {2},
