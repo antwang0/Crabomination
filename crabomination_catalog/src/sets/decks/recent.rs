@@ -10403,3 +10403,80 @@ pub fn slaughter_specialist() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Unhallowed Phalanx — {4}{B} 1/13 Zombie Soldier that enters tapped. A
+/// defensive wall.
+pub fn unhallowed_phalanx() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Unhallowed Phalanx",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 13,
+        static_abilities: vec![StaticAbility {
+            description: "This creature enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Moldgraf Millipede — {4}{G} 2/2 Insect Horror. ETB mill three, then put a
+/// +1/+1 counter on it for each creature card in your graveyard.
+pub fn moldgraf_millipede() -> CardDefinition {
+    CardDefinition {
+        name: "Moldgraf Millipede",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    }),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Overcharged Amalgam — {2}{U}{U} 3/3 Zombie Horror. Flash, flying. Exploit;
+/// when it exploits a creature, counter target spell. (The "or activated /
+/// triggered ability" sub-mode is approximated to spells.)
+pub fn overcharged_amalgam() -> CardDefinition {
+    use crate::effect::shortcut::exploit;
+    CardDefinition {
+        name: "Overcharged Amalgam",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![exploit(Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        })],
+        ..Default::default()
+    }
+}

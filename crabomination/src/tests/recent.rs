@@ -6128,3 +6128,41 @@ fn slaughter_specialist_grows_on_opp_death() {
     let cp = g.computed_permanent(ss).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "3/3 + one counter");
 }
+
+/// Unhallowed Phalanx enters tapped.
+#[test]
+fn unhallowed_phalanx_enters_tapped() {
+    let mut g = two_player_game();
+    let up = g.move_card_to_battlefield_for_test(0, catalog::unhallowed_phalanx());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(up).unwrap().tapped, "entered tapped");
+    assert_eq!(g.computed_permanent(up).map(|c| c.toughness), Some(13));
+}
+
+/// Moldgraf Millipede grows by the creature cards in your graveyard after mill.
+#[test]
+fn moldgraf_millipede_grows_from_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // a creature already in gy
+    let mm = g.add_card_to_battlefield(0, catalog::moldgraf_millipede());
+    // Stack the library with two creatures + a land so mill yields 2 more creatures.
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let etb = catalog::moldgraf_millipede().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(mm, 0, None, 0);
+    g.resolve_effect(&etb, &ctx).unwrap();
+    // 1 pre-existing + 2 milled creatures = 3 counters → 5/5.
+    assert_eq!(g.computed_permanent(mm).map(|c| (c.power, c.toughness)), Some((5, 5)));
+}
+
+/// Overcharged Amalgam exploits then counters a spell.
+#[test]
+fn overcharged_amalgam_counters_via_exploit() {
+    let oa = catalog::overcharged_amalgam();
+    assert!(oa.keywords.contains(&Keyword::Flash) && oa.keywords.contains(&Keyword::Flying));
+    assert!(matches!(oa.triggered_abilities[0].effect,
+        crate::effect::Effect::CounterSpell { .. } | crate::effect::Effect::MayDo { .. }
+        | crate::effect::Effect::Seq(_)),
+        "exploit wires a counter payoff");
+}
