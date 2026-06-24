@@ -9674,3 +9674,95 @@ pub fn sigardas_vanguard() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Diregraf Colossus — {2}{B} 2/2 Zombie Giant. Enters with a +1/+1 counter for
+/// each Zombie card in your graveyard. Whenever you cast a Zombie spell, create
+/// a tapped 2/2 black Zombie.
+pub fn diregraf_colossus() -> CardDefinition {
+    let mut tapped_zombie = black_zombie_token();
+    tapped_zombie.tapped = true;
+    CardDefinition {
+        name: "Diregraf Colossus",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountMatching {
+                sel: Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Any,
+                }),
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+            },
+        )),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(SelectionRequirement::HasCreatureType(
+                    CreatureType::Zombie,
+                )),
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: tapped_zombie,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wilhelt, the Rotcleaver — {2}{U}{B} 3/3 Zombie Warrior. When another Zombie
+/// you control without decayed dies, create a 2/2 black Zombie with decayed. At
+/// your end step, you may sacrifice a Zombie to draw a card.
+pub fn wilhelt_the_rotcleaver() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Wilhelt, the Rotcleaver",
+        cost: cost(&[generic(2), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                            .and(SelectionRequirement::OtherThanSource)
+                            .and(SelectionRequirement::HasKeyword(Keyword::Decayed).negate()),
+                    }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: decayed_zombie_token(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::MaySacrifice {
+                    description: "Sacrifice a Zombie to draw a card?".into(),
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+                    count: Value::Const(1),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    else_: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

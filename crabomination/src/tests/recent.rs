@@ -5822,3 +5822,30 @@ fn sigardas_vanguard_grants_double_strike() {
     g.resolve_effect(&catalog::sigardas_vanguard().triggered_abilities[0].effect, &ctx).unwrap();
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
 }
+
+/// Diregraf Colossus enters with +1/+1 per Zombie card in your graveyard.
+#[test]
+fn diregraf_colossus_counts_graveyard_zombies() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::diregraf_horde()); // a Zombie card
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // not a Zombie
+    let dc = g.move_card_to_battlefield_for_test(0, catalog::diregraf_colossus());
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(dc).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + one Zombie counter");
+}
+
+/// Wilhelt makes a decayed Zombie when a non-decayed Zombie dies.
+#[test]
+fn wilhelt_spawns_decayed_zombie_on_zombie_death() {
+    let mut g = two_player_game();
+    let wil = g.add_card_to_battlefield(0, catalog::wilhelt_the_rotcleaver());
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    let trig = catalog::wilhelt_the_rotcleaver().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(wil, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    let tok = g.battlefield.iter().find(|c| c.is_token
+        && c.definition.keywords.contains(&Keyword::Decayed)).unwrap();
+    assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Zombie));
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), before + 1);
+}

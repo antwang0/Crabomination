@@ -2842,6 +2842,8 @@ static DECKS: &[Factory] = &[
     super::decks::croaking_counterpart,
     super::decks::voldaren_estate,
     super::decks::sigardas_vanguard,
+    super::decks::diregraf_colossus,
+    super::decks::wilhelt_the_rotcleaver,
     super::decks::withering_torment,
     super::decks::voltage_surge,
     super::decks::corpse_appraiser,
