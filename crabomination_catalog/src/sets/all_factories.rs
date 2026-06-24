@@ -2852,6 +2852,8 @@ static DECKS: &[Factory] = &[
     super::decks::ghoulish_procession,
     super::decks::necroduality,
     super::decks::falkenrath_forebear,
+    super::decks::geralf_visionary_stitcher,
+    super::decks::wickerwing_effigy,
     super::decks::withering_torment,
     super::decks::voltage_surge,
     super::decks::corpse_appraiser,

@@ -10052,3 +10052,89 @@ pub fn falkenrath_forebear() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Geralf, Visionary Stitcher — {2}{U} 1/4 Human Wizard. Zombies you control
+/// have flying. {U}, {T}, Sacrifice another nontoken creature: create an X/X
+/// blue Zombie, where X is the sacrificed creature's toughness.
+pub fn geralf_visionary_stitcher() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility, StaticEffect, Supertype, TokenDefinition};
+    CardDefinition {
+        name: "Geralf, Visionary Stitcher",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Zombies you control have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::IsToken.negate())
+                        .and(SelectionRequirement::OtherThanSource),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Zombie".into(),
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::Blue],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Zombie],
+                            ..Default::default()
+                        },
+                        dynamic_pt: Some((Value::SacrificedToughness, Value::SacrificedToughness)),
+                        ..Default::default()
+                    },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wickerwing Effigy — {3} 1/4 Artifact Creature — Scarecrow. Defender. Play
+/// with the top card of your library revealed; you may cast creature spells
+/// from the top of your library. (The "cast creature becomes a 1/1 flying Bird"
+/// rider is omitted.)
+pub fn wickerwing_effigy() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Wickerwing Effigy",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Scarecrow], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Play with the top card of your library revealed.",
+                effect: StaticEffect::TopOfLibraryRevealed,
+            },
+            StaticAbility {
+                description: "You may cast creature spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Creature },
+            },
+        ],
+        ..Default::default()
+    }
+}

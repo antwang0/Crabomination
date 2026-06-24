@@ -5955,3 +5955,38 @@ fn falkenrath_forebear_flying_cant_block() {
     assert!(ff.keywords.contains(&Keyword::CantBlock));
     assert!(ff.activated_abilities[0].from_graveyard, "recurs from graveyard");
 }
+
+/// Geralf grants flying to your Zombies and sacs a creature for an X/X Zombie.
+#[test]
+fn geralf_grants_flying_to_zombies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::geralf_visionary_stitcher());
+    let zomb = g.add_card_to_battlefield(0, catalog::diregraf_colossus());
+    assert!(g.computed_permanent(zomb).unwrap().keywords.contains(&Keyword::Flying),
+        "Zombies you control fly");
+}
+
+/// Geralf sacrifices a creature to mint an X/X Zombie equal to its toughness.
+#[test]
+fn geralf_sac_makes_xx_zombie() {
+    let mut g = two_player_game();
+    let geralf = g.add_card_to_battlefield(0, catalog::geralf_visionary_stitcher());
+    // Only one other creature, a 4/4, so the sacrifice is deterministic.
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    let eff = catalog::geralf_visionary_stitcher().activated_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(geralf, 0, None);
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let tok = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).unwrap();
+    let cp = g.computed_permanent(tok).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "X = sacrificed toughness");
+}
+
+/// Wickerwing Effigy lets you cast creature spells from the top of your library.
+#[test]
+fn wickerwing_effigy_casts_creatures_from_top() {
+    use crate::effect::StaticEffect;
+    let we = catalog::wickerwing_effigy();
+    assert!(we.keywords.contains(&Keyword::Defender));
+    assert!(we.static_abilities.iter().any(|sa|
+        matches!(sa.effect, StaticEffect::PlayFromLibraryTop { .. })));
+}
