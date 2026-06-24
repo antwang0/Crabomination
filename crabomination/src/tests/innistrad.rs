@@ -168,6 +168,17 @@ fn heron_of_hope_lifegain_bonus() {
     assert_eq!(g.players[0].life, 24, "gained 3 + 1");
 }
 
+/// Search Party Captain costs {1} less per creature you attacked with this turn.
+#[test]
+fn search_party_captain_cost_reduction() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::search_party_captain(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no attacks → full price");
+    g.players[0].creatures_attacked_this_turn = 2;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "two attackers → 2 off");
+}
+
 // ── Blue ───────────────────────────────────────────────────────────────────
 
 /// Larder Zombie taps three creatures to surveil.

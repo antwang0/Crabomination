@@ -30,6 +30,25 @@ pub(crate) struct SlotManager {
 pub(crate) struct SlotState {
     total: usize,
     per_ip: HashMap<IpAddr, usize>,
+    /// High-water mark of `total` — the most concurrent connections ever
+    /// held at once. Lets operators size the global cap against real peak
+    /// load rather than guessing.
+    peak: usize,
+    /// Cumulative connections refused because the global cap was full.
+    refused_global: u64,
+    /// Cumulative connections refused because the per-IP cap was full —
+    /// distinct from `refused_global` so a single abusive IP hammering the
+    /// per-IP cap reads differently from genuine global saturation.
+    refused_per_ip: u64,
+}
+
+/// Point-in-time view of the slot accounting, for operator telemetry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SlotSnapshot {
+    pub(crate) current: usize,
+    pub(crate) peak: usize,
+    pub(crate) refused_global: u64,
+    pub(crate) refused_per_ip: u64,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -54,20 +73,35 @@ impl SlotManager {
         // instead of propagating the panic.
         let mut state = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         if self.global_cap != 0 && state.total >= self.global_cap {
+            state.refused_global += 1;
             return Err(SlotRefusal::GlobalCapReached);
         }
         if self.per_ip_cap != 0 {
             let count = state.per_ip.get(&addr).copied().unwrap_or(0);
             if count >= self.per_ip_cap {
+                state.refused_per_ip += 1;
                 return Err(SlotRefusal::PerIpCapReached);
             }
         }
         state.total += 1;
+        state.peak = state.peak.max(state.total);
         *state.per_ip.entry(addr).or_insert(0) += 1;
         Ok(SlotGuard {
             inner: Arc::clone(&self.inner),
             addr,
         })
+    }
+
+    /// Snapshot the live occupancy + cumulative refusal counters for a
+    /// rolling telemetry line. Recovers a poisoned lock (see `try_acquire`).
+    pub(crate) fn snapshot(&self) -> SlotSnapshot {
+        let state = self.inner.lock().unwrap_or_else(|p| p.into_inner());
+        SlotSnapshot {
+            current: state.total,
+            peak: state.peak,
+            refused_global: state.refused_global,
+            refused_per_ip: state.refused_per_ip,
+        }
     }
 }
 

@@ -425,6 +425,29 @@ pub fn heron_of_hope() -> CardDefinition {
     }
 }
 
+/// Search Party Captain — {3}{W} 2/2 Human Soldier. Costs {1} less for each
+/// creature you attacked with this turn. ETB draw a card.
+pub fn search_party_captain() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Search Party Captain",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Costs {1} less for each creature you attacked with this turn.",
+            effect: StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per: 1 },
+        }],
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
 // ── Blue ───────────────────────────────────────────────────────────────────
 
 /// Larder Zombie — {U} 1/3 Zombie. Defender. Tap three untapped creatures you

@@ -96,7 +96,11 @@ fn main() {
             let guard = match slots.try_acquire(peer.ip()) {
                 Ok(g) => g,
                 Err(reason) => {
-                    eprintln!("refusing {peer}: {reason:?}");
+                    let s = slots.snapshot();
+                    eprintln!(
+                        "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip)",
+                        s.current, s.peak, s.refused_global, s.refused_per_ip,
+                    );
                     let _ = stream.shutdown(std::net::Shutdown::Both);
                     continue;
                 }
@@ -267,7 +271,11 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
         let guard = match slots.try_acquire(peer.ip()) {
             Ok(g) => g,
             Err(reason) => {
-                eprintln!("refusing {peer}: {reason:?}");
+                let s = slots.snapshot();
+                eprintln!(
+                    "refusing {peer}: {reason:?} (occupancy {}/peak {}, refused {}g/{}ip)",
+                    s.current, s.peak, s.refused_global, s.refused_per_ip,
+                );
                 let _ = stream.shutdown(std::net::Shutdown::Both);
                 continue;
             }
@@ -579,6 +587,26 @@ mod tests {
         ));
         // A different IP is still admitted.
         let _c = s.try_acquire(ip("10.0.0.2")).expect("other ip");
+    }
+
+    #[test]
+    pub(crate) fn slot_manager_snapshot_tracks_peak_and_refusals() {
+        let s = SlotManager::new(2, 1);
+        let a = s.try_acquire(ip("10.0.0.1")).expect("first");
+        let b = s.try_acquire(ip("10.0.0.2")).expect("second");
+        // Global cap is 2 → a third distinct IP is refused globally.
+        assert!(matches!(s.try_acquire(ip("10.0.0.3")), Err(SlotRefusal::GlobalCapReached)));
+        // Free a global slot, then the first IP (at its per-IP cap of 1) is
+        // refused on the per-IP path.
+        drop(b);
+        assert!(matches!(s.try_acquire(ip("10.0.0.1")), Err(SlotRefusal::PerIpCapReached)));
+        let snap = s.snapshot();
+        assert_eq!(snap.current, 1, "only seat a still held");
+        assert_eq!(snap.peak, 2, "peaked at two concurrent");
+        assert_eq!(snap.refused_global, 1);
+        assert_eq!(snap.refused_per_ip, 1);
+        drop(a);
+        assert_eq!(s.snapshot().current, 0, "all released");
     }
 
     #[test]

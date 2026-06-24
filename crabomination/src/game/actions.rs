@@ -464,6 +464,14 @@ pub(crate) fn cost_reduction_for_spell_zoned(
                 .saturating_add(per * state.players[caster].cards_discarded_this_turn);
         }
     }
+    // Card-intrinsic "costs {N} less per creature you attacked with this turn"
+    // (Search Party Captain). Generic-only, clamped by the caller.
+    for sa in &card.definition.static_abilities {
+        if let StaticEffect::SelfCostReducedPerCreatureAttackedThisTurn { per } = &sa.effect {
+            reduction = reduction
+                .saturating_add(per * state.players[caster].creatures_attacked_this_turn);
+        }
+    }
     // Turn-scoped "[filter] spells you cast this turn cost {N} less"
     // grants (Urza, Planeswalker's +2). Cleared at cleanup.
     for (filter, amount) in &state.players[caster].turn_spell_discounts {

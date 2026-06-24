@@ -699,6 +699,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackOrBlockUnlessEvenCounters => "Can't attack or block unless it has an even number of counters on it.",
         K::CantAttackOrBlockUnlessYouControlCount { .. } => "Can't attack or block unless you control enough matching permanents.",
         K::CantBeCounteredIfXAtLeast(_) => "Can't be countered if X was paid at or above the named amount.",
+        K::StartYourEngines => "When it enters, if you have no speed, your speed becomes 1. Your speed then increases by 1 the first time an opponent loses life on each of your turns (max 4).",
         _ => return None,
     })
 }
@@ -853,6 +854,7 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBeCounteredIfXAtLeast(n) => {
             format!("Can't be countered if X is {n} or more")
         }
+        K::StartYourEngines => "Start your engines!".into(),
         _ => format!("{kw:?}"),
     }
 }

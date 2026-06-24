@@ -382,6 +382,7 @@ static DECKS: &[Factory] = &[
     super::decks::resistance_squad,
     super::decks::loyal_gryff,
     super::decks::heron_of_hope,
+    super::decks::search_party_captain,
     super::decks::larder_zombie,
     super::decks::startle,
     super::decks::organ_hoarder,
