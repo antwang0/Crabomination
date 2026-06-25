@@ -178,6 +178,23 @@ fn airbending_lesson_exiles_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
 }
 
+/// The exile view surfaces airbend's {2} alt-cast cost so the client can
+/// render "play for {2}".
+#[test]
+fn airbend_exile_view_shows_alt_cost() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::airbending_lesson());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::forest());
+    cast_at(&mut g, id, Target::Permanent(victim));
+    let view = crate::server::view::project(&g, 1);
+    let entry = view.exile.iter().find(|e| e.id == victim).expect("airbent card in exile view");
+    assert_eq!(entry.may_play_recipient, Some(1), "owner may play it");
+    assert_eq!(entry.may_play_alt_cost, Some(2), "renders play-for-{{2}}");
+}
+
 /// Aang airbends another nonland permanent on ETB.
 #[test]
 fn aang_airbends_on_etb() {

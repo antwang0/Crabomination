@@ -957,6 +957,12 @@ pub struct ExileCardView {
     /// `None` for plain exile (no may-play grant).
     #[serde(default)]
     pub may_play_recipient: Option<usize>,
+    /// If the may-play grant carries an alternative cast cost (mana value) —
+    /// airbend's flat {2} (CR 701.65a), miracle-from-exile, Hostage Taker's
+    /// pay-its-cost — the client renders "play for {N}" instead of implying
+    /// the card's own cost. `None` when the grant is a free cast.
+    #[serde(default)]
+    pub may_play_alt_cost: Option<u32>,
     /// Card's mana value (CMC). Surfaced so the client can render the
     /// cost badge on exile-browser entries without needing the
     /// full CardDefinition. 0 for cards with no cost (lands).

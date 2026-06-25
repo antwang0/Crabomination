@@ -303,6 +303,13 @@ fn exile_entry(card: &CardInstance, viewer: Option<usize>) -> ExileCardView {
         name: if hidden { "Face-down card".to_string() } else { card.definition.name.to_string() },
         owner: card.owner,
         may_play_recipient: card.may_play_until.as_ref().map(|p| p.player),
+        // Surface the alt-cast cost only while a may-play grant is live, so
+        // "play for {2}" can't leak from a stale cost on a plain exile card.
+        may_play_alt_cost: card
+            .may_play_until
+            .as_ref()
+            .and(card.granted_alt_cast_cost_eot.as_ref())
+            .map(|c| c.cmc()),
         mana_value: if hidden { 0 } else { card.definition.cost.cmc() },
         is_token: card.is_token,
         exiled_by: card.exiled_by.map(|l| l.source),

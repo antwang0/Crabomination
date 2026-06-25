@@ -1304,10 +1304,11 @@ pub fn exile_browser(
                 badges.push("Face down".to_string());
             }
             if let Some(p) = c.may_play_recipient {
-                badges.push(if p == cv.your_seat {
-                    "May play (you)".to_string()
-                } else {
-                    format!("May play (P{p})")
+                let who = if p == cv.your_seat { "you".to_string() } else { format!("P{p}") };
+                // Surface airbend's flat {2} / miracle / Hostage-Taker alt cost.
+                badges.push(match c.may_play_alt_cost {
+                    Some(n) => format!("May play ({who}) for {{{n}}}"),
+                    None => format!("May play ({who})"),
                 });
             }
             if c.encoded_on.is_some() {
