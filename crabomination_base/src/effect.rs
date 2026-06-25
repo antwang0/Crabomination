@@ -674,6 +674,11 @@ pub enum Predicate {
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
     /// Spectacle (CR 702.111) — pair with `who: EachOpponent`.
     PlayerLostLifeThisTurn { who: PlayerRef },
+    /// True if any player matched by `who` has drawn at least `n` cards this
+    /// turn. Backed by `Player.cards_drawn_this_turn`. Paired with
+    /// `who: Triggerer` + `once_per_turn` to model "whenever a player draws
+    /// their Nth card each turn" (Faerie Mastermind's second-draw payoff).
+    PlayerDrewAtLeastThisTurn { who: PlayerRef, n: u32 },
     /// True if any player matched by `who` has an effective life total at most
     /// `life`. Powers "unless an opponent has N or less life" gates (Vampire
     /// Lacerator).

@@ -142,7 +142,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::ProtectionFromSpellSubtype(_)
         | Keyword::ProtectionFromManaValueExcept(_)
         | Keyword::ProtectionFromManaValueParity { .. }
-        | Keyword::ProtectionFromMulticolored => "Protection",
+        | Keyword::ProtectionFromMulticolored
+        | Keyword::ProtectionFromInstants
+        | Keyword::ProtectionFromEverything => "Protection",
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));
         }

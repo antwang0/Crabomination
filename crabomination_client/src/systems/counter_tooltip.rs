@@ -656,6 +656,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::ProtectionFromSpells => "Can't be targeted or damaged by spells.",
         K::ProtectionFromCreatures => "Can't be blocked, targeted, or damaged by creatures.",
         K::ProtectionFromMulticolored => "Can't be blocked, targeted, or damaged by multicolored sources.",
+        K::ProtectionFromInstants => "Can't be targeted or damaged by instant spells.",
+        K::ProtectionFromEverything => "Can't be blocked, targeted, enchanted, equipped, or damaged by anything.",
         K::ProtectionFromManaValueExcept(_) => "Has protection from each mana value other than the named one.",
         K::ProtectionFromManaValueParity { odd } => if *odd {
             "Has protection from each odd mana value."
@@ -1346,6 +1348,7 @@ mod tests {
             Keyword::ProtectionFromManaValueExcept(3),
             Keyword::ProtectionFromCreatureType(CreatureType::Human),
             Keyword::ProtectionFromSpellSubtype(SpellSubtype::Arcane),
+            Keyword::ProtectionFromInstants, Keyword::ProtectionFromEverything,
         ] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");

@@ -6865,6 +6865,39 @@ impl GameState {
                     }
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                         let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                        // Evaluate the trigger's intervening filter here, before
+                        // consuming any once-per-turn / per-subject budget: a
+                        // candidate whose filter fails must not "use up" the
+                        // once-per-turn slot (CR 603.4 — a trigger that doesn't
+                        // meet its condition simply doesn't trigger). The same
+                        // filter is re-checked in `drain_trigger_queue`; this
+                        // pre-check just gates the budget bookkeeping. Powers
+                        // Faerie Mastermind's "second card each turn" payoff.
+                        if let Some(filter) = &ta.event.filter {
+                            let ctx = crate::game::effects::EffectContext {
+                                controller: card.controller,
+                                source: Some(card.id),
+                                targets: vec![],
+                                trigger_source: subject,
+                                mode: 0,
+                                x_value: 0,
+                                converged_value: 0,
+                                mana_spent: 0,
+                                source_name: None,
+                                cast_from_hand: true,
+                                event_amount: self.event_amount_for(ev),
+                                kicked: false,
+                                bargained: false,
+                                cast_via_mayhem: false,
+                                entwined: false,
+                            };
+                            if !self.evaluate_predicate(filter, &ctx) {
+                                if !fanout {
+                                    break;
+                                }
+                                continue;
+                            }
+                        }
                         // Per-subject cap ("triggers only twice each turn"
                         // counted per creature — Nadu). Deferred bump (the
                         // battlefield is immutably borrowed here).

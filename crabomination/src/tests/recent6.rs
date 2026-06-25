@@ -198,6 +198,30 @@ fn malcolm_treasure_on_pirate_combat_damage() {
     assert_eq!(treasures, 1, "one Treasure for the opponent dealt damage");
 }
 
+/// Faerie Mastermind draws on the opponent's second draw, but not the first.
+#[test]
+fn faerie_mastermind_second_draw_payoff() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::faerie_mastermind());
+    g.add_card_to_library(0, catalog::forest()); // my payoff draw
+    for _ in 0..2 { g.add_card_to_library(1, catalog::forest()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    g.players[1].cards_drawn_this_turn = 0;
+    let my_hand = g.players[0].hand.len();
+    // Opponent's first draw — no payoff.
+    let mut ev = vec![];
+    g.draw_one(1, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), my_hand, "no draw on opponent's first card");
+    // Opponent's second draw — Faerie Mastermind draws me a card.
+    let mut ev2 = vec![];
+    g.draw_one(1, &mut ev2);
+    g.dispatch_triggers_for_events(&ev2);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), my_hand + 1, "drew on opponent's second card");
+}
+
 // ── Black ────────────────────────────────────────────────────────────────
 
 /// Profane Tutor suspends for {1}{B} and tutors any card to hand on resolution.

@@ -379,6 +379,42 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
     }
 }
 
+/// Faerie Mastermind — {1}{U} 2/1 Faerie Rogue. Flash, flying. Whenever an
+/// opponent draws their second card each turn, draw a card. {3}{U}: Each player
+/// draws a card. CR 121 (per-turn draw count).
+pub fn faerie_mastermind() -> CardDefinition {
+    CardDefinition {
+        name: "Faerie Mastermind",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl)
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
+                    who: PlayerRef::Triggerer,
+                    n: 2,
+                })
+                .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Black ────────────────────────────────────────────────────────────────
 
 /// Profane Tutor — Sorcery with Suspend 2—{1}{B}. Search your library for a

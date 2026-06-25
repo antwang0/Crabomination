@@ -3591,6 +3591,7 @@ static DECKS: &[Factory] = &[
     super::decks::tezzeret_the_seeker,
     super::decks::dream_eater,
     super::decks::malcolm_keen_eyed_navigator,
+    super::decks::faerie_mastermind,
     super::decks::karplusan_minotaur,
     super::decks::profane_tutor,
     super::decks::shambling_ghast,
