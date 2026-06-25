@@ -681,3 +681,237 @@ pub fn bag_end_porter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hithlain Knots — {1}{U} Instant. Tap target creature. Scry 1. Draw a card.
+pub fn hithlain_knots() -> CardDefinition {
+    CardDefinition {
+        name: "Hithlain Knots",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lossarnach Captain — {3}{W} 3/1 Human Soldier. First strike. Whenever this
+/// or another Human you control enters, tap target creature an opponent
+/// controls. At the beginning of your upkeep, create a 1/1 white Human Soldier.
+pub fn lossarnach_captain() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Lossarnach Captain",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
+                    }),
+                effect: Effect::Tap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: soldier },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dúnedain Blade — {1}{W} Equipment. Equipped creature gets +2/+1. Equip {3}.
+/// (The reduced "Equip Human {1}" alternative is dropped — minor.)
+pub fn dunedain_blade() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Dúnedain Blade",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Erkenbrand, Lord of Westfold — {3}{R} 3/3 Human Soldier. Whenever Erkenbrand
+/// or another Human you control enters, creatures you control get +1/+0 EOT.
+pub fn erkenbrand_lord_of_westfold() -> CardDefinition {
+    CardDefinition {
+        name: "Erkenbrand, Lord of Westfold",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Many Partings — {G} Sorcery. Search your library for a basic land card, put
+/// it into your hand, then shuffle. Create a Food token.
+pub fn many_partings() -> CardDefinition {
+    CardDefinition {
+        name: "Many Partings",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::food_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goblin Fireleaper — {1}{R} 1/1 Goblin Warrior. {1}{R}: gets +1/+0 until end
+/// of turn. When it dies, it deals damage equal to its power to target creature
+/// an opponent controls.
+pub fn goblin_fireleaper() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Fireleaper",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![on_dies(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bitter Downfall — {3}{B} Instant. Costs {3} less if it targets a creature
+/// dealt damage this turn. Destroy target creature. Its controller loses 2 life.
+pub fn bitter_downfall() -> CardDefinition {
+    CardDefinition {
+        name: "Bitter Downfall",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        self_cost_reduction_if_target: Some((SelectionRequirement::DealtDamageThisTurn, 3)),
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Uruk-hai Berserker — {2}{B} 3/2 Orc Berserker. When it enters, the Ring
+/// tempts you.
+pub fn uruk_hai_berserker() -> CardDefinition {
+    CardDefinition {
+        name: "Uruk-hai Berserker",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::RingTempts { who: PlayerRef::You })],
+        ..Default::default()
+    }
+}
+
+/// Ranger's Firebrand — {R} Sorcery. Deals 2 damage to any target. The Ring
+/// tempts you.
+pub fn rangers_firebrand() -> CardDefinition {
+    CardDefinition {
+        name: "Ranger's Firebrand",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(SelectionRequirement::Any), amount: Value::Const(2) },
+            Effect::RingTempts { who: PlayerRef::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+
+
+

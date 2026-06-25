@@ -21,8 +21,19 @@ state-corrupting in ordinary play.
 - **Client HUD: surface `PlayerView.{ring_temptations,ring_bearer}`** as a
   "The Ring ×N" chip + a bearer marker on the creature (fields are on the view;
   the client chip render is the remaining piece).
-- **More LTR cards** beyond the 20 in `decks::ltr` (Sauron cycle, Frodo/Sam
-  partner, Orcish Bowmasters' opponent-extra-draw trigger, …).
+- **More LTR cards** beyond the current `decks::ltr` set (Sauron cycle,
+  Frodo/Sam partner, Orcish Bowmasters' opponent-extra-draw trigger, …).
+- **"Whenever this or another creature you control dies" self-clause.** A
+  `CreatureDied`/`YourControl` trigger on a creature does NOT fire for the
+  creature's *own* death — the dispatch walks the battlefield and the dying
+  creature is already gone. The other-creature half works. Wire the dying
+  card's own YourControl death triggers via death-LKI (held back Warbeast of
+  Gorgoroth, which would otherwise amass on its own death).
+- **Equip-granted `Attacks` triggers** didn't mint tokens in a quick test
+  (Andúril's "whenever equipped creature attacks, create two Spirits") even
+  though `equip_granted_triggers_for` chains into the dispatch — investigate
+  whether attack-time equip triggers reach token creation (combat-damage
+  equip triggers like Goldvein Pick do work). Held back Andúril.
 
 ## Discovered follow-ups — `decks::recent3` / `sets::fin` batch
 

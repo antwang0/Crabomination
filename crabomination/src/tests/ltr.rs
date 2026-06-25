@@ -524,3 +524,137 @@ fn bag_end_porter_scales_with_legends() {
     let p = cp.iter().find(|c| c.id == porter).unwrap();
     assert_eq!((p.power, p.toughness), (5, 5), "4/4 +1/+1 for the one legend");
 }
+
+/// Hithlain Knots taps a creature, scries, and draws.
+#[test]
+fn hithlain_knots_taps_and_draws() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::hithlain_knots());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
+    assert_eq!(g.players[0].hand.len(), hand, "net hand unchanged (cast 1, drew 1)");
+}
+
+/// Lossarnach Captain taps an opponent's creature when a Human enters.
+#[test]
+fn lossarnach_captain_taps_on_human_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lossarnach_captain());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Casting another Human fires the captain's "another Human enters" tap.
+    let human = g.add_card_to_hand(0, catalog::rohirrim_lancer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, human);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "opponent's creature tapped");
+}
+
+/// Dúnedain Blade equips for +2/+1.
+#[test]
+fn dunedain_blade_equips() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::dunedain_blade());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 3), "bear got +2/+1");
+}
+
+/// Erkenbrand pumps the team when a Human enters.
+#[test]
+fn erkenbrand_pumps_team_on_human_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::erkenbrand_lord_of_westfold());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let human = g.add_card_to_hand(0, catalog::rohirrim_lancer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, human);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 2), "team got +1/+0");
+}
+
+/// Many Partings tutors a basic land to hand and makes a Food.
+#[test]
+fn many_partings_fetches_and_makes_food() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::many_partings());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, id);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "basic to hand");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food made");
+}
+
+/// Goblin Fireleaper deals its power to a creature when it dies.
+#[test]
+fn goblin_fireleaper_pings_on_death() {
+    let mut g = two_player_game();
+    let gob = g.add_card_to_battlefield(0, catalog::goblin_fireleaper());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(foe))]));
+    let ev = g.remove_to_graveyard_with_triggers(gob);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 1, "1 damage = Fireleaper's power");
+}
+
+/// Bitter Downfall destroys a creature and drains its controller.
+#[test]
+fn bitter_downfall_destroys_and_drains() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::bitter_downfall());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(foe)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature destroyed");
+    assert_eq!(g.players[1].life, life - 2, "controller lost 2 life");
+}
+
+/// Uruk-hai Berserker tempts on ETB.
+#[test]
+fn uruk_hai_berserker_tempts_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::uruk_hai_berserker());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].ring_temptations, 1);
+}
+
+/// Ranger's Firebrand burns and tempts.
+#[test]
+fn rangers_firebrand_burns_and_tempts() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::rangers_firebrand());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage to face");
+    assert_eq!(g.players[0].ring_temptations, 1, "and tempted");
+}
+
+
+
+
