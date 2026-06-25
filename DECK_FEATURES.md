@@ -122,6 +122,11 @@ Snowballers tap), token-makers (Treetop Freedom Fighters), prowess (Iguana
 Parrot), and sacrifice-/noncreature-cast counter payoffs (Pirate Peddlers,
 Boar-q-pine).
 
+`catalog::sets::decks::recent11` (tests in `tests/recent11.rs`) exercises the
+bending effects in *spell* form — Earthbending Lesson (Earthbend 4 sorcery) and
+the modal Dai Li Indoctrination (discard-a-nonland **or** earthbend 2),
+confirming `Effect::Earthbend` targets correctly through the modal cast path.
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing
