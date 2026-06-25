@@ -4,12 +4,13 @@
 //! Each card has a functionality test in `crabomination/src/tests/recent4.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword,
-    SelectionRequirement, Selector, SpellSubtype, StaticAbility, Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, Predicate, SelectionRequirement, Selector, SpellSubtype, StaticAbility,
+    Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, w};
+use crate::mana::{b, cost, g, generic, u, w, x, Color};
 
 /// Ritual of Soot — {2}{B}{B} Sorcery. Destroy all creatures with mana value
 /// 3 or less.
@@ -203,6 +204,139 @@ pub fn bontus_last_reckoning() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Destroy { what: Selector::EachPermanent(SelectionRequirement::Creature) },
             Effect::LandsDontUntapNextUntapStep { who: Selector::You },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Syphon Mind — {3}{B} Sorcery. Each other player discards a card; you draw a
+/// card for each card discarded this way.
+pub fn syphon_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Syphon Mind",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+                random: false,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::CardsDiscardedThisEffect },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Prosperity — {X}{U} Sorcery. Each player draws X cards.
+pub fn prosperity() -> CardDefinition {
+    CardDefinition {
+        name: "Prosperity",
+        cost: cost(&[x(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Ondu Giant — {3}{G} 2/4 Giant Druid. ETB: you may search your library for a
+/// basic land card and put it onto the battlefield tapped.
+pub fn ondu_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Ondu Giant",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Roiling Regrowth — {2}{G} Instant. Sacrifice a land. Search your library for
+/// up to two basic land cards, put them onto the battlefield tapped.
+pub fn roiling_regrowth() -> CardDefinition {
+    CardDefinition {
+        name: "Roiling Regrowth",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::ONE,
+                filter: SelectionRequirement::Land,
+            },
+            Effect::SearchUpToN {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                count: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Roar of the Wurm — {6}{G} Sorcery. Create a 6/6 green Wurm token. Flashback
+/// {3}{G}.
+pub fn roar_of_the_wurm() -> CardDefinition {
+    CardDefinition {
+        name: "Roar of the Wurm",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), g()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: TokenDefinition {
+                name: "Wurm".into(),
+                power: 6,
+                toughness: 6,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Wurm],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Chart a Course — {1}{U} Sorcery. Draw two cards. Then discard a card unless
+/// you attacked this turn.
+pub fn chart_a_course() -> CardDefinition {
+    CardDefinition {
+        name: "Chart a Course",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::If {
+                cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                }),
+            },
         ]),
         ..Default::default()
     }

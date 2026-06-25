@@ -201,3 +201,129 @@ fn bontus_last_reckoning_wipes_board_and_locks_lands() {
     g.do_untap();
     assert!(!g.battlefield_find(land).unwrap().tapped, "land untaps the next step");
 }
+
+/// Syphon Mind makes each opponent discard and draws you one per discard.
+#[test]
+fn syphon_mind_discards_each_opponent_and_draws() {
+    let mut g = crate::game::multi_player_game(3);
+    for p in 1..3 {
+        g.add_card_to_hand(p, catalog::forest());
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::syphon_mind());
+    let hand0 = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Syphon Mind");
+    drain_stack(&mut g);
+    // Two opponents each discard one; caster draws two (loses Syphon Mind, +2).
+    assert_eq!(g.players[1].hand.len(), 0, "opponent 1 discarded");
+    assert_eq!(g.players[2].hand.len(), 0, "opponent 2 discarded");
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 2, "caster drew one per discard");
+}
+
+/// Prosperity makes each player draw X.
+#[test]
+fn prosperity_each_player_draws_x() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let id = g.add_card_to_hand(0, catalog::prosperity());
+    let h0 = g.players[0].hand.len();
+    let h1 = g.players[1].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Prosperity for X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 2, "caster drew 2 (lost Prosperity)");
+    assert_eq!(g.players[1].hand.len(), h1 + 2, "opponent drew 2");
+}
+
+/// Ondu Giant fetches a basic land onto the battlefield tapped.
+#[test]
+fn ondu_giant_etb_fetches_basic_tapped() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.move_card_to_battlefield_for_test(0, catalog::ondu_giant());
+    drain_stack(&mut g);
+    let fetched = g.battlefield_find(forest).expect("basic land fetched to battlefield");
+    assert!(fetched.tapped, "fetched land enters tapped");
+}
+
+/// Roiling Regrowth sacrifices a land to fetch up to two basics tapped.
+#[test]
+fn roiling_regrowth_sacrifices_land_for_two_basics() {
+    let mut g = two_player_game();
+    let sacland = g.add_card_to_battlefield(0, catalog::mountain());
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(f1)),
+        crate::decision::DecisionAnswer::Search(Some(f2)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::roiling_regrowth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roiling Regrowth");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sacland).is_none(), "a land was sacrificed");
+    assert!(g.battlefield_find(f1).is_some_and(|c| c.tapped), "first basic on battlefield tapped");
+    assert!(g.battlefield_find(f2).is_some_and(|c| c.tapped), "second basic on battlefield tapped");
+}
+
+/// Roar of the Wurm makes a 6/6 Wurm and can be flashed back from the graveyard.
+#[test]
+fn roar_of_the_wurm_token_and_flashback() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::roar_of_the_wurm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roar of the Wurm");
+    drain_stack(&mut g);
+    let wurms = g.battlefield.iter().filter(|c| c.definition.name == "Wurm").count();
+    assert_eq!(wurms, 1, "one 6/6 Wurm token");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Roar is in the graveyard");
+    // Flashback it for {3}{G}.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashback Roar of the Wurm");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Wurm").count(), 2,
+        "flashback made a second Wurm");
+}
+
+/// Chart a Course draws two and only forces a discard when you haven't attacked.
+#[test]
+fn chart_a_course_discards_unless_attacked() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::chart_a_course());
+    let h = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chart a Course");
+    drain_stack(&mut g);
+    // No attack this turn → draw 2, then discard 1 → net +1, minus the spell.
+    assert_eq!(g.players[0].hand.len(), h - 1 + 2 - 1, "drew two, discarded one (no attack)");
+}
