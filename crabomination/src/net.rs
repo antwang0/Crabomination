@@ -473,6 +473,21 @@ pub struct CombatPreview {
     pub damage_to_planeswalkers: Vec<(CardId, i32)>,
 }
 
+/// Per-turn spell-cast locks (CR 611.2 continuous "can't cast more than one
+/// [type] spell each turn" effects) affecting a player, plus whether each has
+/// already been reached this turn. A `*_reached` flag is set only when the
+/// matching lock is in play **and** the player has already cast a spell of that
+/// category this turn — i.e. the UI should refuse further casts of it.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SpellCastLock {
+    /// Rule of Law / Arcane Laboratory — any spell after the first is barred.
+    pub any_reached: bool,
+    /// Deafening Silence — any noncreature spell after the first is barred.
+    pub noncreature_reached: bool,
+    /// Ethersworn Canonist — any nonartifact spell after the first is barred.
+    pub nonartifact_reached: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerView {
     pub seat: usize,
@@ -555,6 +570,11 @@ pub struct PlayerView {
     /// display and cards with "if you've cast N spells this turn" gates.
     #[serde(default)]
     pub spells_cast_this_turn: u32,
+    /// Active per-turn spell-cast locks affecting this player and whether each
+    /// has already been reached this turn (Rule of Law, Deafening Silence,
+    /// Ethersworn Canonist). UIs grey out further casts of the locked category.
+    #[serde(default)]
+    pub spell_cast_lock: SpellCastLock,
     /// CR 402.2 — this player's maximum hand size: `Some(n)` (normally
     /// `Some(7)`) or `None` for "no maximum hand size" effects (Wisdom of
     /// Ages, Reliquary Tower). Surfaced so UIs can show the right limit and

@@ -186,6 +186,7 @@ mod tests {
                 instants_or_sorceries_cast_this_turn: 0,
                 creatures_cast_this_turn: 0,
                 spells_cast_this_turn: 0,
+                spell_cast_lock: Default::default(),
                 max_hand_size: Some(7),
                 command: vec![],
                 commanders: vec![],

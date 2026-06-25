@@ -417,6 +417,25 @@ fn project_player(
             .collect();
         powers.len() >= 3
     };
+    // CR 611.2 — per-turn spell-cast locks in play, and whether this player has
+    // already cast a spell of each locked category this turn.
+    let spell_cast_lock = {
+        use crate::effect::StaticEffect;
+        let any_static = |pred: &dyn Fn(&StaticEffect) -> bool| {
+            state
+                .battlefield
+                .iter()
+                .any(|c| c.definition.static_abilities.iter().any(|sa| pred(&sa.effect)))
+        };
+        crate::net::SpellCastLock {
+            any_reached: player.spells_cast_this_game_turn >= 1
+                && any_static(&|e| matches!(e, StaticEffect::OneSpellPerTurn)),
+            noncreature_reached: player.noncreature_spells_cast_this_game_turn >= 1
+                && any_static(&|e| matches!(e, StaticEffect::OneNoncreatureSpellPerTurn)),
+            nonartifact_reached: player.nonartifact_spells_cast_this_game_turn >= 1
+                && any_static(&|e| matches!(e, StaticEffect::OneNonartifactSpellPerTurn)),
+        }
+    };
     PlayerView {
         seat: player_seat,
         name: player.name.clone(),
@@ -450,6 +469,7 @@ fn project_player(
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
         spells_cast_this_turn: player.spells_cast_this_turn,
+        spell_cast_lock,
         max_hand_size: player.max_hand_size,
         // Command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since
@@ -2762,6 +2782,26 @@ mod tests {
             view.players[0].emblems,
             vec!["Vivien Reid — Creatures you control get +2/+2.".to_string()]
         );
+    }
+
+    #[test]
+    fn spell_cast_lock_surfaces_after_casting_the_locked_category() {
+        // Deafening Silence in play, no spell cast yet → not reached.
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::deafening_silence());
+        let before = project(&g, 0).players[0].spell_cast_lock.clone();
+        assert!(!before.noncreature_reached, "lock not reached before any cast");
+        // Cast a noncreature spell; the lock is now reached for player 0.
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.perform_action(crate::game::GameAction::CastSpell {
+            card_id: bolt, target: Some(crate::game::Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast bolt");
+        crate::game::drain_stack(&mut g);
+        let after = project(&g, 0).players[0].spell_cast_lock.clone();
+        assert!(after.noncreature_reached, "noncreature lock reached after a noncreature cast");
+        assert!(!after.any_reached, "no Rule of Law in play → the any-spell lock stays clear");
     }
 
     #[test]

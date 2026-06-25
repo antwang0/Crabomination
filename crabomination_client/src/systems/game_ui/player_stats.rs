@@ -66,6 +66,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Coven (Innistrad) — a witchy moonlit green: 3+ creatures, distinct powers.
         StatChipKind::Coven => (Color::srgba(0.14, 0.30, 0.20, 1.0), theme::TEXT_PRIMARY),
+        // Spell-cast lock (Rule of Law / Deafening Silence / Ethersworn
+        // Canonist) — a stern slate so a barred extra cast reads as "stop".
+        StatChipKind::SpellLock => (Color::srgba(0.30, 0.14, 0.18, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -90,6 +93,7 @@ pub(super) enum StatChipKind {
     TopCard,
     Speed,
     Coven,
+    SpellLock,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -566,6 +570,23 @@ pub fn update_player_stats_chips(
                 StatChipKind::DrawCap,
                 format!("✎ {}/{}", p.cards_drawn_this_turn, cap),
             );
+        }
+        // CR 611.2 spell-cast lock — surface only the categories this player has
+        // already spent (Rule of Law / Deafening Silence / Ethersworn Canonist).
+        {
+            let lock = &p.spell_cast_lock;
+            let label = if lock.any_reached {
+                Some("⊘ spell")
+            } else if lock.noncreature_reached {
+                Some("⊘ noncreature")
+            } else if lock.nonartifact_reached {
+                Some("⊘ nonartifact")
+            } else {
+                None
+            };
+            if let Some(label) = label {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, label.to_string());
+            }
         }
         // CR 114 emblems — only surface when the player actually owns one.
         if !p.emblems.is_empty() {
