@@ -189,3 +189,19 @@ pub fn sundering_titan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Arcane Laboratory — {2}{U} Enchantment. Each player can't cast more than one
+/// spell each turn. (Reuses the existing `OneSpellPerTurn` static; the Rule of
+/// Law family already ships.)
+pub fn arcane_laboratory() -> CardDefinition {
+    CardDefinition {
+        name: "Arcane Laboratory",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Each player can't cast more than one spell each turn.",
+            effect: StaticEffect::OneSpellPerTurn,
+        }],
+        ..Default::default()
+    }
+}

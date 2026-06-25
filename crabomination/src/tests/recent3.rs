@@ -141,3 +141,25 @@ fn sundering_titan_destroys_one_of_each_basic_type() {
         assert!(in_a_graveyard(&g, id), "{name} destroyed");
     }
 }
+
+/// Arcane Laboratory stops a player from casting a second spell in a turn.
+#[test]
+fn arcane_laboratory_one_spell_per_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::arcane_laboratory());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let a = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: a, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("first spell allowed");
+    drain_stack(&mut g);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: b, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "second spell blocked by Arcane Laboratory");
+}
