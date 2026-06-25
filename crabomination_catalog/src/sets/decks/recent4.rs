@@ -704,3 +704,162 @@ pub fn magmaquake() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Pit Fight — {1}{G} Sorcery. Target creature you control fights target
+/// creature you don't control.
+pub fn pit_fight() -> CardDefinition {
+    CardDefinition {
+        name: "Pit Fight",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Fight {
+            attacker: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            },
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Hunt the Weak — {3}{G} Sorcery. Put a +1/+1 counter on target creature you
+/// control. Then it fights target creature you don't control.
+pub fn hunt_the_weak() -> CardDefinition {
+    CardDefinition {
+        name: "Hunt the Weak",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bramblecrush — {2}{G}{G} Sorcery. Destroy target noncreature permanent.
+pub fn bramblecrush() -> CardDefinition {
+    CardDefinition {
+        name: "Bramblecrush",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::Noncreature),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Creeping Corrosion — {2}{G}{G} Sorcery. Destroy all artifacts.
+pub fn creeping_corrosion() -> CardDefinition {
+    CardDefinition {
+        name: "Creeping Corrosion",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(SelectionRequirement::Artifact),
+        },
+        ..Default::default()
+    }
+}
+
+/// Devour Flesh — {1}{B} Instant. Target player sacrifices a creature of their
+/// choice, then gains life equal to that creature's toughness.
+pub fn devour_flesh() -> CardDefinition {
+    CardDefinition {
+        name: "Devour Flesh",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::Target(0),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::SacrificedToughness,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mudbutton Torchrunner — {1}{R} 1/1 Goblin. When it dies, it deals 3 damage
+/// to any target.
+pub fn mudbutton_torchrunner() -> CardDefinition {
+    CardDefinition {
+        name: "Mudbutton Torchrunner",
+        cost: cost(&[generic(1), crate::mana::r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Llanowar Mentor — {G} 1/1 Elf Spellshaper. "{G}, {T}, Discard a card:
+/// Create a 1/1 green Elf Druid token named Llanowar Elves with '{T}: Add {G}'."
+pub fn llanowar_mentor() -> CardDefinition {
+    let elf = TokenDefinition {
+        name: "Llanowar Elves".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        activated_abilities: vec![crate::sets::tap_add(Color::Green)],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Llanowar Mentor",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Spellshaper],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[g()]),
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elf },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -643,3 +643,131 @@ fn star_of_extinction_destroys_land_and_wipes() {
     assert!(g.battlefield_find(land).is_none(), "target land destroyed");
     assert!(g.battlefield_find(titan).is_none(), "6/6 wiped by 20 damage");
 }
+
+/// Pit Fight makes your creature fight an opponent's; deathtouch-free trade.
+#[test]
+fn pit_fight_resolves_a_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grave_titan()); // 6/6
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::pit_fight());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Pit Fight");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "2/2 dies to the 6/6");
+    assert!(g.battlefield_find(mine).is_some(), "6/6 survives 2 damage");
+}
+
+/// Hunt the Weak grows your creature, then it fights.
+#[test]
+fn hunt_the_weak_buffs_then_fights() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/3
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::hunt_the_weak());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Hunt the Weak");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "their 2/2 dies to the buffed 3/3");
+    assert!(g.battlefield_find(mine).is_some(), "your 3/3 survives 2 damage");
+}
+
+/// Bramblecrush destroys a noncreature permanent (a land).
+#[test]
+fn bramblecrush_destroys_noncreature() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::bramblecrush());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bramblecrush");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "noncreature permanent destroyed");
+}
+
+/// Creeping Corrosion destroys all artifacts.
+#[test]
+fn creeping_corrosion_wipes_artifacts() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::creeping_corrosion());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Creeping Corrosion");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "artifact destroyed");
+    assert!(g.battlefield_find(bear).is_some(), "creature untouched");
+}
+
+/// Devour Flesh makes the target player sacrifice a creature and gain its
+/// toughness in life.
+#[test]
+fn devour_flesh_edicts_and_grants_toughness_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grave_titan()); // 6/6 — only creature
+    let life = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::devour_flesh());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Devour Flesh");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.controller == 1 && c.definition.is_creature()),
+        "opponent sacrificed their creature");
+    assert_eq!(g.players[1].life, life + 6, "opponent gained 6 life (the 6/6's toughness)");
+}
+
+/// Mudbutton Torchrunner deals 3 to any target when it dies.
+#[test]
+fn mudbutton_torchrunner_deals_3_on_death() {
+    let mut g = two_player_game();
+    let mud = g.add_card_to_battlefield(0, catalog::mudbutton_torchrunner());
+    let life = g.players[1].life;
+    // Sacrifice it to a free outlet to trigger the death damage at a player.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(mud)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the 1/1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mud).is_none(), "Torchrunner died");
+    assert_eq!(g.players[1].life, life - 3, "death trigger dealt 3 to the player");
+}
+
+/// Llanowar Mentor discards a card to mint a mana-producing Elf token.
+#[test]
+fn llanowar_mentor_makes_mana_elf() {
+    let mut g = two_player_game();
+    let mentor = g.add_card_to_battlefield(0, catalog::llanowar_mentor());
+    g.clear_sickness(mentor);
+    let pitch = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mentor, ability_index: 0,
+        target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate Llanowar Mentor");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "a card was discarded");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Llanowar Elves" && c.is_token),
+        "a 1/1 mana Elf token was created");
+}
