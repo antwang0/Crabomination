@@ -681,3 +681,99 @@ fn anduril_equips_and_spawns_spirits() {
         .filter(|c| c.controller == 0 && c.definition.name == "Spirit").count();
     assert_eq!(spirits, 2, "two Spirit tokens on attack");
 }
+
+/// Galadhrim Guide scries 2 on ETB (no crash; resolves).
+#[test]
+fn galadhrim_guide_scries_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::galadhrim_guide());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Galadhrim Guide"), "resolved");
+}
+
+/// Protector of Gondor makes a Soldier on ETB.
+#[test]
+fn protector_of_gondor_makes_soldier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::protector_of_gondor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Human Soldier").count();
+    assert_eq!(soldiers, 1, "one Soldier token");
+}
+
+/// Shire Terrace taps for {C} and fetches a basic to the battlefield tapped.
+#[test]
+fn shire_terrace_fetches_basic() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::shire_terrace());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    // Mana ability: tap for {C}.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for C");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "added one colorless");
+    // Untap so the sac-fetch can tap it.
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac-fetch");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "Shire Terrace sacrificed");
+    assert!(g.battlefield_find(forest).is_some(), "basic fetched to battlefield");
+}
+
+/// Eastfarthing Farmer makes a Food and pumps a creature per Food.
+#[test]
+fn eastfarthing_farmer_food_and_pump() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::eastfarthing_farmer());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food made");
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 3), "+1/+1 for the one Food");
+}
+
+/// Grey Havens Navigator scries on ETB (resolves).
+#[test]
+fn grey_havens_navigator_resolves() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::grey_havens_navigator());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grey Havens Navigator"), "resolved");
+}
+
+/// Knights of Dol Amroth grows on your second draw each turn.
+#[test]
+fn knights_of_dol_amroth_grows_on_second_draw() {
+    let mut g = two_player_game();
+    let k = g.add_card_to_battlefield(0, catalog::knights_of_dol_amroth());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev); // first
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    let mut ev2 = vec![];
+    g.draw_one(0, &mut ev2); // second
+    g.dispatch_triggers_for_events(&ev2);
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let kc = cp.iter().find(|c| c.id == k).unwrap();
+    assert_eq!((kc.power, kc.toughness), (4, 4), "got a +1/+1 counter on the second draw");
+}

@@ -955,3 +955,170 @@ pub fn anduril_flame_of_the_west() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Galadhrim Guide — {3}{G} 3/4 Elf Scout. When it enters, scry 2.
+pub fn galadhrim_guide() -> CardDefinition {
+    CardDefinition {
+        name: "Galadhrim Guide",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Protector of Gondor — {3}{W} 3/3 Human Soldier. When it enters, create a
+/// 1/1 white Human Soldier token.
+pub fn protector_of_gondor() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let soldier = TokenDefinition {
+        name: "Human Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Protector of Gondor",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: soldier,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Shire Terrace — Land. {T}: Add {C}. {1}, {T}, Sacrifice this land: search
+/// your library for a basic land, put it onto the battlefield tapped, shuffle.
+pub fn shire_terrace() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Shire Terrace",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Eastfarthing Farmer — {2}{W} 2/3 Halfling Peasant. When it enters, create a
+/// Food token, then target creature you control gets +1/+1 until end of turn
+/// for each Food you control.
+pub fn eastfarthing_farmer() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    let food_count = Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Any)),
+        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food)
+            .and(SelectionRequirement::ControlledByYou),
+    };
+    CardDefinition {
+        name: "Eastfarthing Farmer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Halfling, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::food_token(),
+            },
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: food_count.clone(),
+                toughness: food_count,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Grey Havens Navigator — {2}{U} 3/2 Elf Pilot. Flash. When it enters, scry 1.
+pub fn grey_havens_navigator() -> CardDefinition {
+    CardDefinition {
+        name: "Grey Havens Navigator",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Pilot],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Knights of Dol Amroth — {3}{U} 3/3 Human Knight. Whenever you draw your
+/// second card each turn, put a +1/+1 counter on it.
+pub fn knights_of_dol_amroth() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Knights of Dol Amroth",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
+                .once_per_turn(),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
