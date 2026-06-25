@@ -327,3 +327,138 @@ fn chart_a_course_discards_unless_attacked() {
     // No attack this turn → draw 2, then discard 1 → net +1, minus the spell.
     assert_eq!(g.players[0].hand.len(), h - 1 + 2 - 1, "drew two, discarded one (no attack)");
 }
+
+/// Living Death swaps graveyard creatures for battlefield creatures.
+#[test]
+fn living_death_swaps_graveyards_and_battlefields() {
+    let mut g = two_player_game();
+    // Player 0: a creature in play, a creature in the graveyard.
+    let in_play = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let in_grave = g.add_card_to_graveyard(0, catalog::grave_titan());
+    let id = g.add_card_to_hand(0, catalog::living_death());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Living Death");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(in_play).is_none(), "battlefield creature sacrificed");
+    assert!(g.battlefield_find(in_grave).is_some(), "graveyard creature reanimated");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == in_play),
+        "the sacrificed creature is in the graveyard");
+}
+
+/// Show and Tell lets the caster put a permanent from hand onto the battlefield.
+#[test]
+fn show_and_tell_puts_permanent_from_hand() {
+    let mut g = two_player_game();
+    let titan = g.add_card_to_hand(0, catalog::grave_titan());
+    let id = g.add_card_to_hand(0, catalog::show_and_tell());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Show and Tell");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(titan).is_some(), "the highest-mana permanent entered the battlefield");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == titan), "it left hand");
+}
+
+/// Sylvan Tutor puts a creature card on top of the library.
+#[test]
+fn sylvan_tutor_tops_a_creature() {
+    let mut g = two_player_game();
+    let titan = g.add_card_to_library(0, catalog::grave_titan());
+    g.add_card_to_library(0, catalog::island()); // a non-creature to leave behind
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(titan)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::sylvan_tutor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sylvan Tutor");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(titan),
+        "tutored creature is on top of the library");
+}
+
+/// Final Parting puts one card to hand and another to graveyard.
+#[test]
+fn final_parting_splits_two_cards() {
+    let mut g = two_player_game();
+    let to_hand = g.add_card_to_library(0, catalog::grave_titan());
+    let to_grave = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(to_hand)),
+        crate::decision::DecisionAnswer::Search(Some(to_grave)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::final_parting());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Final Parting");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == to_hand), "first card to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == to_grave), "second card to graveyard");
+}
+
+/// Altar's Reap sacrifices a creature and draws two.
+#[test]
+fn altars_reap_sacrifices_and_draws() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::altars_reap());
+    let h = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Altar's Reap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
+    assert_eq!(g.players[0].hand.len(), h - 1 + 2, "drew two cards");
+}
+
+/// Corpse Knight drains each opponent when another creature you control enters.
+#[test]
+fn corpse_knight_drains_on_creature_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::corpse_knight());
+    let life = g.players[1].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "opponent lost 1 when a creature entered");
+}
+
+/// Harvester of Souls draws when another nontoken creature dies.
+#[test]
+fn harvester_of_souls_draws_on_creature_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::harvester_of_souls());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    // "you may draw" — accept the optional trigger.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let h = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "bear died");
+    assert_eq!(g.players[0].hand.len(), h + 1, "Harvester drew a card on the death");
+}

@@ -6197,6 +6197,94 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LivingDeath => {
+                // 1. Each player exiles all creature cards from their graveyard.
+                let mut exiled: Vec<(usize, CardId)> = Vec::new();
+                for p in 0..self.players.len() {
+                    let ids: Vec<CardId> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| c.definition.is_creature())
+                        .map(|c| c.id)
+                        .collect();
+                    for id in ids {
+                        self.move_card_to(id, &crate::effect::ZoneDest::Exile, ctx, events);
+                        exiled.push((p, id));
+                    }
+                }
+                // 2. Each player sacrifices all creatures they control.
+                let sac: Vec<(CardId, usize)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (c.id, c.controller))
+                    .collect();
+                for (id, who) in sac {
+                    if self.battlefield_find(id).is_some() {
+                        self.sacrifice_one(id, who, events);
+                    }
+                }
+                // 3. Each exiled card returns to the battlefield under its
+                //    owner's control.
+                for (owner, id) in exiled {
+                    let octx = EffectContext::for_ability(id, owner, None);
+                    self.move_card_to(
+                        id,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::You,
+                            tapped: false,
+                        },
+                        &octx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerMayPutPermanentFromHand { filter } => {
+                // APNAP order (active player first).
+                let order = self.apnap_sort((0..self.players.len()).collect());
+                for p in order {
+                    let candidates: Vec<CardId> = self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| {
+                            c.definition.is_permanent()
+                                && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    if candidates.is_empty() {
+                        continue;
+                    }
+                    // Auto-pick the highest-mana matching card (bots/tests); a
+                    // `wants_ui` seat keeps the same auto-pick for now.
+                    let pick = candidates
+                        .iter()
+                        .copied()
+                        .max_by_key(|id| {
+                            self.players[p]
+                                .hand
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| c.definition.cost.cmc())
+                                .unwrap_or(0)
+                        })
+                        .unwrap();
+                    let octx = EffectContext::for_ability(pick, p, None);
+                    self.move_card_to(
+                        pick,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::You,
+                            tapped: false,
+                        },
+                        &octx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::Sacrifice { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {

@@ -3058,6 +3058,16 @@ pub enum Effect {
     /// matching `filter` — no choice involved (CR 701.16). All Is Dust's
     /// "each player sacrifices all colored permanents they control".
     SacrificeAllMatching { who: Selector, filter: SelectionRequirement },
+    /// Living Death (CR — mass reanimation swap): each player exiles all
+    /// creature cards from their graveyard, then sacrifices all creatures they
+    /// control, then puts the cards they exiled this way onto the battlefield
+    /// under their own control.
+    LivingDeath,
+    /// Each player, in APNAP order, may put one permanent card matching
+    /// `filter` from their hand onto the battlefield (Show and Tell). A
+    /// `wants_ui` player is prompted; bots/tests auto-pick their highest-mana
+    /// matching card (or decline if none).
+    EachPlayerMayPutPermanentFromHand { filter: SelectionRequirement },
     /// "`who` exiles `count` permanents they control of their choice" — the
     /// exile analogue of Annihilator's forced sacrifice (Bane of Bala Ged).
     /// The affected player chooses which permanents; a `wants_ui` player with

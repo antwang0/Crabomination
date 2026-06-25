@@ -9,7 +9,7 @@ use crate::card::{
     Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, StaticEffect, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Duration, LibraryPosition, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, u, w, x, Color};
 
 /// Ritual of Soot — {2}{B}{B} Sorcery. Destroy all creatures with mana value
@@ -319,6 +319,33 @@ pub fn roar_of_the_wurm() -> CardDefinition {
     }
 }
 
+/// Living Death — {3}{B}{B} Sorcery. Each player exiles all creature cards from
+/// their graveyard, then sacrifices all creatures they control, then puts all
+/// cards they exiled this way onto the battlefield under their control.
+pub fn living_death() -> CardDefinition {
+    CardDefinition {
+        name: "Living Death",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LivingDeath,
+        ..Default::default()
+    }
+}
+
+/// Show and Tell — {2}{U} Sorcery. Each player may put an artifact, creature,
+/// enchantment, or land card from their hand onto the battlefield.
+pub fn show_and_tell() -> CardDefinition {
+    CardDefinition {
+        name: "Show and Tell",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::EachPlayerMayPutPermanentFromHand {
+            filter: SelectionRequirement::Permanent,
+        },
+        ..Default::default()
+    }
+}
+
 /// Chart a Course — {1}{U} Sorcery. Draw two cards. Then discard a card unless
 /// you attacked this turn.
 pub fn chart_a_course() -> CardDefinition {
@@ -338,6 +365,119 @@ pub fn chart_a_course() -> CardDefinition {
                 }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Sylvan Tutor — {G} Sorcery. Search your library for a creature card, reveal
+/// it, then shuffle and put it on top.
+pub fn sylvan_tutor() -> CardDefinition {
+    CardDefinition {
+        name: "Sylvan Tutor",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+        },
+        ..Default::default()
+    }
+}
+
+/// Final Parting — {3}{B}{B} Sorcery. Search your library for two cards; put one
+/// into your hand and the other into your graveyard, then shuffle.
+pub fn final_parting() -> CardDefinition {
+    CardDefinition {
+        name: "Final Parting",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Graveyard,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Altar's Reap — {1}{B} Instant. As an additional cost, sacrifice a creature.
+/// Draw two cards. (The additional sacrifice is modeled at resolution.)
+pub fn altars_reap() -> CardDefinition {
+    CardDefinition {
+        name: "Altar's Reap",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::ONE,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Corpse Knight — {W}{B} 2/2 Zombie Knight. Whenever another creature you
+/// control enters, each opponent loses 1 life.
+pub fn corpse_knight() -> CardDefinition {
+    CardDefinition {
+        name: "Corpse Knight",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Harvester of Souls — {4}{B}{B} 5/5 Demon with deathtouch. Whenever another
+/// nontoken creature dies, you may draw a card.
+pub fn harvester_of_souls() -> CardDefinition {
+    CardDefinition {
+        name: "Harvester of Souls",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::OtherThanSource
+                        .and(SelectionRequirement::NotToken),
+                }),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
         ..Default::default()
     }
 }
