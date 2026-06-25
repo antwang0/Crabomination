@@ -450,6 +450,62 @@ fn mindwhisker_surveils_on_upkeep() {
     ));
 }
 
+/// Tarrian's Soulcleaver grants vigilance and grows the equipped creature when
+/// another permanent dies.
+#[test]
+fn tarrians_soulcleaver_grows_equipped_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cleaver = g.add_card_to_battlefield(0, catalog::tarrians_soulcleaver());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::Equip { equipment: cleaver, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance),
+        "equipped creature has vigilance"
+    );
+    // Another creature dies → +1/+1 counter on the equipped bear.
+    let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(fodder).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "equipped creature grew by a +1/+1 counter"
+    );
+}
+
+/// Snarespinner pumps +2/+0 when it blocks a flier (but not a grounded attacker).
+#[test]
+fn snarespinner_pumps_blocking_a_flier() {
+    use crate::card::{CardDefinition, CardType};
+    let flier = CardDefinition {
+        name: "Test Drake",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, flier);
+    let spider = g.add_card_to_battlefield(1, catalog::snarespinner());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(spider, atk)])).expect("block");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(spider).unwrap();
+    assert_eq!((s.power(), s.toughness()), (3, 3), "+2/+0 for blocking a flier");
+}
+
 /// Lord Skitter makes a Rat at the beginning of combat on your turn.
 #[test]
 fn lord_skitter_makes_a_rat_in_combat() {

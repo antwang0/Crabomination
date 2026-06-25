@@ -730,6 +730,77 @@ pub fn mindwhisker() -> CardDefinition {
     }
 }
 
+/// Tarrian's Soulcleaver — {1} Legendary Artifact — Equipment. Equipped creature
+/// has vigilance. Whenever another artifact or creature is put into a graveyard
+/// from the battlefield, put a +1/+1 counter on equipped creature. Equip {2}.
+pub fn tarrians_soulcleaver() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType, EquipBonus};
+    CardDefinition {
+        name: "Tarrian's Soulcleaver",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Vigilance],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Or(
+                            Box::new(SelectionRequirement::Artifact),
+                            Box::new(SelectionRequirement::Creature),
+                        )
+                        .and(SelectionRequirement::OtherThanSource),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Snarespinner — {1}{G} 1/3 Spider with Reach. Whenever it blocks a creature
+/// with flying, it gets +2/+0 until end of turn.
+pub fn snarespinner() -> CardDefinition {
+    CardDefinition {
+        name: "Snarespinner",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::BlockedAttacker,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+                },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Lord Skitter, Sewer King — {2}{B} 3/3 Legendary Rat Noble. Whenever another
 /// Rat you control enters, exile a card from an opponent's graveyard. At the
 /// beginning of combat on your turn, create a 1/1 black Rat that can't block.

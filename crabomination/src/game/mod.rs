@@ -1388,6 +1388,31 @@ impl GameState {
         out
     }
 
+    /// Triggered abilities granted to `card` by Equipment attached to it
+    /// (CR 702.6e). Only the `triggers_on_equipment == false` abilities are
+    /// surfaced here — they fire as though printed on the equipped creature
+    /// (Tarrian's Soulcleaver's "whenever another artifact/creature dies, put
+    /// a +1/+1 counter on equipped creature"). The `triggers_on_equipment`
+    /// (Jitte-style) abilities fire off the Equipment via the dedicated
+    /// combat-damage hook, so they're excluded to avoid double-firing.
+    pub(crate) fn equip_granted_triggers_for(
+        &self,
+        card: &CardInstance,
+    ) -> Vec<crate::card::TriggeredAbility> {
+        let mut out = Vec::new();
+        for eq in &self.battlefield {
+            if eq.attached_to != Some(card.id) {
+                continue;
+            }
+            let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+            if bonus.triggers_on_equipment {
+                continue;
+            }
+            out.extend(bonus.triggered_abilities.iter().cloned());
+        }
+        out
+    }
+
     /// Apply format-specific setup: starting life total, turn-1 draw
     /// rule, and (for Two-Headed Giant) the team partition + shared
     /// life pool.
@@ -6667,13 +6692,15 @@ impl GameState {
             // triggers are never once-per-turn and use a sentinel index.
             let n_printed = card.definition.triggered_abilities.len();
             let static_granted = self.statics_granted_triggers_for(card);
+            let equip_granted = self.equip_granted_triggers_for(card);
             let all_triggers = card
                 .definition
                 .triggered_abilities
                 .iter()
                 .enumerate()
                 .chain(self.granted_triggers(card.id).iter().map(|t| (usize::MAX, t)))
-                .chain(static_granted.iter().map(|t| (usize::MAX, t)));
+                .chain(static_granted.iter().map(|t| (usize::MAX, t)))
+                .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
                 // CR 603.3d — "triggers only once each turn": skip if it has
                 // already fired this turn or earlier in this same batch.

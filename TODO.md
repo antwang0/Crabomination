@@ -2026,22 +2026,6 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 > behind at least the audit P0 tier (and the P3 root-cause refactors, which
 > make every subsequent card batch safer to land).
 
-- ⏳ **Equip-granted *observer* triggered abilities (CR 702.6e).** The death/
-  combat paths already fire an equipped creature's equipment triggers when the
-  *creature itself* is the event subject (Skullclamp self-death, Sword combat
-  damage). An equipment whose trigger watches a *different* object — Tarrian's
-  Soulcleaver "whenever another creature dies, put a +1/+1 counter on equipped
-  creature" — isn't dispatched. Adding `EquipBonus.triggered_abilities` (with
-  `triggers_on_equipment == false`) into the battlefield observer-walk in
-  `dispatch_triggers_for_events` would wire it, but must dedupe against the
-  existing self-death / combat-damage paths to avoid double-firing. Tarrian's
-  Soulcleaver is held out of `decks::recent2` pending this.
-- ⏳ **"Blocks a creature with [attribute]" trigger filter.** `EventKind::Blocks`
-  binds `Selector::TriggerSource` to the *blocker*, so a blocker-side trigger
-  can't filter on the blocked attacker's keywords (Snarespinner — "whenever this
-  blocks a creature with flying"). Needs the blocked attacker exposed as a
-  second subject (or a `BlockedCreatureMatches` predicate). Snarespinner held
-  out of `decks::recent2` pending this.
 - ⏳ **recent2 card approximations** (`decks::recent2`, all noted in doc
   comments): March of Otherworldly Light drops the "exile white cards to reduce
   cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static

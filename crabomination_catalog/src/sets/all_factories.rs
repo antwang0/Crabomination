@@ -3315,6 +3315,8 @@ static DECKS: &[Factory] = &[
     super::decks::pyrewood_gearhulk,
     super::decks::beastbond_outcaster,
     super::decks::mindwhisker,
+    super::decks::snarespinner,
+    super::decks::tarrians_soulcleaver,
     super::decks::lord_skitter_sewer_king,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
