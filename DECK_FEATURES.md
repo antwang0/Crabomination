@@ -90,6 +90,21 @@ Gainsborough, Phoenix Down. All ride existing primitives (landfall, ETB,
 end-step self-bounce, Vehicle/Crew, Landcycling, mass −X/−X, lifegain/death
 counter-distribution, modal reanimate).
 
+`catalog::sets::decks::recent8` is an eighth staples wave (tests in
+`tests/recent8.rs`) built around three brand-new keyword actions:
+**earthbend N** (`Effect::Earthbend` — CR 701.66: target land you control
+becomes a 0/0 hasty land creature with N +1/+1 counters and a
+`WhenCardLeavesBattlefield` return-tapped rider; Badgermole/Cub, Earthbending
+Student, Earth Village Ruffians, Earthbender Ascension), **airbend**
+(`Effect::Airbend` — CR 701.65: exile + a never-expiring `WhileExiled` may-play
+grant stamped with a {2} alt-cast cost; Airbending Lesson, Aang, Airbender
+Ascension, Whirlwind Technique, Glider Staff), and **blight N**
+(`Effect::Blight` — CR 701.68: the controller puts N -1/-1 counters on a
+creature they control; Blighted Blackthorn, Chaos Spewer, Boggart Mischief).
+Plus rideable commons (Corrupt Court Official, Jeong Jeong's Deserters,
+Forecasting Fortune Teller, Pretending Poxbearers, Merchant of Many Hats, Yuyan
+Archers, Platypus-Bear, Compassionate Healer, Fire Nation Soldier).
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

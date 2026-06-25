@@ -2552,6 +2552,19 @@ pub enum Effect {
     /// The choice is the controller's (AutoDecider keeps the counters so the
     /// enduring permanent grows). N=0 does nothing (CR 701.63b).
     Endure { target: Selector, n: Value },
+    /// CR 701.68 — *blight N*: the controller puts N -1/-1 counters on a
+    /// creature they control (their choice). With no creature they can't
+    /// blight (701.68b) so it's a no-op. N=0 does nothing.
+    Blight { n: Value },
+    /// CR 701.66 — *earthbend N*: target land you control becomes a 0/0 land
+    /// creature with haste (in addition to its other types) and gets N +1/+1
+    /// counters; a delayed trigger returns it tapped when it dies or is exiled.
+    Earthbend { n: Value },
+    /// CR 701.65 — *airbend* the object(s) `what` resolves to: exile each,
+    /// and for as long as it stays exiled its owner may cast it for {2}
+    /// rather than its mana cost. Wrap in `ApplyToTargets` for the common
+    /// "airbend up to one target [filter]" shape.
+    Airbend { what: Selector },
     /// Remove every counter of every kind from `what` (CR 122.6 — Vampire
     /// Hexmage's "remove all counters from target permanent").
     RemoveAllCounters { what: Selector },

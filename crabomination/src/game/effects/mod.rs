@@ -4971,6 +4971,127 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Blight { n } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let amt = self.evaluate_value(n, ctx).max(0);
+                if amt == 0 { return Ok(()); }
+                // CR 701.68a/b — the controller chooses one creature they
+                // control; with none, they can't blight (no-op).
+                let candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let chosen = if candidates.len() == 1 {
+                    candidates[0]
+                } else {
+                    let answer = self.decider.decide(&Decision::ChooseTarget {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        source_name: ctx.source_name.unwrap_or("").to_string(),
+                        description: format!("blight {amt}: choose a creature you control"),
+                    });
+                    match answer {
+                        DecisionAnswer::Target(Target::Permanent(id)) if candidates.contains(&id) => id,
+                        _ => candidates[0],
+                    }
+                };
+                let mut sub = ctx.clone();
+                sub.targets = vec![Target::Permanent(chosen)];
+                self.run_effect(
+                    &Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::MinusOneMinusOne,
+                        amount: crate::effect::Value::Const(amt),
+                    },
+                    &sub,
+                    events,
+                )?;
+                Ok(())
+            }
+
+            Effect::Earthbend { n } => {
+                let amt = self.evaluate_value(n, ctx).max(0);
+                // CR 701.66a — target land you control (slot 0). No land → no-op.
+                let Some(Target::Permanent(land)) = ctx.targets.first().cloned() else {
+                    return Ok(());
+                };
+                if self.battlefield_find(land).is_none() { return Ok(()); }
+                // Becomes a 0/0 land creature with haste (in addition to its
+                // other types), indefinitely.
+                self.run_effect(
+                    &Effect::BecomeCreature {
+                        what: Selector::Target(0),
+                        power: crate::effect::Value::Const(0),
+                        toughness: crate::effect::Value::Const(0),
+                        creature_types: vec![],
+                        keywords: vec![Keyword::Haste],
+                        duration: Duration::Permanent,
+                    },
+                    ctx,
+                    events,
+                )?;
+                if amt > 0 {
+                    self.run_effect(
+                        &Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: crate::effect::Value::Const(amt),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                // Delayed return: when that land leaves play (dies/exiled or
+                // any other leave), bring it back tapped under its
+                // earthbender's control.
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::WhenCardLeavesBattlefield(land),
+                    effect: Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                            tapped: true,
+                        },
+                    },
+                    target: None,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::Airbend { what } => {
+                // CR 701.65a — exile each object; while exiled its owner may
+                // cast it for {2} rather than its mana cost (a never-expiring
+                // WhileExiled may-play grant + a {2} alt-cast cost).
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                let turn = self.turn_number;
+                for cid in ids {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if let Some(card) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        let owner = card.owner;
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: owner,
+                            granted_turn: turn,
+                            duration: crate::card::MayPlayDuration::WhileExiled,
+                            exile_after: false,
+                        });
+                        card.granted_alt_cast_cost_eot =
+                            Some(crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(2)]));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }

@@ -13,6 +13,13 @@ use super::*;
 /// `BecomeCreature` deliberately targets *non*-creatures and is excluded.)
 static IMPLICIT_CREATURE_TARGET: SelectionRequirement = SelectionRequirement::Creature;
 
+/// Earthbend (CR 701.66a) targets "a land you control" — surfaced for the
+/// auto-targeter / cast-time legality. Built lazily since `.and()` boxes.
+static EARTHBEND_TARGET: std::sync::LazyLock<SelectionRequirement> =
+    std::sync::LazyLock::new(|| {
+        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou)
+    });
+
 /// Player restriction synthesized for the player slot referenced by a
 /// `Selector::ControlledBy { who: PlayerRef::Target(n) }` — the spell targets
 /// a player and then acts on the permanents that player controls (Sleep).
@@ -275,6 +282,10 @@ impl Effect {
             }
             Effect::Forage { then } => then.requires_target(),
             Effect::Endure { target, n } => sel_has_target(target) || value_has_target(n),
+            // Earthbend targets a land you control; blight chooses at resolution.
+            Effect::Earthbend { .. } => true,
+            Effect::Blight { .. } => false,
+            Effect::Airbend { what } => sel_has_target(what),
             Effect::IfRevealFromHand { then, else_, .. } => {
                 then.requires_target() || else_.requires_target()
             }
@@ -805,6 +816,9 @@ impl Effect {
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.primary_target_filter(),
             Effect::Endure { target, .. } => sel_filter(target),
+            // Earthbend targets a land you control (CR 701.66a).
+            Effect::Earthbend { .. } => Some(&EARTHBEND_TARGET),
+            Effect::Airbend { what } => sel_filter(what),
             Effect::Goad { what }
             | Effect::Transform { what }
             | Effect::Flip { what }
@@ -1660,6 +1674,7 @@ impl Effect {
                 }
                 Effect::CreateTokenCopyOf { source, .. } => sel_find(source, slot),
                 Effect::Endure { target, .. } => sel_find(target, slot),
+                Effect::Airbend { what } => sel_find(what, slot),
                 Effect::LifeGainLockThisTurn { who }
                 | Effect::GrantSpellsUncounterableThisTurn { who }
                 | Effect::GrantHexproofFromColorThisTurn { who, .. }
