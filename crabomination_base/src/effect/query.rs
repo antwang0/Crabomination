@@ -933,6 +933,9 @@ impl Effect {
             Effect::CastWithoutPayingImmediate { source_zone, .. } => {
                 matches!(source_zone, crate::card::Zone::Graveyard)
             }
+            // Granting flashback to a card always targets one in a graveyard
+            // (Snapcaster Mage, Slickshot Lockpicker).
+            Effect::GrantFlashbackThisTurn { .. } => true,
             _ => false,
         }
     }

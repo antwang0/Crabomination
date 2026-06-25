@@ -1375,3 +1375,105 @@ pub fn hexgold_slith() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks: OTJ / BLB plot + offspring + value ────────────────────
+
+/// Slickshot Lockpicker — {2}{U} 2/3 Human Rogue. When it enters, target instant
+/// or sorcery card in your graveyard gains flashback equal to its mana cost
+/// until end of turn. Plot {2}{U}.
+pub fn slickshot_lockpicker() -> CardDefinition {
+    CardDefinition {
+        name: "Slickshot Lockpicker",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        plot_cost: Some(cost(&[generic(2), u()])),
+        triggered_abilities: vec![etb(Effect::GrantFlashbackThisTurn {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Or(
+                        Box::new(SelectionRequirement::HasCardType(CardType::Instant)),
+                        Box::new(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+                },
+                Value::Const(1),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tender Wildguide — {1}{G} 2/2 Possum Druid. Offspring {2}. {T}: Add one mana
+/// of any color. {T}: Put a +1/+1 counter on this creature.
+pub fn tender_wildguide() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Tender Wildguide",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Possum, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Offspring(cost(&[generic(2)]))],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sinister Monolith — {3}{B} Artifact. At the beginning of combat on your turn,
+/// each opponent loses 1 life and you gain 1 life. {T}, Pay 2 life, Sacrifice
+/// this: Draw two cards (sorcery speed).
+pub fn sinister_monolith() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::each_opponent;
+    CardDefinition {
+        name: "Sinister Monolith",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: each_opponent(), amount: Value::Const(1) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            life_cost: 2,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

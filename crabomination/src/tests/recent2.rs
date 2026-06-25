@@ -759,3 +759,41 @@ fn hexgold_slith_energy_and_growth() {
         "grew on combat damage"
     );
 }
+
+/// Slickshot Lockpicker grants flashback to an instant/sorcery in your graveyard.
+#[test]
+fn slickshot_lockpicker_grants_flashback() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.move_card_to_battlefield_for_test(0, catalog::slickshot_lockpicker());
+    drain_stack(&mut g);
+    let gy_bolt = g.players[0].graveyard.iter().find(|c| c.id == bolt).unwrap();
+    assert!(gy_bolt.granted_flashback_eot.is_some(), "bolt gained flashback this turn");
+}
+
+/// Tender Wildguide taps for any color and (separately) for a +1/+1 counter.
+#[test]
+fn tender_wildguide_taps_for_counter() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::tender_wildguide());
+    g.clear_sickness(w);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: w, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for counter");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(w).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+    );
+}
+
+/// Sinister Monolith drains at combat and can sac for two cards.
+#[test]
+fn sinister_monolith_drains_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sinister_monolith());
+    advance_to(&mut g, TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent lost 1");
+    assert_eq!(g.players[0].life, 21, "you gained 1");
+}
