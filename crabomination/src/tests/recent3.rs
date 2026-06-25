@@ -321,3 +321,98 @@ fn bot_fires_seq_wrapped_reach_drain_for_lethal() {
         "bot activates the Seq-wrapped drain for lethal: {action:?}"
     );
 }
+
+/// Manalith taps for one mana of any color.
+#[test]
+fn manalith_taps_for_mana() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(0, catalog::manalith());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rock, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+}
+
+/// Darksteel Ingot is indestructible and a mana rock.
+#[test]
+fn darksteel_ingot_indestructible_rock() {
+    let mut g = two_player_game();
+    let ingot = g.add_card_to_battlefield(0, catalog::darksteel_ingot());
+    let cast = g.add_card_to_hand(1, catalog::shatterstorm());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].mana_pool.add(Color::Red, 2);
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Shatterstorm");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ingot).is_some(), "indestructible ingot survives artifact wipe");
+}
+
+/// Cultivator's Caravan has Crew 3 and taps for any color.
+#[test]
+fn cultivators_caravan_crews_and_taps() {
+    let c = catalog::cultivators_caravan();
+    assert!(c.keywords.contains(&Keyword::Crew(3)));
+    assert_eq!((c.power, c.toughness), (5, 5));
+}
+
+/// Hurricane deals X to each flyer and each player.
+#[test]
+fn hurricane_hits_flyers_and_players() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 no fly
+    let cast = g.add_card_to_hand(0, catalog::hurricane());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4); // X = 4
+    g.perform_action(GameAction::CastSpell {
+        card_id: cast, target: None, additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("cast Hurricane");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_none(), "flyer took 4 and died");
+    assert!(g.battlefield_find(ground).is_some(), "ground creature untouched");
+    assert_eq!(g.players[0].life, 16, "controller took 4");
+    assert_eq!(g.players[1].life, 16, "opponent took 4");
+}
+
+/// Staff of Nin draws on upkeep and pings any target.
+#[test]
+fn staff_of_nin_draws_and_pings() {
+    let mut g = two_player_game();
+    let staff = g.add_card_to_battlefield(0, catalog::staff_of_nin());
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on upkeep");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: staff, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "pinged opponent for 1");
+}
+
+/// Ivory Tower gains life for a hand over four cards.
+#[test]
+fn ivory_tower_gains_for_excess_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ivory_tower());
+    g.players[0].hand.clear();
+    for _ in 0..6 { g.add_card_to_hand(0, catalog::forest()); } // hand of 6 → gain 2
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 22, "gained hand(6) - 4 = 2 life");
+}

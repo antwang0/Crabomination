@@ -333,3 +333,144 @@ pub fn choke() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Manalith — {3} Artifact. {T}: Add one mana of any color.
+pub fn manalith() -> CardDefinition {
+    CardDefinition {
+        name: "Manalith",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![crate::sets::tap_add_any_color()],
+        ..Default::default()
+    }
+}
+
+/// Darksteel Ingot — {3} Artifact. Indestructible. {T}: Add one mana of any color.
+pub fn darksteel_ingot() -> CardDefinition {
+    CardDefinition {
+        name: "Darksteel Ingot",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Indestructible],
+        activated_abilities: vec![crate::sets::tap_add_any_color()],
+        ..Default::default()
+    }
+}
+
+/// Cultivator's Caravan — {3} 5/5 Vehicle. {T}: Add one mana of any color. Crew 3.
+pub fn cultivators_caravan() -> CardDefinition {
+    CardDefinition {
+        name: "Cultivator's Caravan",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Crew(3)],
+        activated_abilities: vec![crate::sets::tap_add_any_color()],
+        ..Default::default()
+    }
+}
+
+/// Spinning Wheel — {3} Artifact. {T}: Add one mana of any color. {5}, {T}: Tap
+/// target creature.
+pub fn spinning_wheel() -> CardDefinition {
+    CardDefinition {
+        name: "Spinning Wheel",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            crate::sets::tap_add_any_color(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(5)]),
+                effect: Effect::Tap {
+                    what: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Hurricane / Squall Line shape: deal X to each creature with flying and each player.
+fn hurricane_effect() -> Effect {
+    Effect::Seq(vec![
+        Effect::DealDamage {
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+            amount: Value::XFromCost,
+        },
+        Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::XFromCost,
+        },
+    ])
+}
+
+/// Hurricane — {X}{G} Sorcery. Deal X to each creature with flying and each player.
+pub fn hurricane() -> CardDefinition {
+    CardDefinition {
+        name: "Hurricane",
+        cost: cost(&[crate::mana::x(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: hurricane_effect(),
+        ..Default::default()
+    }
+}
+
+/// Squall Line — {X}{G}{G} Instant. Deal X to each creature with flying and each player.
+pub fn squall_line() -> CardDefinition {
+    CardDefinition {
+        name: "Squall Line",
+        cost: cost(&[crate::mana::x(), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: hurricane_effect(),
+        ..Default::default()
+    }
+}
+
+/// Staff of Nin — {6} Artifact. Upkeep: draw a card. {T}: deal 1 to any target.
+pub fn staff_of_nin() -> CardDefinition {
+    CardDefinition {
+        name: "Staff of Nin",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ivory Tower — {1} Artifact. Upkeep: gain life equal to cards in hand minus 4.
+pub fn ivory_tower() -> CardDefinition {
+    CardDefinition {
+        name: "Ivory Tower",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::NonNeg(Box::new(Value::Diff(
+                    Box::new(Value::HandSizeOf(PlayerRef::You)),
+                    Box::new(Value::Const(4)),
+                ))),
+            },
+        }],
+        ..Default::default()
+    }
+}
