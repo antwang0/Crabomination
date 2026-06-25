@@ -437,6 +437,7 @@ impl Effect {
             Effect::LoseKeywordThisTurn { what, .. } => sel_has_target(what),
             Effect::SkipNextUntap { what } => sel_has_target(what),
             Effect::SkipPlayerUntapStep { player } => player_has_target(player),
+            Effect::LandsDontUntapNextUntapStep { who } => sel_has_target(who),
             Effect::SacrificeAllMatching { who, .. } => sel_has_target(who),
             Effect::BecomeChosenColor { what, .. }
             | Effect::BecomeColor { what, .. }
@@ -610,6 +611,7 @@ impl Effect {
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
             Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
+            Effect::SacrificePermanent { what } => sel_has_target(what),
         }
     }
 

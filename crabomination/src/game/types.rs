@@ -1020,6 +1020,56 @@ impl GameAction {
                 | A::CastFromCommandZone { .. }
         )
     }
+
+    /// The `card_id` of the spell a `Cast*` action casts, if it carries one in
+    /// a `card_id` field (every variant except `CastPrepareSpell`, which names a
+    /// battlefield creature rather than the spell). Used by per-turn lock pieces
+    /// that must inspect the cast spell's card types before payment.
+    pub(crate) fn cast_card_id(&self) -> Option<CardId> {
+        use GameAction as A;
+        match self {
+            A::CastSpell { card_id, .. }
+            | A::CastSpellKicked { card_id, .. }
+            | A::CastSpellMultikicked { card_id, .. }
+            | A::CastBestow { card_id, .. }
+            | A::CastSpellBuyback { card_id, .. }
+            | A::CastSpellEntwine { card_id, .. }
+            | A::CastRoomDoor { card_id, .. }
+            | A::CastFaceDown { card_id, .. }
+            | A::CastForetold { card_id, .. }
+            | A::CastAdventure { card_id, .. }
+            | A::CastOmen { card_id, .. }
+            | A::CastGift { card_id, .. }
+            | A::CastAdventureCreature { card_id, .. }
+            | A::CastPrototype { card_id, .. }
+            | A::CastMutate { card_id, .. }
+            | A::CastSplitRight { card_id, .. }
+            | A::CastSplitFused { card_id, .. }
+            | A::CastAftermath { card_id, .. }
+            | A::CastSpellCasualty { card_id, .. }
+            | A::CastSpellBargain { card_id, .. }
+            | A::CastSpellSpliced { card_id, .. }
+            | A::CastSpellSacrificeReduce { card_id, .. }
+            | A::CastSpellSquad { card_id, .. }
+            | A::CastSpellReplicate { card_id, .. }
+            | A::CastSpellConspire { card_id, .. }
+            | A::CastPlotted { card_id, .. }
+            | A::CastSpellBack { card_id, .. }
+            | A::CastSpellConvoke { card_id, .. }
+            | A::CastSpellDelve { card_id, .. }
+            | A::CastSpellAlternative { card_id, .. }
+            | A::CastFlashback { card_id, .. }
+            | A::CastMayhem { card_id, .. }
+            | A::CastHarmonize { card_id, .. }
+            | A::CastDisturb { card_id, .. }
+            | A::CastRetrace { card_id, .. }
+            | A::CastEscape { card_id, .. }
+            | A::CastFlashbackTap { card_id, .. }
+            | A::CastFromZoneWithoutPaying { card_id, .. }
+            | A::CastFromCommandZone { card_id, .. } => Some(*card_id),
+            _ => None,
+        }
+    }
 }
 
 /// Which of an attacker's two combat-damage choices a `ResumeContext::

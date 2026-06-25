@@ -241,6 +241,19 @@ pub enum StaticEffect {
     /// Eidolon of Rhetoric, Archon of Emeria). Enforced at the central
     /// `perform_action` cast gate against `Player.spells_cast_this_turn`.
     OneSpellPerTurn,
+    /// "Each player can't cast more than one noncreature spell each turn"
+    /// (Deafening Silence). Enforced at the central `perform_action` cast gate
+    /// against `Player.noncreature_spells_cast_this_turn`.
+    OneNoncreatureSpellPerTurn,
+    /// "Each player who has cast a nonartifact spell this turn can't cast
+    /// additional nonartifact spells" (Ethersworn Canonist). Enforced at the
+    /// central `perform_action` cast gate against
+    /// `Player.nonartifact_spells_cast_this_turn`.
+    OneNonartifactSpellPerTurn,
+    /// "Each spell costs {N} more to cast except during its controller's turn"
+    /// (Defense Grid). A generic-mana tax folded into `extra_cost_for_spell`,
+    /// skipped when the caster is the active player.
+    SpellsCostMoreExceptOnControllerTurn { amount: u32 },
     /// CR 104.3c override — "If you would draw a card while your library has
     /// no cards in it, you win the game instead" (Laboratory Maniac, Jace,
     /// Wielder of Mysteries, Thassa's Oracle's gate). Consulted by

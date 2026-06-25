@@ -98,6 +98,15 @@ pub struct Player {
     /// each turn" (CR 611.2). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub spells_cast_this_game_turn: u32,
+    /// Like `spells_cast_this_game_turn` but counting only noncreature spells
+    /// (Deafening Silence's "each player can't cast more than one noncreature
+    /// spell each turn"). Reset for every player at Cleanup. `#[serde(default)]`.
+    #[serde(default)]
+    pub noncreature_spells_cast_this_game_turn: u32,
+    /// Like `spells_cast_this_game_turn` but counting only nonartifact spells
+    /// (Ethersworn Canonist). Reset for every player at Cleanup. `#[serde(default)]`.
+    #[serde(default)]
+    pub nonartifact_spells_cast_this_game_turn: u32,
     /// Total life gained by this player this turn (sum of every
     /// `Effect::GainLife` and `Effect::Drain`-to-this-player resolution).
     /// Reset to 0 in `do_untap`. Powers Strixhaven's **Infusion** rider —
@@ -356,6 +365,11 @@ pub struct Player {
     /// their untap step would run; while > 0 their permanents don't untap.
     #[serde(default)]
     pub skip_next_untap_step: u32,
+    /// Number of this player's upcoming untap steps in which the **lands** they
+    /// control don't untap (Bontu's Last Reckoning). Decremented when their
+    /// untap step runs; non-land permanents untap normally. `#[serde(default)]`.
+    #[serde(default)]
+    pub lands_dont_untap_next_untap: u32,
     /// CR 500.7 — extra turns this player will take. When `advance_turn`
     /// would pass the turn, an active player with `extra_turns > 0`
     /// decrements it and keeps the turn instead (Time Walk, Ral Zarek's
@@ -470,6 +484,8 @@ impl Player {
             extra_land_plays: 0,
             spells_cast_this_turn: 0,
             spells_cast_this_game_turn: 0,
+            noncreature_spells_cast_this_game_turn: 0,
+            nonartifact_spells_cast_this_game_turn: 0,
             life_gained_this_turn: 0,
             cards_drawn_this_turn: 0,
             cards_drawn_this_step: 0,
@@ -520,6 +536,7 @@ impl Player {
             eliminated: false,
             skip_turns: 0,
             skip_next_untap_step: 0,
+            lands_dont_untap_next_untap: 0,
             extra_turns: 0,
             epic_spells: Vec::new(),
             emblems: Vec::new(),

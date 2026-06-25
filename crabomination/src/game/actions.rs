@@ -201,6 +201,13 @@ pub(crate) fn extra_cost_for_spell(
                 {
                     tax += amount;
                 }
+                // Defense Grid: each spell costs {amount} more except during its
+                // controller's turn (CR — read off the caster's active status).
+                StaticEffect::SpellsCostMoreExceptOnControllerTurn { amount }
+                    if caster != state.active_player_idx =>
+                {
+                    tax += amount;
+                }
                 // Jubilant Skybonder: opponents' spells targeting a qualifying
                 // permanent the source controls cost {amount} more.
                 StaticEffect::TaxOpponentSpellsTargeting { target_filter, amount }
@@ -4357,6 +4364,16 @@ impl GameState {
         }
         if !card.casting_alt_half() && card.definition.is_creature() {
             self.players[p].creatures_cast_this_turn += 1;
+        }
+        // Spell-type tallies for the per-turn lock pieces (Deafening Silence,
+        // Ethersworn Canonist). Read the cast half's types so an Adventure/Omen
+        // instant-or-sorcery half counts as a noncreature spell.
+        let cast_types = alt_types.unwrap_or(&card.definition.card_types);
+        if !cast_types.contains(&CardType::Creature) {
+            self.players[p].noncreature_spells_cast_this_game_turn += 1;
+        }
+        if !cast_types.contains(&CardType::Artifact) {
+            self.players[p].nonartifact_spells_cast_this_game_turn += 1;
         }
         // Veil of Summer gate: note when a player casts a blue or black
         // spell (color read off the printed mana cost).

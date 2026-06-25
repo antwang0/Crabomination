@@ -4483,6 +4483,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LandsDontUntapNextUntapStep { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].lands_dont_untap_next_untap =
+                            self.players[p].lands_dont_untap_next_untap.saturating_add(1);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnSelfAsEnchantment => {
                 use crate::card::CardType;
                 let Some(src) = ctx.source else { return Ok(()); };
@@ -6297,6 +6307,23 @@ impl GameState {
                     events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
                     let mut die_evs = self.remove_to_graveyard_with_triggers(id);
                     events.append(&mut die_evs);
+                }
+                Ok(())
+            }
+
+            Effect::SacrificePermanent { what } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(id) => Some(id),
+                        _ => None,
+                    })
+                    .collect();
+                for id in ids {
+                    if let Some(p) = self.battlefield_find(id).map(|c| c.controller) {
+                        self.sacrifice_one(id, p, events);
+                    }
                 }
                 Ok(())
             }

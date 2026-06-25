@@ -359,6 +359,8 @@ impl GameState {
                 self.spells_cast_this_turn = 0;
                 for pl in &mut self.players {
                     pl.spells_cast_this_game_turn = 0;
+                    pl.noncreature_spells_cast_this_game_turn = 0;
+                    pl.nonartifact_spells_cast_this_game_turn = 0;
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
@@ -1433,6 +1435,13 @@ impl GameState {
         } else {
             false
         };
+        // Bontu's Last Reckoning — the active player's lands skip this untap.
+        let active_lands_skip_untap = if self.players[p].lands_dont_untap_next_untap > 0 {
+            self.players[p].lands_dont_untap_next_untap -= 1;
+            true
+        } else {
+            false
+        };
         let untappers: Vec<usize> = {
             let mut u = if active_skips_untap { vec![] } else { vec![p] };
             for c in &self.battlefield {
@@ -1493,6 +1502,14 @@ impl GameState {
                             blocked.insert(c.id);
                             break;
                         }
+                    }
+                }
+            }
+            // Bontu's Last Reckoning — block the active player's lands.
+            if active_lands_skip_untap {
+                for c in &self.battlefield {
+                    if c.controller == p && c.definition.is_land() {
+                        blocked.insert(c.id);
                     }
                 }
             }

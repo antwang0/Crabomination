@@ -2464,6 +2464,10 @@ pub enum Effect {
     /// CR 502.3 — the target player skips their next untap step (Yosei, the
     /// Morning Star). Adds one charge to `Player.skip_next_untap_step`.
     SkipPlayerUntapStep { player: PlayerRef },
+    /// "Lands `who` controls don't untap during their next untap step"
+    /// (Bontu's Last Reckoning). Adds one charge to
+    /// `Player.lands_dont_untap_next_untap`; non-land permanents untap normally.
+    LandsDontUntapNextUntapStep { who: Selector },
     /// Each permanent picked by `what` becomes a single color of the
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").
@@ -3064,6 +3068,14 @@ pub enum Effect {
     /// Lightning) where `Effect::Move { This → Graveyard }` would skip the
     /// `CreatureDied` event.
     SacrificeSource,
+    /// Sacrifice the specific permanent(s) named by `what` (CR 701.16), firing
+    /// proper sacrifice + death triggers. Unlike `Effect::Sacrifice` (which
+    /// makes a player choose `count` matching permanents) this sacrifices an
+    /// already-chosen object — e.g. a creature reanimated this turn that a
+    /// delayed trigger must sacrifice at the next end step (Footsteps of the
+    /// Goryo, Apprentice Necromancer). The sacrificing player is each target's
+    /// own controller.
+    SacrificePermanent { what: Selector },
     /// "Sacrifice this permanent unless you sacrifice a [filter]." (The Gitrog
     /// Monster's upkeep cost.) The controller may sacrifice one permanent
     /// matching `filter` they control to spare the source; if they have none —

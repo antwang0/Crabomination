@@ -43,6 +43,9 @@ mod tests_recent2;
 #[path = "../tests/recent3.rs"]
 mod tests_recent3;
 #[cfg(test)]
+#[path = "../tests/recent4.rs"]
+mod tests_recent4;
+#[cfg(test)]
 #[path = "../tests/fin.rs"]
 mod tests_fin;
 #[cfg(test)]
@@ -5220,17 +5223,39 @@ impl GameState {
         {
             return Err(GameError::EpicLocked);
         }
-        // Rule of Law-style one-spell-per-turn lock — gated here so every
-        // Cast* variant is covered at once.
-        if action.is_cast()
-            && self.players[self.priority.player_with_priority].spells_cast_this_game_turn >= 1
-            && self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::OneSpellPerTurn)
+        // Rule of Law-style one-spell-per-turn locks — gated here so every
+        // Cast* variant is covered at once. The plain `OneSpellPerTurn` lock
+        // (Rule of Law) applies to any spell; `OneNoncreatureSpellPerTurn`
+        // (Deafening Silence) and `OneNonartifactSpellPerTurn` (Ethersworn
+        // Canonist) only count spells of the matching type.
+        if action.is_cast() {
+            use crate::effect::StaticEffect;
+            let pl = &self.players[self.priority.player_with_priority];
+            // The card types of the spell being cast (None for prepare spells,
+            // which don't carry the cast card in a `card_id` field).
+            let cast_types = action
+                .cast_card_id()
+                .and_then(|id| self.find_card_anywhere(id))
+                .map(|c| c.definition.card_types.clone());
+            let is_creature =
+                cast_types.as_ref().is_some_and(|t| t.contains(&CardType::Creature));
+            let is_artifact =
+                cast_types.as_ref().is_some_and(|t| t.contains(&CardType::Artifact));
+            let blocked = self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| match sa.effect {
+                    StaticEffect::OneSpellPerTurn => pl.spells_cast_this_game_turn >= 1,
+                    StaticEffect::OneNoncreatureSpellPerTurn => {
+                        !is_creature && pl.noncreature_spells_cast_this_game_turn >= 1
+                    }
+                    StaticEffect::OneNonartifactSpellPerTurn => {
+                        !is_artifact && pl.nonartifact_spells_cast_this_game_turn >= 1
+                    }
+                    _ => false,
                 })
-            })
-        {
-            return Err(GameError::SpellLimitReached);
+            });
+            if blocked {
+                return Err(GameError::SpellLimitReached);
+            }
         }
         // CR 702.61 — split second: while such a spell is on the stack no
         // player may cast spells or activate non-mana abilities. Special
@@ -9994,6 +10019,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::SelfCostReducedIfControlEach { .. }
             | StaticEffect::WinInsteadOfDrawFromEmpty
             | StaticEffect::OneSpellPerTurn
+            | StaticEffect::OneNoncreatureSpellPerTurn
+            | StaticEffect::OneNonartifactSpellPerTurn
+            | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::UnspentManaBecomesColorless
             // GraveyardAnthem is zone-special: gathered from graveyards in

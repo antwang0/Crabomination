@@ -8559,6 +8559,34 @@ fn joined_researchers_prepare_spell_each_player_draws_three() {
     assert_eq!(g.players[1].hand.len(), opp_hand_before + 3);
 }
 
+// Elite Interceptor // Rejoinder — "You may tap or untap target creature.
+// Draw a card." Mode 0 taps; the draw is unconditional.
+#[test]
+fn elite_interceptor_rejoinder_taps_target_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = prepared_on_battlefield(&mut g, 0, catalog::elite_interceptor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastPrepareSpell {
+        creature_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("Rejoinder castable for {1}{W}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == bear).unwrap().tapped,
+        "mode 0 taps the target creature");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Rejoinder draws a card");
+}
+
 // Quill-Blade Laureate // Twofold Intent — +1/+0 + double strike EOT.
 #[test]
 fn quill_blade_laureate_prepare_spell_pumps_and_grants_double_strike() {
