@@ -3326,6 +3326,8 @@ static DECKS: &[Factory] = &[
     super::decks::gathering_throng,
     super::decks::charming_scoundrel,
     super::decks::fear_of_missing_out,
+    super::decks::archmage_of_runes,
+    super::decks::splashy_spellcaster,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,

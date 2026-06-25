@@ -699,6 +699,9 @@ impl Effect {
             // CreateTokenCopyOf — the `source` is the targeted permanent to
             // copy (Esika's Chariot "copy target token you control").
             Effect::CreateTokenCopyOf { source, .. } => sel_filter(source),
+            // CreateTokenAttachedTo — the `target` is the creature the minted
+            // Aura/Role token attaches to (Splashy Spellcaster's Role).
+            Effect::CreateTokenAttachedTo { target, .. } => sel_filter(target),
             Effect::PumpPT { what, .. }
             | Effect::SetBasePT { what, .. }
             | Effect::SwitchPT { what, .. }

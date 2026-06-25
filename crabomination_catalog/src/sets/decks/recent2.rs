@@ -1124,3 +1124,86 @@ pub fn fear_of_missing_out() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks: WOE / LCI / MOM enchantments + spellslingers ──────────
+
+
+/// Archmage of Runes — {3}{U}{U} 3/6 Giant Wizard. Instant and sorcery spells
+/// you cast cost {1} less. Whenever you cast an instant or sorcery, draw a card.
+pub fn archmage_of_runes() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Archmage of Runes",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 6,
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                amount: 1,
+            },
+        }],
+        triggered_abilities: vec![magecraft(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+
+/// Splashy Spellcaster — {3}{U} 2/4 Elemental Wizard. Whenever you cast an
+/// instant or sorcery, create a Sorcerer Role token attached to up to one other
+/// target creature you control.
+pub fn splashy_spellcaster() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::effect::shortcut::magecraft;
+    let sorcerer_role = TokenDefinition {
+        name: "Sorcerer".into(),
+        card_types: vec![CardType::Enchantment],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
+            ..Default::default()
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Splashy Spellcaster",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![magecraft(Effect::CreateTokenAttachedTo {
+            target: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            },
+            definition: sorcerer_role,
+        })],
+        ..Default::default()
+    }
+}

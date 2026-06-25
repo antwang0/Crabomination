@@ -625,3 +625,49 @@ fn fear_of_missing_out_loots_on_etb() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "discarded the Island");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "drew the Forest");
 }
+
+/// Archmage of Runes discounts instants/sorceries and draws when you cast one.
+#[test]
+fn archmage_of_runes_discount_and_draw() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archmage_of_runes());
+    let bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, None), 1, "one generic off an instant");
+    // Casting an instant draws a card.
+    let id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    // Hand: -1 (bolt cast) +1 (magecraft draw) = net unchanged vs before-minus-cast.
+    assert_eq!(g.players[0].hand.len(), before, "magecraft replaced the cast card");
+}
+
+/// Splashy Spellcaster mints a Sorcerer Role on a friendly creature when you
+/// cast an instant or sorcery.
+#[test]
+fn splashy_spellcaster_makes_a_role() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::splashy_spellcaster());
+    let pet = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    let role_on_pet = g.battlefield.iter()
+        .any(|c| c.attached_to == Some(pet) && c.definition.name == "Sorcerer");
+    assert!(role_on_pet, "Sorcerer Role attached to the bear");
+    // The Role grants +1/+1.
+    let cp = g.computed_permanent(pet).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 from the Role");
+}
