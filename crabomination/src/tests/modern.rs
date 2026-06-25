@@ -43874,8 +43874,8 @@ fn boseiju_opponent_search_routes_to_the_searched_seat() {
     assert_eq!(pd.acting_player(), 1, "the searched player answers");
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Search(Some(basic))))
         .expect("opponent picks the basic");
-    assert!(g.battlefield.iter().any(|c| c.id == basic && c.controller == 1 && c.tapped),
-        "fetched basic enters tapped under the searched player");
+    assert!(g.battlefield.iter().any(|c| c.id == basic && c.controller == 1 && !c.tapped),
+        "fetched land enters untapped under the searched player");
 }
 
 /// Sokenzan channels for two 1/1 hasty Spirits.
@@ -43884,28 +43884,57 @@ fn sokenzan_channel_makes_two_spirits() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::sokenzan_crucible_of_defiance());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("channel Sokenzan");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit" && c.controller == 0).count(), 2);
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Spirit" && c.controller == 0).collect();
+    assert_eq!(spirits.len(), 2);
+    assert!(spirits.iter().all(|c| c.definition.printed_colors().is_empty()), "Spirits are colorless");
 }
 
-/// Takenuma channels to return a creature card from your graveyard to hand.
+/// Takenuma channels ({3}{B}) to mill three, then return a creature card from
+/// your graveyard to hand.
 #[test]
-fn takenuma_channel_returns_creature_from_graveyard() {
+fn takenuma_channel_mills_then_returns_creature_from_graveyard() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::takenuma_abandoned_mire());
     let dead = g.next_id();
     g.players[0].graveyard.push(CardInstance::new(dead, catalog::grizzly_bears(), 0));
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
     }).expect("channel Takenuma");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Forest").count(), 3,
+        "milled three lands into the graveyard");
+}
+
+/// Eiganjo channels ({2}{W}) to deal 4 to a target attacking creature; a
+/// non-attacking creature is an illegal target.
+#[test]
+fn eiganjo_channel_burns_attacking_creature() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::eiganjo_seat_of_the_empire());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let idle = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // A non-attacking, non-blocking creature is not a legal target.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: Some(Target::Permanent(idle)), additional_targets: Vec::new(), x_value: None,
+    }).is_err(), "idle creature rejected");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
+    }).expect("channel Eiganjo at the attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "4 damage kills the 2/2 attacker");
 }
 
 /// Fountainport's {4}, {T} ability creates a Treasure token.

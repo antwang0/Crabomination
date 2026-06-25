@@ -4702,3 +4702,40 @@ fn cr_701_16_targeted_sacrifice_fires_death_triggers() {
     assert!(g.battlefield_find(dead).is_none(), "reanimated creature sacrificed at end step");
     assert_eq!(g.players[0].hand.len(), h + 1, "the sacrifice fired Harvester's death draw");
 }
+
+// ── CR 105.2c / 111.4 — token color from its color indicator ────────────────
+/// A token has no mana cost, so its color comes from the effect that creates
+/// it, modeled as a color indicator. Color-filtered effects therefore see a
+/// white Soldier token (Raise the Alarm) as white and a colorless Spirit token
+/// (Sokenzan) as colorless.
+#[test]
+fn cr_105_2c_token_color_from_indicator() {
+    use crate::card::SelectionRequirement as R;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let alarm = g.add_card_to_hand(0, catalog::raise_the_alarm());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: alarm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Raise the Alarm");
+    drain_stack(&mut g);
+    let soldier = g.battlefield.iter()
+        .find(|c| c.definition.name == "Soldier" && c.controller == 0).expect("soldier token").id;
+    assert!(g.evaluate_requirement_static(&R::HasColor(Color::White), &Target::Permanent(soldier), 0, None),
+        "white Soldier token is white");
+    assert!(!g.evaluate_requirement_static(&R::HasColor(Color::Blue), &Target::Permanent(soldier), 0, None),
+        "white Soldier token is not blue");
+
+    let soken = g.add_card_to_hand(0, catalog::sokenzan_crucible_of_defiance());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: soken, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+    }).expect("channel Sokenzan");
+    drain_stack(&mut g);
+    let spirit = g.battlefield.iter()
+        .find(|c| c.definition.name == "Spirit" && c.controller == 0).expect("spirit token").id;
+    assert!(!g.evaluate_requirement_static(&R::HasColor(Color::Red), &Target::Permanent(spirit), 0, None),
+        "colorless Spirit token has no color");
+}

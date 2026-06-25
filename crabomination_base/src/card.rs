@@ -1517,6 +1517,12 @@ pub struct CardDefinition {
     pub supertypes: Vec<Supertype>,
     pub card_types: Vec<CardType>,
     pub subtypes: Subtypes,
+    /// CR 202.2 / 105.2c — color indicator. Defines the object's color when it
+    /// has no mana symbols to define it (tokens, DFC/Omen back faces). The
+    /// object's colors are the union of its mana cost's colors and this
+    /// indicator. Empty for ordinary cards whose color comes from their cost.
+    #[serde(default)]
+    pub color_indicator: Vec<Color>,
     pub power: i32,
     pub toughness: i32,
     pub base_loyalty: u32,
@@ -2410,6 +2416,11 @@ impl CardDefinition {
                 colors.push(c);
             }
         };
+        // CR 105.2c — a color indicator defines color for objects (tokens,
+        // back faces) whose mana cost can't.
+        for c in &self.color_indicator {
+            push(*c);
+        }
         for sym in &self.cost.symbols {
             match sym {
                 ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {

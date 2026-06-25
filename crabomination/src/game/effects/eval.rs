@@ -1300,9 +1300,10 @@ impl GameState {
                     R::DamagedBySourceThisTurn => {
                         source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
                     }
-                    // CR 105.2/202.2 — hybrid/Phyrexian pips count via
-                    // `ManaCost::colors()` (bare `Colored` scan missed them).
-                    R::HasColor(c) => card.definition.cost.colors().contains(c),
+                    // CR 105.2/202.2 — color is the union of the mana cost's
+                    // colors and the color indicator (tokens, DFC backs), and
+                    // empty under Devoid. `printed_colors` folds all three in.
+                    R::HasColor(c) => card.definition.printed_colors().contains(c),
                     R::HasKeyword(kw) => card.has_keyword(kw),
                     R::HasMutate => card.definition.mutate.is_some(),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
@@ -1594,14 +1595,12 @@ impl GameState {
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),
             R::Noncreature => !card.definition.is_creature(),
-            // A card's color is set by every colored symbol in its cost,
-            // including hybrid ({R/W}), Phyrexian ({R/P}) and mono-hybrid
-            // ({2/W}) pips — so a {R/W} card is both red and white. Defer to
-            // the shared `ManaCost::colors()` helper (the same expansion the
-            // battlefield path uses via `colors_from_card`); a bare
-            // `Colored`-pip scan would mis-read hybrid/Phyrexian cards as
-            // colorless in hidden zones.
-            R::HasColor(c) => card.definition.cost.colors().contains(c),
+            // CR 105.2/202.2 — color is the union of the mana cost's colors
+            // (incl. hybrid {R/W}, Phyrexian {R/P}, mono-hybrid {2/W}) and the
+            // color indicator (tokens, DFC backs), and empty under Devoid.
+            // `printed_colors` folds all three in — matching the battlefield
+            // path (`colors_from_card`) for cards in hidden zones too.
+            R::HasColor(c) => card.definition.printed_colors().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::HasMutate => card.definition.mutate.is_some(),
             R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(

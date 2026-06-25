@@ -1089,8 +1089,8 @@ pub fn restless_spire() -> CardDefinition {
 
 /// Build a Channel land: a legendary land that taps for one color and has a
 /// from-hand "Channel — [cost], Discard this card: [effect]" ability (CR
-/// 702.16, via `from_hand` + `discard_self_cost`). Channel-cost-reduction and
-/// basic-land-search riders are dropped.
+/// 702.16, via `from_hand` + `discard_self_cost`). The "costs {1} less per
+/// legendary creature you control" rider rides `cost_reduction_per`.
 fn channel_land(
     name: &'static str,
     color: Color,
@@ -1125,11 +1125,17 @@ fn channel_land(
 }
 
 /// Boseiju, Who Endures — `{T}: Add {G}`. Channel — {1}{G}: destroy target
-/// artifact, enchantment, or nonbasic land an opponent controls; they may
-/// fetch a basic tapped.
+/// artifact, enchantment, or nonbasic land an opponent controls; that player
+/// may fetch an untapped land with a basic land type.
 pub fn boseiju_who_endures() -> CardDefinition {
-    use crate::card::SelectionRequirement as R;
+    use crate::card::{LandType, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
+    let owner = PlayerRef::ControllerOf(Box::new(Selector::Target(0)));
+    let has_basic_type = R::HasLandType(LandType::Plains)
+        .or(R::HasLandType(LandType::Island))
+        .or(R::HasLandType(LandType::Swamp))
+        .or(R::HasLandType(LandType::Mountain))
+        .or(R::HasLandType(LandType::Forest));
     channel_land(
         "Boseiju, Who Endures",
         Color::Green,
@@ -1144,12 +1150,9 @@ pub fn boseiju_who_endures() -> CardDefinition {
                 ),
             },
             Effect::Search {
-                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                filter: R::IsBasicLand,
-                to: crate::effect::ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
-                },
+                who: owner.clone(),
+                filter: has_basic_type,
+                to: crate::effect::ZoneDest::Battlefield { controller: owner, tapped: false },
             },
         ]),
     )
@@ -1171,22 +1174,24 @@ pub fn otawara_soaring_city() -> CardDefinition {
     )
 }
 
-/// Eiganjo, Seat of the Empire — `{T}: Add {W}`. Channel — {1}{W}: deal 4
-/// damage to target creature. (The printed attacking/blocking restriction and
-/// X-scaling are simplified to a flat 4 to any creature.)
+/// Eiganjo, Seat of the Empire — `{T}: Add {W}`. Channel — {2}{W}: deal 4
+/// damage to target attacking or blocking creature.
 pub fn eiganjo_seat_of_the_empire() -> CardDefinition {
     use crate::card::SelectionRequirement as R;
     use crate::effect::shortcut::target_filtered;
     channel_land(
         "Eiganjo, Seat of the Empire",
         Color::White,
-        cost(&[generic(1), crate::mana::w()]),
-        Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+        cost(&[generic(2), crate::mana::w()]),
+        Effect::DealDamage {
+            to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+            amount: Value::Const(4),
+        },
     )
 }
 
-/// Sokenzan, Crucible of Defiance — `{T}: Add {R}`. Channel — {1}{R}: create
-/// two 1/1 red Spirit creature tokens with haste.
+/// Sokenzan, Crucible of Defiance — `{T}: Add {R}`. Channel — {3}{R}: create
+/// two 1/1 colorless Spirit creature tokens with haste.
 pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
     let spirit = crate::card::TokenDefinition {
         name: "Spirit".into(),
@@ -1194,7 +1199,6 @@ pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
         toughness: 1,
         keywords: vec![crate::card::Keyword::Haste],
         card_types: vec![CardType::Creature],
-        colors: vec![Color::Red],
         subtypes: Subtypes {
             creature_types: vec![crate::card::CreatureType::Spirit],
             ..Default::default()
@@ -1204,31 +1208,33 @@ pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
     channel_land(
         "Sokenzan, Crucible of Defiance",
         Color::Red,
-        cost(&[generic(1), crate::mana::r()]),
+        cost(&[generic(3), crate::mana::r()]),
         Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: spirit },
     )
 }
 
-/// Takenuma, Abandoned Mire — `{T}: Add {B}`. Channel — {1}{B}: return a
-/// creature or planeswalker card from your graveyard to your hand. (Cost
-/// reduction dropped.)
+/// Takenuma, Abandoned Mire — `{T}: Add {B}`. Channel — {3}{B}: mill three,
+/// then return a creature or planeswalker card from your graveyard to hand.
 pub fn takenuma_abandoned_mire() -> CardDefinition {
     use crate::card::SelectionRequirement as R;
     channel_land(
         "Takenuma, Abandoned Mire",
         Color::Black,
-        cost(&[generic(1), crate::mana::b()]),
-        Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: R::Creature.or(R::Planeswalker),
-                },
-                Value::Const(1),
-            ),
-            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
-        },
+        cost(&[generic(3), crate::mana::b()]),
+        Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: R::Creature.or(R::Planeswalker),
+                    },
+                    Value::Const(1),
+                ),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
     )
 }
 
