@@ -1474,7 +1474,9 @@ impl GameState {
                     has_infect: kws.contains(&Keyword::Infect),
                     has_wither: kws.contains(&Keyword::Wither),
                     toxic: kws.iter().filter_map(|k| match k {
-                        Keyword::Toxic(n) => Some(*n),
+                        // Poisonous N (CR 702.70) folds into the same
+                        // combat-damage poison rider as Toxic (CR 702.180).
+                        Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
                         _ => None,
                     }).sum(),
                     // CR 510.1 — a creature with "deals no combat damage this

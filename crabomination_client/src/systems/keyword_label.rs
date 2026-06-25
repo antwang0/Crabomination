@@ -74,6 +74,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         ProtectionFromMulticolored => "ProMC",
         Ward(_) => "Ward",
         Toxic(_) => "Tox",
+        Poisonous(_) => "Psn",
         // Combat-relevant statuses worth a glance on the board.
         CantBlock => "NoBlk",
         // "Can't attack" (Pacifism / Cage of Hands) and the conditional

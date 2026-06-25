@@ -1477,3 +1477,21 @@ pub fn sinister_monolith() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Pit Scorpion — {2}{B} 1/1 Scorpion with Poisonous 1 (CR 702.70): whenever it
+/// deals combat damage to a player, that player gets a poison counter.
+pub fn pit_scorpion() -> CardDefinition {
+    CardDefinition {
+        name: "Pit Scorpion",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scorpion],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Poisonous(1)],
+        ..Default::default()
+    }
+}

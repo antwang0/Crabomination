@@ -480,6 +480,11 @@ pub enum Keyword {
     /// player, that player also gets N poison counters (in addition to
     /// the normal damage).
     Toxic(u32),
+    /// Poisonous N (CR 702.70) — whenever this creature deals combat damage
+    /// to a player, that player gets N poison counters. Mechanically the
+    /// same combat-damage poison rider as Toxic (the wording differs but the
+    /// effect is identical), so it folds into the same combat path.
+    Poisonous(u32),
     Defender,
     /// CR 702.147 — Decayed. "This creature can't block. When it attacks,
     /// sacrifice it at end of combat." Common on Zombie tokens (MID/VOW).

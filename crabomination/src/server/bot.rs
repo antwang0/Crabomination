@@ -2637,7 +2637,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .definition
                 .keywords
                 .iter()
-                .filter_map(|k| if let Keyword::Toxic(n) = k { Some(*n) } else { None })
+                .filter_map(|k| match k {
+                    Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
+                    _ => None,
+                })
                 .sum::<u32>();
             p
         })

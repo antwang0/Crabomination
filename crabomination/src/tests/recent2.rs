@@ -797,3 +797,20 @@ fn sinister_monolith_drains_and_draws() {
     assert_eq!(g.players[1].life, 19, "opponent lost 1");
     assert_eq!(g.players[0].life, 21, "you gained 1");
 }
+
+/// CR 702.70 — Pit Scorpion's Poisonous 1 adds a poison counter on combat damage.
+#[test]
+fn pit_scorpion_poisonous_adds_poison() {
+    let mut g = two_player_game();
+    let scorp = g.add_card_to_battlefield(0, catalog::pit_scorpion());
+    g.clear_sickness(scorp);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: scorp, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 combat damage");
+    assert_eq!(g.players[1].poison_counters, 1, "Poisonous 1 adds a poison counter");
+}

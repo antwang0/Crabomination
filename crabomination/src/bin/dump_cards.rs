@@ -74,6 +74,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Infect => "Infect",
         Keyword::Wither => "Wither",
         Keyword::Toxic(_) => "Toxic",
+        Keyword::Poisonous(_) => "Poisonous",
         Keyword::Changeling => "Changeling",
         Keyword::Companion => "Companion",
         Keyword::Daybound => "Daybound",

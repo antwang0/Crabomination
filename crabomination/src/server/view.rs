@@ -1089,6 +1089,14 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::BecameTarget, EventScope::AnyPlayer) => "Any targets",
         (EventKind::CreatureSacrificed, EventScope::OpponentControl) => "Opp creature sac",
         (EventKind::PermanentSacrificed, EventScope::OpponentControl) => "Opp permanent sac",
+        // "Put into a graveyard from the battlefield" observers (CR 700.4) —
+        // used by equip-granted death watchers (Tarrian's Soulcleaver) and
+        // graveyard-matters payoffs.
+        (EventKind::PutIntoGraveyard, EventScope::SelfSource) => "Put into GY",
+        (EventKind::PutIntoGraveyard, EventScope::YourControl) => "Yours to GY",
+        (EventKind::PutIntoGraveyard, EventScope::OpponentControl) => "Opp to GY",
+        (EventKind::PutIntoGraveyard, EventScope::AnyPlayer) => "Any to GY",
+        (EventKind::LandPutIntoGraveyard, _) => "Land to GY",
         // Enrage (CR 702.130) — "Whenever this creature is dealt damage."
         (EventKind::DealtDamage, EventScope::SelfSource) => "Enrage",
         (EventKind::DealtDamage, EventScope::YourControl) => "Your crea dealt dmg",
