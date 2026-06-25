@@ -1,6 +1,6 @@
-//! A fourth wave of staples — reanimator pieces, sweepers, and lock pieces
-//! that filled remaining gaps (Recurring Nightmare, Survival of the Fittest,
-//! Living Death, Show and Tell, Smokestack, Tangle Wire, …).
+//! A fourth wave of staples — reanimator pieces, sweepers, lock pieces, and
+//! card-advantage spells that filled remaining gaps (Recurring Nightmare,
+//! Survival of the Fittest, Living Death, Show and Tell, Deafening Silence, …).
 //! Each card has a functionality test in `crabomination/src/tests/recent4.rs`.
 
 use crate::card::{
@@ -595,6 +595,54 @@ pub fn kavu_predator() -> CardDefinition {
                 what: Selector::This,
                 kind: crate::card::CounterType::PlusOnePlusOne,
                 amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal Away — {1}{W} Enchantment with flash. ETB: exile target tapped creature
+/// until Seal Away leaves the battlefield.
+pub fn seal_away() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Seal Away",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Tapped)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Conclave Tribunal — {3}{W} Enchantment with convoke. ETB: exile target
+/// nonland permanent an opponent controls until Conclave Tribunal leaves.
+pub fn conclave_tribunal() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Conclave Tribunal",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Convoke],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                return_to: ExileReturnZone::Battlefield,
             },
         }],
         ..Default::default()

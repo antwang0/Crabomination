@@ -547,3 +547,49 @@ fn kavu_predator_grows_on_opponent_lifegain() {
         g.battlefield_find(kavu).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne),
         3, "Kavu Predator gained three +1/+1 counters");
 }
+
+/// Seal Away exiles a tapped creature until it leaves; the creature returns
+/// when Seal Away is destroyed.
+#[test]
+fn seal_away_exiles_tapped_creature_until_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::seal_away());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Seal Away");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "tapped creature exiled");
+    // Destroy Seal Away → the creature returns.
+    let seal = g.battlefield.iter().find(|c| c.definition.name == "Seal Away").unwrap().id;
+    let bolt = g.add_card_to_hand(0, catalog::disenchant());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(seal)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("destroy Seal Away");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "creature returns when Seal Away leaves");
+}
+
+/// Conclave Tribunal exiles a nonland permanent an opponent controls.
+#[test]
+fn conclave_tribunal_exiles_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::conclave_tribunal());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Conclave Tribunal");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "opponent's creature exiled");
+}

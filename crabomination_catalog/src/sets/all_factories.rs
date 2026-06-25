@@ -3399,6 +3399,8 @@ static DECKS: &[Factory] = &[
     super::decks::tribute_mage,
     super::decks::thirst_for_knowledge,
     super::decks::kavu_predator,
+    super::decks::seal_away,
+    super::decks::conclave_tribunal,
     super::decks::pact_of_negation,
     super::decks::plunge_into_darkness,
     super::decks::serum_powder,
