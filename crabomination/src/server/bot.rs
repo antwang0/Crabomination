@@ -2737,16 +2737,26 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // none (won't be killed). Factor both into the trade math.
             let blocker_takes_no_dmg = state.damage_prevented_by_protection(*a_id, b_id);
             let attacker_takes_no_dmg = state.damage_prevented_by_protection(b_id, *a_id);
+            // CR 702.12 — an indestructible permanent isn't destroyed by lethal
+            // damage (or deathtouch), so it never dies in a trade and can't be
+            // killed by a blocker. Block freely behind an indestructible body.
+            let blocker_indestructible =
+                state.battlefield_find(b_id).is_some_and(|c| c.is_indestructible());
+            let attacker_indestructible =
+                state.battlefield_find(*a_id).is_some_and(|c| c.is_indestructible());
             let dies_before_striking = atk_first_strike
                 && !blk_first_strike
                 && !blocker_takes_no_dmg
+                && !blocker_indestructible
                 && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
             let kills_attacker = !attacker_takes_no_dmg
+                && !attacker_indestructible
                 && !dies_before_striking
                 && (b_dt || b_pow >= (a_tough - queued));
             // A deathtouch attacker kills the blocker on any damage.
-            let dies_to_attacker =
-                !blocker_takes_no_dmg && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
+            let dies_to_attacker = !blocker_takes_no_dmg
+                && !blocker_indestructible
+                && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
             // Scoring: clean trade (kill, don't die) > kill-and-die >
             // chump (don't kill, die). Higher attacker power adds value.
             let score = if kills_attacker && !dies_to_attacker {
@@ -2761,6 +2771,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     continue;
                 }
                 500 + delta
+            } else if blocker_indestructible && !dies_to_attacker && *a_pow >= 1 {
+                // An indestructible wall absorbs the attacker's damage at no
+                // cost (it survives and isn't tapped). Free value even with no
+                // life pressure — block the biggest attacker it can.
+                200 + *a_pow
             } else if life_threatened || defend_attackers.contains(a_id) {
                 // Chump-block to stop lethal damage (or to save a doomed
                 // planeswalker). A trampler tramples over a chump
@@ -3997,6 +4012,30 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(chump, atk)], "forced block uses the 1/1, sparing the 3/3");
         assert!(!blocks.iter().any(|(b, _)| *b == big), "the 3/3 is not thrown away");
+    }
+
+    /// An indestructible blocker walls a big attacker for free (CR 702.12) —
+    /// it survives, so the bot blocks even with no life pressure.
+    #[test]
+    fn bot_walls_with_indestructible_blocker() {
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let mut atk_def = catalog::grizzly_bears();
+        atk_def.name = "Bruiser"; atk_def.power = 5; atk_def.toughness = 5;
+        let atk = g.add_card_to_battlefield(0, atk_def);
+        g.clear_sickness(atk);
+        let mut wall = catalog::grizzly_bears();
+        wall.name = "Indestructo"; wall.power = 1; wall.toughness = 1;
+        wall.keywords.push(crate::card::Keyword::Indestructible);
+        let wall = g.add_card_to_battlefield(1, wall);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: atk, target: AttackTarget::Player(1),
+        }])).expect("declare attacker");
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(wall, atk)], "indestructible 1/1 walls the 5/5 for free");
     }
 
     /// The bot won't declare a CanAttackOnlyIfDefenderControls attacker
