@@ -152,6 +152,8 @@ impl Effect {
             Effect::PutFromHandOrGraveyardOntoBattlefield { .. } => false,
             Effect::ReturnExiledBySourceToBattlefield { .. } => false,
             Effect::StealCreatureEtbThisTurn => false,
+            // Sundering Titan auto-picks one land per basic type at resolution.
+            Effect::DestroyLandOfEachBasicType => false,
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
             Effect::LookTopExileOneMayPlay { .. } => false,
             // Targets are chosen at resolution (Decision::ChooseCards), so no

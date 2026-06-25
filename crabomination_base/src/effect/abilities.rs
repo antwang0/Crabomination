@@ -453,6 +453,13 @@ pub enum StaticEffect {
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's
     /// opponents; consulted by `GameState::scale_damage_to`.
     DoubleDamageToOpponents,
+    /// CR 614.5 — "If a source you control would deal *noncombat* damage to an
+    /// opponent or a permanent an opponent controls, it deals double that
+    /// damage instead." (Solphim, Mayhem Dominus.) Noncombat-only and also
+    /// requires the *source* to be controlled by the static's controller, so
+    /// it's applied in the `deal_damage_to_from` funnel rather than
+    /// `scale_damage_to`.
+    DoubleNoncombatDamageToOpponents,
     /// CR 614.5/615 — "If a source would deal damage to you or a permanent
     /// you control, prevent half that damage, rounded up." (Gisela.) The
     /// remainder is floor(amount/2) — same arithmetic as a halver, scoped
@@ -945,6 +952,11 @@ pub enum StaticEffect {
     /// "Your opponents can't cast spells during your turn." Voice of
     /// Victory. Gated at the cast-action dispatch.
     OpponentsCantCastDuringYourTurn,
+    /// "During your turn, your opponents can't cast spells or activate
+    /// abilities of artifacts, creatures, or enchantments." Grand Abolisher.
+    /// Blocks both the cast dispatch (like `OpponentsCantCastDuringYourTurn`)
+    /// and the activated-ability dispatch for A/C/E sources.
+    OpponentsCantActDuringYourTurn,
     /// CR 601 — "Your opponents can't cast spells from anywhere other than
     /// their hands." Drannith Magistrate. Checked in `cast_from_zone_blocked`
     /// for every non-hand cast path (flashback / escape / retrace / free-cast).

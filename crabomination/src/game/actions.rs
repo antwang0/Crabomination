@@ -7790,6 +7790,36 @@ impl GameState {
             }
         }
 
+        // Grand Abolisher — during the active player's turn, that player's
+        // opponents can't activate abilities of artifacts, creatures, or
+        // enchantments (mana abilities included). Lands and other permanents
+        // are unaffected.
+        {
+            let active = self.active_player_idx;
+            let src_is_ace = !source_in_gy
+                && !source_in_hand
+                && self.battlefield_find(card_id).is_some_and(|c| {
+                    c.definition.is_artifact()
+                        || c.definition.card_types.contains(&crate::card::CardType::Creature)
+                        || c.definition.card_types.contains(&crate::card::CardType::Enchantment)
+                });
+            if src_is_ace
+                && p != active
+                && !self.same_team(p, active)
+                && self.battlefield.iter().any(|c| {
+                    c.controller == active
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsCantActDuringYourTurn
+                            )
+                        })
+                })
+            {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
         // CR 701.35 — a detained permanent's activated abilities can't be
         // activated (all of them, mana abilities included) until the detainer's
         // next turn.

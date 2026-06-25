@@ -40,6 +40,9 @@ mod tests_freerunning;
 #[path = "../tests/recent2.rs"]
 mod tests_recent2;
 #[cfg(test)]
+#[path = "../tests/recent3.rs"]
+mod tests_recent3;
+#[cfg(test)]
 #[path = "../tests/innistrad.rs"]
 mod tests_innistrad;
 #[cfg(test)]
@@ -2517,6 +2520,55 @@ impl GameState {
                     .static_abilities
                     .iter()
                     .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageDealt))
+                    .count() as u32
+            })
+            .sum()
+    }
+
+    /// CR 614.5 — Solphim-style noncombat doublers that apply to this exact
+    /// (source, target) pair: a `DoubleNoncombatDamageToOpponents` static
+    /// whose controller also controls `source`, where `ent` is an opponent of
+    /// that controller (a player or a permanent they control). Each match
+    /// doubles the dealt amount. Only consulted on the noncombat funnel.
+    pub fn noncombat_damage_doublers_for(
+        &self,
+        source: Option<CardId>,
+        ent: crate::game::effects::EntityRef,
+    ) -> u32 {
+        use crate::effect::StaticEffect;
+        use crate::game::effects::EntityRef;
+        // Controller of the damage source (a battlefield permanent or the
+        // resolving spell stamped by `resolve_spell`).
+        let Some(src_ctrl) = source.and_then(|s| {
+            self.computed_permanent(s).map(|cp| cp.controller).or_else(|| {
+                match &self.resolving_source {
+                    Some((id, caster, _)) if *id == s => Some(*caster),
+                    _ => None,
+                }
+            })
+        }) else {
+            return 0;
+        };
+        // Affected player (a damaged player, or the controller of a damaged
+        // permanent).
+        let affected = match ent {
+            EntityRef::Player(p) => Some(p),
+            EntityRef::Permanent(c) => self.battlefield_find(c).map(|c| c.controller),
+            EntityRef::Card(_) => None,
+        };
+        let Some(target_player) = affected else { return 0 };
+        self.battlefield
+            .iter()
+            .map(|c| {
+                if c.controller != src_ctrl || self.same_team(src_ctrl, target_player) {
+                    return 0;
+                }
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| {
+                        matches!(sa.effect, StaticEffect::DoubleNoncombatDamageToOpponents)
+                    })
                     .count() as u32
             })
             .sum()
@@ -5197,6 +5249,7 @@ impl GameState {
                             matches!(
                                 sa.effect,
                                 crate::effect::StaticEffect::OpponentsCantCastDuringYourTurn
+                                    | crate::effect::StaticEffect::OpponentsCantActDuringYourTurn
                             )
                         })
                 });
@@ -9709,6 +9762,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
             | StaticEffect::DoubleDamageToOpponents
+            | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::HalveDamageToYou
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
@@ -9953,6 +10007,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // Target-tax, read at `extra_cost_for_spell` (Jubilant Skybonder).
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
+            | StaticEffect::OpponentsCantActDuringYourTurn
             // Attack-permission static, read in `ignores_defender_for_attack`.
             | StaticEffect::CanAttackIgnoringDefenderWhile { .. }
             // Drannith Magistrate — cast-legality gate in `cast_from_zone_blocked`.

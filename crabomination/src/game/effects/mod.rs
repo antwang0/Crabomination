@@ -6567,6 +6567,56 @@ impl GameState {
 
             Effect::DestroyTargetsPolymorph { filter } => self.resolve_destroy_targets_polymorph(filter, ctx, events),
 
+            Effect::DestroyLandOfEachBasicType => {
+                use crate::card::LandType;
+                let owner = ctx.controller;
+                let mut chosen: Vec<CardId> = Vec::new();
+                for t in [
+                    LandType::Plains,
+                    LandType::Island,
+                    LandType::Swamp,
+                    LandType::Mountain,
+                    LandType::Forest,
+                ] {
+                    let req = crate::card::SelectionRequirement::HasLandType(t);
+                    // Candidate lands of this basic type, preferring an
+                    // opponent's (the controller picks; opponents' lands are
+                    // the natural target). Deterministic by id within a tier.
+                    let mut cands: Vec<(bool, CardId)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            self.evaluate_requirement_static(
+                                &req,
+                                &Target::Permanent(c.id),
+                                owner,
+                                ctx.source,
+                            )
+                        })
+                        .map(|c| (self.same_team(c.controller, owner), c.id))
+                        .collect();
+                    cands.sort_by_key(|(mine, id)| (*mine, *id));
+                    if let Some((_, id)) = cands.first()
+                        && !chosen.contains(id)
+                    {
+                        chosen.push(*id);
+                    }
+                }
+                if !chosen.is_empty() {
+                    let mut sub = ctx.clone();
+                    sub.targets = chosen.iter().map(|id| Target::Permanent(*id)).collect();
+                    sub.x_value = 0;
+                    self.run_effect(
+                        &Effect::DestroyTargets {
+                            filter: crate::card::SelectionRequirement::Any,
+                        },
+                        &sub,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::DestroyTargets { filter } => {
                 // Destroy the X chosen targets (slots 0..X) matching `filter`;
                 // without an {X} in the cost, every given target.

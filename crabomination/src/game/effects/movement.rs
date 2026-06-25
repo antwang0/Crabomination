@@ -298,6 +298,13 @@ impl GameState {
         // player order the replacements — double-then-halve is the common
         // pick and keeps the event single-pass here).
         let amount = self.scale_damage_to(source, ent, amount);
+        // CR 614.5 — Solphim, Mayhem Dominus: a noncombat-only doubler scoped
+        // to "a source you control" hitting an opponent / their permanent.
+        // Applied here (not in `scale_damage_to`) so combat damage is exempt.
+        let amount = {
+            let n = self.noncombat_damage_doublers_for(source, ent);
+            amount.saturating_mul(1 << n.min(16))
+        };
         // CR 615.1 — prevention shields. Before applying the damage, let
         // any shield around the target soak it (unless a "damage can't be
         // prevented this turn" effect is active, CR 615.12). Returns the

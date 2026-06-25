@@ -3229,6 +3229,11 @@ pub enum Effect {
     /// from the cast's target list) — the plain sibling of
     /// `DestroyTargetsPolymorph`. Heliod's Intervention mode 0.
     DestroyTargets { filter: SelectionRequirement },
+    /// "Choose a land of each basic land type, then destroy those lands."
+    /// (Sundering Titan.) The source's controller chooses; the engine
+    /// auto-picks one land per basic type (Plains/Island/Swamp/Mountain/
+    /// Forest), preferring an opponent's land, and destroys the union.
+    DestroyLandOfEachBasicType,
     /// CR 702.77 — Champion a [filter]: exile another matching permanent you
     /// control linked to the source (returns when the source leaves), or
     /// sacrifice the source if you exile nothing. Mistbind Clique,
