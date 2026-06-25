@@ -22,7 +22,7 @@ exercising each) was elided in a compaction pass; recover it from
 - **Keywords (~120):** evasion + combat (Flying/Reach/Menace/First+Double
   Strike/Trample/Deathtouch/Lifelink/Vigilance/Protection/Hexproof/Shroud/Ward/
   Bushido/Flanking/Rampage/Provoke/Melee/Dash/Boast/Afflict/Enlist/Mobilize/
-  Myriad/Ninjutsu/Goad/Lure…); ETB/value (Persist/Undying/Riot/Fabricate/
+  Myriad/Ninjutsu/Goad/Lure/Poisonous…); ETB/value (Persist/Undying/Riot/Fabricate/
   Afterlife/Explore/Exploit/Extort/Investigate/Embalm/Eternalize/Backup/
   Soulbond/Mentor); counter-matters (Proliferate/Bolster/Adapt/Training/Evolve/
   Modular/Graft/Outlast/Renown/Bloodthirst/Monstrosity/Devour/Amass); cast-mode

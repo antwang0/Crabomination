@@ -60,6 +60,15 @@ keywords `CantAttackOrBlockUnlessHandSizeAtMost(n)` (Hazoret) and
 the `pick_reach_burn` bot heuristic (fire "deal N to each opponent" abilities for
 lethal).
 
+`catalog::sets::decks::recent2` adds a second wave of staples (tests in
+`tests/recent2.rs`). Engine primitives this wave: equip-granted *observer*
+triggered abilities (`triggers_on_equipment == false` folded into the
+battlefield dispatch — Tarrian's Soulcleaver), `Keyword::Poisonous` (CR 702.70,
+reuses the Toxic combat-poison path), an `all_players` flag on
+`SelfCostReducedPerCreatureAttackedThisTurn` (Witchstalker Frenzy), and
+auto-target coverage for `CreateTokenAttachedTo` / graveyard-targeting
+`GrantFlashbackThisTurn`.
+
 > **Stat-fidelity sweep (2026-06-16).** The supplement's *printed* stats were
 > never audited against Scryfall and carried many synthesized errors (e.g. Grief
 > `{1}{B}{B}`→`{2}{B}{B}`, Elesh Norn MoM `{3}{W}{W}`→`{4}{W}`, Riftwing

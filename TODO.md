@@ -2031,7 +2031,20 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   cost" rider; Conduit of Worlds ships only the play-lands-from-graveyard static
   (not the {T} cast-from-graveyard half); Lord Skitter's Rat-ETB exiles a card
   rather than "up to one target"; Llanowar Greenwidow drops the Domain cost
-  reduction + the exile-if-it-would-leave rider.
+  reduction + the exile-if-it-would-leave rider. Newer wave: Sunfall drops
+  Incubate; Ossification is modeled as a standalone O-Ring (no enchant-a-basic
+  rider); Steamcore Scholar drops the "unless you discard an I/S or flyer"
+  reprieve; Subterranean Schooner explores any creature you control (not
+  specifically the one that crewed it); Gathering Throng searches up to three;
+  Hexgold Slith drops the optional pay-{E}-for-first-strike attack ability.
+- ⏳ **Noticed this run (recent2 MOM/WOE/OTJ wave):** real-card primitives still
+  missing — modern **Incubate** (Incubator token + {2}: transform to 0/0
+  Phyrexian, for Sunfall); a Value for "noncreature spells a player cast this
+  turn" (Magebane Lizard); **Spree** multi-additional-cost casting (Phantom
+  Interference, Three Steps Ahead); chosen-card-type cost reduction (Stenn);
+  cast-from-an-opponent's-graveyard on combat damage (Tinybones). Warren
+  Warleader needs a "create a tapped, attacking token" mint + a "whenever you
+  attack" (declare-attackers) trigger distinct from `Attacks/SelfSource`.
 
 - ⏳ **Haunt / Ripple / Unearth follow-ups** (shipped this push):
   - Haunt's haunted-creature is auto-picked (prefers an opponent's) and the
