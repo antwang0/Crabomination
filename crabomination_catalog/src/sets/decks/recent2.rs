@@ -1207,3 +1207,171 @@ pub fn splashy_spellcaster() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks: OTJ / MKM / KLD / NEO wave ───────────────────────────
+
+/// Subterranean Schooner — {1}{U} 3/4 Vehicle, Crew 1. Whenever it attacks,
+/// target creature you control explores. (The "that crewed it this turn"
+/// restriction is approximated as any creature you control.)
+pub fn subterranean_schooner() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Subterranean Schooner",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Crew(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Explore {
+                who: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Steamcore Scholar — {2}{U} 2/2 Weird Detective with flying and vigilance.
+/// When it enters, draw two cards, then discard two cards. (The "unless you
+/// discard an instant/sorcery or a flyer" reprieve is dropped.)
+pub fn steamcore_scholar() -> CardDefinition {
+    CardDefinition {
+        name: "Steamcore Scholar",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Weird, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Axgard Cavalry — {1}{R} 2/2 Dwarf Berserker. {T}: Target creature gains haste
+/// until end of turn.
+pub fn axgard_cavalry() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Axgard Cavalry",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Experimental Synthesizer — {R} Artifact. When it enters or leaves the
+/// battlefield, exile the top card of your library; you may play it this turn.
+/// {2}{R}, Sacrifice this: create a 2/2 white Samurai with vigilance (sorcery
+/// speed).
+pub fn experimental_synthesizer() -> CardDefinition {
+    use crate::card::{ActivatedAbility, MayPlayDuration};
+    let exile_top = || Effect::ExileTopAndGrantMayPlay {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        duration: MayPlayDuration::EndOfThisTurn,
+        pay_any_color: false,
+        uncast_penalty: None,
+    };
+    let samurai = TokenDefinition {
+        name: "Samurai".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Samurai],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Experimental Synthesizer",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(exile_top()),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: exile_top(),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: samurai,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hexgold Slith — {1}{W} 2/1 Slith. When it enters, you get {E}{E}. Whenever
+/// it deals combat damage to a player, put a +1/+1 counter on it. (The optional
+/// "pay {E}{E} for first strike" attack ability is dropped.)
+pub fn hexgold_slith() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Hexgold Slith",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Slith],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

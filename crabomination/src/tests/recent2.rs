@@ -671,3 +671,91 @@ fn splashy_spellcaster_makes_a_role() {
     let cp = g.computed_permanent(pet).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 from the Role");
 }
+
+/// Subterranean Schooner: crew it with a Bear, attack, and the crewer explores.
+#[test]
+fn subterranean_schooner_explores_on_attack() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::subterranean_schooner());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ship);
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::forest()); // top card is a land → goes to hand
+    g.perform_action(GameAction::Crew { vehicle: ship, crew_creatures: vec![bear] }).expect("crew 1");
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ship, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "explored land to hand");
+}
+
+/// Steamcore Scholar draws two then discards two on entry.
+#[test]
+fn steamcore_scholar_draw_then_discard() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    g.move_card_to_battlefield_for_test(0, catalog::steamcore_scholar());
+    drain_stack(&mut g);
+    // Net hand size unchanged (+2 draw, −2 discard); two cards now in graveyard.
+    assert_eq!(g.players[0].graveyard.len(), 2, "discarded two cards");
+}
+
+/// Axgard Cavalry taps to grant haste.
+#[test]
+fn axgard_cavalry_grants_haste() {
+    let mut g = two_player_game();
+    let cav = g.add_card_to_battlefield(0, catalog::axgard_cavalry());
+    let fresh = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(cav);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cav, ability_index: 0,
+        target: Some(Target::Permanent(fresh)), additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(fresh).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Experimental Synthesizer exiles the top card with may-play on entry, and its
+/// sac ability makes a Samurai.
+#[test]
+fn experimental_synthesizer_etb_and_sac() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let synth = g.move_card_to_battlefield_for_test(0, catalog::experimental_synthesizer());
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Island"), "top card exiled (may-play)");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: synth, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for Samurai");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Samurai"), "Samurai token made");
+}
+
+/// Hexgold Slith nets energy on entry and grows on combat damage.
+#[test]
+fn hexgold_slith_energy_and_growth() {
+    let mut g = two_player_game();
+    let slith = g.add_card_to_battlefield(0, catalog::hexgold_slith());
+    g.move_card_to_battlefield_for_test(0, catalog::hexgold_slith());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 2, "ETB gave two energy");
+    // Attack unblocked → combat damage → +1/+1 counter.
+    g.clear_sickness(slith);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: slith, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(slith).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+        Some(1),
+        "grew on combat damage"
+    );
+}
