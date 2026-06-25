@@ -4729,6 +4729,7 @@ impl GameState {
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src_colors.len() >= 2,
+            Keyword::ProtectionFromEverything => true,
             _ => false,
         })
     }
@@ -10418,6 +10419,10 @@ pub(crate) fn can_block_attacker_computed(
         if matches!(kw, Keyword::ProtectionFromMulticolored)
             && blocker_computed.colors.len() >= 2
         {
+            return false;
+        }
+        // CR 702.16 — protection from everything: can't be blocked at all.
+        if matches!(kw, Keyword::ProtectionFromEverything) {
             return false;
         }
     }

@@ -676,6 +676,50 @@ pub fn marwyn_the_nurturer() -> CardDefinition {
     }
 }
 
+/// Hexdrinker — {G} 2/1 Snake. Level up {1}. LEVEL 3-7: 4/4 protection from
+/// instants. LEVEL 8+: 6/6 protection from everything. CR 702.16 / 702.87.
+pub fn hexdrinker() -> CardDefinition {
+    use crate::card::{CounterType, LevelBand};
+    CardDefinition {
+        name: "Hexdrinker",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        level_bands: vec![
+            LevelBand {
+                min: 3,
+                max: Some(7),
+                power: 4,
+                toughness: 4,
+                keywords: vec![Keyword::ProtectionFromInstants],
+            },
+            LevelBand {
+                min: 8,
+                max: None,
+                power: 6,
+                toughness: 6,
+                keywords: vec![Keyword::ProtectionFromEverything],
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Level,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Wolfir Avenger — {1}{G}{G} 3/3 Wolf Warrior. Flash. {1}{G}: Regenerate this
 /// creature.
 pub fn wolfir_avenger() -> CardDefinition {

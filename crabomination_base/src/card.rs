@@ -521,6 +521,15 @@ pub enum Keyword {
     /// Crusader). Can't be blocked/damaged/targeted/enchanted by a source that
     /// is two or more colors.
     ProtectionFromMulticolored,
+    /// CR 702.16 — "protection from instants" (Hexdrinker level 3-7). Cast-time
+    /// targeting gate: an instant spell can't target this permanent. (Instants
+    /// are never permanents/blockers/combat sources, so this only matters at the
+    /// spell-target check.)
+    ProtectionFromInstants,
+    /// CR 702.16 — "protection from everything" (Hexdrinker level 8+,
+    /// Progenitus): can't be blocked, targeted, enchanted/equipped, or dealt
+    /// damage by anything. Returns true at every protection-check site.
+    ProtectionFromEverything,
     /// CR 702.89 — Umbra armor (on an Aura): if the enchanted creature
     /// would be destroyed, instead remove all damage from it and destroy
     /// this Aura (Hyena Umbra, Spider Umbra).

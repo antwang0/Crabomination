@@ -3652,8 +3652,17 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
-                // Protection from ALL spells (Emrakul, the World Anew).
-                if matches!(kw, Keyword::ProtectionFromSpells) {
+                // Protection from ALL spells (Emrakul, the World Anew), or from
+                // everything (Hexdrinker level 8+, Progenitus).
+                if matches!(kw, Keyword::ProtectionFromSpells | Keyword::ProtectionFromEverything) {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+                // CR 702.16 — protection from instants (Hexdrinker level 3-7):
+                // an instant spell can't target it.
+                if matches!(kw, Keyword::ProtectionFromInstants)
+                    && card.definition.card_types.contains(&CardType::Instant)
+                {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
@@ -6392,6 +6401,7 @@ impl GameState {
                     | Keyword::ProtectionFromManaValueExcept(_)
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
+                    | Keyword::ProtectionFromEverything
             )
         }) && !(src_is_opponent && (printed_hexproof_color || turn_hexproof_color))
         {
@@ -6428,6 +6438,7 @@ impl GameState {
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
+            Keyword::ProtectionFromEverything => true,
             _ => false,
         })
     }

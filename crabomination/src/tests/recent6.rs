@@ -375,6 +375,33 @@ fn marwyn_grows_and_taps_for_power() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "added G equal to her power (2)");
 }
 
+/// Hexdrinker levels into protection from instants, then from everything.
+#[test]
+fn hexdrinker_levels_into_protection() {
+    let mut g = two_player_game();
+    let hex = g.add_card_to_battlefield(0, catalog::hexdrinker());
+    // Push to level 3: protection from instants → a Bolt can't target it.
+    g.battlefield.iter_mut().find(|c| c.id == hex).unwrap()
+        .counters.insert(CounterType::Level, 3);
+    assert!(g.computed_permanent(hex).unwrap().keywords.contains(&Keyword::ProtectionFromInstants));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(hex)), additional_targets: vec![],
+        mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "instant can't target protection-from-instants");
+
+    // Push to level 8: protection from everything → can't be blocked.
+    g.battlefield.iter_mut().find(|c| c.id == hex).unwrap()
+        .counters.insert(CounterType::Level, 8);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.computed_permanent(hex).unwrap().keywords.contains(&Keyword::ProtectionFromEverything));
+    assert!(!g.blocker_can_block_attacker(blocker, hex), "can't be blocked");
+}
+
 /// Wolfir Avenger can regenerate itself.
 #[test]
 fn wolfir_avenger_regenerates() {
