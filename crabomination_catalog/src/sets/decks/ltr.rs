@@ -1775,3 +1775,90 @@ pub fn soothing_of_smeagol() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mushroom Watchdogs — {1}{G} 2/2 Dog. Sacrifice a Food: put a +1/+1 counter on
+/// this creature; it gains vigilance until end of turn. Sorcery speed.
+pub fn mushroom_watchdogs() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType};
+    CardDefinition {
+        name: "Mushroom Watchdogs",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sorcery_speed: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food),
+                1,
+            )),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gollum's Bite — {B} Instant. Target creature gets -2/-2 until end of turn.
+/// {3}{B}, exile this from your graveyard: the Ring tempts you (sorcery speed).
+pub fn gollums_bite() -> CardDefinition {
+    CardDefinition {
+        name: "Gollum's Bite",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), b()]),
+            sorcery_speed: true,
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::RingTempts { who: PlayerRef::You },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lembas — {2} Food artifact. When it enters, scry 1, then draw a card.
+/// {2}, {T}, Sacrifice this: you gain 3 life. (Death-shuffle clause omitted.)
+pub fn lembas() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Lembas",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Food],
+            ..Default::default()
+        },
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -1170,3 +1170,62 @@ fn soothing_of_smeagol_bounces_and_tempts() {
     assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "to owner's hand");
     assert_eq!(g.players[0].ring_temptations, 1, "tempted");
 }
+
+/// Mushroom Watchdogs sacrifices a Food to grow and gain vigilance.
+#[test]
+fn mushroom_watchdogs_sac_food_grows() {
+    let mut g = two_player_game();
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let dog = g.add_card_to_battlefield(0, catalog::mushroom_watchdogs());
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dog, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let d = cp.iter().find(|c| c.id == dog).unwrap();
+    assert_eq!((d.power, d.toughness), (3, 3), "+1/+1 counter");
+    assert!(d.keywords.contains(&crate::card::Keyword::Vigilance), "vigilance granted");
+}
+
+/// Gollum's Bite shrinks a creature, and its graveyard ability tempts.
+#[test]
+fn gollums_bite_shrinks_then_gy_tempts() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    let id = g.add_card_to_hand(0, catalog::gollums_bite());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, id, Target::Permanent(foe));
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == foe).map(|c| (c.power, c.toughness)), Some((1, 1)), "-2/-2");
+    // Now activate the graveyard ability.
+    g.step = crate::game::TurnStep::PreCombatMain;
+    let gy_id = g.players[0].graveyard.iter().find(|c| c.definition.name == "Gollum's Bite").unwrap().id;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gy_id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("gy activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].ring_temptations, 1, "graveyard ability tempts");
+}
+
+/// Lembas draws on ETB and can be sacrificed for life.
+#[test]
+fn lembas_etb_draw_and_sac_life() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::lembas());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "spent Lembas, drew a card");
+    let lem = g.battlefield.iter().find(|c| c.definition.name == "Lembas").unwrap().id;
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lem, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    }).expect("sac for life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "gained 3 life");
+}
