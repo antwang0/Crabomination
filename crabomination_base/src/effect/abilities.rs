@@ -615,7 +615,16 @@ pub enum StaticEffect {
     /// controller's matching creatures. `exclude_source: true` skips the source
     /// itself ("**other** creatures …" — Adaptive Automaton); `false` includes
     /// it (Patchwork Banner). No effect while no type has been chosen.
-    AnthemForChosenType { power: i32, toughness: i32, #[serde(default)] exclude_source: bool },
+    /// `opponents: true` instead applies the (typically negative) modifier to
+    /// each *opponent's* creatures of the chosen type (Plague Engineer).
+    AnthemForChosenType {
+        power: i32,
+        toughness: i32,
+        #[serde(default)]
+        exclude_source: bool,
+        #[serde(default)]
+        opponents: bool,
+    },
     /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
     /// Read at cast time by `controller_grants_spells_delve`: a delve-cards
     /// list is accepted on any spell whose controller has this static, not

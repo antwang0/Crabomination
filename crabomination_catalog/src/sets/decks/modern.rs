@@ -31559,7 +31559,7 @@ pub fn adaptive_automaton() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control of the chosen type get +1/+1.",
-            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: true },
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: true, opponents: false },
         }],
         ..Default::default()
     }
@@ -31577,7 +31577,7 @@ pub fn patchwork_banner() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
-            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false },
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false, opponents: false },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -36987,7 +36987,7 @@ pub fn obelisk_of_urd() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +2/+2.",
-            effect: StaticEffect::AnthemForChosenType { power: 2, toughness: 2, exclude_source: false },
+            effect: StaticEffect::AnthemForChosenType { power: 2, toughness: 2, exclude_source: false, opponents: false },
         }],
         ..Default::default()
     }
@@ -37830,7 +37830,7 @@ pub fn shared_triumph() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type get +1/+1.",
-            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false },
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false, opponents: false },
         }],
         ..Default::default()
     }

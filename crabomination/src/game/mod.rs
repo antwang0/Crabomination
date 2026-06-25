@@ -49,6 +49,9 @@ mod tests_recent4;
 #[path = "../tests/recent5.rs"]
 mod tests_recent5;
 #[cfg(test)]
+#[path = "../tests/recent6.rs"]
+mod tests_recent6;
+#[cfg(test)]
 #[path = "../tests/fin.rs"]
 mod tests_fin;
 #[cfg(test)]
@@ -4212,25 +4215,34 @@ impl GameState {
         // Patchwork Banner.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source } =
+                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents } =
                     &sa.effect
                 else {
                     continue;
                 };
                 let Some(ct) = card.chosen_creature_type else { continue };
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::AllWithCreatureType {
-                        controller: Some(card.controller),
-                        creature_type: ct,
-                        exclude_source: *exclude_source,
-                    },
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(*power, *toughness),
-                });
+                // Whose creatures the modifier hits: the controller's (the
+                // tribal-anthem default) or each opponent's (Plague Engineer).
+                let seats: Vec<usize> = if *opponents {
+                    self.opponents_of(card.controller)
+                } else {
+                    vec![card.controller]
+                };
+                for seat in seats {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::AllWithCreatureType {
+                            controller: Some(seat),
+                            creature_type: ct,
+                            exclude_source: *exclude_source,
+                        },
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                    });
+                }
             }
         }
         // CR 604.3 — characteristic-defining dynamic P/T injection. The
